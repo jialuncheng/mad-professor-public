@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 from pathlib import Path
+from unittest import result
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -429,7 +430,7 @@ class MarkdownProcessor:
                         # 如果是参考文献章节，将内容解析为列表
                         current_section.content = self.parse_references('\n'.join(current_content))
                         result['sections'].append(vars(current_section))
-                        break  # 处理完参考文献后直接跳出
+                        in_references = False  # 重置，讓後續章節正常處理
                     else:
                         # 如果是摘要章节，需要特殊处理
                         if self.abstract_pattern.match(current_section.title):
@@ -477,12 +478,15 @@ class MarkdownProcessor:
                 else:
                     current_content.append(line)
         # 儲存最後一個章節（迴圈結束後未被觸發存檔的章節）
-        if current_section and current_section not in result['sections']:
-            if in_references:
-                current_section.content = self.parse_references('\n'.join(current_content))
-            else:
-                current_section.content = self.parse_content(current_content)
-            result['sections'].append(vars(current_section))
+        # 改成這段
+        if current_section:
+            saved_titles = {s.get('title') for s in result['sections']}
+            if current_section.title not in saved_titles:
+                if in_references:
+                    current_section.content = self.parse_references('\n'.join(current_content))
+                else:
+                    current_section.content = self.parse_content(current_content)
+                result['sections'].append(vars(current_section))
         
         # 构建层级结构（包含连续性检查）
         result['sections'] = self.build_hierarchy(result['sections'])
