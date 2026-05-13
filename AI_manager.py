@@ -1,8 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QUuid
 from AI_professor_chat import AIProfessorChat
 from threads import AIResponseThread
-from TTS_manager import TTSManager
-from voice_input import VoiceInput
 from rag_retriever import RagRetriever
 import os
 
@@ -18,12 +16,6 @@ class AIManager(QObject):
     """
     # 信号定义
     ai_response_ready = pyqtSignal(str)       # AI回复准备好信号
-    vad_started = pyqtSignal()                # 语音活动开始信号
-    vad_stopped = pyqtSignal()                # 语音活动结束信号  
-    voice_text_received = pyqtSignal(str)     # 接收到语音文本信号
-    voice_error = pyqtSignal(str)             # 语音错误信号
-    voice_ready = pyqtSignal()                # 语音系统就绪信号
-    voice_device_switched = pyqtSignal(bool)  # 语音设备切换状态信号
     ai_sentence_ready = pyqtSignal(str, str)  # 单句AI回复准备好信号（内容, 请求ID）
     ai_generation_cancelled = pyqtSignal()    # AI生成被取消信号
     
@@ -33,16 +25,6 @@ class AIManager(QObject):
         
         # 初始化AI聊天助手
         self._init_ai_assistant()
-        
-        # 初始化TTS管理器
-        self.tts_manager = TTSManager()
-        # 连接TTS播放开始信号
-        self.tts_manager.tts_playback_started.connect(self._on_tts_playback_started)
-        # 连接TTS音频实际播放开始信号
-        self.tts_manager.tts_audio_playback_started.connect(self._on_tts_audio_playback_started)
-        
-        # 缓存待显示的句子
-        self.pending_sentences = {}
         
         # 语音输入对象将在init_voice_recognition中初始化
         self.voice_input = None
@@ -69,46 +51,9 @@ class AIManager(QObject):
         # 连接新的单句信号
         self.ai_response_thread.sentence_ready.connect(self._on_ai_sentence_ready)
     
-    def init_voice_recognition(self, input_device_index=0):
-        """初始化语音识别系统"""
-        if self.voice_input is not None:
-            return True  # 已经初始化
-        
-        try:
-            # 创建语音输入对象
-            self.voice_input = VoiceInput(input_device_index)
-            
-            # 连接信号
-            self.voice_input.text_received.connect(self._on_voice_text_received)
-            self.voice_input.vad_started.connect(self._on_vad_started)
-            self.voice_input.vad_stopped.connect(self._on_vad_stopped)
-            self.voice_input.error_occurred.connect(self._on_voice_error)
-            self.voice_input.initialization_complete.connect(self._on_voice_init_complete)
-            
-            # 开始后台初始化
-            self.voice_input.initialize()
-            
-            return True
-        except Exception as e:
-            print(f"初始化语音识别失败: {str(e)}")
-            return False
-
-    def _on_voice_init_complete(self, success):
-        """语音初始化完成回调"""
-        if success:
-            self.voice_ready.emit()
-        else:
-            self.voice_error.emit("语音系统初始化失败")
-    
     def cancel_current_response(self):
         """取消当前正在生成的AI响应"""
         print("取消当前的AI响应...")
-        
-        # 停止TTS播放并清除与当前请求相关的所有待处理TTS
-        if self.current_request_id:
-            self.tts_manager.cancel_request_id(self.current_request_id)
-        else:
-            self.tts_manager.stop_playing()  # 旧版兼容
         
         # 处理已收集的部分响应
         # 只有当有实际内容时才添加到历史记录
@@ -124,9 +69,6 @@ class AIManager(QObject):
         # 无论是否添加到历史，都重置累积响应
         self.accumulated_response = ""
         
-        # 清空待处理的句子
-        self.pending_sentences.clear()
-        
         # 中断AI响应线程
         if self.ai_response_thread.isRunning():
             print("正在停止AI生成...")
@@ -139,11 +81,7 @@ class AIManager(QObject):
             
             # 清除当前请求ID
             self.current_request_id = None
-    
-    def is_busy(self):
-        """检查是否有AI响应正在生成或TTS正在播放"""
-        return self.is_generating_response or not self.tts_manager.is_queue_empty()
-    
+        
     def get_ai_response(self, query, paper_id=None, visible_content=None):
         """获取AI对用户查询的响应"""
         try:
@@ -202,158 +140,19 @@ class AIManager(QObject):
         
         # 发出信号通知UI
         self.ai_response_ready.emit(response)
-        
-        # 不再重复调用TTS - 只有在非流式响应时才使用TTS
-        if not self.ai_response_thread.use_streaming:
-            self._speak_response(response)
     
     def _on_ai_sentence_ready(self, sentence, emotion, scroll_info=None):
-        """处理单句AI响应就绪事件"""
-        # 如果没有当前请求ID，可能是已经被取消，忽略这个句子
         if not self.current_request_id:
             return
-        
-        # 缓存句子，并关联请求ID和情绪
-        sentence_id = id(sentence)  # 使用对象id作为唯一标识
-        self.pending_sentences[sentence_id] = (sentence, self.current_request_id, emotion)
-        
-        # 累积响应
+
         self.accumulated_response += sentence
-        
-        # 删除此行，不在AI生成时触发显示
-        # self.ai_sentence_ready.emit(sentence, self.current_request_id)
-        
-        # 处理滚动信息 - 如果有滚动信息且markdown_view被设置，则执行滚动
+    
+        # 直接發送顯示信號，不經過 TTS
+        self.ai_sentence_ready.emit(sentence, self.current_request_id)
+
+        # 處理滾動
         if scroll_info and hasattr(self, 'markdown_view') and self.markdown_view:
             self._scroll_to_content(scroll_info)
-        
-        # 使用TTS朗读单句 - 传递从AI生成的实际情绪
-        self._speak_response(sentence, sentence_id, emotion)
-
-    def _speak_response(self, text, sentence_id=None, emotion="neutral"):
-        """使用TTS朗读文本"""
-        # 确保有当前请求ID
-        if not self.current_request_id:
-            return
-        
-        # 为文本添加标识，用于在TTS开始播放时匹配回来
-        if sentence_id:
-            # 保存文本、请求ID和情绪的映射关系，请求TTS时传递请求ID和情绪
-            self.tts_manager.request_tts(text, self.current_request_id, emotion)
-            # 存储映射关系（句子ID与句子内容+请求ID+情绪）
-            self.pending_sentences[sentence_id] = (text, self.current_request_id, emotion)
-        else:
-            # 对于非流式响应，直接传递请求ID和情绪
-            self.tts_manager.request_tts(text, self.current_request_id, emotion)
-    
-    def _on_tts_playback_started(self, text, request_id):
-        """当TTS加入播放队列时调用（不再触发消息显示）"""
-        # 如果请求ID不匹配当前活动请求，忽略这个播放事件
-        if request_id != self.current_request_id:
-            print(f"忽略过时的TTS播放：{text[:20]}... (请求ID: {request_id})")
-            return
-        
-        # 可以在此处添加进度指示等逻辑，但不再触发消息显示
-    
-    def _on_tts_audio_playback_started(self, text, request_id):
-        """当TTS音频实际开始播放时调用（触发消息显示）"""
-        # 如果请求ID不匹配当前活动请求，忽略这个播放事件
-        if request_id != self.current_request_id:
-            print(f"忽略过时的TTS音频播放：{text[:20]}... (请求ID: {request_id})")
-            return
-            
-        # 查找匹配的句子
-        for sentence_id, (sentence, stored_request_id, _) in list(self.pending_sentences.items()):
-            if sentence == text and stored_request_id == request_id:
-                # 发出显示此句子的信号，附带请求ID
-                self.ai_sentence_ready.emit(sentence, request_id)
-                # 从待处理列表中移除
-                self.pending_sentences.pop(sentence_id, None)
-                break
-    
-    # 语音识别相关方法
-    def toggle_voice_detection(self, active):
-        """切换语音检测状态"""
-        if not self.voice_input:
-            return False
-            
-        if (active):
-            return self.voice_input.start_listening()
-        else:
-            return self.voice_input.stop_listening()
-    
-    def get_voice_devices(self):
-        """获取可用的语音输入设备"""
-        return VoiceInput.get_input_devices()
-    
-    def switch_voice_device(self, device_index):
-        """切换语音输入设备"""
-        if not self.voice_input:
-            print("语音输入系统未初始化")
-            self.voice_device_switched.emit(False)
-            return False
-            
-        # 开始切换设备并返回结果
-        success = self.voice_input.switch_device(device_index)
-        
-        # 这里不发送信号，由voice_input的initialization_complete信号触发
-        # 但需要确保正确连接这个信号到设备切换完成处理
-        
-        # 确保初始化完成信号连接到正确的处理方法
-        if success:
-            # 断开可能存在的旧连接，避免重复连接
-            try:
-                self.voice_input.initialization_complete.disconnect(self._on_device_switch_complete)
-            except:
-                pass  # 如果没有连接，忽略错误
-                
-            # 添加新连接，将初始化完成信号连接到设备切换完成处理
-            self.voice_input.initialization_complete.connect(self._on_device_switch_complete)
-        
-        return success
-
-    def _on_device_switch_complete(self, success):
-        """处理设备切换完成事件"""
-        # 转发信号到UI
-        self.voice_device_switched.emit(success)
-        
-        # 断开特定连接，避免混淆普通初始化和设备切换的初始化完成信号
-        try:
-            self.voice_input.initialization_complete.disconnect(self._on_device_switch_complete)
-        except:
-            pass
-            
-        # 如果切换成功，也需要触发voice_ready信号
-        if success:
-            self.voice_ready.emit()
-    
-    # 语音回调转发方法
-    def _on_voice_text_received(self, text):
-        self.voice_text_received.emit(text)
-        
-    def _on_vad_started(self):
-        self.vad_started.emit()
-        
-    def _on_vad_stopped(self):
-        self.vad_stopped.emit()
-        
-    def _on_voice_error(self, error_message):
-        self.voice_error.emit(error_message)
-    
-    def cleanup(self):
-        """清理所有资源"""
-        # 停止TTS
-        if hasattr(self, 'tts_manager'):
-            self.tts_manager.stop()
-        
-        # 停止语音识别
-        if self.voice_input:
-            self.voice_input.cleanup()
-        
-        # 停止AI响应线程
-        if self.ai_response_thread and self.ai_response_thread.isRunning():
-            self.ai_response_thread.requestInterruption()
-            self.ai_response_thread.wait()
 
     def init_rag_retriever(self, base_path):
         """在后台初始化RAG检索器"""
