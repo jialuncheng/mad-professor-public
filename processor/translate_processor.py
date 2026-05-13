@@ -227,4 +227,14 @@ class TranslateProcessor:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
-        return self.llm.chat(messages, stream=True).strip()
+        translated = self.llm.chat(messages, stream=True).strip()
+
+        # 如果原始內容有多行，確保翻譯結果也有對應換行
+        original_lines = content.strip().split('\n')
+        if len(original_lines) > 1:
+            translated_lines = translated.split('\n')
+            # 如果翻譯結果行數少於原始，用句號重新分行
+            if len(translated_lines) < len(original_lines):
+                import re
+                translated = re.sub(r'([。！？])\s*', r'\1\n', translated).strip()
+        return translated

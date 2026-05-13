@@ -18,6 +18,22 @@ class RestoreProcessor:
         except Exception as e:
             self.logger.warning(f"读取文件 {filepath} 失败: {str(e)}")
             return ""
+    def _clean_authors_info(self, authors_info: str) -> str:
+        """清理作者資訊，移除上標數字、多餘符號、HTML table 和目錄"""
+        import re
+        # 移除 HTML table
+        text = re.sub(r'<table.*?</table>', '', authors_info, flags=re.DOTALL)
+        # 移除目錄標題行
+        text = re.sub(r'(?m)^Contents\s*$', '', text)
+        # 移除上標數字（字母後接數字，數字後是空白、逗號、分號或行尾）
+        text = re.sub(r'(\w)\d+(?=\s|,|;|$)', r'\1', text)
+        # 移除 \*
+        text = re.sub(r'\\\*', '', text)
+        # 移除多餘空格
+        text = re.sub(r' +', ' ', text)
+        # 清理每行
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        return '\n\n'.join(lines)
 
     def _write_to_md(self, filepath, content):
         """将内容写入md文件"""
@@ -57,7 +73,9 @@ class RestoreProcessor:
                     })
                 elif isinstance(item, dict):
                     item_type = item.get('type')
-                    index = item.get('index', 0)
+                    index = item.get('index')
+                    if index is None:
+                        index = id(item)  # 用物件 id 確保每個 item 獨立
                     part = item.get('part', 0)
                     
                     if item_type == 'text':
@@ -215,8 +233,10 @@ class RestoreProcessor:
             
             # 处理作者信息
             if 'authors_info' in data:
-                self._write_to_md(output_path_en, data['authors_info'])
-                self._write_to_md(output_path_zh, data['authors_info'])
+                authors = self._clean_authors_info(data['authors_info'])
+                if authors:
+                    self._write_to_md(output_path_en, authors)
+                    self._write_to_md(output_path_zh, authors)
             
             # 处理各个章节
             for section in data['sections']:
