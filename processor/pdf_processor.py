@@ -29,7 +29,10 @@ class PDFProcessor:
                 response = requests.post(
                     self.MINERU_API_URL,
                     files={"files": (pdf_path.name, f, "application/pdf")},
-                    data={"return_md": "true"},
+                    data={
+                        "return_md": "true"
+                        "backend": "pipeline"
+                    },
                     timeout=300
                 )
 
