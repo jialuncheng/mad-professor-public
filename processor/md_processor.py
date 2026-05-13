@@ -28,10 +28,12 @@ class MarkdownProcessor:
         self.title_pattern = re.compile(r'^(#+)\s*(\S.*?)$')
         
         # 匹配摘要标题的正则表达式（匹配 ABSTRACT 或其变体）
-        self.abstract_pattern = re.compile(r'^#?\s*(?:\d+\.)?\s*(?:ABSTRACT|Abstract|abstract)')
+        self.abstract_pattern = re.compile(
+            r'^#+\s*(?:\d+\.)?\s*(?:ABSTRACT|Abstract|abstract|SUMMARY|Summary|summary)'
+        )
         
         # 匹配参考文献标题的正则表达式
-        self.reference_pattern = re.compile(r'^#?\s*(?:\d+\.)?\s*(?:REFERENCES?|References?|references?)')
+        self.reference_pattern = re.compile(r'^#+\s*(?:\d+\.)?\s*(?:REFERENCES?|References?|references?)')
 
         # 匹配不带#的参考文献行
         self.reference_line_pattern = re.compile(r'^(?:REFERENCES?|References?|references?)(?:\s*:|\s*\.)?\s*$')
@@ -200,13 +202,27 @@ class MarkdownProcessor:
 
         return result
 
+    def _roman_to_int(self, s: str) -> int:
+        roman = {'I':1,'V':5,'X':10,'L':50,'C':100,'D':500,'M':1000}
+        try:
+            return int(s)
+        except ValueError:
+            s = s.upper()
+            result = 0
+            for i in range(len(s)):
+                if i + 1 < len(s) and roman.get(s[i], 0) < roman.get(s[i+1], 0):
+                    result -= roman.get(s[i], 0)
+                else:
+                    result += roman.get(s[i], 0)
+            return result
+
     def check_section_continuity(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """检查同级章节的编号连续性，查找并补充遗漏的章节"""
         # 按章节编号排序
-        sections.sort(key=lambda x: int(x['number'].split('.')[-1]))
+        sections.sort(key=lambda x: self._roman_to_int(x['number'].split('.')[-1]))
         
         all_sections = sections.copy()
-        section_numbers = [int(s['number'].split('.')[-1]) for s in sections]
+        section_numbers = [self._roman_to_int(s['number'].split('.')[-1]) for s in sections]
         
         # 检查相邻章节编号的连续性
         i = 0
@@ -247,7 +263,7 @@ class MarkdownProcessor:
                         all_sections.insert(insert_idx, missing_dict)
                     
                     # 更新章节编号列表
-                    section_numbers = [int(s['number'].split('.')[-1]) for s in all_sections]
+                    section_numbers = [self._roman_to_int(s['number'].split('.')[-1]) for s in all_sections]
                     i = 0  # 重新开始检查，因为可能有新的不连续性
                     continue
             
@@ -460,6 +476,13 @@ class MarkdownProcessor:
                     authors_content.append(line)
                 else:
                     current_content.append(line)
+        # 儲存最後一個章節（迴圈結束後未被觸發存檔的章節）
+        if current_section and current_section not in result['sections']:
+            if in_references:
+                current_section.content = self.parse_references('\n'.join(current_content))
+            else:
+                current_section.content = self.parse_content(current_content)
+            result['sections'].append(vars(current_section))
         
         # 构建层级结构（包含连续性检查）
         result['sections'] = self.build_hierarchy(result['sections'])
