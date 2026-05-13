@@ -81,6 +81,10 @@ class AIManager(QObject):
             
             # 清除当前请求ID
             self.current_request_id = None
+
+    def is_busy(self):
+        """檢查是否有 AI 響應正在生成"""
+        return self.is_generating_response
         
     def get_ai_response(self, query, paper_id=None, visible_content=None):
         """获取AI对用户查询的响应"""
