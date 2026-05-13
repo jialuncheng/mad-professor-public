@@ -1,6 +1,8 @@
 import logging
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from typing import Optional, List, Dict, Any, Generator
 from openai import OpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
