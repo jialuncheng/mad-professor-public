@@ -37,8 +37,9 @@ class MarkdownProcessor:
         self.reference_line_pattern = re.compile(r'^(?:REFERENCES?|References?|references?)(?:\s*:|\s*\.)?\s*$')
         
         # 匹配章节编号的正则表达式（如 1.2.3）
-        self.section_number_pattern = re.compile(r'^(\d+(?:\.\d+)*)(\.?)\s*(.*?)$')
-        
+        self.section_number_pattern = re.compile(
+            r'^((?:[IVXivx]+|[0-9]+(?:\.[0-9]+)*))(\.?)\s*(.*?)$'
+)        
         # 匹配可能的标题行（非 # 开头，但包含数字编号和大写标题）
         self.potential_title_pattern = re.compile(r'^(?!#)(\d+(?:\.\d+)*)\s+([A-Z][A-Z\s\d:]+(?:\s*[A-Z][A-Za-z\s\d:]+)*)')
 
@@ -70,9 +71,12 @@ class MarkdownProcessor:
         if match:
             number, dot, raw_title = match.groups()
             # 忽略末尾的点号
-            level = len(number.split('.'))  # 通过点号数量确定层级
+            if re.match(r'^[IVXivx]+$', number):
+                level = 1
+            else:
+                level = len(number.split('.'))
             return number.strip(), raw_title.strip(), level
-        return '', title.strip(), 1  # 如果没有编号，返回默认值
+        return '', title.strip(), 1
 
     def parse_references(self, content: str) -> List[str]:
         """将参考文献内容解析为列表"""
