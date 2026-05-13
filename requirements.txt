@@ -10,5 +10,3 @@ PyQt6-WebEngine
 markdown
 pymdown-extensions
 zhconv
-RealtimeSTT
-pyaudio
