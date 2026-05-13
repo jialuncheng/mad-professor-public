@@ -102,24 +102,19 @@ class TranslateProcessor:
                     return
                     
                 # 查找第一个type为text的content项
-                abstract_text = ""
+                self.logger.info("开始翻译摘要")
+                first_translated = ""
+
                 for content_item in section["content"]:
                     if content_item.get("type") == "text":
                         abstract_text = content_item.get("content", "")
-                        break
-                        
-                if not abstract_text:
-                    self.logger.warning("Abstract中未找到text类型内容，跳过摘要翻译")
-                    return
-                
-                # 翻译摘要
-                self.logger.info("开始翻译摘要")
-                translated_abstract = self.translate_text("abstract", abstract_text)
-                
-                # 保存翻译结果
-                content_item["translated_content"] = translated_abstract
-                self.translated_abstract = translated_abstract
-                
+                        if abstract_text:
+                            translated = self.translate_text("abstract", abstract_text)
+                            content_item["translated_content"] = translated
+                            if not first_translated:
+                                first_translated = translated
+
+                self.translated_abstract = first_translated
                 self.logger.info("摘要翻译完成")
                 return
                 
