@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                           QTextEdit, QScrollArea, QLabel, QFrame, QComboBox)
+                          QTextEdit, QScrollArea, QLabel, QFrame)
+# QComboBox
 from PyQt6.QtCore import Qt, QTimer, QSize
 from PyQt6.QtGui import QIcon, QFont
 
@@ -27,13 +28,13 @@ class ChatWidget(QWidget):
         self.ai_controller = None  # AI控制器引用
         self.paper_controller = None  # 论文控制器引用
         self.loading_bubble = None  # 加载动画引用
-        self.is_voice_active = False  # 语音功能是否激活
+        # self.is_voice_active = False  # 语音功能是否激活
         
         # 初始化UI
         self.init_ui()
         
         # 界面显示后立即初始化语音功能
-        QTimer.singleShot(500, self.init_voice_recognition)
+        # QTimer.singleShot(500, self.init_voice_recognition)
         
     def set_ai_controller(self, ai_controller:AIManager):
         """设置AI控制器引用"""
@@ -41,12 +42,12 @@ class ChatWidget(QWidget):
         # 连接AI控制器信号
         self.ai_controller.ai_response_ready.connect(self.on_ai_response_ready)
         self.ai_controller.ai_sentence_ready.connect(self.on_ai_sentence_ready)  
-        self.ai_controller.voice_text_received.connect(self.on_voice_text_received)
-        self.ai_controller.vad_started.connect(self.on_vad_started)
-        self.ai_controller.vad_stopped.connect(self.on_vad_stopped)
-        self.ai_controller.voice_error.connect(self.on_voice_error)
-        self.ai_controller.voice_ready.connect(self.on_voice_ready)
-        self.ai_controller.voice_device_switched.connect(self.on_device_switched)
+        # self.ai_controller.voice_text_received.connect(self.on_voice_text_received)
+        # self.ai_controller.vad_started.connect(self.on_vad_started)
+        # self.ai_controller.vad_stopped.connect(self.on_vad_stopped)
+        # self.ai_controller.voice_error.connect(self.on_voice_error)
+        # self.ai_controller.voice_ready.connect(self.on_voice_ready)
+        # self.ai_controller.voice_device_switched.connect(self.on_device_switched)
         # 新增信号连接
         self.ai_controller.ai_generation_cancelled.connect(self.on_ai_generation_cancelled)
         
@@ -231,13 +232,13 @@ class ChatWidget(QWidget):
         control_layout.setSpacing(12)  # 增加控件间距
         
         # 创建语音控制区
-        voice_container = self.create_voice_container()
+        # voice_container = self.create_voice_container()
         
         # 创建发送按钮
         send_button = self.create_send_button()
         
         # 添加到控制布局
-        control_layout.addWidget(voice_container)
+        # control_layout.addWidget(voice_container)
         control_layout.addStretch(1)
         control_layout.addWidget(send_button)
         
