@@ -44,7 +44,10 @@ class PDFProcessor:
             paper_name = pdf_path.stem
             markdown_path = output_dir / f"{paper_name}.md"
 
-            md_content = result.get("md_content") or result.get("markdown") or ""
+            # 從 results 裡取出對應檔名的內容
+            results = result.get("results", {})
+            file_result = results.get(pdf_path.stem, {})
+            md_content = file_result.get("md_content") or file_result.get("markdown") or ""
             if not md_content:
                 raise RuntimeError(f"MinerU API 回傳內容為空，完整回應: {result}")
 
