@@ -46,5 +46,11 @@ class PDFProcessor:
                 raise RuntimeError(f"MinerU API 回傳內容為空，完整回應: {result}")
 
             markdown_path.write_text(md_content, encoding="utf-8")
-
             self.logger.info(f"Markdown 文件已保存到: {markdown_path}")
+            return markdown_path
+
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("無法連接 MinerU API，請確認 MinerU 服務是否已啟動")
+        except Exception as e:
+            self.logger.error(f"PDF 處理失敗: {str(e)}", exc_info=True)
+            raise
