@@ -3,6 +3,7 @@ import logging
 import zipfile
 import io
 import subprocess
+import shutil
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -45,14 +46,10 @@ class PDFProcessor:
             if response.status_code != 200:
                 raise RuntimeError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
 
-            # 取得 task_id 用於後續複製圖片
-            content_type = response.headers.get("content-type", "")
-            task_id = response.headers.get("X-Task-Id") or response.headers.get("task-id")
-
-            # 解壓 ZIP（包含 Markdown）
             paper_name = pdf_path.stem
+
+            # 解壓 ZIP 到暫存目錄
             with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-                # ZIP 內路徑是 NPH71232/auto/NPH71232.md，解壓後需要移動
                 z.extractall(output_dir / "_tmp")
 
             # 把 Markdown 移到正確位置
@@ -65,7 +62,6 @@ class PDFProcessor:
             self._copy_images(paper_name, output_dir)
 
             # 清理暫存目錄
-            import shutil
             shutil.rmtree(output_dir / "_tmp", ignore_errors=True)
 
             if not markdown_path.exists():
@@ -83,7 +79,6 @@ class PDFProcessor:
     def _copy_images(self, paper_name: str, output_dir: Path):
         """從 mineru-lab 複製最新的圖片目錄"""
         try:
-            # 找最新的 task 目錄
             result = subprocess.run(
                 ["ssh", self.MINERU_HOST,
                  f"ls -t {self.MINERU_OUTPUT_DIR} | head -1"],
@@ -92,3 +87,18 @@ class PDFProcessor:
             latest_task = result.stdout.strip()
             if not latest_task:
                 self.logger.warning("找不到 mineru-lab 的輸出目錄")
+                return
+
+            src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
+            dst = str(output_dir / "images")
+
+            scp_result = subprocess.run(
+                ["scp", "-r", src, dst],
+                capture_output=True, text=True, timeout=60
+            )
+            if scp_result.returncode == 0:
+                self.logger.info(f"圖片複製成功: {dst}")
+            else:
+                self.logger.warning(f"圖片複製失敗: {scp_result.stderr}")
+        except Exception as e:
+            self.logger.warning(f"複製圖片時出錯: {str(e)}")
