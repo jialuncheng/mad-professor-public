@@ -14,6 +14,7 @@ class PDFProcessor:
     MINERU_API_URL = "http://192.168.139.94:8000/file_parse"
     MINERU_HOST = "baroncheng@192.168.139.94"
     MINERU_OUTPUT_DIR = "/home/baroncheng/output"
+    GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
@@ -58,6 +59,9 @@ class PDFProcessor:
             if tmp_md.exists():
                 tmp_md.rename(markdown_path)
 
+            # 用 LLM 修正標題層級
+            self._fix_heading_levels(markdown_path)
+
             # 從 mineru-lab 複製圖片
             self._copy_images(paper_name, output_dir)
 
@@ -75,6 +79,89 @@ class PDFProcessor:
         except Exception as e:
             self.logger.error(f"PDF 處理失敗: {str(e)}", exc_info=True)
             raise
+
+    def _fix_heading_levels(self, markdown_path: Path):
+        """用 LLM 修正 Markdown 標題層級"""
+        import os
+        try:
+            content = markdown_path.read_text(encoding="utf-8")
+
+            # 只取出標題行給 LLM 判斷
+            lines = content.split("\n")
+            heading_lines = []
+            for i, line in enumerate(lines):
+                if line.startswith("#"):
+                    heading_lines.append(f"行{i}: {line}")
+
+            if not heading_lines:
+                return
+
+            headings_text = "\n".join(heading_lines)
+
+            prompt = f"""以下是一篇學術論文 Markdown 的所有標題行（格式：行號: 標題內容）：
+
+{headings_text}
+
+請根據學術論文的結構邏輯（章節編號格式、標題語意、層級關係），判斷每個標題應該使用幾個 # 符號。
+
+規則：
+- 論文標題用 #（一個）
+- 頂層章節（Abstract、Introduction、Methods、Results、Discussion、References 等，或羅馬數字 I. II. III.）用 ##（兩個）
+- 子章節（阿拉伯數字 1. 2. 3. 或明顯從屬於上一層的標題）用 ###（三個）
+- 子子章節用 ####（四個）
+
+請只輸出 JSON 格式，key 為行號（數字），value 為應使用的 # 數量（1-4 的整數）：
+{{"行號": #數量, ...}}
+
+只輸出 JSON，不要任何解釋。"""
+
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                self.logger.warning("找不到 GEMINI_API_KEY，跳過標題層級修正")
+                return
+
+            resp = requests.post(
+                f"{self.GEMINI_API_URL}chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gemini-2.0-flash",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 2000
+                },
+                timeout=60
+            )
+
+            if resp.status_code != 200:
+                self.logger.warning(f"LLM 標題修正失敗: {resp.status_code}")
+                return
+
+            result_text = resp.json()["choices"][0]["message"]["content"].strip()
+
+            # 清理 JSON（移除可能的 markdown 包裹）
+            import re
+            result_text = re.sub(r"```json|```", "", result_text).strip()
+
+            import json
+            heading_map = json.loads(result_text)
+
+            # 套用修正
+            new_lines = lines.copy()
+            for line_num_str, hash_count in heading_map.items():
+                line_num = int(line_num_str)
+                if line_num < len(lines) and lines[line_num].startswith("#"):
+                    original = lines[line_num]
+                    # 取出標題文字（去掉所有 # 和空白）
+                    title_text = original.lstrip("#").strip()
+                    new_lines[line_num] = "#" * int(hash_count) + " " + title_text
+
+            markdown_path.write_text("\n".join(new_lines), encoding="utf-8")
+            self.logger.info(f"標題層級修正完成: {markdown_path}")
+
+        except Exception as e:
+            self.logger.warning(f"標題層級修正時出錯（不影響後續流程）: {str(e)}")
 
     def _copy_images(self, paper_name: str, output_dir: Path):
         """從 mineru-lab 複製最新的圖片目錄"""
