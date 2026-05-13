@@ -130,43 +130,54 @@ class RestoreProcessor:
                     zh_content = ' '.join([part[1] for part in zh_parts])
                     
                     # 写入合并后的内容
-                    self._write_to_md(output_path_en, en_content)
-                    self._write_to_md(output_path_zh, zh_content)
+                    import re
+                    en_content = re.sub(r'\n(?!\n)', '\n\n', en_content)
+                    zh_content = re.sub(r'\n(?!\n)', '\n\n', zh_content)
+                    if en_content.strip():
+                        self._write_to_md(output_path_en, en_content)
+                    if zh_content.strip():
+                        self._write_to_md(output_path_zh, zh_content)
+
                     
                     # 标记这个索引已处理
                     processed_text_indices.add(index)
                 
                 elif item['type'] == 'formula':
                     # 处理公式（公式在中英文文档中保持一致）
-                    self._write_to_md(output_path_en, item['content'])
-                    self._write_to_md(output_path_zh, item['content'])
+                    if item.get('content', '').strip():
+                        self._write_to_md(output_path_en, item['content'])
+                        self._write_to_md(output_path_zh, item['content'])
                 
                 elif item['type'] == 'figure':
                     # 英文图片说明
-                    en_figure = f"![{item['alt']}]({item['src']})\n\n*{item['en_caption']}*"
+                    en_figure = f"![{item['alt']}]({item['src']})"
+                    if item['en_caption']:
+                        en_figure += f"\n\n*{item['en_caption']}*"
                     self._write_to_md(output_path_en, en_figure)
                     
                     # 中文图片说明
-                    zh_figure = f"![{item['alt']}]({item['src']})\n\n*{item['zh_caption']}*"
+                    zh_figure = f"![{item['alt']}]({item['src']})"
+                    if item['zh_caption']:
+                        zh_figure += f"\n\n*{item['zh_caption']}*"
                     self._write_to_md(output_path_zh, zh_figure)
                 
                 elif item['type'] == 'table':
                     # 表格内容在中英文文档中保持一致
-                    self._write_to_md(output_path_en, item['content'])
-                    self._write_to_md(output_path_zh, item['content'])
+                    if item.get('content', '').strip():
+                        self._write_to_md(output_path_en, item['content'])
+                        self._write_to_md(output_path_zh, item['content'])
                     
                     # 处理表格标题
                     if item['en_caption']:
-                        en_caption = f"*{item['en_caption']}*"
-                        self._write_to_md(output_path_en, en_caption)
+                        self._write_to_md(output_path_en, f"*{item['en_caption']}*")
                         
-                        zh_caption = f"*{item['zh_caption']}*"
-                        self._write_to_md(output_path_zh, zh_caption)
+                        self._write_to_md(output_path_zh, f"*{item['zh_caption']}*")
                 
                 elif item['type'] == 'ref':
                     # 参考文献保持原样
-                    self._write_to_md(output_path_en, item['content'])
-                    self._write_to_md(output_path_zh, item['content'])
+                    if item.get('content', '').strip():
+                        self._write_to_md(output_path_en, item['content'])
+                        self._write_to_md(output_path_zh, item['content'])
         
         # 递归处理子章节
         if 'children' in section and section['children']:
