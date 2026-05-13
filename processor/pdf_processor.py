@@ -30,7 +30,7 @@ class PDFProcessor:
                     self.MINERU_API_URL,
                     files={"files": (pdf_path.name, f, "application/pdf")},
                     data={
-                        "return_md": "true"
+                        "return_md": "true",
                         "backend": "pipeline"
                     },
                     timeout=300
