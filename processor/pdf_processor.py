@@ -47,4 +47,4 @@ class PDFProcessor:
 
             markdown_path.write_text(md_content, encoding="utf-8")
 
-            self.logger.info(f"Mar
+            self.logger.info(f"Markdown 文件已保存到: {markdown_path}")
