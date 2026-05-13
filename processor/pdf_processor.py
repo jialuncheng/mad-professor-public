@@ -1,69 +1,50 @@
-from pathlib import Path
+import requests
 import logging
-
-from magic_pdf.data.data_reader_writer import FileBasedDataWriter, FileBasedDataReader
-from magic_pdf.data.dataset import PymuDocDataset
-from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 class PDFProcessor:
-    """PDF处理器：将PDF转换为Markdown格式"""
+    """PDF處理器：透過本機 MinerU API 將 PDF 轉換為 Markdown 格式"""
     
+    MINERU_API_URL = "http://192.168.139.94:8000/file_parse"
+
     def __init__(self):
-        """
-        初始化PDF处理器
-        """
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.logger.debug("初始化PDF处理器")
+        self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
-        """
-        处理PDF文件
-        
-        Args:
-            pdf_path: PDF文件路径
-            output_dir: 输出目录路径
-
-        Returns:
-            Path: 生成的Markdown文件路径
-        
-        Raises:
-            FileNotFoundError: 当PDF文件不存在时
-        """
         pdf_path = Path(pdf_path)
         output_dir = Path(output_dir)
-        
+
         if not pdf_path.exists():
-            raise FileNotFoundError(f"PDF文件不存在: {pdf_path}")
+            raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            # 设置输出路径
+            self.logger.info(f"呼叫 MinerU API 處理 PDF: {pdf_path}")
+            
+            with open(pdf_path, "rb") as f:
+                response = requests.post(
+                    self.MINERU_API_URL,
+                    files={"files": (pdf_path.name, f, "application/pdf")},
+                    data={"return_md": "true"},
+                    timeout=300
+                )
+
+            if response.status_code != 200:
+                raise RuntimeError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
+
+            result = response.json()
+            
             paper_name = pdf_path.stem
-            output_image_path = output_dir / "images"
-            local_image_path = 'images'
-            
-            # 初始化图片写入器
-            image_writer = FileBasedDataWriter(str(output_image_path))
-            md_writer = FileBasedDataWriter(str(output_dir))
-            
-            # 读取PDF文件
-            reader = FileBasedDataReader("")
-            pdf_bytes = reader.read(pdf_path)  # 读取PDF内容
-            
-            # 创建数据集实例
-            ds = PymuDocDataset(pdf_bytes)
-            
-            # 处理PDF
-            self.logger.info("开始PDF处理流程...")
-            ds.apply(doc_analyze, ocr=True).pipe_ocr_mode(image_writer).dump_md(md_writer, f"{paper_name}.md", local_image_path)
-            
-            # 生成Markdown路径
             markdown_path = output_dir / f"{paper_name}.md"
-            
-            self.logger.info(f"Markdown文件已保存到: {markdown_path}")
-            return markdown_path
-            
-        except Exception as e:
-            self.logger.error(f"PDF处理失败: {str(e)}", exc_info=True)
-            raise
+
+            md_content = result.get("md_content") or result.get("markdown") or ""
+            if not md_content:
+                raise RuntimeError(f"MinerU API 回傳內容為空，完整回應: {result}")
+
+            markdown_path.write_text(md_content, encoding="utf-8")
+
+            self.logger.info(f"Mar
