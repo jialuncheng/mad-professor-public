@@ -1,15 +1,16 @@
 import logging
 import sys
+import os
 from typing import Optional, List, Dict, Any, Generator
 from openai import OpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # API配置
-API_BASE_URL = "YOUR_API_URL"
-API_KEY = "YOUR_API_KEY"
+API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+API_KEY = os.getenv("GEMINI_API_KEY")
 
-TTS_GROUP_ID = "YOUR_MINIMAX_GROUP_ID"
-TTS_API_KEY = "YOUR_MINIMAX_API_KEY"
+#TTS_GROUP_ID = "YOUR_MINIMAX_GROUP_ID"
+#TTS_API_KEY = "YOUR_MINIMAX_API_KEY"
 
 # 嵌入模型配置
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
@@ -73,7 +74,7 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-v3-250324",
+                model="gemini-3.1-flash-lite",
                 messages=messages,
                 temperature=temperature,
                 stream=stream
@@ -110,7 +111,7 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-v3-250324",
+                model="gemini-3.1-flash-lite",
                 messages=messages,
                 temperature=temperature,
                 stream=True
