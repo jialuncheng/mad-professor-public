@@ -143,8 +143,12 @@ async def run_pipeline(paper_id: str, pdf_path: str):
         def on_progress(info):
             processing_tasks[paper_id]['progress'] = info
 
-        from pipeline_core import PipelineCore
-        pipeline = PipelineCore(on_progress=on_progress)
+        # 移除這兩行
+        # from pipeline_core import PipelineCore
+        # pipeline = PipelineCore(on_progress=on_progress)
+
+        # 改用全域 pipeline_core
+        pipeline_core.on_progress = on_progress
 
         loop = asyncio.get_event_loop()
         output_paths = await loop.run_in_executor(
