@@ -77,6 +77,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import HTMLResponse
+
+@app.get("/")
+async def root():
+    html_path = BASE_DIR / "static" / "index.html"
+    if html_path.exists():
+        return HTMLResponse(html_path.read_text(encoding='utf-8'))
+    return HTMLResponse("<h1>Frontend not found</h1>")
 
 # ── 資料模型 ──
 
