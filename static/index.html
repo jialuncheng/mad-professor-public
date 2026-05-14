@@ -123,6 +123,86 @@
       color: #94a3b8;
       font-size: 15px;
     }
+/* 右側 AI 問答 */
+    #chat-panel {
+      width: 340px;
+      background: white;
+      border-left: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    #chat-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .msg-user {
+      background: #2563eb;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 12px 12px 2px 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      align-self: flex-end;
+      max-width: 85%;
+    }
+    .msg-ai {
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 10px 14px;
+      border-radius: 12px 12px 12px 2px;
+      font-size: 14px;
+      line-height: 1.6;
+      align-self: flex-start;
+      max-width: 90%;
+    }
+    #chat-input-area {
+      padding: 12px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      gap: 8px;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      resize: none;
+      height: 44px;
+      outline: none;
+    }
+    #chat-input:focus { border-color: #2563eb; }
+    #send-btn {
+      padding: 10px 16px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    #send-btn:hover { background: #1d4ed8; }
+    #send-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .chat-empty {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
@@ -142,6 +222,18 @@
   </div>
   <div id="empty-state">← 從左側選擇一篇論文</div>
   <div id="paper-content" style="display:none"></div>
+</div>
+
+<!-- 右側 AI 問答 -->
+<div id="chat-panel">
+  <div id="chat-header">🤖 AI 問答</div>
+  <div id="chat-messages">
+    <div class="chat-empty">選擇論文後開始提問</div>
+  </div>
+  <div id="chat-input-area">
+    <textarea id="chat-input" placeholder="輸入問題..." disabled></textarea>
+    <button id="send-btn" disabled>送出</button>
+  </div>
 </div>
 
 <script>
@@ -206,6 +298,79 @@ document.getElementById('lang-toggle').onclick = async () => {
   currentLang = currentLang === 'zh' ? 'en' : 'zh';
   document.getElementById('lang-toggle').textContent = currentLang === 'zh' ? '切換英文' : '切換中文';
   if (currentPaperId) await fetchContent(currentPaperId, currentLang);
+};// 聊天功能
+let isStreaming = false;
+
+function enableChat() {
+  document.getElementById('chat-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">針對論文提問</div>';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const query = input.value.trim();
+  if (!query || isStreaming || !currentPaperId) return;
+
+  input.value = '';
+  isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  // 顯示用戶訊息
+  const messages = document.getElementById('chat-messages');
+  const userMsg = document.createElement('div');
+  userMsg.className = 'msg-user';
+  userMsg.textContent = query;
+  messages.appendChild(userMsg);
+
+  // 建立 AI 訊息泡泡
+  const aiMsg = document.createElement('div');
+  aiMsg.className = 'msg-ai';
+  aiMsg.textContent = '▋';
+  messages.appendChild(aiMsg);
+  messages.scrollTop = messages.scrollHeight;
+
+  // SSE 串流
+  const res = await fetch(`/api/papers/${currentPaperId}/chat`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({query, paper_id: currentPaperId})
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let accumulated = '';
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+
+    const text = decoder.decode(value);
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const chunk = JSON.parse(line.slice(6));
+        if (chunk.sentence) {
+          accumulated += chunk.sentence;
+          aiMsg.textContent = accumulated;
+          messages.scrollTop = messages.scrollHeight;
+        }
+        if (chunk.done) {
+          isStreaming = false;
+          document.getElementById('send-btn').disabled = false;
+        }
+      } catch {}
+    }
+  }
+}
+
+document.getElementById('send-btn').onclick = sendMessage;
+document.getElementById('chat-input').onkeydown = (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 };
 
 loadPapers();
