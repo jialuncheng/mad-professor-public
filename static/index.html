@@ -373,6 +373,73 @@ document.getElementById('chat-input').onkeydown = (e) => {
   }
 };
 
+// 上傳論文
+document.getElementById('upload-btn').onclick = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('upload-btn');
+    btn.textContent = '上傳中...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/papers/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const paperId = data.paper_id;
+
+      // 開始追蹤進度
+      btn.textContent = '處理中...';
+      trackProgress(paperId, btn);
+
+    } catch (err) {
+      btn.textContent = '＋ 上傳論文';
+      btn.disabled = false;
+      alert('上傳失敗：' + err.message);
+    }
+  };
+  input.click();
+};
+
+// 追蹤處理進度
+function trackProgress(paperId, btn) {
+  const evtSource = new EventSource(`/api/papers/${paperId}/status`);
+
+  evtSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.status === 'processing') {
+      const p = data.progress;
+      btn.textContent = `${p.stage_name}... ${p.progress}%`;
+    } else if (data.status === 'done') {
+      evtSource.close();
+      btn.textContent = '＋ 上傳論文';
+      btn.disabled = false;
+      loadPapers();  // 重新載入論文列表
+    } else if (data.status === 'error') {
+      evtSource.close();
+      btn.textContent = '＋ 上傳論文';
+      btn.disabled = false;
+      alert('處理失敗：' + (data.error || '未知錯誤'));
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    btn.textContent = '＋ 上傳論文';
+    btn.disabled = false;
+  };
+}
+
 loadPapers();
 </script>
 </body>
