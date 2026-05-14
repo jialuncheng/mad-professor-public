@@ -152,7 +152,7 @@ async def run_pipeline(paper_id: str, pdf_path: str):
 
         loop = asyncio.get_event_loop()
         output_paths = await loop.run_in_executor(
-            None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR))
+            None, lambda: pipeline_core.process(pdf_path, str(OUTPUT_DIR))
         )
 
         # 載入新論文的向量庫和快取
