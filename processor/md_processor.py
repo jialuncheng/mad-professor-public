@@ -316,8 +316,13 @@ class MarkdownProcessor:
                     continue
                 
                 if collecting_authors:
-                    authors_content.append(title_text)
-                    continue
+                    # 如果遇到 ## 或更深的標題，強制結束作者收集
+                    if heading_level >= 2:
+                        result['authors_info'] = '\n'.join(authors_content).strip()
+                        collecting_authors = False
+                    else:
+                        authors_content.append(title_text)
+                        continue
                 
                 if current_section and not collecting_authors:
                     if in_references:
