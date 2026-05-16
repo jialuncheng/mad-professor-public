@@ -67,7 +67,9 @@
 
 2. 安裝依賴
 
-        pip install -r requirements.txt
+        bash install.sh
+
+    `install.sh` 會按照正確順序安裝所有套件，並在結尾自動驗證。
 
 3. 設定環境變數，建立 `.env` 檔案：
 
