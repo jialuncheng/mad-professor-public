@@ -2,18 +2,20 @@ import os
 import json
 import logging
 import asyncio
-import uuid
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
 import paper_manager
+from pipeline_core import PipelineCore
+from ai_core import AICore
 
 load_dotenv()
 
@@ -37,7 +39,7 @@ async def lifespan(app: FastAPI):
     """啟動時初始化"""
     global ai_core
 
-    from ai_core import AICore
+
 
     ai_core = AICore()
     ai_core.init_rag_retriever(str(OUTPUT_DIR))
@@ -57,8 +59,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from fastapi.responses import HTMLResponse
 
 @app.get("/")
 async def root():
@@ -122,8 +122,6 @@ async def upload_paper(
 async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
     """在背景執行 pipeline"""
     try:
-        from pipeline_core import PipelineCore
-
         def on_progress(info):
             processing_tasks[paper_id]['progress'] = info
 
@@ -217,7 +215,6 @@ async def paper_image(paper_id: str, filename: str):
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="圖片不存在")
 
-    from fastapi.responses import FileResponse
     return FileResponse(str(image_path))
 
 
@@ -304,7 +301,6 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_ta
 @app.delete("/api/papers/{paper_id}")
 async def delete_paper(paper_id: str):
     """刪除論文及其所有相關檔案"""
-    import shutil
     paper_dir = OUTPUT_DIR / paper_id
     if not paper_dir.exists():
         raise HTTPException(status_code=404, detail="論文不存在")

@@ -1,6 +1,5 @@
 import logging
 import json
-import asyncio
 from typing import AsyncGenerator, Optional, Dict, Any
 from AI_professor_chat import AIProfessorChat
 from rag_retriever import RagRetriever
@@ -83,7 +82,6 @@ class AICore:
     def load_paper_cache(self, paper_id: str, rag_tree_path: str) -> bool:
         """載入論文的 RAG tree 到快取"""
         try:
-            import json
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
             self._paper_cache[paper_id] = paper_data
