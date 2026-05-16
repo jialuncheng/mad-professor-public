@@ -242,17 +242,27 @@ class MarkdownProcessor:
             'sections': []
         }
         
-        # 如果有 structure，預處理：在 abstract 區塊前插入 ## Abstract 標題
+        # 如果有 structure，預處理：插入 ## Abstract 和 ## Introduction 標題
         if structure:
+            lines_to_insert = []
+
             abstract_blocks = [b for b in structure.get('structure', []) if b.get('type') == 'abstract']
+            intro_blocks = [b for b in structure.get('structure', []) if b.get('type') == 'intro_text']
+
             if abstract_blocks:
-                # 找最早的 abstract 起始行
                 first_abstract = min(abstract_blocks, key=lambda b: b['start'])
-                insert_line = first_abstract['start']
-                # 在該行前插入 ## Abstract
-                lines.insert(insert_line, '## Abstract')
-                content = '\n'.join(lines)
-                lines = content.split('\n')
+                lines_to_insert.append((first_abstract['start'], '## Abstract'))
+
+            if intro_blocks:
+                first_intro = min(intro_blocks, key=lambda b: b['start'])
+                lines_to_insert.append((first_intro['start'], '## Introduction'))
+
+            # 從後往前插入，避免行號偏移
+            for insert_line, heading in sorted(lines_to_insert, key=lambda x: -x[0]):
+                lines.insert(insert_line, heading)
+
+            content = '\n'.join(lines)
+            lines = content.split('\n')
 
         current_section = None
         current_content = []
