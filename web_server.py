@@ -125,15 +125,15 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
         def on_progress(info):
             processing_tasks[paper_id]['progress'] = info
 
-        pipeline = PipelineCore(on_progress=on_progress)
+
 
         loop = asyncio.get_event_loop()
 
         if doc_type is None:
             # 第一階段：只跑 pdf2md，然後暫停等待確認
+            pipeline = PipelineCore(on_progress=on_progress, stages=['pdf2md'])
             output_paths = await loop.run_in_executor(
-                None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
-                    stages=['pdf2md'])
+                None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR))
             )
             detection = output_paths.get('_doc_type_detection', {})
             processing_tasks[paper_id]['status'] = 'waiting_confirm'
