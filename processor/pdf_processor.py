@@ -62,6 +62,12 @@ class PDFProcessor:
             # 用 LLM 修正標題層級
             self._fix_heading_levels(markdown_path)
 
+            # 清除控制字元（MinerU 解析特殊字元時可能產生）
+            import re as _re
+            md_text = markdown_path.read_text(encoding='utf-8')
+            md_text = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', md_text)
+            markdown_path.write_text(md_text, encoding='utf-8')
+
             # 分析文件結構
             self._analyze_document_structure(markdown_path)
 

@@ -21,8 +21,10 @@ class RestoreProcessor:
     def _clean_authors_info(self, authors_info: str) -> str:
         """清理作者資訊，移除上標數字、多餘符號、HTML table 和目錄"""
         import re
+        # 移除控制字元（MinerU 解析特殊字元時產生的亂碼，如 \x01）
+        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', authors_info)
         # 移除 HTML table
-        text = re.sub(r'<table.*?</table>', '', authors_info, flags=re.DOTALL)
+        text = re.sub(r'<table.*?</table>', '', text, flags=re.DOTALL)
         # 移除目錄標題行
         text = re.sub(r'(?m)^Contents\s*$', '', text)
         # 移除上標數字（字母後接數字，數字後是空白、逗號、分號或行尾）
