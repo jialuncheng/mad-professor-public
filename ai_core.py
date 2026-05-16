@@ -58,14 +58,13 @@ class AICore:
                 if paper_data:
                     self.ai_chat.set_paper_context(paper_id, paper_data)
 
-            for sentence, emotion, scroll_info in self.ai_chat.process_query_stream(
+            for sentence in self.ai_chat.process_query_stream(
                 query, visible_content
             ):
                 if not self.is_generating:
                     break
                 yield {
                     'sentence': sentence,
-                    'emotion': emotion or 'neutral',
                     'done': False
                 }
 
