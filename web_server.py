@@ -249,6 +249,31 @@ async def chat(paper_id: str, request: ChatRequest):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+# ── 對話紀錄 ──
+
+class ChatHistory(BaseModel):
+    messages: list
+
+@app.get("/api/papers/{paper_id}/chat/history")
+async def get_chat_history(paper_id: str):
+    """取得對話紀錄"""
+    history_path = OUTPUT_DIR / paper_id / "chat_history.json"
+    if not history_path.exists():
+        return []
+    with open(history_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+@app.post("/api/papers/{paper_id}/chat/history")
+async def save_chat_history(paper_id: str, history: ChatHistory):
+    """儲存對話紀錄"""
+    paper_dir = OUTPUT_DIR / paper_id
+    if not paper_dir.exists():
+        raise HTTPException(status_code=404, detail="論文不存在")
+    history_path = paper_dir / "chat_history.json"
+    with open(history_path, 'w', encoding='utf-8') as f:
+        json.dump(history.messages, f, ensure_ascii=False, indent=2)
+    return {"status": "ok"}
+
 # ── 健康檢查 ──
 
 @app.get("/api/health")
