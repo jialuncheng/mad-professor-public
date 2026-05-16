@@ -5,6 +5,7 @@ import io
 import subprocess
 import shutil
 from pathlib import Path
+from config import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +15,10 @@ class PDFProcessor:
     MINERU_API_URL = "http://192.168.139.94:8000/file_parse"
     MINERU_HOST = "baroncheng@192.168.139.94"
     MINERU_OUTPUT_DIR = "/home/baroncheng/output"
-    GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.llm = LLMClient()
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
@@ -91,7 +92,6 @@ class PDFProcessor:
 
     def _fix_heading_levels(self, markdown_path: Path):
         """用 LLM 修正 Markdown 標題層級"""
-        import os
         try:
             content = markdown_path.read_text(encoding="utf-8")
 
@@ -124,30 +124,8 @@ class PDFProcessor:
 
 只輸出 JSON，不要任何解釋。"""
 
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                self.logger.warning("找不到 GEMINI_API_KEY，跳過標題層級修正")
-                return
-
-            resp = requests.post(
-                f"{self.GEMINI_API_URL}chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "gemini-2.0-flash",
-                    "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 2000
-                },
-                timeout=60
-            )
-
-            if resp.status_code != 200:
-                self.logger.warning(f"LLM 標題修正失敗: {resp.status_code}")
-                return
-
-            result_text = resp.json()["choices"][0]["message"]["content"].strip()
+            messages = [{"role": "user", "content": prompt}]
+            result_text = self.llm.chat(messages, stream=False).strip()
 
             # 清理 JSON（移除可能的 markdown 包裹）
             import re
@@ -174,11 +152,8 @@ class PDFProcessor:
 
     def _analyze_document_structure(self, markdown_path: Path) -> dict:
         """用 LLM 分析文件結構，識別標題、作者、摘要等區塊"""
-        import os
         import re
         import json as json_module
-        from dotenv import load_dotenv
-        load_dotenv()
 
         try:
             content = markdown_path.read_text(encoding='utf-8')
@@ -212,23 +187,8 @@ type 可以是：title, authors, publication_info, abstract, preface, toc, secti
 
 只輸出 JSON，不要任何解釋。"""
 
-            api_key = os.getenv('GEMINI_API_KEY')
-            if not api_key:
-                self.logger.warning('找不到 GEMINI_API_KEY，跳過文件結構分析')
-                return {}
-
-            resp = requests.post(
-                f'{self.GEMINI_API_URL}chat/completions',
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                json={'model': 'gemini-2.0-flash', 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': 2000},
-                timeout=60
-            )
-
-            if resp.status_code != 200:
-                self.logger.warning(f'LLM 結構分析失敗: {resp.status_code}')
-                return {}
-
-            result_text = resp.json()['choices'][0]['message']['content'].strip()
+            messages = [{'role': 'user', 'content': prompt}]
+            result_text = self.llm.chat(messages, stream=False).strip()
             result_text = re.sub(r'```json|```', '', result_text).strip()
             structure = json_module.loads(result_text)
 
