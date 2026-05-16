@@ -1,0 +1,21 @@
+以下是一篇新聞文章的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
+
+{content}
+
+請分析這篇新聞的前段結構，回傳 JSON：
+
+{
+  "structure": [
+    {"start": 起始行號, "end": 結束行號, "type": "類型"}
+  ]
+}
+
+type 選項：
+- title：新聞主標題
+- authors：作者、記者署名
+- publication_info：發布日期、媒體名稱、版權資訊、標籤
+- intro_text：導言、摘要（新聞的前幾段）
+- section_heading：段落標題行
+- other：其他無法分類的內容
+
+只輸出 JSON，不要任何解釋。

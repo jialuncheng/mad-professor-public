@@ -307,7 +307,7 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_ta
     if not task or task['status'] != 'waiting_confirm':
         raise HTTPException(status_code=400, detail="論文不在等待確認狀態")
 
-    valid_types = ['academic', 'book', 'technical', 'slides', 'web']
+    valid_types = ['academic', 'book', 'technical', 'slides', 'web', 'news']
     if request.doc_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
 

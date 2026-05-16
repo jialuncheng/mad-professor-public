@@ -12,6 +12,7 @@ HEADING_FIX_PROMPTS = {
     'technical': 'prompt/heading_fix_technical.txt',
     'slides':    'prompt/heading_fix_slides.txt',
     'web':       'prompt/heading_fix_web.txt',
+    'news':      'prompt/heading_fix_news.txt',
 }
 
 STRUCTURE_PROMPTS = {
@@ -20,6 +21,7 @@ STRUCTURE_PROMPTS = {
     'technical': 'prompt/structure_technical.txt',
     'slides':    'prompt/structure_slides.txt',
     'web':       'prompt/structure_web.txt',
+    'news':      'prompt/structure_news.txt',
 }
 
 class DocAnalyzer:
