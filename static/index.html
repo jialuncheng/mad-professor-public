@@ -88,6 +88,59 @@
       font-weight: 500;
     }
     #upload-btn:hover { background: #1d4ed8; }
+    #sidebar-bottom {
+      display: flex;
+      gap: 8px;
+      margin: 8px;
+    }
+    #upload-btn {
+      margin: 0;
+      flex: 1;
+    }
+    #help-btn {
+      padding: 10px 12px;
+      background: #2e3d50;
+      color: #94a3b8;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    #help-btn:hover { background: #3e5068; color: #fff; }
+    #help-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #help-modal.show { display: flex; }
+    #help-box {
+      background: white;
+      border-radius: 12px;
+      padding: 28px 32px;
+      width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    #help-box h3 { font-size: 16px; color: #1e293b; margin-bottom: 16px; }
+    #help-box ol { padding-left: 20px; color: #374151; font-size: 14px; line-height: 2; }
+    #help-box li { margin-bottom: 4px; }
+    #help-box .step-note { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+    #help-close-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #help-close-btn:hover { background: #1d4ed8; }
 
     /* 中間論文內容 */
     #content-area {
@@ -299,7 +352,27 @@
 <div id="sidebar">
   <h1>📚 論文列表</h1>
   <div id="paper-list"></div>
-  <button id="upload-btn">＋ 上傳論文</button>
+  <div id="sidebar-bottom">
+    <button id="upload-btn">＋ 上傳論文</button>
+    <button id="help-btn" title="上傳說明">？</button>
+  </div>
+</div>
+
+<!-- 說明框 -->
+<div id="help-modal">
+  <div id="help-box">
+    <h3>📄 文件上傳流程</h3>
+    <ol>
+      <li>點擊「＋ 上傳論文」，選擇 PDF 檔案</li>
+      <li>系統自動解析 PDF，偵測文件類型</li>
+      <li>確認或修改文件類型後，點擊「確認，開始處理」</li>
+      <li>等待處理完成（含翻譯、建立向量索引）</li>
+      <li>完成後論文出現在左側列表</li>
+    </ol>
+    <p class="step-note">支援類型：學術論文、書籍、技術文件、簡報、新聞、網頁存檔</p>
+    <p class="step-note">問答使用 Ctrl+Enter 送出</p>
+    <button id="help-close-btn">了解了</button>
+  </div>
 </div>
 
 <!-- 中間論文內容 -->
@@ -685,6 +758,19 @@ function showConfirmModal(paperId, detection, btn) {
     }
   };
 }
+
+// 說明框
+document.getElementById('help-btn').onclick = () => {
+  document.getElementById('help-modal').classList.add('show');
+};
+document.getElementById('help-close-btn').onclick = () => {
+  document.getElementById('help-modal').classList.remove('show');
+};
+document.getElementById('help-modal').onclick = (e) => {
+  if (e.target === document.getElementById('help-modal')) {
+    document.getElementById('help-modal').classList.remove('show');
+  }
+};
 
 loadPapers();
 </script>
