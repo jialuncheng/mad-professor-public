@@ -357,7 +357,9 @@ async function sendMessage() {
         const chunk = JSON.parse(line.slice(6));
         if (chunk.sentence) {
           accumulated += chunk.sentence;
-          aiMsg.innerHTML = marked.parse(accumulated);
+          // 把單換行轉成 Markdown 段落（兩個換行）
+          const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
+          aiMsg.innerHTML = marked.parse(formatted);
           messages.scrollTop = messages.scrollHeight;
         }
         if (chunk.done) {
