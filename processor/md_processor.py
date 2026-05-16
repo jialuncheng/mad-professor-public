@@ -242,20 +242,27 @@ class MarkdownProcessor:
             'sections': []
         }
         
-        # 如果有 structure，預處理：插入 ## Abstract 和 ## Introduction 標題
+        # 如果有 structure，預處理：負面表列邏輯
+        # 只有 authors/publication_info/toc/other/title 不翻譯（歸入 authors_info）
+        # 其他所有類型都插入標題，確保會被翻譯
         if structure:
+            SKIP_TYPES = {'authors', 'publication_info', 'toc', 'other', 'title'}
+            TYPE_TO_HEADING = {
+                'abstract':   '## Abstract',
+                'intro_text': '## Introduction',
+                'preface':    '## Preface',
+            }
+
             lines_to_insert = []
+            seen_types = set()
 
-            abstract_blocks = [b for b in structure.get('structure', []) if b.get('type') == 'abstract']
-            intro_blocks = [b for b in structure.get('structure', []) if b.get('type') == 'intro_text']
-
-            if abstract_blocks:
-                first_abstract = min(abstract_blocks, key=lambda b: b['start'])
-                lines_to_insert.append((first_abstract['start'], '## Abstract'))
-
-            if intro_blocks:
-                first_intro = min(intro_blocks, key=lambda b: b['start'])
-                lines_to_insert.append((first_intro['start'], '## Introduction'))
+            for block in structure.get('structure', []):
+                btype = block.get('type')
+                if btype in SKIP_TYPES:
+                    continue
+                if btype in TYPE_TO_HEADING and btype not in seen_types:
+                    lines_to_insert.append((block['start'], TYPE_TO_HEADING[btype]))
+                    seen_types.add(btype)
 
             # 從後往前插入，避免行號偏移
             for insert_line, heading in sorted(lines_to_insert, key=lambda x: -x[0]):
