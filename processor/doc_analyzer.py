@@ -54,7 +54,7 @@ class DocAnalyzer:
             non_empty = [(i, line) for i, line in enumerate(lines) if line.strip()][:30]
             preview = '\n'.join(f'{i}: {line}' for i, line in non_empty)
 
-            prompt_template = self._read_prompt('prompt/doc_type_detect.txt')
+            prompt_template = self._read_prompt('prompt/doc/doc_type_detect.txt')
             prompt = prompt_template.format(content=preview)
 
             result_text = self.llm.chat(
