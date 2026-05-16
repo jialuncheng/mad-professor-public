@@ -159,7 +159,20 @@
       font-size: 14px;
       font-weight: 600;
       color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+    #export-btn {
+      font-size: 12px;
+      color: #64748b;
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    #export-btn:hover { background: #f1f5f9; color: #1e293b; }
     #chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -321,7 +334,10 @@
 
 <!-- 右側 AI 問答 -->
 <div id="chat-panel">
-  <div id="chat-header">🤖 AI 問答</div>
+  <div id="chat-header">
+    <span>🤖 AI 問答</span>
+    <button id="export-btn" style="display:none" title="匯出對話紀錄">↓ MD</button>
+  </div>
   <div id="chat-messages">
     <div class="chat-empty">選擇論文後開始提問</div>
   </div>
@@ -408,7 +424,13 @@ let isStreaming = false;
 function enableChat() {
   document.getElementById('chat-input').disabled = false;
   document.getElementById('send-btn').disabled = false;
+  document.getElementById('export-btn').style.display = 'block';
 }
+
+document.getElementById('export-btn').onclick = () => {
+  if (!currentPaperId) return;
+  window.location.href = `/api/papers/${currentPaperId}/chat/export`;
+};
 
 // 載入對話紀錄
 async function deletePaper(paperId, title) {

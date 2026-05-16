@@ -298,6 +298,38 @@ async def delete_paper(paper_id: str):
     paper_manager.delete_paper(OUTPUT_DIR, paper_id)
     return {"status": "ok", "deleted": paper_id}
 
+# ── 對話紀錄匯出 ──
+
+@app.get("/api/papers/{paper_id}/chat/export")
+async def export_chat_history(paper_id: str):
+    """匯出對話紀錄為 Markdown"""
+    history = paper_manager.load_chat_history(OUTPUT_DIR, paper_id)
+    if not history:
+        raise HTTPException(status_code=404, detail="沒有對話紀錄")
+
+    # 取得論文標題
+    papers = paper_manager.load_papers_index(OUTPUT_DIR)
+    paper = next((p for p in papers if p['id'] == paper_id), None)
+    title = paper.get('translated_title') or paper.get('title', paper_id) if paper else paper_id
+
+    # 產生 Markdown
+    lines = [f"# {title} — 對話紀錄", ""]
+    for msg in history:
+        if msg['role'] == 'user':
+            lines.append(f"**問：** {msg['content']}")
+        else:
+            lines.append(f"**答：**\n\n{msg['content']}")
+        lines.append("")
+
+    md_content = "\n".join(lines)
+
+    from fastapi.responses import Response
+    return Response(
+        content=md_content.encode('utf-8'),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename={paper_id}_chat.md"}
+    )
+
 # ── 健康檢查 ──
 
 @app.get("/api/health")
