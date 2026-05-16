@@ -145,6 +145,9 @@ class DocAnalyzer:
 
             # 加入 document_type 欄位，供 md_processor 使用
             structure['document_type'] = doc_type
+            # 簡報用扁平結構，不建立父子關係
+            if doc_type == 'slides':
+                structure['flat_structure'] = True
 
             sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
             sidecar_path.write_text(

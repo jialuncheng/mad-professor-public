@@ -400,8 +400,12 @@ class MarkdownProcessor:
                     current_section.content = self.parse_content(current_content)
                 result['sections'].append(vars(current_section))
         
-        result['sections'] = self.build_hierarchy(result['sections'])
-        result['sections'] = self.remove_empty_sections(result['sections'])
+        # 簡報用扁平結構，不建立父子關係
+        if structure and structure.get('flat_structure'):
+            result['sections'] = self.remove_empty_sections(result['sections'])
+        else:
+            result['sections'] = self.build_hierarchy(result['sections'])
+            result['sections'] = self.remove_empty_sections(result['sections'])
         
         return result
 
