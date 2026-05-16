@@ -277,6 +277,7 @@ async function loadPaper(paperId, title) {
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
 
   await fetchContent(paperId, currentLang);
+  enableChat();
 }
 
 // 取得論文 Markdown 內容
@@ -353,7 +354,7 @@ async function sendMessage() {
         const chunk = JSON.parse(line.slice(6));
         if (chunk.sentence) {
           accumulated += chunk.sentence;
-          aiMsg.textContent = accumulated;
+          aiMsg.innerHTML = marked.parse(accumulated);
           messages.scrollTop = messages.scrollHeight;
         }
         if (chunk.done) {
