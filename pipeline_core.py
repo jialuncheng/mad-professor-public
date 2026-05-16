@@ -75,16 +75,22 @@ class PipelineCore:
         self.paper_info = {'paper_id': None, 'output_dir': None}
         self._current_stage = None
 
+    TOTAL_STAGES = 9  # pdf2md, analyze, md2json, json_process, tiling, translate, md_restore, extra_info, rag
+
     def _emit_progress(self, stage: str, index: int):
         """發送進度更新"""
         if not self.on_progress:
             return
+        # 用固定總數計算進度，避免分階段跑時進度跳到 100%
+        all_stages = ['pdf2md', 'analyze', 'md2json', 'json_process',
+                      'tiling', 'translate', 'md_restore', 'extra_info', 'rag']
+        global_index = all_stages.index(stage) + 1 if stage in all_stages else index
         info = {
             'stage': stage,
             'stage_name': self.STAGE_NAMES.get(stage, stage),
-            'index': index,
-            'total': len(self.stages),
-            'progress': int(index / len(self.stages) * 100)
+            'index': global_index,
+            'total': len(all_stages),
+            'progress': int(global_index / len(all_stages) * 100)
         }
         self.on_progress(info)
 
