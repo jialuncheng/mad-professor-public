@@ -17,13 +17,15 @@ class PDFProcessor:
 
 
 
+
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+
         self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://192.168.139.94:8000/file_parse")
         self.MINERU_HOST = os.getenv("MINERU_HOST", "baroncheng@192.168.139.94")
         self.MINERU_OUTPUT_DIR = os.getenv("MINERU_OUTPUT_DIR", "/home/baroncheng/output")
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
+        self.llm = LLMClient()
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
         pdf_path = Path(pdf_path)
