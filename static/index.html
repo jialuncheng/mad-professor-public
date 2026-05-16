@@ -326,7 +326,7 @@
     <div class="chat-empty">選擇論文後開始提問</div>
   </div>
   <div id="chat-input-area">
-    <textarea id="chat-input" placeholder="輸入問題..." disabled></textarea>
+    <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..." disabled></textarea>
     <button id="send-btn" disabled>送出</button>
   </div>
 </div>
@@ -539,7 +539,7 @@ async function sendMessage() {
 
 document.getElementById('send-btn').onclick = sendMessage;
 document.getElementById('chat-input').onkeydown = (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && e.ctrlKey) {
     e.preventDefault();
     sendMessage();
   }
