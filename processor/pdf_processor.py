@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 import zipfile
@@ -11,14 +12,17 @@ logger = logging.getLogger(__name__)
 
 class PDFProcessor:
     """PDF處理器：透過本機 MinerU API 將 PDF 轉換為 Markdown 格式"""
-    
-    MINERU_API_URL = "http://192.168.139.94:8000/file_parse"
-    MINERU_HOST = "baroncheng@192.168.139.94"
-    MINERU_OUTPUT_DIR = "/home/baroncheng/output"
+
+
+
+
 
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://192.168.139.94:8000/file_parse")
+        self.MINERU_HOST = os.getenv("MINERU_HOST", "baroncheng@192.168.139.94")
+        self.MINERU_OUTPUT_DIR = os.getenv("MINERU_OUTPUT_DIR", "/home/baroncheng/output")
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
