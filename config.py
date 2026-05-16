@@ -11,6 +11,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 API_KEY = os.getenv("GEMINI_API_KEY")
 
+# 模型設定（翻譯和對話分開）
+TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-2.0-flash")
+CHAT_MODEL = os.getenv("LLM_CHAT_MODEL", "gemini-2.0-flash")
+
 #TTS_GROUP_ID = "YOUR_MINIMAX_GROUP_ID"
 #TTS_API_KEY = "YOUR_MINIMAX_API_KEY"
 
@@ -63,7 +67,7 @@ class LLMClient:
         )
         self._initialized = True
         
-    def chat(self, messages: List[Dict[str, Any]], temperature=0.5, stream=True) -> str:
+    def chat(self, messages: List[Dict[str, Any]], temperature=0.5, stream=True, model=None) -> str:
         """与LLM交互
         
         Args:
@@ -76,7 +80,7 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="gemini-3.1-flash-lite",
+                model=model or CHAT_MODEL,
                 messages=messages,
                 temperature=temperature,
                 stream=stream
@@ -113,7 +117,7 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="gemini-3.1-flash-lite",
+                model=CHAT_MODEL,
                 messages=messages,
                 temperature=temperature,
                 stream=True

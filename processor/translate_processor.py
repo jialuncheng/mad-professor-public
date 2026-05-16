@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from config import LLMClient
+from config import LLMClient, TRANSLATE_MODEL
 
 # 翻译提示词文件路径
 TITLE_TRANSLATE_PROMPT_PATH = "prompt/title_translate_prompt.txt"
@@ -227,7 +227,7 @@ class TranslateProcessor:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
-        translated = self.llm.chat(messages, stream=True).strip()
+        translated = self.llm.chat(messages, stream=True, model=TRANSLATE_MODEL).strip()
 
         # 如果原始內容有多行，確保翻譯結果也有對應換行
         original_lines = content.strip().split('\n')
