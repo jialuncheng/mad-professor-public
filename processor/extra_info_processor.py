@@ -3,10 +3,10 @@ import logging
 from pathlib import Path
 from config import LLMClient
 
-SUMMARY_PROMPT_PATH = "prompt/summary_generation_prompt.txt"
-QUESTION_PROMPT_PATH = "prompt/question_generation_prompt.txt"
-GRAPH_QUESTION_PROMPT_PATH = "prompt/graph_question_generation_prompt.txt"
-FORMULA_ANALYSIS_PROMPT_PATH = "prompt/formula_analysis_prompt.txt"
+SUMMARY_PROMPT_PATH = "prompt/translate/summary_generation_prompt.txt"
+QUESTION_PROMPT_PATH = "_deprecated/prompt/question_generation_prompt.txt"
+GRAPH_QUESTION_PROMPT_PATH = "_deprecated/prompt/graph_question_generation_prompt.txt"
+FORMULA_ANALYSIS_PROMPT_PATH = "_deprecated/prompt/formula_analysis_prompt.txt"
 
 class ExtraInfoProcessor:
     """额外信息处理器，用于生成论文各章节的总结信息和问题"""

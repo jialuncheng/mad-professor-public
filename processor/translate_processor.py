@@ -4,8 +4,8 @@ from pathlib import Path
 from config import LLMClient, TRANSLATE_MODEL
 
 # 翻译提示词文件路径
-TITLE_TRANSLATE_PROMPT_PATH = "prompt/title_translate_prompt.txt"
-CONTENT_TRANSLATE_PROMPT_PATH = "prompt/content_translate_prompt.txt"
+TITLE_TRANSLATE_PROMPT_PATH = "prompt/translate/title_translate_prompt.txt"
+CONTENT_TRANSLATE_PROMPT_PATH = "prompt/translate/content_translate_prompt.txt"
 
 class TranslateProcessor:
     """翻译处理器, 使用LLM进行对论文json文件分段翻译"""

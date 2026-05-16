@@ -7,21 +7,21 @@ from config import LLMClient
 logger = logging.getLogger(__name__)
 
 HEADING_FIX_PROMPTS = {
-    'academic':  'prompt/heading_fix_academic.txt',
-    'book':      'prompt/heading_fix_book.txt',
-    'technical': 'prompt/heading_fix_technical.txt',
-    'slides':    'prompt/heading_fix_slides.txt',
-    'web':       'prompt/heading_fix_web.txt',
-    'news':      'prompt/heading_fix_news.txt',
+    'academic':  'prompt/doc/heading_fix_academic.txt',
+    'book':      'prompt/doc/heading_fix_book.txt',
+    'technical': 'prompt/doc/heading_fix_technical.txt',
+    'slides':    'prompt/doc/heading_fix_slides.txt',
+    'web':       'prompt/doc/heading_fix_web.txt',
+    'news':      'prompt/doc/heading_fix_news.txt',
 }
 
 STRUCTURE_PROMPTS = {
-    'academic':  'prompt/structure_academic.txt',
-    'book':      'prompt/structure_book.txt',
-    'technical': 'prompt/structure_technical.txt',
-    'slides':    'prompt/structure_slides.txt',
-    'web':       'prompt/structure_web.txt',
-    'news':      'prompt/structure_news.txt',
+    'academic':  'prompt/doc/structure_academic.txt',
+    'book':      'prompt/doc/structure_book.txt',
+    'technical': 'prompt/doc/structure_technical.txt',
+    'slides':    'prompt/doc/structure_slides.txt',
+    'web':       'prompt/doc/structure_web.txt',
+    'news':      'prompt/doc/structure_news.txt',
 }
 
 class DocAnalyzer:

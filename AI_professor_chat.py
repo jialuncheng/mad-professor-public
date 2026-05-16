@@ -5,9 +5,9 @@ import re
 from typing import List, Dict, Any, Generator, Tuple
 from config import LLMClient
 
-AI_CHARACTER_PROMPT_PATH = "prompt/ai_character_prompt.txt"
-AI_EXPLAIN_PROMPT_PATH = "prompt/ai_explain_prompt.txt"
-AI_ROUTER_PROMPT_PATH = "prompt/ai_router_prompt.txt"
+AI_CHARACTER_PROMPT_PATH = "prompt/ai/ai_character_prompt.txt"
+AI_EXPLAIN_PROMPT_PATH = "prompt/ai/ai_explain_prompt.txt"
+AI_ROUTER_PROMPT_PATH = "prompt/ai/ai_router_prompt.txt"
 
 class AIProfessorChat:
     """AI對話助手 - 學術論文智能問答系統"""
