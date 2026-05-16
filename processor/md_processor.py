@@ -246,7 +246,7 @@ class MarkdownProcessor:
         # 只有 authors/publication_info/toc/other/title 不翻譯（歸入 authors_info）
         # 其他所有類型都插入標題，確保會被翻譯
         if structure:
-            SKIP_TYPES = {'authors', 'publication_info', 'toc'}
+            SKIP_TYPES = {'authors', 'toc'}
             TYPE_TO_HEADING = {
                 'abstract':   '## Abstract',
                 'intro_text': '## Introduction',
