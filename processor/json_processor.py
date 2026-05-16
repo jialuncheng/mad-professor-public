@@ -243,6 +243,6 @@ if __name__ == "__main__":
     processor = JsonProcessor()
     try:
         output_path = processor.process("input.json","output.json")
-        print(f"处理完成，输出文件：{output_path}")
+        logging.info(f"处理完成，输出文件：{output_path}")
     except Exception as e:
-        print(f"处理失败：{e}")
+        logging.error(f"处理失败：{e}")

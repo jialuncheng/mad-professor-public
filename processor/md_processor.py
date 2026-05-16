@@ -436,4 +436,4 @@ if __name__ == "__main__":
     try:
         json_path = processor.process("input.md", "output.json")
     except Exception as e:
-        print(f"处理失败：{e}")
+        logging.error(f"处理失败：{e}")
