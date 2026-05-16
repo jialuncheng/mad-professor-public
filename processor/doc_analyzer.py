@@ -55,7 +55,7 @@ class DocAnalyzer:
             preview = '\n'.join(f'{i}: {line}' for i, line in non_empty)
 
             prompt_template = self._read_prompt('prompt/doc/doc_type_detect.txt')
-            prompt = prompt_template.format(content=preview)
+            prompt = prompt_template.replace('{content}', preview)
 
             result_text = self.llm.chat(
                 [{"role": "user", "content": prompt}], stream=False
@@ -95,7 +95,7 @@ class DocAnalyzer:
                 return
 
             prompt_template = self._read_prompt(HEADING_FIX_PROMPTS[doc_type])
-            prompt = prompt_template.format(headings='\n'.join(heading_lines))
+            prompt = prompt_template.replace('{headings}', '\n'.join(heading_lines))
 
             result_text = self.llm.chat(
                 [{"role": "user", "content": prompt}], stream=False
@@ -135,7 +135,7 @@ class DocAnalyzer:
             )
 
             prompt_template = self._read_prompt(STRUCTURE_PROMPTS[doc_type])
-            prompt = prompt_template.format(content=numbered)
+            prompt = prompt_template.replace('{content}', numbered)
 
             result_text = self.llm.chat(
                 [{'role': 'user', 'content': prompt}], stream=False
