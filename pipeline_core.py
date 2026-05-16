@@ -132,9 +132,26 @@ class PipelineCore:
                     continue
             else:
                 if isinstance(expected_output, Path) and expected_output.exists():
-                    self.logger.info(f"階段 {stage} 已存在，跳過")
-                    output_paths[stage] = expected_output
-                    continue
+                    # md2json 階段：額外檢查 sidecar 是否存在
+                    if stage == 'md2json':
+                        md_path = output_paths.get('pdf2md')
+                        if md_path:
+                            sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
+                            if not sidecar.exists():
+                                self.logger.info("sidecar 不存在，重新執行 md2json")
+                                pass  # 不 skip，繼續執行
+                            else:
+                                self.logger.info(f"階段 {stage} 已存在，跳過")
+                                output_paths[stage] = expected_output
+                                continue
+                        else:
+                            self.logger.info(f"階段 {stage} 已存在，跳過")
+                            output_paths[stage] = expected_output
+                            continue
+                    else:
+                        self.logger.info(f"階段 {stage} 已存在，跳過")
+                        output_paths[stage] = expected_output
+                        continue
 
             stage_output = self.available_stages[stage](
                 pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
