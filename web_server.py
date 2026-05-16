@@ -114,8 +114,14 @@ async def upload_paper(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
-    paper_id = Path(file.filename).stem
-    pdf_path = DATA_DIR / file.filename
+    import re as _re
+    raw_stem = Path(file.filename).stem
+    # 清理 paper_id：只保留字母、數字、底線、連字號
+    paper_id = _re.sub(r'[^\w\-]', '_', raw_stem)
+    paper_id = _re.sub(r'_+', '_', paper_id).strip('_')
+    # 用清理後的 paper_id 作為檔名
+    clean_filename = paper_id + '.pdf'
+    pdf_path = DATA_DIR / clean_filename
 
     # 儲存上傳的 PDF
     with open(pdf_path, 'wb') as f:
