@@ -28,11 +28,27 @@ def load_papers_index(output_dir: Path) -> list:
         return []
 
 
-def update_papers_index(output_dir: Path, paper_id: str, title: str,
-                         translated_title: str, final_paths: dict) -> None:
+def _read_title_from_rag_tree(final_paths: dict) -> tuple:
+    """從 rag_tree 讀取標題"""
+    title, translated_title = "", ""
+    rag_tree = final_paths.get('rag_tree')
+    if rag_tree and Path(rag_tree).exists():
+        try:
+            with open(rag_tree, 'r', encoding='utf-8') as f:
+                tree_data = json.load(f)
+                title = tree_data.get('title', '')
+                translated_title = tree_data.get('translated_title', '')
+        except Exception as e:
+            logger.error(f"讀取 rag_tree 標題失敗: {str(e)}")
+    return title, translated_title
+
+
+def update_papers_index(output_dir: Path, paper_id: str, final_paths: dict) -> None:
     """更新 papers_index.json"""
     index_path = output_dir / "papers_index.json"
     papers_index = load_papers_index(output_dir)
+
+    title, translated_title = _read_title_from_rag_tree(final_paths)
 
     path_dict = {}
     for key, path in final_paths.items():

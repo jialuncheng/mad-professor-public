@@ -206,21 +206,9 @@ class PipelineCore:
         return output_paths
 
     def _update_global_index(self, base_output_dir: Path, final_paths: Dict) -> None:
-        title, translated_title = "", ""
-        if 'rag_tree' in final_paths and Path(final_paths['rag_tree']).exists():
-            try:
-                with open(final_paths['rag_tree'], 'r', encoding='utf-8') as f:
-                    tree_data = json.load(f)
-                    title = tree_data.get('title', '')
-                    translated_title = tree_data.get('translated_title', '')
-            except Exception as e:
-                self.logger.error(f"提取標題時出錯: {str(e)}")
-
         paper_manager.update_papers_index(
             base_output_dir,
             self.paper_info['paper_id'],
-            title,
-            translated_title,
             {k: str(v) for k, v in final_paths.items() if v}
         )
 
