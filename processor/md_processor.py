@@ -411,7 +411,7 @@ class MarkdownProcessor:
 
             # 讀取結構分析 sidecar（如果存在）
             import json as json_module
-            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_structure.json'
+            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
             structure = {}
             if sidecar_path.exists():
                 structure = json_module.loads(sidecar_path.read_text(encoding='utf-8'))

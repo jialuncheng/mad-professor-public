@@ -225,7 +225,7 @@ type 可以是：title, authors, publication_info, abstract, preface, toc, secti
             result_text = re.sub(r'```json|```', '', result_text).strip()
             structure = json_module.loads(result_text)
 
-            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_structure.json'
+            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
             sidecar_path.write_text(json_module.dumps(structure, ensure_ascii=False, indent=2), encoding='utf-8')
             self.logger.info(f'文件結構分析完成: {structure.get("document_type")}')
             return structure
