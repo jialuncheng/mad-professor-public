@@ -5,6 +5,7 @@ python-multipart
 
 # LLM
 openai
+google-genai
 
 # Embedding 與向量庫
 sentence_transformers

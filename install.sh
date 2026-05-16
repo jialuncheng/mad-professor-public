@@ -22,9 +22,9 @@ pip install numpy packaging
 echo "[4/9] 安裝 langchain..."
 pip install langchain langchain-community langchain-huggingface langchain-text-splitters
 
-# 5. openai
-echo "[5/9] 安裝 openai..."
-pip install openai
+# 5. openai + google-genai
+echo "[5/9] 安裝 openai + google-genai..."
+pip install openai google-genai
 
 # 6. fastapi + uvicorn
 echo "[6/9] 安裝 fastapi + uvicorn..."
@@ -51,6 +51,7 @@ import torch; print('torch:', torch.__version__, '| CUDA:', torch.cuda.is_availa
 import fastapi; print('fastapi:', fastapi.__version__)
 import uvicorn; print('uvicorn:', uvicorn.__version__)
 import openai; print('openai:', openai.__version__)
+import google.genai; print('google-genai: ok')
 import langchain; print('langchain:', langchain.__version__)
 import sentence_transformers; print('sentence_transformers:', sentence_transformers.__version__)
 import faiss; print('faiss: ok')
