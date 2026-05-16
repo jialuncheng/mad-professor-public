@@ -1,13 +1,20 @@
+# Web 框架
+fastapi
+uvicorn
+python-multipart
+
+# LLM
+openai
+
+# Embedding 與向量庫
 sentence_transformers
-modelscope
 faiss-cpu
-scikit-learn
 langchain
 langchain_community
 langchain-huggingface
-PyQt6
-PyQt6-WebEngine
-markdown
-pymdown-extensions
+langchain-text-splitters
+
+# 工具
+python-dotenv
+requests
 zhconv
-openai
