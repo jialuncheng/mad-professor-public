@@ -55,6 +55,27 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    .paper-item-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .paper-item-titles { flex: 1; min-width: 0; }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .paper-item:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { color: #ef4444; background: #1e2a3a; }
     #upload-btn {
       margin: 8px;
       padding: 10px;
@@ -260,9 +281,18 @@ async function loadPapers() {
     item.className = 'paper-item';
     item.dataset.id = p.id;
     item.innerHTML = `
-      <div class="paper-title-zh">${p.translated_title || p.title}</div>
-      <div class="paper-title-en">${p.title}</div>
+      <div class="paper-item-header">
+        <div class="paper-item-titles">
+          <div class="paper-title-zh">${p.translated_title || p.title}</div>
+          <div class="paper-title-en">${p.title}</div>
+        </div>
+        <button class="delete-btn" title="刪除論文">✕</button>
+      </div>
     `;
+    item.querySelector('.delete-btn').onclick = (e) => {
+      e.stopPropagation();
+      deletePaper(p.id, p.translated_title || p.title);
+    };
     item.onclick = () => loadPaper(p.id, p.translated_title || p.title);
     list.appendChild(item);
   });
@@ -315,6 +345,26 @@ function enableChat() {
 }
 
 // 載入對話紀錄
+async function deletePaper(paperId, title) {
+  if (!confirm(`確定要刪除「${title}」嗎？\n此操作無法還原。`)) return;
+  try {
+    const res = await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('刪除失敗');
+    if (currentPaperId === paperId) {
+      currentPaperId = null;
+      document.getElementById('content-toolbar').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'flex';
+      document.getElementById('paper-content').style.display = 'none';
+      document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇論文後開始提問</div>';
+      document.getElementById('chat-input').disabled = true;
+      document.getElementById('send-btn').disabled = true;
+    }
+    await loadPapers();
+  } catch(e) {
+    alert('刪除失敗：' + e.message);
+  }
+}
+
 async function loadChatHistory(paperId) {
   const messages = document.getElementById('chat-messages');
   messages.innerHTML = '';

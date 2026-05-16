@@ -269,6 +269,30 @@ async def save_chat_history(paper_id: str, history: ChatHistory):
         json.dump(history.messages, f, ensure_ascii=False, indent=2)
     return {"status": "ok"}
 
+# ── 刪除論文 ──
+
+@app.delete("/api/papers/{paper_id}")
+async def delete_paper(paper_id: str):
+    """刪除論文及其所有相關檔案"""
+    import shutil
+    paper_dir = OUTPUT_DIR / paper_id
+    if not paper_dir.exists():
+        raise HTTPException(status_code=404, detail="論文不存在")
+
+    # 刪除目錄
+    shutil.rmtree(paper_dir)
+
+    # 更新 papers_index.json
+    index_path = OUTPUT_DIR / "papers_index.json"
+    if index_path.exists():
+        with open(index_path, 'r', encoding='utf-8') as f:
+            papers = json.load(f)
+        papers = [p for p in papers if p['id'] != paper_id]
+        with open(index_path, 'w', encoding='utf-8') as f:
+            json.dump(papers, f, ensure_ascii=False, indent=2)
+
+    return {"status": "ok", "deleted": paper_id}
+
 # ── 健康檢查 ──
 
 @app.get("/api/health")
