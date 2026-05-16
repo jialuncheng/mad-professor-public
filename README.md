@@ -1,251 +1,127 @@
-# 暴躁的教授读论文（mad-professor）
-一个Python应用程序，特色是具有暴躁个性的AI教授，让学术论文阅读更加高效有趣。
+# Mad Professor（Web 版）
 
-## 项目概述
+一個以 Web 為基礎的學術文件閱讀與問答系統。上傳 PDF 後自動處理、翻譯，並透過 AI 導師引導深度思考。
 
-"暴躁教授读论文"是一个学术论文阅读伴侣应用程序，旨在通过富有个性的AI助手提高论文阅读效率。它集成了PDF处理、AI翻译、RAG检索、AI问答和语音交互等多种功能，为学术研究者提供一站式的论文阅读解决方案。
-
-![](assets/main_page.png)
+本專案 Fork 自 [LYiHub/mad-professor-public](https://github.com/LYiHub/mad-professor-public)，在原作者的基礎上進行大規模重構，從桌面應用改為 Web 架構。
 
 ## 主要特性
 
-- **论文自动处理**：导入PDF后自动提取、翻译和结构化论文内容
-- **双语显示**：支持中英文对照阅读论文
-- **AI智能问答**：与论文内容结合，提供专业的解释和分析
-- **个性化AI教授**：AI以"暴躁教授"的个性回答问题，增加趣味性
-- **语音交互**：支持语音提问和TTS语音回答
-- **RAG增强检索**：基于论文内容的精准检索和定位
-- **分屏界面**：左侧论文内容，右侧AI问答，高效交互
+- **多種文件類型**：學術論文、書籍、技術文件、簡報、新聞、網頁存檔
+- **自動文件類型偵測**：上傳後由 LLM 判斷文件類型，使用者確認後開始處理
+- **雙語閱讀**：中英文切換顯示
+- **AI 學術導師**：結合論文內容回答問題，以蘇格拉底式啟發、第一性原理、事後驗屍三種模式引導思考
+- **RAG 精準檢索**：基於向量庫的論文段落檢索
+- **對話紀錄**：問答歷史自動儲存，重啟不遺失
 
-## 技术架构
+## 技術架構
 
-- **前端界面**：PyQt6构建的现代化桌面应用
-- **核心引擎**：
-  - AI问答模块：基于LLM的学术问答系统
-  - RAG检索系统：向量检索增强的问答精准度
-  - 论文处理管线：PDF转MD、自动翻译、结构化解析
-- **交互系统**：
-  - 语音识别：实时语音输入识别
-  - TTS语音合成：AI回答实时播报
-  - 情感识别：根据问题内容调整回答情绪
+- **後端**：FastAPI，提供 REST API 和 SSE 串流
+- **前端**：純 HTML/JS，無框架依賴
+- **AI 問答**：LLM（Gemini）+ RAG 向量檢索
+- **PDF 解析**：MinerU API（本地部署）
+- **Embedding**：BAAI/bge-m3（本地）
 
-## 安装指南
+## 系統架構
 
-### 环境要求
-- Python 3.10或更高版本
-- CUDA支持
-- 6GB 以上显存
+    web_server.py          <- HTTP 路由、SSE、背景任務
+    pipeline_core.py       <- 處理階段編排、進度回報
+    paper_manager.py       <- 論文索引管理、資源載入
 
-### 项目依赖
-本项目依赖以下开源项目
-- MinerU https://github.com/opendatalab/MinerU
-- RealtimeSTT https://github.com/KoljaB/RealtimeSTT
+    processor/
+      pdf_processor.py     <- PDF -> Markdown（MinerU API）
+      md_cleaner.py        <- 清除控制字元
+      doc_analyzer.py      <- 文件類型偵測、標題修正、結構分析
+      md_processor.py      <- Markdown -> JSON
+      json_processor.py    <- JSON 清理
+      tiling_processor.py  <- 切片
+      translate_processor.py   <- 翻譯
+      md_restore_processor.py  <- 還原 Markdown
+      extra_info_processor.py  <- 章節摘要
+      rag_processor.py     <- RAG 向量庫建立
 
-本项目依赖以下在线API服务（可以通过修改代码改为本地实现）
-- DeepSeek https://api-docs.deepseek.com
-- MiniMax https://platform.minimaxi.com/document/Voice%20Cloning?key=66719032a427f0c8a570165b
+    AI_professor_chat.py   <- 問答流程、RAG 檢索、決策路由
+    ai_core.py             <- AI 介面（供 web_server 呼叫）
+    rag_retriever.py       <- 向量庫檢索
+    config.py              <- LLMClient、EmbeddingModel
+    paper_manager.py       <- 論文資料管理
 
-### 安装步骤
-1. 使用conda创建环境
-    ```
-    conda create -n mad-professor python=3.10.16
-    conda activate mad-professor
-    ```
-2. 安装MinerU依赖
-    ```
-    pip install -U magic-pdf[full]==1.3.3 -i https://mirrors.aliyun.com/pypi/simple
-    ```
+    prompt/
+      ai/                  <- AI 問答相關 prompt
+      translate/           <- 翻譯相關 prompt
+      doc/                 <- 文件分析相關 prompt
 
-3. 安装剩余依赖
-   ```
-   pip install -r requirements.txt
-   ```
+## 安裝指南
 
-4. 安装电脑显卡版本匹配的CUDA和torch, 要求numpy<=2.1.1，例（具体版本请按电脑配置修改，目前支持CUDA 11.8/12.4/12.6）：
-    ```
-    pip install --force-reinstall torch torchvision torchaudio "numpy<=2.1.1" --index-url https://download.pytorch.org/whl/cu124
-    ```
-    如果出现报错，请根据MinerU和RealtimeSTT开源项目中的CUDA依赖修改符合的torch和torchaudio版本
+### 環境需求
 
-5. 安装FAISS的gpu版本 (注：faiss-gpu版本只能通过conda安装，无法通过pip安装)
-    ```
-    conda install -c conda-forge faiss-gpu
-    ```
-6. 模型下载
-    ```
-    python download_models.py
-    ```
-    python脚本会自动下载模型文件并配置好配置文件中的模型目录，配置文件可以在用户目录中找到，文件名为magic-pdf.json
+- Python 3.10 以上
+- MinerU API 服務（本地部署，參考 [MinerU](https://github.com/opendatalab/MinerU)）
+- Gemini API Key
 
-    windows的【用户目录】为 "C:\Users\用户名", linux【用户目录】为 "/home/用户名"
+### 安裝步驟
 
-    修改【用户目录】配置文件magic-pdf.json中"device-mode"的值来启用CUDA
-    ```
-    {
-        "device-mode":"cuda"
-    }
-    ```
-    语音输入的Whisper模型会在运行时自动下载
+1. 建立虛擬環境
 
-7. API密钥配置
-   
-   项目依赖LLM和TTS在线API服务
+        python -m venv venv
+        source venv/bin/activate
 
-   通过修改`config.py`中的对应字段配置请求路径和密钥
+2. 安裝依賴
 
-    ```
-    API_BASE_URL = "YOUR_API_URL"
-    API_KEY = "YOUR_API_KEY"   
-    ```
-    按照DeepSeek官方文档配置 https://api-docs.deepseek.com
+        pip install -r requirements.txt
 
-    ```
-    TTS_GROUP_ID = "YOUR_MINIMAX_GROUP_ID"
-    TTS_API_KEY = "YOUR_MINIMAX_API_KEY"
-    ```
-    按照MiniMax官方文档配置 https://platform.minimaxi.com/document/Voice%20Cloning?key=66719032a427f0c8a570165b
+3. 設定環境變數，建立 `.env` 檔案：
 
-## 使用说明
+        GEMINI_API_KEY=your_api_key
+        LLM_TRANSLATE_MODEL=gemini-2.0-flash
+        LLM_CHAT_MODEL=gemini-2.0-flash
 
-### 教授人设/声音修改
-目前人设和声音的修改只能通过手动修改代码实现
+4. 確認 MinerU API 服務已啟動，並在 `processor/pdf_processor.py` 設定正確的 API 位址：
 
-1. 人设prompt修改
-   
-    在`prompt`文件夹中创建一个新的`ai_character_prompt_[你的人设名字].txt`
+        MINERU_API_URL = "http://your_mineru_host:8000/file_parse"
 
-    将`AI_professor_chat.py`程序开头`AI_CHARACTER_PROMPT_PATH`字段修改为相应的人设prompt路径
-    ```
-    AI_CHARACTER_PROMPT_PATH = "prompt/ai_character_prompt_[你的人设名字].txt"
-    ```
+## 使用說明
 
-    当前已有两个人设`ai_character_prompt_keli.txt`和`ai_character_prompt_leidian.txt`，可以作为示例
+### 啟動應用
 
+    python web_server.py
 
-2.  声音修改
-   
-    按照MiniMax官方文档新建voice id，或使用现有voice id。官方文档：https://platform.minimaxi.com/document/Voice%20Cloning?key=66719032a427f0c8a570165b
+開啟瀏覽器：http://localhost:8080
 
-    修改`TTS_manager.py`程序` TTSManager`类中`build_tts_stream_body`请求方法对应的voice_id参数
-    ```
-     body = json.dumps({
-            "model": "speech-02-turbo",
-            "text": text,
-            "stream": True,
-            "voice_setting": {
-                "voice_id": "将这个参数修改为你想要使用的voice id",
-                "speed": 1,
-                "vol": 1,
-                "pitch": 0,
-                "emotion": mapped_emotion
-            },
-            "audio_setting": {
-                "sample_rate": 32000,
-                "bitrate": 128000,
-                "format": "pcm",
-                "channel": 1
-            }
-        })
-    ```
+### 上傳文件
 
+1. 點擊左側「＋ 上傳論文」按鈕，選擇 PDF
+2. 系統完成解析後，顯示偵測到的文件類型
+3. 確認或修改文件類型後，點擊「確認，開始處理」
+4. 等待處理完成，論文會出現在左側列表
 
-### 启动应用
-运行`main.py`
+### 閱讀論文
 
-    python main.py
+1. 在左側列表選擇論文
+2. 右上角切換中英文
+3. 滑鼠移到論文標題上，點擊 ✕ 可刪除論文
 
-### 导入论文
-1. 点击侧边栏的"导入论文"按钮
-2. 选择PDF文件导入
-3. 点击“继续”，等待处理完成（包括翻译和索引构建）
-4. 导入的PDF会存放到data文件夹中，也可以将多篇PDF放入data文件夹，程序会检测未处理的文件批量处理
+### AI 問答
 
-    ![](assets/upload_page.jpg)
+在右側輸入框輸入問題，按 Enter 或點擊「送出」。AI 導師會結合論文內容回答，並在結尾引導下一個問題。
 
-### 论文阅读
-1. 在侧边栏选择已经处理好的论文
-   
-    ![](assets/paper_page.png)
+## 已知問題
 
-2. 在主窗口查看论文内容，右上角可切换中英文
-   
-    ![](assets/language_switch.jpg)
+1. MinerU 對簡報的圖片解析效果較差，部分圖片可能遺漏或截斷
+2. 文件名稱含有特殊字元會自動清理為底線
+3. 複雜的子圖排版標籤對應可能不準確
 
-3. 左右侧可折叠隐藏，提供沉浸式阅读体验
+## 授權
 
-    ![](assets/fold_page.png)
+本專案採用 Apache License - 詳見 LICENSE 文件
 
-### AI问答与语音对话
-1. 在对话窗口下方选择语音输入设备
+## 致謝
 
-    ![](assets/voice_page.jpg)
+特別感謝原專案作者 [LYiHub](https://github.com/LYiHub) 的創意與基礎實作，本專案在其基礎上進行重構。
 
-2. 点击麦克风按钮，等指示灯变绿时开始对话
-3. 如果说话时指示灯没有变黄，可能说明输入设备无法检测到人声，建议切换其他输入设备进行尝试
+感謝以下開源專案：
 
-## 项目结构
-```
-mad-professor/
-├── 核心模块
-│   ├── AI_manager.py         # AI功能管理器，整合所有AI相关功能
-│   ├── AI_professor_chat.py  # AI对话逻辑，实现暴躁教授的交互回答
-│   ├── AI_professor_UI.py    # 主界面实现，应用程序的UI入口
-│   ├── data_manager.py       # 数据管理器，处理论文索引和内容加载
-│   ├── pipeline.py           # 处理管线，协调各处理器的工作流程
-│   ├── rag_retriever.py      # RAG检索系统，实现向量检索和上下文提取
-│   ├── TTS_manager.py        # TTS管理器，处理语音合成和播放
-│   ├── voice_input.py        # 语音输入处理，实时语音识别
-│   └── threads.py            # 线程管理，处理异步任务和并发
-│
-├── 用户界面组件 (ui/)
-│   ├── chat_widget.py        # 聊天界面组件
-│   ├── markdown_view.py      # Markdown渲染和显示组件
-│   ├── message_bubble.py     # 消息气泡组件
-│   ├── sidebar_widget.py     # 侧边栏组件（论文列表和上传）
-│   └── upload_widget.py      # 文件上传组件
-│
-├── 处理器模块 (processor/)
-│   ├── pdf_processor.py      # PDF处理器，提取PDF内容转为Markdown
-│   ├── md_processor.py       # Markdown处理器，结构化解析Markdown
-│   ├── json_processor.py     # JSON处理器，处理结构化数据
-│   ├── tiling_processor.py   # 分块处理器，将内容分割为块
-│   ├── translate_processor.py # 翻译处理器，中英文翻译
-│   ├── md_restore_processor.py # Markdown还原处理器
-│   ├── extra_info_processor.py # 额外信息处理器，生成摘要和问题
-│   └── rag_processor.py      # RAG处理器，生成向量库和检索树
-│
-├── 提示词模板 (prompt/)
-│   ├── ai_character_prompt_keli.txt    # 可莉教授人设提示词
-│   ├── ai_character_prompt_leidian.txt # 雷电教授人设提示词
-│   ├── ai_explain_prompt.txt           # 解释功能提示词
-│   ├── ai_router_prompt.txt            # 路由决策提示词
-│   ├── content_translate_prompt.txt    # 内容翻译提示词
-│   ├── formula_analysis_prompt.txt     # 公式分析提示词
-│   └── summary_generation_prompt.txt   # 摘要生成提示词
-│
-├── 资源和配置
-│   ├── config.py             # 配置文件，API密钥和模型设置
-│   ├── paths.py              # 路径管理，统一管理文件路径
-│   ├── main.py               # 程序入口文件
-│   ├── download_models.py    # 模型下载脚本
-│   ├── assets/               # 资源文件目录（图片、样式等）
-│   └── font/                 # 字体文件目录
-│
-└── 数据目录
-    ├── data/                 # 源数据目录（论文PDF）
-    └── output/               # 输出目录（处理结果）
-```
-## 已知问题
-
-1. 本项目目前仅适用论文结构的PDF文档，对于非论文结构的文档可能报错/失效
-
-2. 在音频输入设备未完成加载时激活麦克风按钮，再进行输入设备切换，可能会切换失败，激活麦克风按钮建议在音频设备完全加载后进行
-
-3. 当前语音对话在外放时，AI教授的声音可能会被当做用户声音重复录入，建议使用耳机避免声音泄露
-
-## 许可证
-
-本项目采用 Apache 许可证 - 详情见 LICENSE 文件
-
-## 致谢
-特别感谢 MinerU 和 RealtimeSTT 项目
+- [MinerU](https://github.com/opendatalab/MinerU) — PDF 解析引擎
+- [LangChain](https://github.com/langchain-ai/langchain) — RAG 向量檢索框架
+- [FAISS](https://github.com/facebookresearch/faiss) — 向量相似度搜尋
+- [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) — 多語言 Embedding 模型
+- [FastAPI](https://github.com/tiangolo/fastapi) — Web 框架
