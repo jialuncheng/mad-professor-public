@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import paper_manager
 
 load_dotenv()
 
@@ -42,24 +43,7 @@ async def lifespan(app: FastAPI):
     ai_core.init_rag_retriever(str(OUTPUT_DIR))
 
     # 載入已有論文的向量庫
-    index_path = OUTPUT_DIR / "papers_index.json"
-    if index_path.exists():
-        with open(index_path, 'r', encoding='utf-8') as f:
-            papers = json.load(f)
-        for paper in papers:
-            paper_id = paper['id']
-            paths = paper.get('paths', {})
-            vector_store = paths.get('rag_vector_store')
-            rag_tree = paths.get('rag_tree')
-            if vector_store:
-                full_vector_path = OUTPUT_DIR / vector_store
-                if full_vector_path.exists():
-                    ai_core.add_paper_vector_store(paper_id, str(full_vector_path))
-                    logger.info(f"[INFO] 預載向量庫: {paper_id}")
-            if rag_tree:
-                full_tree_path = OUTPUT_DIR / rag_tree
-                if full_tree_path.exists():
-                    ai_core.load_paper_cache(paper_id, str(full_tree_path))
+    paper_manager.preload_vector_stores(OUTPUT_DIR, ai_core)
 
     logger.info("Web server 初始化完成")
     yield
@@ -114,12 +98,7 @@ async def upload_paper(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
-    import re as _re
-    raw_stem = Path(file.filename).stem
-    # 清理 paper_id：只保留字母、數字、底線、連字號
-    paper_id = _re.sub(r'[^\w\-]', '_', raw_stem)
-    paper_id = _re.sub(r'_+', '_', paper_id).strip('_')
-    # 用清理後的 paper_id 作為檔名
+    paper_id = paper_manager.sanitize_paper_id(file.filename)
     clean_filename = paper_id + '.pdf'
     pdf_path = DATA_DIR / clean_filename
 
@@ -180,13 +159,7 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
             )
 
             final = output_paths2.get('final', {})
-            vector_store = final.get('rag_vector_store')
-            rag_tree = final.get('rag_tree')
-
-            if vector_store and Path(vector_store).exists():
-                ai_core.add_paper_vector_store(paper_id, str(vector_store))
-            if rag_tree and Path(rag_tree).exists():
-                ai_core.load_paper_cache(paper_id, str(rag_tree))
+            paper_manager.load_paper_resources(OUTPUT_DIR, paper_id, final, ai_core)
 
             processing_tasks[paper_id]['status'] = 'done'
             logger.info(f"論文處理完成: {paper_id}")
@@ -336,18 +309,7 @@ async def delete_paper(paper_id: str):
     if not paper_dir.exists():
         raise HTTPException(status_code=404, detail="論文不存在")
 
-    # 刪除目錄
-    shutil.rmtree(paper_dir)
-
-    # 更新 papers_index.json
-    index_path = OUTPUT_DIR / "papers_index.json"
-    if index_path.exists():
-        with open(index_path, 'r', encoding='utf-8') as f:
-            papers = json.load(f)
-        papers = [p for p in papers if p['id'] != paper_id]
-        with open(index_path, 'w', encoding='utf-8') as f:
-            json.dump(papers, f, ensure_ascii=False, indent=2)
-
+    paper_manager.delete_paper(OUTPUT_DIR, paper_id)
     return {"status": "ok", "deleted": paper_id}
 
 # ── 健康檢查 ──

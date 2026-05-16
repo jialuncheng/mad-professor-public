@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import logging
 from typing import Optional, Dict, List, Union, Callable
+import paper_manager
 from processor.pdf_processor import PDFProcessor
 from processor.md_cleaner import MarkdownCleaner
 from processor.doc_analyzer import DocAnalyzer
@@ -205,23 +206,6 @@ class PipelineCore:
         return output_paths
 
     def _update_global_index(self, base_output_dir: Path, final_paths: Dict) -> None:
-        index_path = base_output_dir / "papers_index.json"
-        papers_index = []
-        if index_path.exists():
-            try:
-                with open(index_path, 'r', encoding='utf-8') as f:
-                    papers_index = json.load(f)
-            except json.JSONDecodeError:
-                papers_index = []
-
-        path_dict = {}
-        for key, path in final_paths.items():
-            if path:
-                try:
-                    path_dict[key] = str(path.relative_to(base_output_dir))
-                except ValueError:
-                    path_dict[key] = str(path)
-
         title, translated_title = "", ""
         if 'rag_tree' in final_paths and Path(final_paths['rag_tree']).exists():
             try:
@@ -232,22 +216,13 @@ class PipelineCore:
             except Exception as e:
                 self.logger.error(f"提取標題時出錯: {str(e)}")
 
-        paper_entry = {
-            'id': self.paper_info['paper_id'],
-            'title': title,
-            'translated_title': translated_title,
-            'paths': path_dict
-        }
-
-        existing_index = next((i for i, e in enumerate(papers_index)
-                               if e.get('id') == paper_entry['id']), -1)
-        if existing_index >= 0:
-            papers_index[existing_index] = paper_entry
-        else:
-            papers_index.append(paper_entry)
-
-        with open(index_path, 'w', encoding='utf-8') as f:
-            json.dump(papers_index, f, ensure_ascii=False, indent=2)
+        paper_manager.update_papers_index(
+            base_output_dir,
+            self.paper_info['paper_id'],
+            title,
+            translated_title,
+            {k: str(v) for k, v in final_paths.items() if v}
+        )
 
     # ── 各階段方法（與 pipeline.py 相同，只是移除 Qt 依賴） ──
 
