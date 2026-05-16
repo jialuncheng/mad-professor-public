@@ -27,7 +27,6 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
 # 全域狀態
-pipeline_core = None
 ai_core = None
 processing_tasks: dict = {}  # paper_id -> {'status': str, 'progress': dict}
 
@@ -35,12 +34,10 @@ processing_tasks: dict = {}  # paper_id -> {'status': str, 'progress': dict}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """啟動時初始化"""
-    global pipeline_core, ai_core
+    global ai_core
 
-    from pipeline_core import PipelineCore
     from ai_core import AICore
 
-    pipeline_core = PipelineCore()
     ai_core = AICore()
     ai_core.init_rag_retriever(str(OUTPUT_DIR))
 
@@ -140,19 +137,17 @@ async def upload_paper(
 async def run_pipeline(paper_id: str, pdf_path: str):
     """在背景執行 pipeline"""
     try:
+        from pipeline_core import PipelineCore
+
         def on_progress(info):
             processing_tasks[paper_id]['progress'] = info
 
-        # 移除這兩行
-        # from pipeline_core import PipelineCore
-        # pipeline = PipelineCore(on_progress=on_progress)
-
-        # 改用全域 pipeline_core
-        pipeline_core.on_progress = on_progress
+        # 每次上傳建立獨立 instance，避免並發衝突
+        pipeline = PipelineCore(on_progress=on_progress)
 
         loop = asyncio.get_event_loop()
         output_paths = await loop.run_in_executor(
-            None, lambda: pipeline_core.process(pdf_path, str(OUTPUT_DIR))
+            None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR))
         )
 
         # 載入新論文的向量庫和快取
