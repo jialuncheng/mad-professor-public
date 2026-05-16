@@ -242,11 +242,9 @@ class MarkdownProcessor:
             'sections': []
         }
         
-        # 如果有 structure，預處理：負面表列邏輯
-        # 只有 authors/publication_info/toc/other/title 不翻譯（歸入 authors_info）
-        # 其他所有類型都插入標題，確保會被翻譯
+        # 如果有 structure，預處理：只插入缺少的標題
+        # 前置內容（authors/publication_info 等）自然落入 authors_info，不需要清空
         if structure:
-            SKIP_TYPES = {'authors', 'toc'}
             TYPE_TO_HEADING = {
                 'abstract':   '## Abstract',
                 'intro_text': '## Introduction',
@@ -258,23 +256,11 @@ class MarkdownProcessor:
 
             for block in structure.get('structure', []):
                 btype = block.get('type')
-                if btype in SKIP_TYPES:
-                    continue
                 if btype in TYPE_TO_HEADING and btype not in seen_types:
                     lines_to_insert.append((block['start'], TYPE_TO_HEADING[btype]))
                     seen_types.add(btype)
 
-            # 把 SKIP_TYPES 的行清空（不讓它們進入 authors_info）
-            skip_line_indices = set()
-            for block in structure.get('structure', []):
-                if block.get('type') in SKIP_TYPES:
-                    for i in range(block['start'], block['end'] + 1):
-                        skip_line_indices.add(i)
-            for i in skip_line_indices:
-                if i < len(lines):
-                    lines[i] = ''
-
-            # 從後往前插入標題，避免行號偏移
+            # 從後往前插入標題（structure 的行號是原始行號，直接使用）
             for insert_line, heading in sorted(lines_to_insert, key=lambda x: -x[0]):
                 lines.insert(insert_line, heading)
 

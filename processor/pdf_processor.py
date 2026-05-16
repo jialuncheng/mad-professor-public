@@ -186,9 +186,10 @@ class PDFProcessor:
 
             analysis_end = min(first_section_line + 10, 500, len(lines))
             analysis_lines = lines[:analysis_end]
-            numbered = '\n'.join(f'{i}: {line}' for i, line in enumerate(analysis_lines))
+            # 只送非空行給 LLM，但保留原始行號
+            numbered = '\n'.join(f'{i}: {line}' for i, line in enumerate(analysis_lines) if line.strip())
 
-            prompt = f"""以下是一份文件的前段內容（格式：行號: 內容）：
+            prompt = f"""以下是一份文件的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
 
 {numbered}
 
