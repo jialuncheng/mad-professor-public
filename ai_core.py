@@ -16,6 +16,7 @@ class AICore:
         self.ai_chat = AIProfessorChat()
         self.retriever: Optional[RagRetriever] = None
         self.is_generating = False
+        self._paper_cache: Dict[str, Any] = {}
 
     def init_rag_retriever(self, base_path: str) -> bool:
         """初始化 RAG 檢索器"""
@@ -52,7 +53,7 @@ class AICore:
             self.is_generating = True
 
             # 設定論文上下文
-            if paper_id and hasattr(self, '_paper_cache'):
+            if paper_id:
                 paper_data = self._paper_cache.get(paper_id)
                 if paper_data:
                     self.ai_chat.set_paper_context(paper_id, paper_data)
@@ -86,8 +87,6 @@ class AICore:
             import json
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
-            if not hasattr(self, '_paper_cache'):
-                self._paper_cache = {}
             self._paper_cache[paper_id] = paper_data
             self.ai_chat.set_paper_context(paper_id, paper_data)
             return True
