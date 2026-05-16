@@ -4,7 +4,8 @@ import os
 from typing import List, Dict, Any, Generator, Tuple
 from config import LLMClient
 
-AI_CHARACTER_PROMPT_PATH = "prompt/ai_character_prompt_leidian.txt"
+AI_CHARACTER = os.getenv("AI_CHARACTER", "leidian")
+AI_CHARACTER_PROMPT_PATH = f"prompt/ai_character_prompt_{AI_CHARACTER}.txt"
 AI_EXPLAIN_PROMPT_PATH = "prompt/ai_explain_prompt.txt"
 AI_ROUTER_PROMPT_PATH = "prompt/ai_router_prompt.txt"
 
