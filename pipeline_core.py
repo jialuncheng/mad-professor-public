@@ -113,7 +113,6 @@ class PipelineCore:
             return paper_dir / f"{paper_name}{identifier}.json"
 
     def process(self, pdf_path: str, output_dir: Optional[str] = None,
-                stages: Optional[List[str]] = None,
                 existing_paths: Optional[Dict] = None) -> Dict:
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
@@ -129,9 +128,6 @@ class PipelineCore:
 
         # 支援傳入已有的 output_paths（第二階段繼續處理）
         output_paths = dict(existing_paths) if existing_paths else {}
-        # 支援臨時覆蓋 stages
-        if stages:
-            self.stages = stages
 
         for i, stage in enumerate(self.stages):
             if stage not in self.available_stages:

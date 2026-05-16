@@ -173,14 +173,10 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
             remaining_stages = ['analyze', 'md2json', 'json_process', 'tiling',
                                 'translate', 'md_restore', 'extra_info', 'rag']
             pipeline2 = PipelineCore(on_progress=on_progress, stages=remaining_stages)
-            # 把已有的 output_paths 傳進去
-            pipeline2.paper_info['paper_id'] = paper_id
-            paper_dir = OUTPUT_DIR / paper_id
-            pipeline2.paper_info['output_dir'] = paper_dir
 
             output_paths2 = await loop.run_in_executor(
                 None, lambda: pipeline2.process(pdf_path, str(OUTPUT_DIR),
-                    stages=remaining_stages, existing_paths=output_paths)
+                    existing_paths=output_paths)
             )
 
             final = output_paths2.get('final', {})
