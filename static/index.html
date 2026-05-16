@@ -180,7 +180,9 @@
       border-radius: 8px;
       font-size: 14px;
       resize: none;
-      height: 44px;
+      min-height: 44px;
+      max-height: 120px;
+      overflow-y: auto;
       outline: none;
     }
     #chat-input:focus { border-color: #2563eb; }
@@ -321,6 +323,7 @@ async function sendMessage() {
   const messages = document.getElementById('chat-messages');
   const userMsg = document.createElement('div');
   userMsg.className = 'msg-user';
+  userMsg.style.whiteSpace = 'pre-wrap';
   userMsg.textContent = query;
   messages.appendChild(userMsg);
 
