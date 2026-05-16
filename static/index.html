@@ -272,12 +272,10 @@ async function loadPapers() {
 async function loadPaper(paperId, title) {
   currentPaperId = paperId;
 
-  // 更新選中狀態
   document.querySelectorAll('.paper-item').forEach(el => {
     el.classList.toggle('active', el.dataset.id === paperId);
   });
 
-  // 顯示 toolbar
   document.getElementById('content-toolbar').style.display = 'flex';
   document.getElementById('current-title').textContent = title;
   document.getElementById('empty-state').style.display = 'none';
@@ -286,6 +284,7 @@ async function loadPaper(paperId, title) {
 
   await fetchContent(paperId, currentLang);
   enableChat();
+  await loadChatHistory(paperId);
 }
 
 // 取得論文 Markdown 內容
@@ -313,7 +312,51 @@ let isStreaming = false;
 function enableChat() {
   document.getElementById('chat-input').disabled = false;
   document.getElementById('send-btn').disabled = false;
-  document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">針對論文提問</div>';
+}
+
+// 載入對話紀錄
+async function loadChatHistory(paperId) {
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML = '';
+  try {
+    const res = await fetch(`/api/papers/${paperId}/chat/history`);
+    const history = await res.json();
+    if (!history.length) {
+      messages.innerHTML = '<div class="chat-empty">針對論文提問</div>';
+      return;
+    }
+    history.forEach(msg => {
+      const div = document.createElement('div');
+      if (msg.role === 'user') {
+        div.className = 'msg-user';
+        div.textContent = msg.content;
+      } else {
+        div.className = 'msg-ai';
+        const formatted = msg.content.replace(/\n(?!\n)/g, '\n\n');
+        div.innerHTML = marked.parse(formatted);
+      }
+      messages.appendChild(div);
+    });
+    messages.scrollTop = messages.scrollHeight;
+  } catch(e) {
+    messages.innerHTML = '<div class="chat-empty">針對論文提問</div>';
+  }
+}
+
+// 儲存對話紀錄
+async function saveChatHistory(paperId) {
+  const msgs = document.querySelectorAll('#chat-messages .msg-user, #chat-messages .msg-ai');
+  const history = Array.from(msgs).map(el => ({
+    role: el.classList.contains('msg-user') ? 'user' : 'assistant',
+    content: el.classList.contains('msg-user') ? el.textContent : el.innerText
+  }));
+  try {
+    await fetch(`/api/papers/${paperId}/chat/history`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({messages: history})
+    });
+  } catch(e) {}
 }
 
 async function sendMessage() {
@@ -371,6 +414,7 @@ async function sendMessage() {
         if (chunk.done) {
           isStreaming = false;
           document.getElementById('send-btn').disabled = false;
+          await saveChatHistory(currentPaperId);
         }
       } catch {}
     }
