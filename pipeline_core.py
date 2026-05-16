@@ -219,6 +219,14 @@ class PipelineCore:
         markdown_path = output_paths.get('pdf2md')
         if not markdown_path:
             raise ValueError("未找到 Markdown 文件")
+
+        # 如果 doc_structure sidecar 不存在，先產生
+        from pathlib import Path as _Path
+        sidecar = _Path(markdown_path).parent / f'{_Path(markdown_path).stem}_doc_structure.json'
+        if not sidecar.exists():
+            self.logger.info("產生文件結構 sidecar...")
+            self.pdf_processor._analyze_document_structure(_Path(markdown_path))
+
         output_path = self._get_stage_output_path('md2json', paper_dir, paper_name)
         return self.md_processor.process(str(markdown_path), str(output_path))
 
