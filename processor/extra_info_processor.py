@@ -26,13 +26,14 @@ class ExtraInfoProcessor:
             self.logger.warning(f"读取文件 {filepath} 失败: {str(e)}")
             return ""
     
-    def process(self, input_path: str, output_path: str) -> Path:
+    def process(self, input_path: str, output_path: str, skip_questions: bool = True) -> Path:
         """
         读取JSON文件，自下而上为各章节生成总结
         
         Args:
             input_path: 输入JSON文件路径
             output_path: 输出添加了总结的JSON文件路径
+            skip_questions: 是否跳過 Q&A 和公式解析（預設 True，加快處理速度）
             
         Returns:
             Path: 输出文件路径
@@ -52,19 +53,22 @@ class ExtraInfoProcessor:
             if "sections" in data:
                 self.generate_section_summaries(data["sections"])
                 
-                # 生成问题阶段
-                self.logger.info("开始生成各块内容的问题")
-                self.generate_questions(data["sections"])
-                self.logger.info("问题生成完成")
+                if not skip_questions:
+                    # 生成问题阶段
+                    self.logger.info("开始生成各块内容的问题")
+                    self.generate_questions(data["sections"])
+                    self.logger.info("问题生成完成")
+                else:
+                    self.logger.info("跳過 Q&A 問題生成（skip_questions=True）")
 
             # 写入输出文件
             with output_path.open('w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            self.logger.info(f"章节总结和问题生成完成，结果已保存到: {output_path}")
+            self.logger.info(f"章节总结生成完成，结果已保存到: {output_path}")
             return output_path
         except Exception as e:
-            self.logger.error(f"章节总结和问题生成失败: {str(e)}", exc_info=True)
+            self.logger.error(f"章节总结生成失败: {str(e)}", exc_info=True)
             raise
     
     def extract_abstract(self, data):
