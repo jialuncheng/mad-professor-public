@@ -232,6 +232,52 @@
       font-size: 13px;
       margin-top: 40px;
     }
+    #confirm-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-modal.show { display: flex; }
+    #confirm-box {
+      background: white;
+      border-radius: 12px;
+      padding: 28px 32px;
+      width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    #confirm-box h3 { font-size: 16px; color: #1e293b; margin-bottom: 8px; }
+    #confirm-box p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    #doc-type-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    #confirm-reason {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+    #confirm-box-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    #confirm-ok-btn {
+      padding: 9px 20px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    #confirm-ok-btn:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
@@ -251,6 +297,25 @@
   </div>
   <div id="empty-state">← 從左側選擇一篇論文</div>
   <div id="paper-content" style="display:none"></div>
+</div>
+
+<!-- 文件類型確認框 -->
+<div id="confirm-modal">
+  <div id="confirm-box">
+    <h3>確認文件類型</h3>
+    <p id="confirm-desc">AI 偵測到文件類型如下，請確認或修改後繼續處理。</p>
+    <select id="doc-type-select">
+      <option value="academic">學術論文</option>
+      <option value="book">書籍</option>
+      <option value="technical">技術文件</option>
+      <option value="slides">簡報</option>
+      <option value="web">網頁存檔</option>
+    </select>
+    <div id="confirm-reason"></div>
+    <div id="confirm-box-btns">
+      <button id="confirm-ok-btn">確認，開始處理</button>
+    </div>
+  </div>
 </div>
 
 <!-- 右側 AI 問答 -->
@@ -526,6 +591,10 @@ function trackProgress(paperId, btn) {
     if (data.status === 'processing') {
       const p = data.progress;
       btn.textContent = `${p.stage_name}... ${p.progress}%`;
+    } else if (data.status === 'waiting_confirm') {
+      evtSource.close();
+      btn.textContent = '等待確認...';
+      showConfirmModal(paperId, data.detection, btn);
     } else if (data.status === 'done') {
       evtSource.close();
       btn.textContent = '＋ 上傳論文';
@@ -543,6 +612,53 @@ function trackProgress(paperId, btn) {
     evtSource.close();
     btn.textContent = '＋ 上傳論文';
     btn.disabled = false;
+  };
+}
+
+// 文件類型確認
+const DOC_TYPE_LABELS = {
+  academic: '學術論文',
+  book: '書籍',
+  technical: '技術文件',
+  slides: '簡報',
+  web: '網頁存檔'
+};
+
+function showConfirmModal(paperId, detection, btn) {
+  const modal = document.getElementById('confirm-modal');
+  const select = document.getElementById('doc-type-select');
+  const reason = document.getElementById('confirm-reason');
+  const desc = document.getElementById('confirm-desc');
+
+  const docType = detection?.doc_type || 'academic';
+  const confidence = detection?.confidence || '';
+  const detectionReason = detection?.reason || '';
+
+  select.value = docType;
+  desc.textContent = `AI 偵測結果：${DOC_TYPE_LABELS[docType] || docType}（信心度：${confidence}）`;
+  reason.textContent = detectionReason;
+
+  modal.classList.add('show');
+
+  document.getElementById('confirm-ok-btn').onclick = async () => {
+    const selectedType = select.value;
+    modal.classList.remove('show');
+    btn.textContent = '處理中...';
+    btn.disabled = true;
+
+    try {
+      await fetch(`/api/papers/${paperId}/confirm_type`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({doc_type: selectedType})
+      });
+      // 重新追蹤進度
+      trackProgress(paperId, btn);
+    } catch(e) {
+      btn.textContent = '＋ 上傳論文';
+      btn.disabled = false;
+      alert('確認失敗：' + e.message);
+    }
   };
 }
 

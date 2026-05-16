@@ -1,0 +1,22 @@
+以下是一本書籍的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
+
+{content}
+
+請分析這份書籍的前段結構，回傳 JSON：
+
+{
+  "structure": [
+    {"start": 起始行號, "end": 結束行號, "type": "類型"}
+  ]
+}
+
+type 選項：
+- title：書名
+- authors：作者
+- publication_info：出版資訊（出版社、ISBN、版次、版權聲明）
+- preface：序言、前言正文
+- toc：目錄
+- section_heading：章節標題行
+- other：其他無法分類的內容
+
+只輸出 JSON，不要任何解釋。

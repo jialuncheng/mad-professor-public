@@ -1,0 +1,20 @@
+以下是一份文件的前段內容（格式：行號: 內容，空行已省略）：
+
+{content}
+
+請判斷這份文件的類型，從以下選項選一個：
+- academic：學術論文（包含實驗研究、綜述、案例研究等）
+- book：書籍（包含教科書、專著、章節）
+- technical：技術文件（包含說明書、API 文件、規格書、報告）
+- slides：簡報（包含投影片、講義）
+- web：網頁存檔（包含新聞、部落格、網頁 PDF）
+
+判斷依據：
+- academic：有 Abstract、Keywords、References，作者有機構隸屬，有 DOI 或期刊資訊
+- book：有 Chapter/Part 結構，有目錄（Contents/Table of Contents），有出版社資訊
+- technical：有版本號，有技術規格，結構以數字編號為主（1. 1.1 1.1.1）
+- slides：每頁內容很少，有大量條列式內容，標題獨立成行
+- web：有網址、日期、作者署名，內容結構扁平
+
+只輸出 JSON，不要任何解釋：
+{"doc_type": "選擇的類型", "confidence": "high/medium/low", "reason": "一句話說明判斷依據"}

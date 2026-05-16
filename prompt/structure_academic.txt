@@ -1,0 +1,22 @@
+以下是一篇學術論文的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
+
+{content}
+
+請分析這份論文的前段結構，回傳 JSON：
+
+{
+  "structure": [
+    {"start": 起始行號, "end": 結束行號, "type": "類型"}
+  ]
+}
+
+type 選項：
+- title：論文主標題
+- authors：作者名單（包含作者姓名、上標數字）
+- publication_info：出版資訊（投稿日期、接受日期、DOI、期刊名、Check for updates）
+- abstract：摘要正文
+- intro_text：引言正文（Introduction 的內容，在第一個正式章節標題之前）
+- section_heading：章節標題行（## 開頭的標題）
+- other：其他無法分類的內容
+
+只輸出 JSON，不要任何解釋。

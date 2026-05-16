@@ -1,0 +1,22 @@
+以下是一份技術文件的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
+
+{content}
+
+請分析這份技術文件的前段結構，回傳 JSON：
+
+{
+  "structure": [
+    {"start": 起始行號, "end": 結束行號, "type": "類型"}
+  ]
+}
+
+type 選項：
+- title：文件主標題
+- authors：作者或維護者
+- publication_info：版本號、發布日期、版權資訊
+- preface：概述、Overview 正文
+- toc：目錄
+- section_heading：章節標題行
+- other：其他無法分類的內容
+
+只輸出 JSON，不要任何解釋。

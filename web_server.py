@@ -134,7 +134,7 @@ async def upload_paper(
     return {'paper_id': paper_id, 'status': 'processing'}
 
 
-async def run_pipeline(paper_id: str, pdf_path: str):
+async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
     """在背景執行 pipeline"""
     try:
         from pipeline_core import PipelineCore
@@ -142,26 +142,52 @@ async def run_pipeline(paper_id: str, pdf_path: str):
         def on_progress(info):
             processing_tasks[paper_id]['progress'] = info
 
-        # 每次上傳建立獨立 instance，避免並發衝突
         pipeline = PipelineCore(on_progress=on_progress)
 
         loop = asyncio.get_event_loop()
-        output_paths = await loop.run_in_executor(
-            None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR))
-        )
 
-        # 載入新論文的向量庫和快取
-        final = output_paths.get('final', {})
-        vector_store = final.get('rag_vector_store')
-        rag_tree = final.get('rag_tree')
+        if doc_type is None:
+            # 第一階段：只跑 pdf2md，然後暫停等待確認
+            output_paths = await loop.run_in_executor(
+                None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
+                    stages=['pdf2md'])
+            )
+            detection = output_paths.get('_doc_type_detection', {})
+            processing_tasks[paper_id]['status'] = 'waiting_confirm'
+            processing_tasks[paper_id]['detection'] = detection
+            processing_tasks[paper_id]['_output_paths'] = output_paths
+            processing_tasks[paper_id]['_pdf_path'] = pdf_path
+            logger.info(f"偵測文件類型完成，等待確認: {paper_id} -> {detection.get('doc_type')}")
+        else:
+            # 第二階段：使用者確認後，繼續跑剩餘階段
+            output_paths = processing_tasks[paper_id].get('_output_paths', {})
+            output_paths['_confirmed_doc_type'] = doc_type
+            processing_tasks[paper_id]['status'] = 'processing'
 
-        if vector_store and Path(vector_store).exists():
-            ai_core.add_paper_vector_store(paper_id, str(vector_store))
-        if rag_tree and Path(rag_tree).exists():
-            ai_core.load_paper_cache(paper_id, str(rag_tree))
+            remaining_stages = ['analyze', 'md2json', 'json_process', 'tiling',
+                                'translate', 'md_restore', 'extra_info', 'rag']
+            pipeline2 = PipelineCore(on_progress=on_progress, stages=remaining_stages)
+            # 把已有的 output_paths 傳進去
+            pipeline2.paper_info['paper_id'] = paper_id
+            paper_dir = OUTPUT_DIR / paper_id
+            pipeline2.paper_info['output_dir'] = paper_dir
 
-        processing_tasks[paper_id]['status'] = 'done'
-        logger.info(f"論文處理完成: {paper_id}")
+            output_paths2 = await loop.run_in_executor(
+                None, lambda: pipeline2.process(pdf_path, str(OUTPUT_DIR),
+                    stages=remaining_stages, existing_paths=output_paths)
+            )
+
+            final = output_paths2.get('final', {})
+            vector_store = final.get('rag_vector_store')
+            rag_tree = final.get('rag_tree')
+
+            if vector_store and Path(vector_store).exists():
+                ai_core.add_paper_vector_store(paper_id, str(vector_store))
+            if rag_tree and Path(rag_tree).exists():
+                ai_core.load_paper_cache(paper_id, str(rag_tree))
+
+            processing_tasks[paper_id]['status'] = 'done'
+            logger.info(f"論文處理完成: {paper_id}")
 
     except Exception as e:
         processing_tasks[paper_id]['status'] = 'error'
@@ -181,9 +207,9 @@ async def paper_status(paper_id: str):
                 yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
                 break
 
-            yield f"data: {json.dumps(task)}\n\n"
+            yield f"data: {json.dumps({k: v for k, v in task.items() if not k.startswith('_')})}\n\n"
 
-            if task['status'] in ('done', 'error'):
+            if task['status'] in ('done', 'error', 'waiting_confirm'):
                 break
 
             await asyncio.sleep(1)
@@ -268,6 +294,35 @@ async def save_chat_history(paper_id: str, history: ChatHistory):
     with open(history_path, 'w', encoding='utf-8') as f:
         json.dump(history.messages, f, ensure_ascii=False, indent=2)
     return {"status": "ok"}
+
+# ── 文件類型確認 ──
+
+class ConfirmTypeRequest(BaseModel):
+    doc_type: str
+
+@app.post("/api/papers/{paper_id}/confirm_type")
+async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_tasks: BackgroundTasks):
+    """使用者確認文件類型後，繼續處理"""
+    task = processing_tasks.get(paper_id)
+    if not task or task['status'] != 'waiting_confirm':
+        raise HTTPException(status_code=400, detail="論文不在等待確認狀態")
+
+    valid_types = ['academic', 'book', 'technical', 'slides', 'web']
+    if request.doc_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
+
+    pdf_path = task.get('_pdf_path')
+    if not pdf_path:
+        raise HTTPException(status_code=500, detail="找不到原始 PDF 路徑")
+
+    processing_tasks[paper_id]['status'] = 'processing'
+    processing_tasks[paper_id]['progress'] = {
+        'stage': 'analyze', 'stage_name': '文件結構分析',
+        'index': 1, 'total': 8, 'progress': 10
+    }
+
+    background_tasks.add_task(run_pipeline, paper_id, pdf_path, request.doc_type)
+    return {"status": "ok", "doc_type": request.doc_type}
 
 # ── 刪除論文 ──
 

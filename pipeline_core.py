@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Optional, Dict, List, Union, Callable
 from processor.pdf_processor import PDFProcessor
+from processor.md_cleaner import MarkdownCleaner
+from processor.doc_analyzer import DocAnalyzer
 from processor.md_processor import MarkdownProcessor
 from processor.json_processor import JsonProcessor
 from processor.tiling_processor import TilingProcessor
@@ -18,6 +20,7 @@ class PipelineCore:
 
     STAGE_NAMES = {
         'pdf2md': 'PDF 轉 Markdown',
+        'analyze': '文件結構分析',
         'md2json': 'Markdown 轉 JSON',
         'json_process': 'JSON 處理',
         'tiling': '分段處理',
@@ -34,6 +37,7 @@ class PipelineCore:
 
         self.stage_identifiers = {
             'pdf2md': '',
+            'analyze': '_doc_structure',
             'md2json': '_structured',
             'json_process': '_processed',
             'tiling': '_tiled',
@@ -45,6 +49,7 @@ class PipelineCore:
 
         self.available_stages = {
             'pdf2md': self._stage_pdf_to_md,
+            'analyze': self._stage_analyze,
             'md2json': self._stage_md_to_json,
             'json_process': self._stage_json_process,
             'tiling': self._stage_tiling,
@@ -53,9 +58,12 @@ class PipelineCore:
             'extra_info': self._stage_extra_info,
             'rag': self._stage_rag
         }
-        self.stages = stages or list(self.available_stages.keys())
+        default_stages = ['pdf2md', 'analyze', 'md2json', 'json_process', 'tiling', 'translate', 'md_restore', 'extra_info', 'rag']
+        self.stages = stages or default_stages
 
         self.pdf_processor = PDFProcessor()
+        self.md_cleaner = MarkdownCleaner()
+        self.doc_analyzer = DocAnalyzer()
         self.md_processor = MarkdownProcessor()
         self.json_processor = JsonProcessor()
         self.tiling_processor = TilingProcessor()
@@ -98,7 +106,9 @@ class PipelineCore:
         else:
             return paper_dir / f"{paper_name}{identifier}.json"
 
-    def process(self, pdf_path: str, output_dir: Optional[str] = None) -> Dict:
+    def process(self, pdf_path: str, output_dir: Optional[str] = None,
+                stages: Optional[List[str]] = None,
+                existing_paths: Optional[Dict] = None) -> Dict:
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
@@ -111,7 +121,11 @@ class PipelineCore:
         paper_output_dir.mkdir(exist_ok=True)
         self.paper_info['output_dir'] = paper_output_dir
 
-        output_paths = {}
+        # 支援傳入已有的 output_paths（第二階段繼續處理）
+        output_paths = dict(existing_paths) if existing_paths else {}
+        # 支援臨時覆蓋 stages
+        if stages:
+            self.stages = stages
 
         for i, stage in enumerate(self.stages):
             if stage not in self.available_stages:
@@ -236,20 +250,24 @@ class PipelineCore:
     # ── 各階段方法（與 pipeline.py 相同，只是移除 Qt 依賴） ──
 
     def _stage_pdf_to_md(self, pdf_path, paper_dir, paper_name, output_paths):
-        return self.pdf_processor.process(str(pdf_path), str(paper_dir))
+        markdown_path = self.pdf_processor.process(str(pdf_path), str(paper_dir))
+        self.md_cleaner.clean(markdown_path)
+        # 偵測文件類型，結果暫存供前端確認
+        detection = self.doc_analyzer.detect_type(markdown_path)
+        output_paths['_doc_type_detection'] = detection
+        return markdown_path
+
+    def _stage_analyze(self, pdf_path, paper_dir, paper_name, output_paths):
+        markdown_path = output_paths.get('pdf2md')
+        if not markdown_path:
+            raise ValueError("未找到 Markdown 文件")
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+        return self.doc_analyzer.analyze(markdown_path, doc_type)
 
     def _stage_md_to_json(self, pdf_path, paper_dir, paper_name, output_paths):
         markdown_path = output_paths.get('pdf2md')
         if not markdown_path:
             raise ValueError("未找到 Markdown 文件")
-
-        # 如果 doc_structure sidecar 不存在，先產生
-        from pathlib import Path as _Path
-        sidecar = _Path(markdown_path).parent / f'{_Path(markdown_path).stem}_doc_structure.json'
-        if not sidecar.exists():
-            self.logger.info("產生文件結構 sidecar...")
-            self.pdf_processor._analyze_document_structure(_Path(markdown_path))
-
         output_path = self._get_stage_output_path('md2json', paper_dir, paper_name)
         return self.md_processor.process(str(markdown_path), str(output_path))
 
