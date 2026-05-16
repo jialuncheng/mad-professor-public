@@ -82,6 +82,26 @@ def delete_paper(output_dir: Path, paper_id: str) -> bool:
     return True
 
 
+def load_chat_history(output_dir: Path, paper_id: str) -> list:
+    """讀取對話紀錄"""
+    history_path = output_dir / paper_id / "chat_history.json"
+    if not history_path.exists():
+        return []
+    try:
+        with open(history_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_chat_history(output_dir: Path, paper_id: str, messages: list) -> None:
+    """儲存對話紀錄"""
+    history_path = output_dir / paper_id / "chat_history.json"
+    with open(history_path, 'w', encoding='utf-8') as f:
+        json.dump(messages, f, ensure_ascii=False, indent=2)
+    logger.info(f"對話紀錄已儲存: {paper_id}")
+
+
 def preload_vector_stores(output_dir: Path, ai_core) -> None:
     """啟動時預載所有論文的向量庫和快取"""
     papers = load_papers_index(output_dir)

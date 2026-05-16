@@ -80,11 +80,7 @@ class ChatRequest(BaseModel):
 @app.get("/api/papers")
 async def list_papers():
     """取得所有論文列表"""
-    index_path = OUTPUT_DIR / "papers_index.json"
-    if not index_path.exists():
-        return []
-    with open(index_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return paper_manager.load_papers_index(OUTPUT_DIR)
 
 
 # ── 論文上傳 ──
@@ -250,11 +246,7 @@ class ChatHistory(BaseModel):
 @app.get("/api/papers/{paper_id}/chat/history")
 async def get_chat_history(paper_id: str):
     """取得對話紀錄"""
-    history_path = OUTPUT_DIR / paper_id / "chat_history.json"
-    if not history_path.exists():
-        return []
-    with open(history_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return paper_manager.load_chat_history(OUTPUT_DIR, paper_id)
 
 @app.post("/api/papers/{paper_id}/chat/history")
 async def save_chat_history(paper_id: str, history: ChatHistory):
@@ -262,9 +254,7 @@ async def save_chat_history(paper_id: str, history: ChatHistory):
     paper_dir = OUTPUT_DIR / paper_id
     if not paper_dir.exists():
         raise HTTPException(status_code=404, detail="論文不存在")
-    history_path = paper_dir / "chat_history.json"
-    with open(history_path, 'w', encoding='utf-8') as f:
-        json.dump(history.messages, f, ensure_ascii=False, indent=2)
+    paper_manager.save_chat_history(OUTPUT_DIR, paper_id, history.messages)
     return {"status": "ok"}
 
 # ── 文件類型確認 ──
