@@ -234,7 +234,7 @@ class MarkdownProcessor:
         
         return hierarchy
 
-    def parse(self, content: str) -> Dict[str, Any]:
+    def parse(self, content: str, structure: dict = None) -> Dict[str, Any]:
         lines = content.split('\n')
         result = {
             'title': '',
@@ -242,6 +242,18 @@ class MarkdownProcessor:
             'sections': []
         }
         
+        # 如果有 structure，預處理：在 abstract 區塊前插入 ## Abstract 標題
+        if structure:
+            abstract_blocks = [b for b in structure.get('structure', []) if b.get('type') == 'abstract']
+            if abstract_blocks:
+                # 找最早的 abstract 起始行
+                first_abstract = min(abstract_blocks, key=lambda b: b['start'])
+                insert_line = first_abstract['start']
+                # 在該行前插入 ## Abstract
+                lines.insert(insert_line, '## Abstract')
+                content = '\n'.join(lines)
+                lines = content.split('\n')
+
         current_section = None
         current_content = []
         collecting_authors = False
@@ -386,7 +398,16 @@ class MarkdownProcessor:
             output_path = Path(output_path)
             self.logger.info(f"开始解析Markdown文件: {markdown_path}")
             content = markdown_path.read_text(encoding='utf-8')
-            result = self.parse(content)
+
+            # 讀取結構分析 sidecar（如果存在）
+            import json as json_module
+            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_structure.json'
+            structure = {}
+            if sidecar_path.exists():
+                structure = json_module.loads(sidecar_path.read_text(encoding='utf-8'))
+                self.logger.info(f"讀取文件結構: {structure.get('document_type')}")
+
+            result = self.parse(content, structure=structure)
             self.logger.info(f"保存解析结果到: {output_path}")
             output_path.write_text(
                 json.dumps(result, ensure_ascii=False, indent=2),
