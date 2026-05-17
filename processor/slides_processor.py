@@ -49,7 +49,6 @@ class SlidesProcessor:
         self.logger.info(f"共 {total_pages} 頁")
 
         lines = [f"# {paper_name.replace('_', ' ')}", ""]
-        title = ""
 
         # 建立 images 目錄
         images_dir = output_dir / "images"
@@ -79,15 +78,12 @@ class SlidesProcessor:
             content = result.get("content", "").strip()
             figure_desc = result.get("figure_description", "").strip()
 
-            # 第一頁的標題作為文件標題
+            # 第一頁用 slide_title 更新文件標題
             if page_num == 0 and slide_title:
-                title = slide_title
-                lines[0] = f"# {title}"
+                lines[0] = f"# {slide_title}"
 
-            # 組合成 Markdown（第一頁只用文件標題，不重複加 section 標題）
-            if page_num == 0:
-                pass  # 已用作文件標題
-            elif slide_title:
+            # 每頁都有自己的 section
+            if slide_title:
                 lines.append(f"## {slide_title}")
             else:
                 lines.append(f"## 第 {page_num + 1} 頁")
