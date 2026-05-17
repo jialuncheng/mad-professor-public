@@ -330,6 +330,24 @@ async def export_chat_history(paper_id: str):
         headers={"Content-Disposition": f"attachment; filename={paper_id}_chat.md"}
     )
 
+# ── 清理殘餘檔案 ──
+
+@app.post("/api/cleanup")
+async def cleanup_orphaned():
+    """清理不在 papers_index 裡的殘餘目錄"""
+    import shutil
+    papers = paper_manager.load_papers_index(OUTPUT_DIR)
+    valid_ids = {p['id'] for p in papers}
+
+    removed = []
+    for item in OUTPUT_DIR.iterdir():
+        if item.is_dir() and item.name not in valid_ids:
+            shutil.rmtree(item)
+            removed.append(item.name)
+            logger.info(f"清理殘餘目錄: {item.name}")
+
+    return {"status": "ok", "removed": removed, "count": len(removed)}
+
 # ── 健康檢查 ──
 
 @app.get("/api/health")

@@ -108,6 +108,17 @@
       flex-shrink: 0;
     }
     #help-btn:hover { background: #3e5068; color: #fff; }
+    #cleanup-btn {
+      padding: 10px 12px;
+      background: #2e3d50;
+      color: #94a3b8;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    #cleanup-btn:hover { background: #7f1d1d; color: #fca5a5; }
     #help-modal {
       display: none;
       position: fixed;
@@ -355,6 +366,7 @@
   <div id="sidebar-bottom">
     <button id="upload-btn">＋ 上傳論文</button>
     <button id="help-btn" title="上傳說明">？</button>
+    <button id="cleanup-btn" title="清理殘餘檔案">🗑</button>
   </div>
 </div>
 
@@ -758,6 +770,22 @@ function showConfirmModal(paperId, detection, btn) {
     }
   };
 }
+
+// 清理殘餘檔案
+document.getElementById('cleanup-btn').onclick = async () => {
+  if (!confirm('確定要清理殘餘檔案嗎？\n此操作會刪除所有不在論文列表中的目錄。')) return;
+  try {
+    const res = await fetch('/api/cleanup', { method: 'POST' });
+    const data = await res.json();
+    if (data.count === 0) {
+      alert('沒有殘餘檔案需要清理。');
+    } else {
+      alert(`已清理 ${data.count} 個殘餘目錄：\n${data.removed.join('\n')}`);
+    }
+  } catch(e) {
+    alert('清理失敗：' + e.message);
+  }
+};
 
 // 說明框
 document.getElementById('help-btn').onclick = () => {
