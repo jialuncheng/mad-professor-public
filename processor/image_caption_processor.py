@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import Optional
 from config import LLMClient
 
-logger = logging.getLogger(__name__)
-
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 MIME_TYPES = {
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -43,13 +41,15 @@ class ImageCaptionProcessor:
         ])
 
         if not image_files:
-            self.logger.info("沒有圖片需要處理")
-            return None
+            self.logger.info("沒有圖片需要處理，建立空的 images_info.md")
+            output_path.write_text('', encoding='utf-8')
+            return output_path
 
         self.logger.info(f"開始處理 {len(image_files)} 張圖片")
 
         lines = []
-        for img_path in image_files:
+        for idx, img_path in enumerate(image_files, 1):
+            self.logger.info(f"  [{idx}/{len(image_files)}] {img_path.name}")
             caption = self._generate_caption(img_path)
             src = f"images/{img_path.name}"
             lines.append(f"## {src}")
