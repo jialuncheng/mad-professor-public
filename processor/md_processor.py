@@ -241,8 +241,17 @@ class MarkdownProcessor:
             'authors_info': '',
             'sections': []
         }
-        
-        # 不自動插入任何標題，忠實呈現 MinerU 的解析結果
+
+        # 用 structure 計算 authors_info 的結束行號
+        # 只收集 authors/publication_info/other，遇到 intro_text/section_heading 就停
+        authors_end_line = -1
+        if structure and structure.get('structure'):
+            for block in structure['structure']:
+                btype = block.get('type', '')
+                if btype in ('authors', 'publication_info'):
+                    authors_end_line = max(authors_end_line, block['end'])
+                elif btype in ('intro_text', 'section_heading', 'abstract'):
+                    break  # 遇到內文或章節標題就停止
 
         current_section = None
         current_content = []
@@ -250,8 +259,16 @@ class MarkdownProcessor:
         in_references = False
         authors_content = []
         has_started = False
-        
+        current_line_num = -1
+
         for line in lines:
+            current_line_num += 1
+
+            # 如果有 structure 且超過 authors 範圍，強制結束收集
+            if collecting_authors and authors_end_line >= 0 and current_line_num > authors_end_line:
+                result['authors_info'] = '\n'.join(authors_content).strip()
+                collecting_authors = False
+                # 這行要繼續處理，不要 skip
             title_match = self.title_pattern.match(line)
 
             reference_line_match = None
