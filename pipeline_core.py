@@ -343,7 +343,9 @@ class PipelineCore:
         if not input_path:
             raise ValueError("未找到 JSON 文件")
         paths = self._get_stage_output_path('rag', paper_dir, paper_name)
+        images_info_path = self._get_stage_output_path('image_caption', paper_dir, paper_name)
         md_path, tree_path, vector_path = self.rag_processor.process(
-            str(input_path), str(paths['md']), str(paths['tree_json']), str(paths['vector_store'])
+            str(input_path), str(paths['md']), str(paths['tree_json']), str(paths['vector_store']),
+            images_info_path=str(images_info_path) if images_info_path.exists() else None
         )
         return {'md': Path(md_path), 'tree_json': Path(tree_path), 'vector_store': Path(vector_path)}

@@ -14,7 +14,28 @@ class RagProcessor:
         """初始化 RAG 处理器"""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-    def process(self, input_path: str, output_md_path: str, output_tree_json_path: str, vector_store_path: str) -> Tuple[str, str, str]:
+    def _load_caption_map(self, images_info_path: str) -> dict:
+        """讀取 images_info.md，建立 src -> caption 的字典"""
+        caption_map = {}
+        try:
+            path = Path(images_info_path)
+            if not path.exists():
+                return caption_map
+            lines = path.read_text(encoding='utf-8').split('\n')
+            current_src = None
+            for line in lines:
+                if line.startswith('## '):
+                    current_src = line[3:].strip()
+                elif current_src and line.strip():
+                    caption_map[current_src] = line.strip()
+                    current_src = None
+            self.logger.info(f"載入 caption_map: {len(caption_map)} 張圖片")
+        except Exception as e:
+            self.logger.warning(f"讀取 images_info.md 失敗: {str(e)}")
+        return caption_map
+
+    def process(self, input_path: str, output_md_path: str, output_tree_json_path: str,
+                vector_store_path: str, images_info_path: str = None) -> Tuple[str, str, str]:
         """处理 JSON 文件，生成 Markdown、JSON以及向量库
 
         Args:
@@ -22,11 +43,13 @@ class RagProcessor:
             output_md_path: 输出的Markdown文件路径
             output_tree_json_path: 输出的树结构JSON文件路径
             vector_store_path: 向量库存储路径
+            images_info_path: Vision 生成的圖片說明檔案路徑（可選）
 
         Returns:
             Tuple[str, str, str]: Markdown文件路径, JSON文件路径, 向量库路径
         """
         self.logger.info(f"开始处理 RAG 数据: {input_path}")
+        self.caption_map = self._load_caption_map(images_info_path) if images_info_path else {}
 
         try:
             with open(input_path, "r", encoding="utf-8") as f:
@@ -178,10 +201,15 @@ class RagProcessor:
                         new_item["translated_content"] = item.get("translated_content", "")
                         new_item["questions"] = item.get("questions", "")
                     elif item.get("type") == "figure":
-                        new_item["src"] = item.get("src", "")
+                        src = item.get("src", "")
+                        new_item["src"] = src
                         new_item["alt"] = item.get("alt", "")
-                        new_item["caption"] = item.get("caption", "")
-                        new_item["translated_caption"] = item.get("translated_caption", "")
+                        # 優先用原始 caption，沒有則從 images_info.md 補充
+                        caption = item.get("caption", "") or item.get("translated_caption", "")
+                        if not caption and hasattr(self, "caption_map"):
+                            caption = self.caption_map.get(src, "")
+                        new_item["caption"] = caption
+                        new_item["translated_caption"] = item.get("translated_caption", "") or caption
                         new_item["questions"] = item.get("questions", "")
                     elif item.get("type") == "table":
                         new_item["content"] = item.get("content", "")
