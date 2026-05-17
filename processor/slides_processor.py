@@ -57,12 +57,11 @@ class SlidesProcessor:
         total_pages = len(doc)
         self.logger.info(f"共 {total_pages} 頁")
 
-        lines = [f"# {paper_name.replace('_', ' ')}", ""]
+        lines = [""]
         images_dir = output_dir / "images"
         images_dir.mkdir(exist_ok=True)
 
         slide_counter = 0  # 實際輸出的投影片編號
-        is_first_slide = True
 
         for page_num in range(total_pages):
             page = doc[page_num]
@@ -107,10 +106,7 @@ class SlidesProcessor:
                 content = result.get("content", "").strip()
                 figure_desc = result.get("figure_description", "").strip()
 
-                # 第一張投影片的標題作為文件標題
-                if is_first_slide and slide_title:
-                    lines[0] = f"# {slide_title}"
-                    is_first_slide = False
+                is_first_slide = False
 
                 if slide_title:
                     lines.append(f"## {slide_title}")
