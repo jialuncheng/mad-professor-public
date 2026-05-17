@@ -6,6 +6,7 @@ load_dotenv()
 from typing import Optional, List, Dict, Any, Generator
 from google import genai
 from google.genai import types
+from langchain_core.embeddings import Embeddings
 
 # 模型設定
 TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-2.0-flash")
@@ -171,8 +172,8 @@ class LLMClient:
 
 
 # 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
-class EmbeddingModel:
-    """使用 Gemini Embedding 2 API，支援文字和圖片的多模態 embedding"""
+class EmbeddingModel(Embeddings):
+    """使用 Gemini Embedding 2 API，符合 LangChain Embeddings 介面"""
 
     _instance: Optional['EmbeddingModel'] = None
 
