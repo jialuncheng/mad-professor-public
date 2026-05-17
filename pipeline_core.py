@@ -317,7 +317,7 @@ class PipelineCore:
     def _stage_image_caption(self, pdf_path, paper_dir, paper_name, output_paths):
         """Vision 圖片說明生成，與 translate 並行執行"""
         images_dir = paper_dir / "images"
-        output_path = paper_dir / f"{paper_name}_images_info.md"
+        output_path = self._get_stage_output_path('image_caption', paper_dir, paper_name)
         result = self.image_caption_processor.process(str(images_dir), str(output_path))
         return result
 
