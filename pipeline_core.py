@@ -335,8 +335,10 @@ class PipelineCore:
         if not input_path:
             raise ValueError("未找到翻譯 JSON 文件")
         paths = self._get_stage_output_path('md_restore', paper_dir, paper_name)
+        images_info_path = self._get_stage_output_path('image_caption', paper_dir, paper_name)
         en_path, zh_path = self.restore_processor.process(
-            str(input_path), str(paths['en']), str(paths['zh'])
+            str(input_path), str(paths['en']), str(paths['zh']),
+            images_info_path=str(images_info_path) if images_info_path.exists() else None
         )
         return {'en': Path(en_path), 'zh': Path(zh_path)}
 
