@@ -6,6 +6,44 @@
   <title>Mad Professor</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <style>
+    :root {
+      /* 色彩 - 蜜思凡德羅黑白灰 */
+      --color-bg: #ffffff;
+      --color-surface: #fafafa;
+      --color-border: #e5e5e5;
+      --color-border-strong: #d4d4d4;
+      --color-text: #171717;
+      --color-text-muted: #737373;
+      --color-text-subtle: #a3a3a3;
+      --color-accent: #171717;
+      --color-accent-hover: #404040;
+      --color-danger: #dc2626;
+
+      /* 間距 scale (4px 基準) */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-8: 48px;
+
+      /* 圓角 (極小) */
+      --radius-sm: 2px;
+      --radius-md: 4px;
+
+      /* 字級 scale */
+      --font-xs: 12px;
+      --font-sm: 13px;
+      --font-base: 14px;
+      --font-lg: 16px;
+      --font-xl: 20px;
+      --font-2xl: 28px;
+
+      /* 過渡 */
+      --transition: 150ms ease;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f5; height: 100vh; display: flex; }
 
@@ -382,12 +420,35 @@
       font-weight: 500;
     }
     #confirm-ok-btn:hover { background: #1d4ed8; }
+
+    /* 階段一：側欄收合 */
+    #sidebar.collapsed { width: 0; overflow: hidden; }
+    #chat-panel.collapsed { width: 0; overflow: hidden; }
+    .panel-toggle {
+      position: fixed;
+      z-index: 50;
+      top: var(--space-3);
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--font-base);
+      line-height: 1;
+    }
+    .panel-toggle:hover { background: var(--color-border); }
+    #sidebar-toggle { left: var(--space-3); }
+    #chat-toggle { right: var(--space-3); }
   </style>
 </head>
 <body>
 
 <!-- 左側論文列表 -->
 <div id="sidebar">
+  <button id="sidebar-toggle" class="panel-toggle" title="收合/展開左側欄">☰</button>
   <h1>📚 文件列表</h1>
   <div id="paper-list"></div>
   <div id="sidebar-bottom">
@@ -449,6 +510,7 @@
 <!-- 右側 AI 問答 -->
 <div id="chat-panel">
   <div id="chat-header">
+    <button id="chat-toggle" class="panel-toggle" title="收合/展開右側欄">☰</button>
     <span>🤖 AI 問答</span>
     <button id="export-btn" style="display:none" title="匯出對話紀錄">↓ MD</button>
   </div>
@@ -849,6 +911,14 @@ document.getElementById('help-modal').onclick = (e) => {
 };
 
 loadPapers();
+
+// 階段一：側欄收合切換
+document.getElementById('sidebar-toggle').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+};
+document.getElementById('chat-toggle').onclick = () => {
+  document.getElementById('chat-panel').classList.toggle('collapsed');
+};
 </script>
 </body>
 </html>
