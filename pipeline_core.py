@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import logging
 from typing import Optional, Dict, List, Union, Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import paper_manager
 from processor.pdf_processor import PDFProcessor
 from processor.md_cleaner import MarkdownCleaner
@@ -13,6 +14,7 @@ from processor.translate_processor import TranslateProcessor
 from processor.md_restore_processor import RestoreProcessor
 from processor.extra_info_processor import ExtraInfoProcessor
 from processor.rag_processor import RagProcessor
+from processor.image_caption_processor import ImageCaptionProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ class PipelineCore:
         'json_process': 'JSON 處理',
         'tiling': '分段處理',
         'translate': '內容翻譯',
+        'image_caption': '圖片說明生成',
         'md_restore': '生成 Markdown 文件',
         'extra_info': '提取額外資訊',
         'rag': 'RAG 處理'
@@ -43,6 +46,7 @@ class PipelineCore:
             'json_process': '_processed',
             'tiling': '_tiled',
             'translate': '_translated',
+            'image_caption': '_images_info',
             'md_restore': '_restored',
             'extra_info': '_extra_info',
             'rag': '_rag'
@@ -55,11 +59,12 @@ class PipelineCore:
             'json_process': self._stage_json_process,
             'tiling': self._stage_tiling,
             'translate': self._stage_translate,
+            'image_caption': self._stage_image_caption,
             'md_restore': self._stage_md_restore,
             'extra_info': self._stage_extra_info,
             'rag': self._stage_rag
         }
-        default_stages = ['pdf2md', 'analyze', 'md2json', 'json_process', 'tiling', 'translate', 'md_restore', 'extra_info', 'rag']
+        default_stages = ['pdf2md', 'analyze', 'md2json', 'json_process', 'tiling', 'translate', 'image_caption', 'md_restore', 'extra_info', 'rag']
         self.stages = stages or default_stages
 
         self.pdf_processor = PDFProcessor()
@@ -69,6 +74,7 @@ class PipelineCore:
         self.json_processor = JsonProcessor()
         self.tiling_processor = TilingProcessor()
         self.translate_processor = TranslateProcessor()
+        self.image_caption_processor = ImageCaptionProcessor()
         self.restore_processor = RestoreProcessor()
         self.extra_info_processor = ExtraInfoProcessor()
         self.rag_processor = RagProcessor()
@@ -76,7 +82,7 @@ class PipelineCore:
         self.paper_info = {'paper_id': None, 'output_dir': None}
         self._current_stage = None
 
-    TOTAL_STAGES = 9  # pdf2md, analyze, md2json, json_process, tiling, translate, md_restore, extra_info, rag
+    TOTAL_STAGES = 10  # pdf2md, analyze, md2json, json_process, tiling, translate, image_caption, md_restore, extra_info, rag
 
     def _emit_progress(self, stage: str, index: int):
         """發送進度更新"""
@@ -130,57 +136,73 @@ class PipelineCore:
         # 支援傳入已有的 output_paths（第二階段繼續處理）
         output_paths = dict(existing_paths) if existing_paths else {}
 
-        for i, stage in enumerate(self.stages):
+        # translate 和 image_caption 並行執行
+        PARALLEL_STAGES = {'translate', 'image_caption'}
+
+        i = 0
+        while i < len(self.stages):
+            stage = self.stages[i]
+
+            # 偵測到 translate，嘗試與 image_caption 並行
+            if stage == 'translate' and 'image_caption' in self.stages:
+                translate_done = self._check_stage_exists('translate', paper_output_dir, self.paper_info['paper_id'], output_paths)
+                caption_done = self._check_stage_exists('image_caption', paper_output_dir, self.paper_info['paper_id'], output_paths)
+
+                if not translate_done or not caption_done:
+                    self.logger.info("並行執行: translate + image_caption")
+                    self._emit_progress('translate', i + 1)
+
+                    with ThreadPoolExecutor(max_workers=2) as executor:
+                        futures = {}
+                        if not translate_done:
+                            futures[executor.submit(
+                                self.available_stages['translate'],
+                                pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
+                            )] = 'translate'
+                        if not caption_done:
+                            futures[executor.submit(
+                                self.available_stages['image_caption'],
+                                pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
+                            )] = 'image_caption'
+
+                        for future in as_completed(futures):
+                            s = futures[future]
+                            try:
+                                output_paths[s] = future.result()
+                                self.logger.info(f"階段 {s} 完成")
+                            except Exception as e:
+                                self.logger.error(f"階段 {s} 失敗: {str(e)}")
+                                if s == 'translate':
+                                    raise
+
+                # 跳過 image_caption（已並行處理）
+                if i + 1 < len(self.stages) and self.stages[i + 1] == 'image_caption':
+                    i += 2
+                else:
+                    i += 1
+                continue
+
+            if stage == 'image_caption':
+                i += 1
+                continue
+
             if stage not in self.available_stages:
                 self.logger.warning(f"未知的處理階段: {stage}")
+                i += 1
                 continue
 
             self._current_stage = stage
             self._emit_progress(stage, i + 1)
             self.logger.info(f"開始運行階段: {stage}")
 
-            expected_output = self._get_stage_output_path(stage, paper_output_dir, self.paper_info['paper_id'])
+            if not self._check_stage_exists(stage, paper_output_dir, self.paper_info['paper_id'], output_paths):
+                stage_output = self.available_stages[stage](
+                    pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
+                )
+                output_paths[stage] = stage_output
+                self.logger.info(f"階段 {stage} 完成")
 
-            # 檢查是否已存在
-            if stage in ['md_restore', 'rag']:
-                if all(p.exists() for p in expected_output.values()):
-                    self.logger.info(f"階段 {stage} 已存在，跳過")
-                    output_paths[stage] = expected_output
-                    continue
-            else:
-                if isinstance(expected_output, Path) and expected_output.exists():
-                    # pdf2md 被 skip 時，額外記錄 .md 路徑供後續使用
-                    if stage == 'pdf2md':
-                        md_path = paper_output_dir / f'{self.paper_info["paper_id"]}.md'
-                        output_paths['pdf2md'] = md_path
-                        self.logger.info(f"階段 {stage} 已存在，跳過")
-                        continue
-                    # md2json 階段：額外檢查 sidecar 是否存在
-                    elif stage == 'md2json':
-                        md_path = output_paths.get('pdf2md')
-                        if md_path:
-                            sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
-                            if not sidecar.exists():
-                                self.logger.info("sidecar 不存在，重新執行 md2json")
-                                pass  # 不 skip，繼續執行
-                            else:
-                                self.logger.info(f"階段 {stage} 已存在，跳過")
-                                output_paths[stage] = expected_output
-                                continue
-                        else:
-                            self.logger.info(f"階段 {stage} 已存在，跳過")
-                            output_paths[stage] = expected_output
-                            continue
-                    else:
-                        self.logger.info(f"階段 {stage} 已存在，跳過")
-                        output_paths[stage] = expected_output
-                        continue
-
-            stage_output = self.available_stages[stage](
-                pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
-            )
-            output_paths[stage] = stage_output
-            self.logger.info(f"階段 {stage} 完成")
+            i += 1
 
         self._current_stage = None
 
@@ -204,6 +226,42 @@ class PipelineCore:
             output_paths['final'] = final_paths
 
         return output_paths
+
+    def _check_stage_exists(self, stage: str, paper_dir: Path, paper_name: str, output_paths: dict) -> bool:
+        """檢查階段是否已完成，若已完成則更新 output_paths"""
+        expected_output = self._get_stage_output_path(stage, paper_dir, paper_name)
+
+        if stage in ['md_restore', 'rag']:
+            if all(p.exists() for p in expected_output.values()):
+                output_paths[stage] = expected_output
+                self.logger.info(f"階段 {stage} 已存在，跳過")
+                return True
+
+        elif isinstance(expected_output, Path) and expected_output.exists():
+            if stage == 'pdf2md':
+                md_path = paper_dir / f'{paper_name}.md'
+                output_paths['pdf2md'] = md_path
+                self.logger.info(f"階段 {stage} 已存在，跳過")
+                return True
+            elif stage == 'md2json':
+                md_path = output_paths.get('pdf2md')
+                if md_path:
+                    sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
+                    if sidecar.exists():
+                        output_paths[stage] = expected_output
+                        self.logger.info(f"階段 {stage} 已存在，跳過")
+                        return True
+                    return False
+            elif stage == 'image_caption':
+                output_paths[stage] = expected_output
+                self.logger.info(f"階段 {stage} 已存在，跳過")
+                return True
+            else:
+                output_paths[stage] = expected_output
+                self.logger.info(f"階段 {stage} 已存在，跳過")
+                return True
+
+        return False
 
     def _update_global_index(self, base_output_dir: Path, final_paths: Dict) -> None:
         paper_manager.update_papers_index(
@@ -256,6 +314,13 @@ class PipelineCore:
             raise ValueError("未找到 JSON 文件")
         output_path = self._get_stage_output_path('translate', paper_dir, paper_name)
         return self.translate_processor.process(str(input_path), str(output_path))
+
+    def _stage_image_caption(self, pdf_path, paper_dir, paper_name, output_paths):
+        """Vision 圖片說明生成，與 translate 並行執行"""
+        images_dir = paper_dir / "images"
+        output_path = paper_dir / f"{paper_name}_images_info.md"
+        result = self.image_caption_processor.process(str(images_dir), str(output_path))
+        return result
 
     def _stage_md_restore(self, pdf_path, paper_dir, paper_name, output_paths):
         input_path = output_paths.get('translate')
