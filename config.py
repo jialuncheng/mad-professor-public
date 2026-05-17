@@ -191,15 +191,18 @@ class EmbeddingModel(Embeddings):
 
     def embed_documents(self, texts: list) -> list:
         """批次 embed 文字列表（用於建立向量庫）"""
-        result = self.client.models.embed_content(
-            model=self.model,
-            contents=texts,
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=768
+        embeddings = []
+        for text in texts:
+            result = self.client.models.embed_content(
+                model=self.model,
+                contents=[text],
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=768
+                )
             )
-        )
-        return [e.values for e in result.embeddings]
+            embeddings.append(result.embeddings[0].values)
+        return embeddings
 
     def embed_query(self, text: str) -> list:
         """embed 單一查詢字串（用於搜尋）"""
