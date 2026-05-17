@@ -84,8 +84,10 @@ class SlidesProcessor:
                 title = slide_title
                 lines[0] = f"# {title}"
 
-            # 組合成 Markdown
-            if slide_title:
+            # 組合成 Markdown（第一頁只用文件標題，不重複加 section 標題）
+            if page_num == 0:
+                pass  # 已用作文件標題
+            elif slide_title:
                 lines.append(f"## {slide_title}")
             else:
                 lines.append(f"## 第 {page_num + 1} 頁")
