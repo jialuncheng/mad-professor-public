@@ -193,30 +193,27 @@ class EmbeddingModel(Embeddings):
         """批次 embed 文字列表（用於建立向量庫）"""
         import time
         embeddings = []
-        batch_size = 5  # 每批最多 5 個，避免 rate limit
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+        for text in texts:
             for attempt in range(3):
                 try:
-                    for text in batch:
-                        result = self.client.models.embed_content(
-                            model=self.model,
-                            contents=[text],
-                            config=types.EmbedContentConfig(
-                                task_type="RETRIEVAL_DOCUMENT",
-                                output_dimensionality=768
-                            )
+                    result = self.client.models.embed_content(
+                        model=self.model,
+                        contents=[text],
+                        config=types.EmbedContentConfig(
+                            task_type="RETRIEVAL_DOCUMENT",
+                            output_dimensionality=768
                         )
-                        embeddings.append(result.embeddings[0].values)
+                    )
+                    embeddings.append(result.embeddings[0].values)
                     break
                 except Exception as e:
                     if '429' in str(e) and attempt < 2:
-                        wait = 10 * (attempt + 1)
+                        wait = 15 * (attempt + 1)
                         self.logger.warning(f"Rate limit，等待 {wait} 秒後重試...")
                         time.sleep(wait)
                     else:
                         raise
-            time.sleep(0.5)  # 每批之間稍作停頓
+            time.sleep(0.3)
         return embeddings
 
     def embed_query(self, text: str) -> list:
