@@ -34,7 +34,6 @@ class RagProcessor:
 
             # 提取摘要并放入 summary 字段
             abstract_content = self._extract_abstract_summary(paper_data.get("sections", []))
-            abstract_content = self._extract_abstract_summary(paper_data.get("sections", []))
             paper_data["abstract"] = {
                 "content": abstract_content.get("content", ""),
                 "translated_content": abstract_content.get("translated_content", "")

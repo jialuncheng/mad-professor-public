@@ -75,9 +75,6 @@ class PDFProcessor:
             md_text = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', md_text)
             markdown_path.write_text(md_text, encoding='utf-8')
 
-            # 分析文件結構
-            self._analyze_document_structure(markdown_path)
-
             # 從 mineru-lab 複製圖片
             self._copy_images(paper_name, output_dir)
 
@@ -155,57 +152,6 @@ class PDFProcessor:
 
         except Exception as e:
             self.logger.warning(f"標題層級修正時出錯（不影響後續流程）: {str(e)}")
-
-    def _analyze_document_structure(self, markdown_path: Path) -> dict:
-        """用 LLM 分析文件結構，識別標題、作者、摘要等區塊"""
-        import re
-        import json as json_module
-
-        try:
-            content = markdown_path.read_text(encoding='utf-8')
-            lines = content.split('\n')
-
-            first_section_line = len(lines)
-            for i, line in enumerate(lines):
-                if re.match(r'^#{2,}\s+\S', line):
-                    first_section_line = i
-                    break
-
-            analysis_end = min(first_section_line + 10, 500, len(lines))
-            analysis_lines = lines[:analysis_end]
-            # 只送非空行給 LLM，但保留原始行號
-            numbered = '\n'.join(f'{i}: {line}' for i, line in enumerate(analysis_lines) if line.strip())
-
-            prompt = f"""以下是一份文件的前段內容（格式：原始行號: 內容，空行已省略但行號保留）：
-
-{numbered}
-
-請分析這份文件的結構，回傳 JSON：
-
-{{
-  "document_type": "academic_paper 或 book 或 technical_doc 或 slides 或 other",
-  "structure": [
-    {{"start": 起始行號, "end": 結束行號, "type": "類型"}}
-  ]
-}}
-
-type 可以是：title, authors, publication_info, abstract, preface, toc, section_heading, intro_text, other
-
-只輸出 JSON，不要任何解釋。"""
-
-            messages = [{'role': 'user', 'content': prompt}]
-            result_text = self.llm.chat(messages, stream=False).strip()
-            result_text = re.sub(r'```json|```', '', result_text).strip()
-            structure = json_module.loads(result_text)
-
-            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
-            sidecar_path.write_text(json_module.dumps(structure, ensure_ascii=False, indent=2), encoding='utf-8')
-            self.logger.info(f'文件結構分析完成: {structure.get("document_type")}')
-            return structure
-
-        except Exception as e:
-            self.logger.warning(f'文件結構分析時出錯（不影響後續流程）: {str(e)}')
-            return {}
 
     def _copy_images(self, paper_name: str, output_dir: Path):
         """從 mineru-lab 複製最新的圖片目錄"""
