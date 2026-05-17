@@ -2,7 +2,7 @@ import re
 import json
 import logging
 from typing import Dict, Any, List, Tuple, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import defaultdict
 from pathlib import Path
 

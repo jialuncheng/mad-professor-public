@@ -4,7 +4,6 @@ import re
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Any
-import numpy as np
 from config import EmbeddingModel
 
 class TilingProcessor:
