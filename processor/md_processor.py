@@ -6,41 +6,35 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from pathlib import Path
 
-# 配置日志
 logger = logging.getLogger(__name__)
 
 @dataclass
 class Section:
-    title: str            # 完整标题（包含编号和文本）
-    number: str           # 章节编号（如 "1.2.3"）
-    level: int           # 层级深度（根据编号中的点数确定）
-    content: List[str]   # 章节内容，每个段落作为列表的一个元素
-    raw_title: str       # 不含编号的标题文本
-    type: Optional[str] = None   # 章节类型,如 'abstract', 'references'
-    heading_level: int = 1       # Markdown # 的數量
+    title: str
+    number: str
+    level: int
+    content: List[str]
+    raw_title: str
+    type: Optional[str] = None
+    heading_level: int = 1
 
 class MarkdownProcessor:
-    """Markdown处理器：将Markdown解析为结构化JSON"""
+    """Markdown處理器：將Markdown解析為結構化JSON"""
 
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-
         self.title_pattern = re.compile(r'^(#+)\s*(\S.*?)$')
-        
         self.abstract_pattern = re.compile(
             r'^#+\s*(?:\d+\.)?\s*(?:ABSTRACT|Abstract|abstract|SUMMARY|Summary|summary)'
         )
-        
         self.reference_pattern = re.compile(r'^#+\s*(?:\d+\.)?\s*(?:REFERENCES?|References?|references?)')
-
         self.reference_line_pattern = re.compile(r'^(?:REFERENCES?|References?|references?)(?:\s*:|\s*\.)?\s*$')
-        
         self.section_number_pattern = re.compile(
             r'^((?:[IVXivx]+|[0-9]+(?:\.[0-9]+)*))(\.?)\s*(.*?)$'
         )
-        
-        self.potential_title_pattern = re.compile(r'^(?!#)(\d+(?:\.\d+)*)\s+([A-Z][A-Z\s\d:]+(?:\s*[A-Z][A-Za-z\s\d:]+)*)')
-
+        self.potential_title_pattern = re.compile(
+            r'^(?!#)(\d+(?:\.\d+)*)\s+([A-Z][A-Z\s\d:]+(?:\s*[A-Z][A-Za-z\s\d:]+)*)'
+        )
         self.figure_table_pattern = re.compile(r'''
             ^(?:
                 (?:Figure|Fig\.|Table|Tab\.)
@@ -53,12 +47,10 @@ class MarkdownProcessor:
                 (?:\s+[IVX]+:?)
             )
             ''', re.IGNORECASE | re.VERBOSE)
-
         self.image_pattern = re.compile(r'^!\[.*?\]\(.*?\)')
         self.latex_block_pattern = re.compile(r'^\$\$')
-        self.logger.debug("初始化Markdown处理器完成")
-        
-    def parse_section_number(self, title: str) -> tuple[str, str, int]:
+
+    def parse_section_number(self, title: str) -> tuple:
         match = self.section_number_pattern.match(title)
         if match:
             number, dot, raw_title = match.groups()
@@ -70,8 +62,7 @@ class MarkdownProcessor:
         return '', title.strip(), 1
 
     def parse_references(self, content: str) -> List[str]:
-        references = [line.strip() for line in content.split('\n') if line.strip()]
-        return references
+        return [line.strip() for line in content.split('\n') if line.strip()]
 
     def parse_content(self, content: List[str]) -> List[str]:
         text = '\n'.join(content)
@@ -79,7 +70,6 @@ class MarkdownProcessor:
         current_para = []
         in_latex_block = False
         latex_content = []
-        
         for line in text.split('\n'):
             line = line.strip()
             if self.latex_block_pattern.match(line):
@@ -110,7 +100,6 @@ class MarkdownProcessor:
                 paragraphs.append(line)
                 continue
             current_para.append(line)
-            
         if current_para:
             paragraphs.append('\n'.join(current_para).strip())
         return paragraphs
@@ -119,19 +108,15 @@ class MarkdownProcessor:
         missing_sections = []
         lines = content.split('\n')
         section_start_indices = []
-        
         for i, line in enumerate(lines):
             match = self.potential_title_pattern.match(line)
             if match:
                 number, title_text = match.groups()
                 if number.startswith(current_prefix):
                     section_start_indices.append((i, number, title_text))
-        
         if not section_start_indices:
             return [], self.parse_content(lines)
-            
         original_content = self.parse_content(lines[:section_start_indices[0][0]])
-        
         for idx in range(len(section_start_indices)):
             start_idx, number, title_text = section_start_indices[idx]
             end_idx = section_start_indices[idx + 1][0] if idx < len(section_start_indices) - 1 else len(lines)
@@ -144,7 +129,6 @@ class MarkdownProcessor:
                 content=section_content,
                 raw_title=raw_title
             ))
-        
         return missing_sections, original_content
 
     def remove_empty_sections(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -154,10 +138,7 @@ class MarkdownProcessor:
         for section in sections:
             if 'children' in section:
                 section['children'] = self.remove_empty_sections(section['children'])
-            content_empty = not section.get('content', [])
-            children_empty = not section.get('children', [])
-            references_empty = not section.get('references', [])
-            if not (content_empty and children_empty and references_empty):
+            if not (not section.get('content') and not section.get('children') and not section.get('references')):
                 result.append(section)
         return result
 
@@ -175,11 +156,10 @@ class MarkdownProcessor:
                     result += roman.get(s[i], 0)
             return result
 
-    def check_section_continuity(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def check_section_continuity(self, sections):
         sections.sort(key=lambda x: self._roman_to_int(x['number'].split('.')[-1]))
         all_sections = sections.copy()
         section_numbers = [self._roman_to_int(s['number'].split('.')[-1]) for s in sections]
-        
         i = 0
         while i < len(section_numbers) - 1:
             current_num = section_numbers[i]
@@ -197,61 +177,44 @@ class MarkdownProcessor:
                     for missing_section in missing_sections:
                         missing_dict = vars(missing_section)
                         missing_dict['children'] = []
-                        insert_idx = next((j for j, s in enumerate(all_sections) 
-                                        if s['number'] > missing_section.number), len(all_sections))
+                        insert_idx = next((j for j, s in enumerate(all_sections)
+                                          if s['number'] > missing_section.number), len(all_sections))
                         all_sections.insert(insert_idx, missing_dict)
                     section_numbers = [self._roman_to_int(s['number'].split('.')[-1]) for s in all_sections]
                     i = 0
                     continue
             i += 1
-        
         return all_sections
 
-    def build_hierarchy(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """用 heading_level 建立父子關係"""
+    def build_hierarchy(self, sections):
         if not sections:
             return []
-        
         hierarchy = []
-        stack = []  # 存放 (heading_level, section_dict)
-        
+        stack = []
         for section in sections:
             section['children'] = []
             h = section.get('heading_level', 1)
-            
-            # 彈出所有 heading_level >= 當前的節點
             while stack and stack[-1][0] >= h:
                 stack.pop()
-            
             if stack:
-                # 當前節點是棧頂節點的子節點
                 stack[-1][1]['children'].append(section)
             else:
-                # 頂層節點
                 hierarchy.append(section)
-            
             stack.append((h, section))
-        
         return hierarchy
 
     def parse(self, content: str, structure: dict = None) -> Dict[str, Any]:
         lines = content.split('\n')
-        result = {
-            'title': '',
-            'authors_info': '',
-            'sections': []
-        }
+        result = {'title': '', 'authors_info': '', 'sections': []}
 
-        # 用 structure 計算 authors_info 的結束行號
-        # 只收集 authors/publication_info/other，遇到 intro_text/section_heading 就停
-        authors_end_line = -1
+        # 從 doc_analyzer 的 structure 取得 authors 行號集合
+        # 只有在 authors/publication_info 類型的行才放進 authors_info
+        author_lines = set()
         if structure and structure.get('structure'):
             for block in structure['structure']:
-                btype = block.get('type', '')
-                if btype in ('authors', 'publication_info'):
-                    authors_end_line = max(authors_end_line, block['end'])
-                elif btype in ('intro_text', 'section_heading', 'abstract'):
-                    break  # 遇到內文或章節標題就停止
+                if block.get('type') in ('authors', 'publication_info'):
+                    for i in range(block['start'], block['end'] + 1):
+                        author_lines.add(i)
 
         current_section = None
         current_content = []
@@ -263,21 +226,13 @@ class MarkdownProcessor:
 
         for line in lines:
             current_line_num += 1
-
-            # 如果有 structure 且超過 authors 範圍，強制結束收集
-            if collecting_authors and authors_end_line >= 0 and current_line_num > authors_end_line:
-                result['authors_info'] = '\n'.join(authors_content).strip()
-                collecting_authors = False
-                # 這行要繼續處理，不要 skip
             title_match = self.title_pattern.match(line)
-
             reference_line_match = None
             if not in_references and not title_match:
                 reference_line_match = self.reference_line_pattern.match(line)
-            
+
             if not has_started and not title_match:
                 continue
-
             if line.strip().startswith('#') and not title_match:
                 continue
 
@@ -286,12 +241,8 @@ class MarkdownProcessor:
                     current_section.content = self.parse_content(current_content)
                     result['sections'].append(vars(current_section))
                 current_section = Section(
-                    title="REFERENCES",
-                    number="",
-                    level=1,
-                    content=[],
-                    raw_title="REFERENCES",
-                    type='references'
+                    title="REFERENCES", number="", level=1,
+                    content=[], raw_title="REFERENCES", type='references'
                 )
                 reference_content = re.sub(r'^(?:REFERENCES?|References?|references?)\s*', '', line).strip()
                 current_content = [reference_content] if reference_content else []
@@ -301,87 +252,66 @@ class MarkdownProcessor:
             elif title_match:
                 heading_level = len(title_match.group(1))
                 title_text = title_match.group(2).strip()
-                
+
                 if not has_started:
                     result['title'] = title_text
                     collecting_authors = True
                     has_started = True
                     continue
-                
+
                 if self.abstract_pattern.match(line):
-                    authors_text = '\n'.join(authors_content).strip()
-                    authors_lines = authors_text.split('\n')
-                    image_lines = []
-                    clean_authors_lines = []
-                    for line in authors_lines:
-                        if self.image_pattern.match(line) or self.figure_table_pattern.match(line):
-                            image_lines.append(line)
-                        else:
-                            clean_authors_lines.append(line)
-                    result['authors_info'] = '\n'.join(clean_authors_lines).strip()
+                    result['authors_info'] = '\n'.join(authors_content).strip()
                     collecting_authors = False
                     number, raw_title, level = self.parse_section_number(title_text)
                     current_section = Section(
-                        title=title_text,
-                        number=number,
-                        level=level,
-                        content=[],
-                        raw_title=raw_title,
-                        type='abstract',
+                        title=title_text, number=number, level=level,
+                        content=[], raw_title=raw_title, type='abstract',
                         heading_level=heading_level
                     )
                     current_content = []
-                    current_content.extend(image_lines)
                     continue
-                
+
                 if collecting_authors:
-                    # 如果遇到 ## 或更深的標題，強制結束作者收集
                     if heading_level >= 2:
                         result['authors_info'] = '\n'.join(authors_content).strip()
                         collecting_authors = False
                     else:
                         authors_content.append(title_text)
                         continue
-                
+
                 if current_section and not collecting_authors:
                     if in_references:
                         current_section.content = self.parse_references('\n'.join(current_content))
                         result['sections'].append(vars(current_section))
                         in_references = False
                     else:
-                        if self.abstract_pattern.match(current_section.title):
-                            parsed_content = []
-                            other_lines = []
-                            for line in current_content:
-                                if self.image_pattern.match(line) or self.figure_table_pattern.match(line):
-                                    parsed_content.append(line)
-                                else:
-                                    other_lines.append(line)
-                            if other_lines:
-                                parsed_content.extend(self.parse_content(other_lines))
-                            current_section.content = parsed_content
-                        else:
-                            current_section.content = self.parse_content(current_content)
+                        current_section.content = self.parse_content(current_content)
                         result['sections'].append(vars(current_section))
-                
+
                 number, raw_title, level = self.parse_section_number(title_text)
                 current_section = Section(
-                    title=title_text,
-                    number=number,
-                    level=level,
-                    content=[],
-                    raw_title=raw_title,
-                    heading_level=heading_level
+                    title=title_text, number=number, level=level,
+                    content=[], raw_title=raw_title, heading_level=heading_level
                 )
                 current_content = []
-                
                 if self.reference_pattern.match(line):
                     in_references = True
                     current_section.type = 'references'
-                    
+
             else:
                 if collecting_authors:
-                    authors_content.append(line)
+                    # 有 structure：只收集 author_lines 範圍內的行
+                    # 沒有 structure：收集所有行（舊邏輯）
+                    if author_lines:
+                        if current_line_num in author_lines:
+                            authors_content.append(line)
+                        else:
+                            # 超出 authors 範圍，結束收集，這行當內文
+                            result['authors_info'] = '\n'.join(authors_content).strip()
+                            collecting_authors = False
+                            current_content.append(line)
+                    else:
+                        authors_content.append(line)
                 else:
                     current_content.append(line)
 
@@ -393,40 +323,33 @@ class MarkdownProcessor:
                 else:
                     current_section.content = self.parse_content(current_content)
                 result['sections'].append(vars(current_section))
-        
-        # 簡報用扁平結構，不建立父子關係
+
         if structure and structure.get('flat_structure'):
             result['sections'] = self.remove_empty_sections(result['sections'])
         else:
             result['sections'] = self.build_hierarchy(result['sections'])
             result['sections'] = self.remove_empty_sections(result['sections'])
-        
+
         return result
 
     def process(self, markdown_path: str, output_path: str) -> Path:
         try:
             markdown_path = Path(markdown_path)
             output_path = Path(output_path)
-            self.logger.info(f"开始解析Markdown文件: {markdown_path}")
+            self.logger.info(f"開始解析Markdown文件: {markdown_path}")
             content = markdown_path.read_text(encoding='utf-8')
-
-            # 讀取結構分析 sidecar（如果存在）
             import json as json_module
             sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
             structure = {}
             if sidecar_path.exists():
                 structure = json_module.loads(sidecar_path.read_text(encoding='utf-8'))
                 self.logger.info(f"讀取文件結構: {structure.get('document_type')}")
-
             result = self.parse(content, structure=structure)
-            self.logger.info(f"保存解析结果到: {output_path}")
-            output_path.write_text(
-                json.dumps(result, ensure_ascii=False, indent=2),
-                encoding='utf-8'
-            )
+            self.logger.info(f"保存解析結果到: {output_path}")
+            output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
             return output_path
         except Exception as e:
-            self.logger.error(f"Markdown处理失败: {str(e)}", exc_info=True)
+            self.logger.error(f"Markdown處理失敗: {str(e)}", exc_info=True)
             raise
 
 if __name__ == "__main__":
@@ -434,4 +357,4 @@ if __name__ == "__main__":
     try:
         json_path = processor.process("input.md", "output.json")
     except Exception as e:
-        logging.error(f"处理失败：{e}")
+        logging.error(f"處理失敗：{e}")
