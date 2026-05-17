@@ -275,7 +275,7 @@ class RestoreProcessor:
             
             # 处理各个章节
             for section in data['sections']:
-                self._process_section(section, output_path_en, output_path_zh, vision_captions=vision_captions)
+                self._process_section(section, output_path_en, output_path_zh, level=2, vision_captions=vision_captions)
             
             self.logger.info(f"恢复完成，结果已保存到: {output_path_en} 和 {output_path_zh}")
             return output_path_en, output_path_zh
