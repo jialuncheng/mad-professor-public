@@ -1,21 +1,22 @@
-# Web 框架
+# Web Server
 fastapi
 uvicorn
 python-multipart
 
-# LLM
+# Gemini API（LLM + Embedding）
 google-genai
 
-# Embedding 與向量庫
-sentence_transformers
-faiss-cpu
+# RAG
 langchain
-langchain_community
-langchain-huggingface
+langchain-community
 langchain-text-splitters
+faiss-cpu
+
+# PDF 解析
+PyMuPDF
 
 # 工具
+numpy
 python-dotenv
+pydantic-settings
 requests
-zhconv
-pymupdf
