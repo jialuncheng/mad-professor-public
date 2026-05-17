@@ -90,7 +90,7 @@ class PipelineCore:
             return
         # 用固定總數計算進度，避免分階段跑時進度跳到 100%
         all_stages = ['pdf2md', 'analyze', 'md2json', 'json_process',
-                      'tiling', 'translate', 'md_restore', 'extra_info', 'rag']
+                      'tiling', 'translate', 'image_caption', 'md_restore', 'extra_info', 'rag']
         global_index = all_stages.index(stage) + 1 if stage in all_stages else index
         info = {
             'stage': stage,
@@ -116,6 +116,8 @@ class PipelineCore:
                 'tree_json': paper_dir / f"final_{paper_name}_rag_tree.json",
                 'vector_store': paper_dir / "vectors"
             }
+        elif stage == 'image_caption':
+            return paper_dir / f"{paper_name}{identifier}.md"
         else:
             return paper_dir / f"{paper_name}{identifier}.json"
 
@@ -135,9 +137,6 @@ class PipelineCore:
 
         # 支援傳入已有的 output_paths（第二階段繼續處理）
         output_paths = dict(existing_paths) if existing_paths else {}
-
-        # translate 和 image_caption 並行執行
-        PARALLEL_STAGES = {'translate', 'image_caption'}
 
         i = 0
         while i < len(self.stages):
