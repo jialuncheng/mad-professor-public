@@ -51,6 +51,10 @@ class SlidesProcessor:
         lines = [f"# {paper_name.replace('_', ' ')}", ""]
         title = ""
 
+        # 建立 images 目錄
+        images_dir = output_dir / "images"
+        images_dir.mkdir(exist_ok=True)
+
         for page_num in range(total_pages):
             page = doc[page_num]
             self.logger.info(f"  [{page_num + 1}/{total_pages}] 處理第 {page_num + 1} 頁")
@@ -59,6 +63,11 @@ class SlidesProcessor:
             mat = fitz.Matrix(2.0, 2.0)  # 2x 解析度
             pix = page.get_pixmap(matrix=mat)
             img_data = pix.tobytes("jpeg")
+
+            # 儲存頁面圖片
+            img_filename = f"slide_{page_num + 1:02d}.jpg"
+            img_path = images_dir / img_filename
+            img_path.write_bytes(img_data)
 
             # Vision 辨識
             result = self._analyze_slide(img_data, page_num + 1)
@@ -80,6 +89,9 @@ class SlidesProcessor:
                 lines.append(f"## {slide_title}")
             else:
                 lines.append(f"## 第 {page_num + 1} 頁")
+
+            # 插入頁面圖片
+            lines.append(f"![slide_{page_num + 1:02d}](images/{img_filename})")
 
             if content:
                 lines.append(content)
