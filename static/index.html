@@ -194,14 +194,19 @@
     }
     #print-btn:hover { background: #f1f5f9; }
     @media print {
-      #sidebar, #chat-panel, #content-toolbar { display: none !important; }
-      #content-area { display: block !important; }
+      * { overflow: visible !important; height: auto !important; }
+      body { display: block !important; height: auto !important; }
+      #sidebar, #chat-panel, #content-toolbar, #print-btn, #lang-toggle { display: none !important; }
+      #content-area { display: block !important; width: 100% !important; overflow: visible !important; }
       #paper-content {
         display: block !important;
         max-width: 100% !important;
-        padding: 0 !important;
+        width: 100% !important;
+        padding: 20px !important;
         margin: 0 !important;
         overflow: visible !important;
+        height: auto !important;
+        position: static !important;
       }
       #empty-state { display: none !important; }
     }
