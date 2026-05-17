@@ -303,7 +303,10 @@ class MarkdownProcessor:
                     # 有 structure：只收集 author_lines 範圍內的行
                     # 沒有 structure：收集所有行（舊邏輯）
                     if author_lines:
-                        if current_line_num in author_lines:
+                        if not line.strip():
+                            # 空行：不觸發結束，繼續等待
+                            pass
+                        elif current_line_num in author_lines:
                             authors_content.append(line)
                         else:
                             # 超出 authors 範圍，結束收集，這行當內文
