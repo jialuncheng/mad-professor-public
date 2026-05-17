@@ -321,7 +321,8 @@ class PipelineCore:
         if not input_path:
             raise ValueError("未找到 JSON 文件")
         output_path = self._get_stage_output_path('translate', paper_dir, paper_name)
-        return self.translate_processor.process(str(input_path), str(output_path))
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+        return self.translate_processor.process(str(input_path), str(output_path), doc_type=doc_type)
 
     def _stage_image_caption(self, pdf_path, paper_dir, paper_name, output_paths):
         """Vision 圖片說明生成，與 translate 並行執行"""
