@@ -1,7 +1,6 @@
 import re
 import logging
 from pathlib import Path
-from utils.text_utils import CONTROL_CHAR_PATTERN
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +14,6 @@ class MarkdownCleaner:
         """清除控制字元等雜訊"""
         try:
             text = markdown_path.read_text(encoding='utf-8')
-
-            # 移除控制字元
-            text = CONTROL_CHAR_PATTERN.sub('', text)
 
             # 移除 MinerU 從圖表解析出的純數字行（如坡度標籤 "- 8 6 1 8 11 1 2 2 4"）
             # 特徵：只含數字、空格、小數點、百分號、負號，不含任何文字

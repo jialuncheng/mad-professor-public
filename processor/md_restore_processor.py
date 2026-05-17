@@ -263,13 +263,3 @@ class RestoreProcessor:
         except Exception as e:
             self.logger.error(f"JSON处理失败: {str(e)}", exc_info=True)
             raise
-
-
-# 使用示例
-if __name__ == "__main__":
-    processor = RestoreProcessor()
-    processor.process(
-        "output/HUMAN-LIKE EPISODIC MEMORY FOR INFINITE CONTEXT LLMS/HUMAN-LIKE EPISODIC MEMORY FOR INFINITE CONTEXT LLMS_translated.json",
-        "output_english.md",
-        "output_chinese.md"
-    )

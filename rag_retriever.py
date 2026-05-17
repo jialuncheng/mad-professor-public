@@ -1,8 +1,11 @@
 import json
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_community.vectorstores.faiss import FAISS
 from config import EmbeddingModel
+
+logger = logging.getLogger(__name__)
 
 
 class RagRetriever:
@@ -22,7 +25,7 @@ class RagRetriever:
         try:
             index_path = Path(base_path) / "papers_index.json"
             if not index_path.exists():
-                print(f"[WARNING] 論文索引不存在: {index_path}")
+                logger.warning(f"論文索引不存在: {index_path}")
                 return
             with open(index_path, 'r', encoding='utf-8') as f:
                 papers_index = json.load(f)
@@ -31,30 +34,30 @@ class RagRetriever:
                 vector_store_path = paper.get('paths', {}).get('rag_vector_store')
                 if paper_id and vector_store_path:
                     self.paper_vector_paths[paper_id] = str(Path(base_path) / vector_store_path)
-            print(f"[INFO] 预加载了 {len(self.paper_vector_paths)} 篇论文的向量库路径")
+            logger.info(f"预加载了 {len(self.paper_vector_paths)} 篇论文的向量库路径")
         except Exception as e:
-            print(f"[ERROR] 預載論文索引失敗: {str(e)}")
+            logger.error(f"預載論文索引失敗: {str(e)}")
 
     def add_paper(self, paper_id: str, vector_store_path: str) -> bool:
         """新增論文向量庫"""
         try:
             self.paper_vector_paths[paper_id] = vector_store_path
-            print(f"[INFO] 添加新论文向量库: {paper_id} -> {vector_store_path}")
+            logger.info(f"添加新论文向量库: {paper_id} -> {vector_store_path}")
             vector_store = self.load_vector_store(vector_store_path)
             if vector_store:
                 self.vector_stores[paper_id] = vector_store
-                print(f"[INFO] 成功加载新论文 {paper_id} 的向量库")
+                logger.info(f"成功加载新论文 {paper_id} 的向量库")
                 return True
             return False
         except Exception as e:
-            print(f"[ERROR] 添加新论文 {paper_id} 失敗: {str(e)}")
+            logger.error(f"添加新论文 {paper_id} 失敗: {str(e)}")
             return False
 
     def load_vector_store(self, vector_store_path: str) -> Optional[FAISS]:
         """載入向量庫"""
         path = Path(vector_store_path)
         if not path.exists() or not (path / "index.faiss").exists():
-            print(f"[ERROR] 向量庫路徑不存在: {vector_store_path}")
+            logger.error(f"向量庫路徑不存在: {vector_store_path}")
             return None
         try:
             store = FAISS.load_local(
@@ -62,10 +65,10 @@ class RagRetriever:
                 EmbeddingModel.get_instance(),
                 allow_dangerous_deserialization=True
             )
-            print(f"[INFO] 成功加载向量库: {vector_store_path}")
+            logger.info(f"成功加载向量库: {vector_store_path}")
             return store
         except Exception as e:
-            print(f"[ERROR] 載入向量庫失敗: {str(e)}")
+            logger.error(f"載入向量庫失敗: {str(e)}")
             return None
 
     def _get_vector_store(self, paper_id: str) -> Optional[FAISS]:
@@ -106,7 +109,7 @@ class RagRetriever:
             self.rag_trees[paper_id] = rag_tree
             return rag_tree
         except Exception as e:
-            print(f"[ERROR] 載入 RAG tree 失敗: {str(e)}")
+            logger.error(f"載入 RAG tree 失敗: {str(e)}")
             return {}
 
     def is_ready(self) -> bool:
@@ -172,7 +175,7 @@ class RagRetriever:
             return "\n\n".join(result_parts)
 
         except Exception as e:
-            print(f"[ERROR] 結構化檢索失敗: {str(e)}")
+            logger.error(f"結構化檢索失敗: {str(e)}")
             return ""
 
     def _get_node_from_path(self, tree: Dict, path: str) -> Dict:

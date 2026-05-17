@@ -716,7 +716,7 @@ document.getElementById('upload-btn').onclick = () => {
 
       // 上傳完成，立即顯示文件類型選擇框
       btn.textContent = '選擇類型...';
-      showConfirmModal(paperId, null, btn);
+      showConfirmModal(paperId, data.suggested_doc_type, btn);
 
     } catch (err) {
       btn.textContent = '＋ 上傳論文';
@@ -771,8 +771,15 @@ function showConfirmModal(paperId, detection, btn) {
   const modal = document.getElementById('confirm-modal');
   const select = document.getElementById('doc-type-select');
 
-  // 預設選 academic
-  select.value = 'academic';
+  // 預設選偵測值，無則 academic
+  select.value = detection || 'academic';
+
+  const desc = document.getElementById('confirm-desc');
+  if (detection === 'slides') {
+    desc.textContent = '系統偵測為簡報，已預設選『簡報』，可手動調整';
+  } else {
+    desc.textContent = '請選擇文件類型，系統將根據類型選擇最佳解析方式。';
+  }
 
   modal.classList.add('show');
 

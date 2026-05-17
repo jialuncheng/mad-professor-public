@@ -237,12 +237,3 @@ class JsonProcessor:
         if not m:
             return "", ""
         return m.group("alt"), m.group("src")
-
-
-if __name__ == "__main__":
-    processor = JsonProcessor()
-    try:
-        output_path = processor.process("input.json","output.json")
-        logging.info(f"处理完成，输出文件：{output_path}")
-    except Exception as e:
-        logging.error(f"处理失败：{e}")

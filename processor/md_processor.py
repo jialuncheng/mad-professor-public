@@ -362,10 +362,3 @@ class MarkdownProcessor:
         except Exception as e:
             self.logger.error(f"Markdown處理失敗: {str(e)}", exc_info=True)
             raise
-
-if __name__ == "__main__":
-    processor = MarkdownProcessor()
-    try:
-        json_path = processor.process("input.md", "output.json")
-    except Exception as e:
-        logging.error(f"處理失敗：{e}")

@@ -19,10 +19,16 @@ from processor.slides_processor import SlidesProcessor
 
 logger = logging.getLogger(__name__)
 
+# 階段清單的唯一權威來源（順序即執行順序）
+STAGE_NAMES = [
+    "pdf2md", "analyze", "md2json", "json_process", "tiling",
+    "translate", "image_caption", "md_restore", "extra_info", "rag"
+]
+
 class PipelineCore:
     """學術論文處理管線（不依賴 Qt，供 Web API 使用）"""
 
-    STAGE_NAMES = {
+    STAGE_DISPLAY_NAMES = {
         'pdf2md': 'PDF 轉 Markdown',
         'analyze': '文件結構分析',
         'md2json': 'Markdown 轉 JSON',
@@ -65,37 +71,91 @@ class PipelineCore:
             'extra_info': self._stage_extra_info,
             'rag': self._stage_rag
         }
-        default_stages = ['pdf2md', 'analyze', 'md2json', 'json_process', 'tiling', 'translate', 'image_caption', 'md_restore', 'extra_info', 'rag']
+        default_stages = list(STAGE_NAMES)
         self.stages = stages or default_stages
-
-        self.pdf_processor = PDFProcessor()
-        self.md_cleaner = MarkdownCleaner()
-        self.doc_analyzer = DocAnalyzer()
-        self.md_processor = MarkdownProcessor()
-        self.json_processor = JsonProcessor()
-        self.tiling_processor = TilingProcessor()
-        self.translate_processor = TranslateProcessor()
-        self.image_caption_processor = ImageCaptionProcessor()
-        self.restore_processor = RestoreProcessor()
-        self.extra_info_processor = ExtraInfoProcessor()
-        self.rag_processor = RagProcessor()
 
         self.paper_info = {'paper_id': None, 'output_dir': None}
         self._current_stage = None
 
-    TOTAL_STAGES = 10  # pdf2md, analyze, md2json, json_process, tiling, translate, image_caption, md_restore, extra_info, rag
+    # 各 processor 延遲建立並快取：首次存取對應屬性時才實例化，之後重用同一物件
+    @property
+    def pdf_processor(self):
+        if not hasattr(self, '_pdf_processor'):
+            self._pdf_processor = PDFProcessor()
+        return self._pdf_processor
+
+    @property
+    def md_cleaner(self):
+        if not hasattr(self, '_md_cleaner'):
+            self._md_cleaner = MarkdownCleaner()
+        return self._md_cleaner
+
+    @property
+    def doc_analyzer(self):
+        if not hasattr(self, '_doc_analyzer'):
+            self._doc_analyzer = DocAnalyzer()
+        return self._doc_analyzer
+
+    @property
+    def md_processor(self):
+        if not hasattr(self, '_md_processor'):
+            self._md_processor = MarkdownProcessor()
+        return self._md_processor
+
+    @property
+    def json_processor(self):
+        if not hasattr(self, '_json_processor'):
+            self._json_processor = JsonProcessor()
+        return self._json_processor
+
+    @property
+    def tiling_processor(self):
+        if not hasattr(self, '_tiling_processor'):
+            self._tiling_processor = TilingProcessor()
+        return self._tiling_processor
+
+    @property
+    def translate_processor(self):
+        if not hasattr(self, '_translate_processor'):
+            self._translate_processor = TranslateProcessor()
+        return self._translate_processor
+
+    @property
+    def image_caption_processor(self):
+        if not hasattr(self, '_image_caption_processor'):
+            self._image_caption_processor = ImageCaptionProcessor()
+        return self._image_caption_processor
+
+    @property
+    def restore_processor(self):
+        if not hasattr(self, '_restore_processor'):
+            self._restore_processor = RestoreProcessor()
+        return self._restore_processor
+
+    @property
+    def extra_info_processor(self):
+        if not hasattr(self, '_extra_info_processor'):
+            self._extra_info_processor = ExtraInfoProcessor()
+        return self._extra_info_processor
+
+    @property
+    def rag_processor(self):
+        if not hasattr(self, '_rag_processor'):
+            self._rag_processor = RagProcessor()
+        return self._rag_processor
+
+    TOTAL_STAGES = len(STAGE_NAMES)
 
     def _emit_progress(self, stage: str, index: int):
         """發送進度更新"""
         if not self.on_progress:
             return
         # 用固定總數計算進度，避免分階段跑時進度跳到 100%
-        all_stages = ['pdf2md', 'analyze', 'md2json', 'json_process',
-                      'tiling', 'translate', 'image_caption', 'md_restore', 'extra_info', 'rag']
+        all_stages = STAGE_NAMES
         global_index = all_stages.index(stage) + 1 if stage in all_stages else index
         info = {
             'stage': stage,
-            'stage_name': self.STAGE_NAMES.get(stage, stage),
+            'stage_name': self.STAGE_DISPLAY_NAMES.get(stage, stage),
             'index': global_index,
             'total': len(all_stages),
             'progress': int(global_index / len(all_stages) * 100)

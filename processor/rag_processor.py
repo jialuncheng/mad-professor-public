@@ -392,16 +392,3 @@ class RagProcessor:
                 return md_content
         
         return ""
-
-
-# === 运行示例 ===
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, 
-                      format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    processor = RagProcessor()
-    input_json_path = "HUMAN-LIKE_EPISODIC_MEMORY_FOR_INFINITE_CONTEXT_LLMS_extra_info.json"
-    output_md_path = "HUMAN-LIKE_EPISODIC_MEMORY.md"
-    output_tree_json_path = "HUMAN-LIKE_EPISODIC_MEMORY_tree.json"
-
-    processor.process(input_json_path, output_md_path, output_tree_json_path)

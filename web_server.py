@@ -3,6 +3,7 @@ import json
 import logging
 import asyncio
 import threading
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -17,10 +18,50 @@ from dotenv import load_dotenv
 import paper_manager
 from pipeline_core import PipelineCore
 from ai_core import AICore
+from processor.slides_processor import SlidesProcessor
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+def _setup_logging():
+    """終端機只顯示 WARNING/ERROR；pipeline 與 chat log 分流寫入檔案。"""
+    log_dir = Path(__file__).parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+
+    fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    for h in root_logger.handlers[:]:
+        root_logger.removeHandler(h)
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.WARNING)
+    console.setFormatter(fmt)
+    root_logger.addHandler(console)
+
+    def _rotating(filename):
+        h = RotatingFileHandler(
+            log_dir / filename, maxBytes=10 * 1024 * 1024,
+            backupCount=5, encoding='utf-8'
+        )
+        h.setLevel(logging.DEBUG)
+        h.setFormatter(fmt)
+        return h
+
+    pipeline_handler = _rotating("pipeline.log")
+    for name in ('pipeline_core', 'paper_manager', 'processor'):
+        lg = logging.getLogger(name)
+        lg.setLevel(logging.DEBUG)
+        lg.addHandler(pipeline_handler)
+
+    chat_handler = _rotating("chat.log")
+    for name in ('AI_professor_chat', 'ai_core', 'rag_retriever'):
+        lg = logging.getLogger(name)
+        lg.setLevel(logging.DEBUG)
+        lg.addHandler(chat_handler)
+
+
+_setup_logging()
 logger = logging.getLogger(__name__)
 
 # 全域設定
@@ -114,6 +155,16 @@ async def upload_paper(
     with open(pdf_path, 'wb') as f:
         f.write(content)
 
+    # 偵測是否為簡報，供前端預選文件類型（不阻塞事件迴圈）
+    try:
+        loop = asyncio.get_event_loop()
+        suggested = await loop.run_in_executor(
+            None, SlidesProcessor.is_slides_pdf, str(pdf_path)
+        )
+        suggested_doc_type = 'slides' if suggested else 'academic'
+    except Exception:
+        suggested_doc_type = 'academic'
+
     # 上傳完成，立即等待使用者選擇文件類型
     with tasks_lock:
         processing_tasks[paper_id] = {
@@ -122,7 +173,7 @@ async def upload_paper(
             '_pdf_path': str(pdf_path)
         }
 
-    return {'paper_id': paper_id, 'status': 'waiting_confirm'}
+    return {'paper_id': paper_id, 'status': 'waiting_confirm', 'suggested_doc_type': suggested_doc_type}
 
 
 async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
