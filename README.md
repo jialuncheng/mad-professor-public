@@ -17,8 +17,9 @@
 
 - **後端**：FastAPI，提供 REST API 和 SSE 串流
 - **前端**：純 HTML/JS，無框架依賴
-- **AI 問答**：LLM（Gemini）+ RAG 向量檢索 + Vision
+- **AI 問答**：LLM（Gemini）+ RAG 向量檢索 + Vision 圖片理解
 - **PDF 解析**：MinerU API（本地部署）
+- **簡報解析**：PyMuPDF + Gemini Vision（每頁渲染辨識）
 - **Embedding**：BAAI/bge-m3（本地）
 
 ## 系統架構

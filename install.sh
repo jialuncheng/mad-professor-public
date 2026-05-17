@@ -42,6 +42,10 @@ pip install requests
 echo "[9/9] 安裝 zhconv..."
 pip install zhconv
 
+# 10. PyMuPDF（PDF 頁面渲染）
+echo "[10/10] 安裝 pymupdf..."
+pip install pymupdf
+
 echo ""
 echo "=== 安裝完成 ==="
 echo ""

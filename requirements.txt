@@ -18,3 +18,4 @@ langchain-text-splitters
 python-dotenv
 requests
 zhconv
+pymupdf
