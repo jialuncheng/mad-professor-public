@@ -242,30 +242,7 @@ class MarkdownProcessor:
             'sections': []
         }
         
-        # 如果有 structure，預處理：只插入缺少的標題
-        # 前置內容（authors/publication_info 等）自然落入 authors_info，不需要清空
-        if structure:
-            TYPE_TO_HEADING = {
-                'abstract':   '## Abstract',
-                'intro_text': '## Introduction',
-                'preface':    '## Preface',
-            }
-
-            lines_to_insert = []
-            seen_types = set()
-
-            for block in structure.get('structure', []):
-                btype = block.get('type')
-                if btype in TYPE_TO_HEADING and btype not in seen_types:
-                    lines_to_insert.append((block['start'], TYPE_TO_HEADING[btype]))
-                    seen_types.add(btype)
-
-            # 從後往前插入標題（structure 的行號是原始行號，直接使用）
-            for insert_line, heading in sorted(lines_to_insert, key=lambda x: -x[0]):
-                lines.insert(insert_line, heading)
-
-            content = '\n'.join(lines)
-            lines = content.split('\n')
+        # 不自動插入任何標題，忠實呈現 MinerU 的解析結果
 
         current_section = None
         current_content = []
