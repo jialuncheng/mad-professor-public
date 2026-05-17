@@ -152,6 +152,11 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
                     existing_paths=output_paths)
             )
 
+            # 檢查是否在處理過程中被刪除
+            if processing_tasks.get(paper_id, {}).get('status') == 'cancelled':
+                logger.info(f"論文已被刪除，取消後續處理: {paper_id}")
+                return
+
             final = output_paths2.get('final', {})
             paper_manager.load_paper_resources(OUTPUT_DIR, paper_id, final, ai_core)
 
@@ -294,6 +299,10 @@ async def delete_paper(paper_id: str):
     paper_dir = OUTPUT_DIR / paper_id
     if not paper_dir.exists():
         raise HTTPException(status_code=404, detail="論文不存在")
+
+    # 標記任務為已取消，避免 pipeline 完成後重新寫入
+    if paper_id in processing_tasks:
+        processing_tasks[paper_id]['status'] = 'cancelled'
 
     paper_manager.delete_paper(OUTPUT_DIR, paper_id)
     return {"status": "ok", "deleted": paper_id}
