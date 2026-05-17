@@ -183,6 +183,28 @@
       color: #475569;
     }
     #lang-toggle:hover { background: #f1f5f9; }
+    #print-btn {
+      padding: 6px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      color: #475569;
+    }
+    #print-btn:hover { background: #f1f5f9; }
+    @media print {
+      #sidebar, #chat-panel, #content-toolbar { display: none !important; }
+      #content-area { display: block !important; }
+      #paper-content {
+        display: block !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+      }
+      #empty-state { display: none !important; }
+    }
     #paper-content {
       flex: 1;
       overflow-y: auto;
@@ -392,6 +414,7 @@
   <div id="content-toolbar" style="display:none">
     <h2 id="current-title">論文標題</h2>
     <button id="lang-toggle">切換英文</button>
+    <button id="print-btn" title="列印論文">🖨 列印</button>
   </div>
   <div id="empty-state">← 從左側選擇一篇論文</div>
   <div id="paper-content" style="display:none"></div>
@@ -496,6 +519,11 @@ async function fetchContent(paperId, lang) {
 
   document.getElementById('paper-content').innerHTML = marked.parse(content);
 }
+
+// 列印
+document.getElementById('print-btn').onclick = () => {
+  window.print();
+};
 
 // 切換語言
 document.getElementById('lang-toggle').onclick = async () => {
