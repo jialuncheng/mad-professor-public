@@ -27,16 +27,17 @@ class TranslateProcessor:
             self.logger.warning(f"读取文件 {filepath} 失败: {str(e)}")
             return ""
         
-    def process(self, input_path: str, output_path: str) -> Path:
+    def process(self, input_path: str, output_path: str, doc_type: str = 'academic') -> Path:
         """
-        读取 input.json，分阶段进行翻译。
-        首先翻译所有title，然后翻译abstact，最后递归翻译每个章节的text和caption。
+        讀取 input.json，分階段進行翻譯。
+        首先翻譯所有標題，然後翻譯摘要，最後遞迴翻譯每個章節的文字和圖說。
         """
         try:
             input_path = Path(input_path)
             output_path = Path(output_path)
 
-            self.logger.info(f"开始翻译JSON文件: {input_path}")
+            self.doc_type = doc_type  # 儲存文件類型供翻譯時使用
+            self.logger.info(f"開始翻譯JSON文件: {input_path}")
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             
@@ -206,6 +207,20 @@ class TranslateProcessor:
         
         # 读取系统提示词
         system_prompt = self._read_file(prompt_file)
+
+        # 根據文件類型附加翻譯風格提示
+        doc_type = getattr(self, 'doc_type', 'academic')
+        style_hints = {
+            'academic': '文件為學術論文，請使用正式學術用語，保留英文專有名詞與縮寫。',
+            'book': '文件為書籍，請使用流暢自然的書面語，保留專有名詞。',
+            'technical': '文件為技術文件，請使用精確的技術術語，保留英文技術詞彙。',
+            'slides': '文件為簡報投影片，請保持簡潔的條列式風格，勿過度詮釋。',
+            'news': '文件為新聞文章，請使用流暢自然的新聞文體，不要過於學術化。',
+            'web': '文件為網頁文章，請使用自然口語化的繁體中文。',
+        }
+        hint = style_hints.get(doc_type, '')
+        if hint:
+            system_prompt = system_prompt + '\n\n' + hint
         
         # 构建用户提示词
         if text_type == "title":
