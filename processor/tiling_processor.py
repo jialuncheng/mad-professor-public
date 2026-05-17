@@ -4,7 +4,7 @@ import re
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Any
-from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 from config import EmbeddingModel
 
 class TilingProcessor:
@@ -218,7 +218,7 @@ class TilingProcessor:
         block_embeddings = [embedding_model.embed_query(block) for block in blocks]
         
         # 计算相邻块之间的相似度                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
-        similarities = [cosine_similarity([block_embeddings[i]], [block_embeddings[i+1]])[0][0] 
+        similarities = [float(np.dot(block_embeddings[i], block_embeddings[i+1]) / (np.linalg.norm(block_embeddings[i]) * np.linalg.norm(block_embeddings[i+1]) + 1e-8)) 
                         for i in range(len(block_embeddings)-1)]
         
         # 计算深度分数
