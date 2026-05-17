@@ -51,14 +51,13 @@ class AICore:
         try:
             self.is_generating = True
 
-            # 設定論文上下文
-            if paper_id:
-                paper_data = self._paper_cache.get(paper_id)
-                if paper_data:
-                    self.ai_chat.set_paper_context(paper_id, paper_data)
+            # 取得論文上下文（一律注入；cache-miss 以無論文模式回答）
+            paper_data = self._paper_cache.get(paper_id) if paper_id else None
+            if paper_id and paper_data is None:
+                self.logger.warning(f"paper_id {paper_id} 不在快取中，以無論文模式回答")
 
             for sentence in self.ai_chat.process_query_stream(
-                query, visible_content
+                query, visible_content, paper_id=paper_id, paper_data=paper_data
             ):
                 if not self.is_generating:
                     break
@@ -85,7 +84,6 @@ class AICore:
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
             self._paper_cache[paper_id] = paper_data
-            self.ai_chat.set_paper_context(paper_id, paper_data)
             return True
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")

@@ -44,9 +44,13 @@ class AIProfessorChat:
             self.logger.error(f"設置論文上下文失敗: {str(e)}")
             return False
 
-    def process_query_stream(self, query: str, visible_content: str = None) -> Generator[str, None, None]:
+    def process_query_stream(self, query: str, visible_content: str = None,
+                             paper_id: str = None, paper_data: Dict[str, Any] = None) -> Generator[str, None, None]:
         """流式處理用戶查詢，逐句 yield 回答"""
         try:
+            effective_paper_id = paper_id
+            effective_paper_data = paper_data
+
             if not self.llm_client:
                 yield "AI服務尚未初始化，請稍後再試。"
                 return
@@ -61,7 +65,7 @@ class AIProfessorChat:
                 self.conversation_history = self.conversation_history[-10:]
 
             # 決策
-            decision = self._make_decision(query)
+            decision = self._make_decision(query, effective_paper_id, effective_paper_data)
             self.logger.info(f"決策結果: {decision}")
 
             function_name = decision.get('function', 'direct_answer')
@@ -71,16 +75,18 @@ class AIProfessorChat:
             context_info = ""
             if function_name == 'page_content_analysis' and visible_content:
                 context_info = f"以下是頁面當前顯示的內容:\n\n{visible_content}"
-            elif function_name == 'macro_retrieval' and self.current_paper_data:
-                context_info = self._get_macro_context(optimized_query)
-            elif function_name == 'rag_retrieval' and self.current_paper_id:
-                context_info = self._get_rag_context(optimized_query)
+            elif function_name == 'macro_retrieval' and effective_paper_data:
+                context_info = self._get_macro_context(optimized_query, effective_paper_data)
+            elif function_name == 'rag_retrieval' and effective_paper_id:
+                context_info = self._get_rag_context(optimized_query, effective_paper_id)
 
             # 準備訊息
             final_messages = self._prepare_final_messages(
                 query=query,
                 context_info=context_info,
-                function_name=function_name
+                function_name=function_name,
+                paper_id=effective_paper_id,
+                paper_data=effective_paper_data
             )
 
             # 串流回答
@@ -104,15 +110,15 @@ class AIProfessorChat:
         valid_functions = ["direct_answer", "page_content_analysis", "macro_retrieval", "rag_retrieval"]
         return decision_data["function"] in valid_functions
 
-    def _make_decision(self, query: str) -> Dict[str, str]:
+    def _make_decision(self, query: str, paper_id: str = None, paper_data: Dict[str, Any] = None) -> Dict[str, str]:
         default = {"function": "direct_answer", "query": query}
         try:
             router_prompt = self._read_file(AI_ROUTER_PROMPT_PATH)
-            has_paper = self.current_paper_id is not None and self.current_paper_data is not None
+            has_paper = paper_id is not None and paper_data is not None
             paper_status = "有論文加載" if has_paper else "無論文加載"
             paper_title = ""
             if has_paper:
-                paper_title = self.current_paper_data.get('translated_title', '') or self.current_paper_data.get('title', '')
+                paper_title = paper_data.get('translated_title', '') or paper_data.get('title', '')
 
             formatted_history = ""
             if len(self.conversation_history) > 1:
@@ -155,19 +161,19 @@ class AIProfessorChat:
             self.logger.error(f"決策失敗: {str(e)}")
             return default
 
-    def _get_macro_context(self, query: str) -> str:
+    def _get_macro_context(self, query: str, paper_data: Dict[str, Any] = None) -> str:
         try:
-            if not self.current_paper_data:
+            if not paper_data:
                 return ""
             parts = []
-            title = self.current_paper_data.get('translated_title', '') or self.current_paper_data.get('title', '')
+            title = paper_data.get('translated_title', '') or paper_data.get('title', '')
             if title:
                 parts.append(f"# {title}")
-            if self.current_paper_data.get('summary'):
-                parts.append(f"## 總摘要\n{self.current_paper_data['summary']}")
-            if self.current_paper_data.get('sections'):
+            if paper_data.get('summary'):
+                parts.append(f"## 總摘要\n{paper_data['summary']}")
+            if paper_data.get('sections'):
                 parts.append("## 章節概要")
-                for section in self.current_paper_data['sections']:
+                for section in paper_data['sections']:
                     sec_title = section.get('translated_title', '') or section.get('title', '')
                     sec_summary = section.get('summary', '')
                     if sec_title:
@@ -180,27 +186,28 @@ class AIProfessorChat:
             self.logger.error(f"取得宏觀上下文失敗: {str(e)}")
             return ""
 
-    def _get_rag_context(self, query: str) -> str:
+    def _get_rag_context(self, query: str, paper_id: str = None) -> str:
         try:
-            if not self.current_paper_id or not query or not self.retriever:
+            if not paper_id or not query or not self.retriever:
                 return ""
             if not self.retriever.is_ready():
                 return ""
             context, _ = self.retriever.retrieve_with_context(
-                query=query, paper_id=self.current_paper_id, top_k=5
+                query=query, paper_id=paper_id, top_k=5
             )
             return context
         except Exception as e:
             self.logger.error(f"RAG檢索失敗: {str(e)}")
             return ""
 
-    def _prepare_final_messages(self, query: str, context_info: str, function_name: str = None) -> List[Dict]:
+    def _prepare_final_messages(self, query: str, context_info: str, function_name: str = None,
+                                paper_id: str = None, paper_data: Dict[str, Any] = None) -> List[Dict]:
         character_prompt = self._read_file(AI_CHARACTER_PROMPT_PATH)
         explain_prompt = self._read_file(AI_EXPLAIN_PROMPT_PATH)
 
         title = ""
-        if self.current_paper_data:
-            title = self.current_paper_data.get('translated_title', '') or self.current_paper_data.get('title', '')
+        if paper_data:
+            title = paper_data.get('translated_title', '') or paper_data.get('title', '')
         else:
             title = "無論文"
 
