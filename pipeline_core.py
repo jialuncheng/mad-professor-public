@@ -200,6 +200,21 @@ class PipelineCore:
                 )
                 output_paths[stage] = stage_output
                 self.logger.info(f"階段 {stage} 完成")
+            elif stage == 'pdf2md' and '_doc_type_detection' not in output_paths:
+                # pdf2md 被跳過時，從 sidecar 讀取文件類型偵測結果
+                md_path = output_paths.get('pdf2md')
+                if md_path:
+                    sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
+                    if sidecar.exists():
+                        import json as _json
+                        structure = _json.loads(sidecar.read_text(encoding='utf-8'))
+                        doc_type = structure.get('document_type', 'academic')
+                        output_paths['_doc_type_detection'] = {
+                            'doc_type': doc_type,
+                            'confidence': 'high',
+                            'reason': '從已存在的分析結果載入'
+                        }
+                        self.logger.info(f"從 sidecar 載入文件類型: {doc_type}")
 
             i += 1
 
