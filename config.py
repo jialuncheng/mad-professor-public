@@ -6,15 +6,14 @@ load_dotenv()
 from typing import Optional, List, Dict, Any, Generator
 from google import genai
 from google.genai import types
-from langchain_huggingface import HuggingFaceEmbeddings
 
 # 模型設定
 TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-2.0-flash")
 CHAT_MODEL = os.getenv("LLM_CHAT_MODEL", "gemini-2.0-flash")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# 嵌入模型配置
-EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
+# 嵌入模型配置（從 .env 讀取，預設 gemini-embedding-2）
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 
 # 日誌配置
 def setup_logging():
@@ -152,7 +151,6 @@ class LLMClient:
         model = model or CHAT_MODEL
         system_instruction, contents = _convert_messages(messages)
 
-        # 把圖片加到最後一個 user message
         image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
         if contents and contents[-1].role == "user":
             contents[-1].parts.append(image_part)
@@ -172,24 +170,57 @@ class LLMClient:
         return response.text
 
 
-# 嵌入模型
+# 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
 class EmbeddingModel:
-    _instance: Optional[HuggingFaceEmbeddings] = None
+    """使用 Gemini Embedding 2 API，支援文字和圖片的多模態 embedding"""
+
+    _instance: Optional['EmbeddingModel'] = None
+
+    def __init__(self):
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.model = EMBEDDING_MODEL_NAME
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(f"初始化嵌入模型: {self.model}（Gemini API）")
 
     @classmethod
-    def get_instance(cls) -> HuggingFaceEmbeddings:
+    def get_instance(cls) -> 'EmbeddingModel':
         if cls._instance is None:
-            try:
-                import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except ImportError:
-                device = "cpu"
-
-            logging.info(f"初始化嵌入模型: {EMBEDDING_MODEL_NAME}，使用設備: {device}")
-
-            cls._instance = HuggingFaceEmbeddings(
-                model_name=EMBEDDING_MODEL_NAME,
-                model_kwargs={"device": device},
-                encode_kwargs={"normalize_embeddings": True}
-            )
+            cls._instance = cls()
         return cls._instance
+
+    def embed_documents(self, texts: list) -> list:
+        """批次 embed 文字列表（用於建立向量庫）"""
+        result = self.client.models.embed_content(
+            model=self.model,
+            contents=texts,
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_DOCUMENT",
+                output_dimensionality=768
+            )
+        )
+        return [e.values for e in result.embeddings]
+
+    def embed_query(self, text: str) -> list:
+        """embed 單一查詢字串（用於搜尋）"""
+        result = self.client.models.embed_content(
+            model=self.model,
+            contents=[text],
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_QUERY",
+                output_dimensionality=768
+            )
+        )
+        return result.embeddings[0].values
+
+    def embed_image(self, image_data: bytes, mime_type: str = "image/jpeg") -> list:
+        """embed 圖片（用於圖片向量檢索）"""
+        image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
+        result = self.client.models.embed_content(
+            model=self.model,
+            contents=[image_part],
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_DOCUMENT",
+                output_dimensionality=768
+            )
+        )
+        return result.embeddings[0].values
