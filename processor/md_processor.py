@@ -287,6 +287,14 @@ class MarkdownProcessor:
                     else:
                         current_section.content = self.parse_content(current_content)
                         result['sections'].append(vars(current_section))
+                elif not collecting_authors and current_content:
+                    # 第一個 section 出現前的孤立內容，建立無標題 section 承載
+                    orphan = Section(
+                        title='', number='', level=1,
+                        content=self.parse_content(current_content),
+                        raw_title='', heading_level=2
+                    )
+                    result['sections'].append(vars(orphan))
 
                 number, raw_title, level = self.parse_section_number(title_text)
                 current_section = Section(
