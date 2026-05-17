@@ -7,6 +7,7 @@ import subprocess
 import shutil
 from pathlib import Path
 from config import LLMClient
+from processor.slides_processor import SlidesProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,12 @@ class PDFProcessor:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
+            # 判斷是否為簡報，若是則用 Vision 解析
+            if SlidesProcessor.is_slides_pdf(str(pdf_path)):
+                self.logger.info(f"偵測為簡報格式，使用 Vision 解析: {pdf_path}")
+                slides_proc = SlidesProcessor()
+                return slides_proc.process(str(pdf_path), str(output_dir))
+
             self.logger.info(f"呼叫 MinerU API 處理 PDF: {pdf_path}")
 
             with open(pdf_path, "rb") as f:
