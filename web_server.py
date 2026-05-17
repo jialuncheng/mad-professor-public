@@ -144,7 +144,7 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str = None):
             processing_tasks[paper_id]['status'] = 'processing'
 
             remaining_stages = ['analyze', 'md2json', 'json_process', 'tiling',
-                                'translate', 'md_restore', 'extra_info', 'rag']
+                                'translate', 'image_caption', 'md_restore', 'extra_info', 'rag']
             pipeline2 = PipelineCore(on_progress=on_progress, stages=remaining_stages)
 
             output_paths2 = await loop.run_in_executor(
