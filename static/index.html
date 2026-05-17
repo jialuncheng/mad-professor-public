@@ -527,7 +527,11 @@ async function fetchContent(paperId, lang) {
 
 // 列印
 document.getElementById('print-btn').onclick = () => {
+  const original = document.title;
+  const title = document.getElementById('current-title').textContent.trim();
+  if (title) document.title = title;
   window.print();
+  document.title = original;
 };
 
 // 切換語言
