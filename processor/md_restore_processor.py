@@ -42,7 +42,9 @@ class RestoreProcessor:
         with open(filepath, 'a', encoding='utf-8') as f:
             f.write(content + "\n\n")
     
-    def _process_section(self, section, output_path_en, output_path_zh, level=1):
+    def _process_section(self, section, output_path_en, output_path_zh, level=1, vision_captions=None):
+        if vision_captions is None:
+            vision_captions = {}
         """处理文档的一个章节，递归处理子章节"""
         # 处理标题
         title_prefix = "#" * level
@@ -169,16 +171,23 @@ class RestoreProcessor:
                         self._write_to_md(output_path_zh, item['content'])
                 
                 elif item['type'] == 'figure':
+                    src = item['src']
+                    src_filename = Path(src).name
+
                     # 英文图片说明
-                    en_figure = f"![{item['alt']}]({item['src']})"
+                    en_figure = f"![{item['alt']}]({src})"
                     if item['en_caption']:
                         en_figure += f"\n\n*{item['en_caption']}*"
+                    elif src_filename in vision_captions:
+                        en_figure += f"\n\n*{vision_captions[src_filename]}*"
                     self._write_to_md(output_path_en, en_figure)
-                    
+
                     # 中文图片说明
-                    zh_figure = f"![{item['alt']}]({item['src']})"
+                    zh_figure = f"![{item['alt']}]({src})"
                     if item['zh_caption']:
                         zh_figure += f"\n\n*{item['zh_caption']}*"
+                    elif src_filename in vision_captions:
+                        zh_figure += f"\n\n*{vision_captions[src_filename]}*"
                     self._write_to_md(output_path_zh, zh_figure)
                 
                 elif item['type'] == 'table':
@@ -202,9 +211,29 @@ class RestoreProcessor:
         # 递归处理子章节
         if 'children' in section and section['children']:
             for child in section['children']:
-                self._process_section(child, output_path_en, output_path_zh, level + 1)
+                self._process_section(child, output_path_en, output_path_zh, level + 1, vision_captions)
     
-    def process(self, input_path: str, output_path_en: str, output_path_zh: str) -> tuple:
+    def _load_vision_captions(self, images_info_path: str) -> dict:
+        """讀取 images_info.md，建立 src -> caption 的字典"""
+        caption_map = {}
+        try:
+            path = Path(images_info_path)
+            if not path.exists():
+                return caption_map
+            lines = path.read_text(encoding='utf-8').split('\n')
+            current_src = None
+            for line in lines:
+                if line.startswith('## '):
+                    current_src = line[3:].strip()
+                elif current_src and line.strip():
+                    caption_map[current_src] = line.strip()
+                    current_src = None
+        except Exception as e:
+            self.logger.warning(f"讀取 images_info.md 失敗: {str(e)}")
+        return caption_map
+
+    def process(self, input_path: str, output_path_en: str, output_path_zh: str,
+                images_info_path: str = None) -> tuple:
         """
         读取 input.json，恢复成中英文两篇md文档
         1. 中文用翻译部分；如果没有翻译则保留英文原文
@@ -223,6 +252,10 @@ class RestoreProcessor:
             open(output_path_zh, 'w', encoding='utf-8').close()
             
             self.logger.info(f"开始处理JSON文件: {input_path}")
+
+            # 載入 Vision caption（補充 MinerU 沒有的圖片說明）
+            vision_captions = self._load_vision_captions(images_info_path) if images_info_path else {}
+
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             
@@ -242,7 +275,7 @@ class RestoreProcessor:
             
             # 处理各个章节
             for section in data['sections']:
-                self._process_section(section, output_path_en, output_path_zh)
+                self._process_section(section, output_path_en, output_path_zh, vision_captions=vision_captions)
             
             self.logger.info(f"恢复完成，结果已保存到: {output_path_en} 和 {output_path_zh}")
             return output_path_en, output_path_zh
