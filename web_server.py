@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import asyncio
+import threading
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -32,6 +33,7 @@ DATA_DIR.mkdir(exist_ok=True)
 # 全域狀態
 ai_core = None
 processing_tasks: dict = {}  # paper_id -> {'status': str, 'progress': dict}
+tasks_lock = threading.Lock()
 
 
 @asynccontextmanager
@@ -94,21 +96,31 @@ async def upload_paper(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
+    content = await file.read()
+
+    # 檔案大小上限 100 MB
+    if len(content) > 100 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"error": "檔案大小超過 100 MB 上限"})
+
+    # PDF magic bytes 驗證（副檔名檢查之後）
+    if content[:4] != b'%PDF':
+        return JSONResponse(status_code=415, content={"error": "僅支援 PDF 格式"})
+
     paper_id = paper_manager.sanitize_paper_id(file.filename)
     clean_filename = paper_id + '.pdf'
     pdf_path = DATA_DIR / clean_filename
 
     # 儲存上傳的 PDF
     with open(pdf_path, 'wb') as f:
-        content = await file.read()
         f.write(content)
 
     # 上傳完成，立即等待使用者選擇文件類型
-    processing_tasks[paper_id] = {
-        'status': 'waiting_confirm',
-        'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
-        '_pdf_path': str(pdf_path)
-    }
+    with tasks_lock:
+        processing_tasks[paper_id] = {
+            'status': 'waiting_confirm',
+            'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
+            '_pdf_path': str(pdf_path)
+        }
 
     return {'paper_id': paper_id, 'status': 'waiting_confirm'}
 
@@ -117,11 +129,13 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
     """在背景執行 pipeline（使用者確認文件類型後觸發）"""
     try:
         def on_progress(info):
-            processing_tasks[paper_id]['progress'] = info
+            with tasks_lock:
+                processing_tasks[paper_id]['progress'] = info
 
         loop = asyncio.get_event_loop()
         output_paths = {'_confirmed_doc_type': doc_type}
-        processing_tasks[paper_id]['status'] = 'processing'
+        with tasks_lock:
+            processing_tasks[paper_id]['status'] = 'processing'
 
         pipeline = PipelineCore(on_progress=on_progress)
         output_paths2 = await loop.run_in_executor(
@@ -130,19 +144,22 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
         )
 
         # 檢查是否在處理過程中被刪除
-        if processing_tasks.get(paper_id, {}).get('status') == 'cancelled':
-            logger.info(f"論文已被刪除，取消後續處理: {paper_id}")
-            return
+        with tasks_lock:
+            if processing_tasks.get(paper_id, {}).get('status') == 'cancelled':
+                logger.info(f"論文已被刪除，取消後續處理: {paper_id}")
+                return
 
         final = output_paths2.get('final', {})
         paper_manager.load_paper_resources(OUTPUT_DIR, paper_id, final, ai_core)
 
-        processing_tasks[paper_id]['status'] = 'done'
+        with tasks_lock:
+            processing_tasks[paper_id]['status'] = 'done'
         logger.info(f"論文處理完成: {paper_id}")
 
     except Exception as e:
-        processing_tasks[paper_id]['status'] = 'error'
-        processing_tasks[paper_id]['error'] = str(e)
+        with tasks_lock:
+            processing_tasks[paper_id]['status'] = 'error'
+            processing_tasks[paper_id]['error'] = str(e)
         logger.error(f"論文處理失敗: {paper_id} - {str(e)}")
 
 
@@ -153,7 +170,10 @@ async def paper_status(paper_id: str):
     """取得論文處理進度（SSE）"""
     async def event_stream():
         while True:
-            task = processing_tasks.get(paper_id)
+            with tasks_lock:
+                task = processing_tasks.get(paper_id)
+                if task is not None:
+                    task = dict(task)
             if not task:
                 yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
                 break
@@ -189,7 +209,17 @@ async def paper_content(paper_id: str, lang: str = "zh"):
 @app.get("/api/papers/{paper_id}/images/{filename}")
 async def paper_image(paper_id: str, filename: str):
     """取得論文圖片"""
-    image_path = OUTPUT_DIR / paper_id / "images" / filename
+    # ① 去除任何目錄層級，只取純檔名
+    safe_filename = Path(filename).name
+    image_path = OUTPUT_DIR / paper_id / "images" / safe_filename
+
+    # ② 確認解析後路徑仍位於 OUTPUT_DIR 之內（防止 ../ 逃逸）
+    try:
+        image_path.resolve().relative_to(OUTPUT_DIR.resolve())
+    except ValueError:
+        # ③ 路徑逃逸 OUTPUT_DIR
+        return JSONResponse(status_code=400, content={"error": "無效的檔案路徑"})
+
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="圖片不存在")
 
@@ -251,12 +281,14 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_ta
     if request.doc_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
 
-    task = processing_tasks.get(paper_id)
-    pdf_path = task.get('_pdf_path') if task else None
+    with tasks_lock:
+        task = processing_tasks.get(paper_id)
+        pdf_path = task.get('_pdf_path') if task else None
     if not pdf_path:
         raise HTTPException(status_code=500, detail="找不到原始 PDF 路徑")
 
-    processing_tasks[paper_id]['status'] = 'processing'
+    with tasks_lock:
+        processing_tasks[paper_id]['status'] = 'processing'
     background_tasks.add_task(run_pipeline, paper_id, pdf_path, request.doc_type)
     return {"status": "ok", "doc_type": request.doc_type}
 
@@ -270,8 +302,9 @@ async def delete_paper(paper_id: str):
         raise HTTPException(status_code=404, detail="論文不存在")
 
     # 標記任務為已取消，避免 pipeline 完成後重新寫入
-    if paper_id in processing_tasks:
-        processing_tasks[paper_id]['status'] = 'cancelled'
+    with tasks_lock:
+        if paper_id in processing_tasks:
+            processing_tasks[paper_id]['status'] = 'cancelled'
 
     paper_manager.delete_paper(OUTPUT_DIR, paper_id)
     return {"status": "ok", "deleted": paper_id}

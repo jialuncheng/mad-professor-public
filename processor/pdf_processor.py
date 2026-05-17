@@ -8,6 +8,8 @@ import shutil
 from pathlib import Path
 from config import LLMClient
 from processor.slides_processor import SlidesProcessor
+from utils.heading_utils import fix_heading_levels
+from utils.text_utils import CONTROL_CHAR_PATTERN
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +24,9 @@ class PDFProcessor:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-        self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://192.168.139.94:8000/file_parse")
-        self.MINERU_HOST = os.getenv("MINERU_HOST", "baroncheng@192.168.139.94")
-        self.MINERU_OUTPUT_DIR = os.getenv("MINERU_OUTPUT_DIR", "/home/baroncheng/output")
+        self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://localhost:8000/file_parse")
+        self.MINERU_HOST = os.getenv("MINERU_HOST", "")
+        self.MINERU_OUTPUT_DIR = os.getenv("MINERU_OUTPUT_DIR", "")
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
         self.llm = LLMClient()
 
@@ -77,9 +79,8 @@ class PDFProcessor:
             self._fix_heading_levels(markdown_path)
 
             # 清除控制字元（MinerU 解析特殊字元時可能產生）
-            import re as _re
             md_text = markdown_path.read_text(encoding='utf-8')
-            md_text = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', md_text)
+            md_text = CONTROL_CHAR_PATTERN.sub('', md_text)
             markdown_path.write_text(md_text, encoding='utf-8')
 
             # 從 mineru-lab 複製圖片
@@ -134,27 +135,9 @@ class PDFProcessor:
 
 只輸出 JSON，不要任何解釋。"""
 
-            messages = [{"role": "user", "content": prompt}]
-            result_text = self.llm.chat(messages, stream=False).strip()
+            new_text = fix_heading_levels(content, self.llm, prompt)
 
-            # 清理 JSON（移除可能的 markdown 包裹）
-            import re
-            result_text = re.sub(r"```json|```", "", result_text).strip()
-
-            import json
-            heading_map = json.loads(result_text)
-
-            # 套用修正
-            new_lines = lines.copy()
-            for line_num_str, hash_count in heading_map.items():
-                line_num = int(line_num_str)
-                if line_num < len(lines) and lines[line_num].startswith("#"):
-                    original = lines[line_num]
-                    # 取出標題文字（去掉所有 # 和空白）
-                    title_text = original.lstrip("#").strip()
-                    new_lines[line_num] = "#" * int(hash_count) + " " + title_text
-
-            markdown_path.write_text("\n".join(new_lines), encoding="utf-8")
+            markdown_path.write_text(new_text, encoding="utf-8")
             self.logger.info(f"標題層級修正完成: {markdown_path}")
 
         except Exception as e:

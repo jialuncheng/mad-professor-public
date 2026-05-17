@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 import fitz  # PyMuPDF
 from config import LLMClient
+from utils.text_utils import strip_json_fence
 
 logger = logging.getLogger(__name__)
 
@@ -146,14 +147,13 @@ class SlidesProcessor:
 
     def _analyze_slide(self, img_data: bytes, slide_num: int) -> Optional[dict]:
         """用 Vision 分析單頁投影片"""
-        import re
         try:
             result_text = self.llm.chat_with_image(
                 messages=[{"role": "user", "content": SLIDE_PROMPT}],
                 image_data=img_data,
                 mime_type="image/jpeg"
             )
-            result_text = re.sub(r'```json|```', '', result_text).strip()
+            result_text = strip_json_fence(result_text)
             return json.loads(result_text)
         except Exception as e:
             self.logger.warning(f"  第 {slide_num} 張 Vision 辨識失敗: {str(e)}")

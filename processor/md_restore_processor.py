@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from collections import defaultdict
+from utils.text_utils import load_caption_map, CONTROL_CHAR_PATTERN
 
 class RestoreProcessor:
     """恢复处理器, 将提供的json文件还原成中英两篇md文档"""
@@ -22,7 +23,7 @@ class RestoreProcessor:
         """清理作者資訊，移除上標數字、多餘符號、HTML table 和目錄"""
         import re
         # 移除控制字元（MinerU 解析特殊字元時產生的亂碼，如 \x01）
-        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', authors_info)
+        text = CONTROL_CHAR_PATTERN.sub('', authors_info)
         # 移除 HTML table
         text = re.sub(r'<table.*?</table>', '', text, flags=re.DOTALL)
         # 移除目錄標題行
@@ -212,30 +213,6 @@ class RestoreProcessor:
             for child in section['children']:
                 self._process_section(child, output_path_en, output_path_zh, level + 1, vision_captions)
     
-    def _load_vision_captions(self, images_info_path: str) -> dict:
-        """讀取 images_info.md，建立 src -> caption 的字典"""
-        caption_map = {}
-        try:
-            path = Path(images_info_path)
-            if not path.exists():
-                return caption_map
-            lines = path.read_text(encoding='utf-8').split('\n')
-            current_src = None
-            for line in lines:
-                if line.startswith('## '):
-                    src = line[3:].strip()
-                    # 同時存完整路徑和只有檔名，方便對應
-                    current_src = src
-                elif current_src and line.strip():
-                    caption_map[current_src] = line.strip()
-                    # 也存只有檔名的版本
-                    from pathlib import Path as _Path
-                    caption_map[_Path(current_src).name] = line.strip()
-                    current_src = None
-        except Exception as e:
-            self.logger.warning(f"讀取 images_info.md 失敗: {str(e)}")
-        return caption_map
-
     def process(self, input_path: str, output_path_en: str, output_path_zh: str,
                 images_info_path: str = None) -> tuple:
         """
@@ -258,7 +235,7 @@ class RestoreProcessor:
             self.logger.info(f"开始处理JSON文件: {input_path}")
 
             # 載入 Vision caption（補充 MinerU 沒有的圖片說明）
-            vision_captions = self._load_vision_captions(images_info_path) if images_info_path else {}
+            vision_captions = load_caption_map(images_info_path) if images_info_path else {}
 
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)

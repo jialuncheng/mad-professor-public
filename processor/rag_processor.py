@@ -6,6 +6,7 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
+from utils.text_utils import load_caption_map
 
 class RagProcessor:
     """RAG 处理器：将 JSON 转换为 Markdown 和符合检索需求的JSON树结构，并生成向量库"""
@@ -13,29 +14,6 @@ class RagProcessor:
     def __init__(self):
         """初始化 RAG 处理器"""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-
-    def _load_caption_map(self, images_info_path: str) -> dict:
-        """讀取 images_info.md，建立 src -> caption 的字典"""
-        caption_map = {}
-        try:
-            path = Path(images_info_path)
-            if not path.exists():
-                return caption_map
-            lines = path.read_text(encoding='utf-8').split('\n')
-            current_src = None
-            for line in lines:
-                if line.startswith('## '):
-                    current_src = line[3:].strip()
-                elif current_src and line.strip():
-                    caption_map[current_src] = line.strip()
-                    # 也存只有檔名的版本
-                    from pathlib import Path as _Path
-                    caption_map[_Path(current_src).name] = line.strip()
-                    current_src = None
-            self.logger.info(f"載入 caption_map: {len(caption_map)} 張圖片")
-        except Exception as e:
-            self.logger.warning(f"讀取 images_info.md 失敗: {str(e)}")
-        return caption_map
 
     def process(self, input_path: str, output_md_path: str, output_tree_json_path: str,
                 vector_store_path: str, images_info_path: str = None) -> Tuple[str, str, str]:
@@ -52,7 +30,7 @@ class RagProcessor:
             Tuple[str, str, str]: Markdown文件路径, JSON文件路径, 向量库路径
         """
         self.logger.info(f"开始处理 RAG 数据: {input_path}")
-        self.caption_map = self._load_caption_map(images_info_path) if images_info_path else {}
+        self.caption_map = load_caption_map(images_info_path) if images_info_path else {}
 
         try:
             with open(input_path, "r", encoding="utf-8") as f:
