@@ -465,6 +465,13 @@
 const API = '';
 let currentPaperId = null;
 let currentLang = 'zh';
+let isProcessing = false;
+
+function setBusy(busy) {
+  isProcessing = busy;
+  document.getElementById('upload-btn').disabled = busy;
+  document.getElementById('cleanup-btn').disabled = busy;
+}
 
 // 載入論文列表
 async function loadPapers() {
@@ -702,6 +709,7 @@ document.getElementById('upload-btn').onclick = () => {
     const btn = document.getElementById('upload-btn');
     btn.textContent = '上傳中...';
     btn.disabled = true;
+    setBusy(true);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -721,6 +729,7 @@ document.getElementById('upload-btn').onclick = () => {
     } catch (err) {
       btn.textContent = '＋ 上傳論文';
       btn.disabled = false;
+      setBusy(false);
       alert('上傳失敗：' + err.message);
     }
   };
@@ -741,11 +750,13 @@ function trackProgress(paperId, btn) {
       evtSource.close();
       btn.textContent = '＋ 上傳論文';
       btn.disabled = false;
+      setBusy(false);
       loadPapers();  // 重新載入論文列表
     } else if (data.status === 'error') {
       evtSource.close();
       btn.textContent = '＋ 上傳論文';
       btn.disabled = false;
+      setBusy(false);
       alert('處理失敗：' + (data.error || '未知錯誤'));
     }
   };
@@ -754,6 +765,7 @@ function trackProgress(paperId, btn) {
     evtSource.close();
     btn.textContent = '＋ 上傳論文';
     btn.disabled = false;
+    setBusy(false);
   };
 }
 
@@ -800,6 +812,7 @@ function showConfirmModal(paperId, detection, btn) {
     } catch(e) {
       btn.textContent = '＋ 上傳論文';
       btn.disabled = false;
+      setBusy(false);
       alert('確認失敗：' + e.message);
     }
   };
@@ -807,6 +820,7 @@ function showConfirmModal(paperId, detection, btn) {
 
 // 清理殘餘檔案
 document.getElementById('cleanup-btn').onclick = async () => {
+  if (isProcessing) return;
   if (!confirm('確定要清理殘餘檔案嗎？\n此操作會刪除所有不在論文列表中的目錄。')) return;
   try {
     const res = await fetch('/api/cleanup', { method: 'POST' });
