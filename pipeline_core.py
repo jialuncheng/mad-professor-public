@@ -200,21 +200,7 @@ class PipelineCore:
                 )
                 output_paths[stage] = stage_output
                 self.logger.info(f"階段 {stage} 完成")
-            elif stage == 'pdf2md' and '_doc_type_detection' not in output_paths:
-                # pdf2md 被跳過時，從 sidecar 讀取文件類型偵測結果
-                md_path = output_paths.get('pdf2md')
-                if md_path:
-                    sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
-                    if sidecar.exists():
-                        import json as _json
-                        structure = _json.loads(sidecar.read_text(encoding='utf-8'))
-                        doc_type = structure.get('document_type', 'academic')
-                        output_paths['_doc_type_detection'] = {
-                            'doc_type': doc_type,
-                            'confidence': 'high',
-                            'reason': '從已存在的分析結果載入'
-                        }
-                        self.logger.info(f"從 sidecar 載入文件類型: {doc_type}")
+
 
             i += 1
 
@@ -287,11 +273,18 @@ class PipelineCore:
     # ── 各階段方法（與 pipeline.py 相同，只是移除 Qt 依賴） ──
 
     def _stage_pdf_to_md(self, pdf_path, paper_dir, paper_name, output_paths):
-        markdown_path = self.pdf_processor.process(str(pdf_path), str(paper_dir))
-        self.md_cleaner.clean(markdown_path)
-        # 偵測文件類型，結果暫存供前端確認
-        detection = self.doc_analyzer.detect_type(markdown_path)
-        output_paths['_doc_type_detection'] = detection
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+
+        if doc_type == 'slides':
+            # 簡報：用 Vision 每頁解析，不走 MinerU
+            self.logger.info("簡報類型，使用 Vision 解析")
+            slides_proc = SlidesProcessor()
+            markdown_path = slides_proc.process(str(pdf_path), str(paper_dir))
+        else:
+            # 其他：MinerU 解析
+            markdown_path = self.pdf_processor.process(str(pdf_path), str(paper_dir))
+            self.md_cleaner.clean(markdown_path)
+
         return markdown_path
 
     def _stage_analyze(self, pdf_path, paper_dir, paper_name, output_paths):

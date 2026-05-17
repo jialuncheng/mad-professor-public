@@ -376,8 +376,8 @@
     <h3>📄 文件上傳流程</h3>
     <ol>
       <li>點擊「＋ 上傳論文」，選擇 PDF 檔案</li>
-      <li>系統自動解析 PDF，偵測文件類型</li>
-      <li>確認或修改文件類型後，點擊「確認，開始處理」</li>
+      <li>選擇文件類型（學術論文、簡報、書籍等）</li>
+      <li>點擊「確認，開始處理」</li>
       <li>等待處理完成（含翻譯、建立向量索引）</li>
       <li>完成後論文出現在左側列表</li>
     </ol>
@@ -400,8 +400,8 @@
 <!-- 文件類型確認框 -->
 <div id="confirm-modal">
   <div id="confirm-box">
-    <h3>確認文件類型</h3>
-    <p id="confirm-desc">AI 偵測到文件類型如下，請確認或修改後繼續處理。</p>
+    <h3>選擇文件類型</h3>
+    <p id="confirm-desc">請選擇文件類型，系統將根據類型選擇最佳解析方式。</p>
     <select id="doc-type-select">
       <option value="academic">學術論文</option>
       <option value="book">書籍</option>
@@ -410,7 +410,6 @@
       <option value="web">網頁存檔</option>
       <option value="news">新聞文章</option>
     </select>
-    <div id="confirm-reason"></div>
     <div id="confirm-box-btns">
       <button id="confirm-ok-btn">確認，開始處理</button>
     </div>
@@ -676,9 +675,9 @@ document.getElementById('upload-btn').onclick = () => {
       const data = await res.json();
       const paperId = data.paper_id;
 
-      // 開始追蹤進度
-      btn.textContent = '處理中...';
-      trackProgress(paperId, btn);
+      // 上傳完成，立即顯示文件類型選擇框
+      btn.textContent = '等待確認...';
+      showConfirmModal(paperId, null, btn);
 
     } catch (err) {
       btn.textContent = '＋ 上傳論文';
@@ -699,10 +698,6 @@ function trackProgress(paperId, btn) {
     if (data.status === 'processing') {
       const p = data.progress;
       btn.textContent = `${p.stage_name}... ${p.progress}%`;
-    } else if (data.status === 'waiting_confirm') {
-      evtSource.close();
-      btn.textContent = '等待確認...';
-      showConfirmModal(paperId, data.detection, btn);
     } else if (data.status === 'done') {
       evtSource.close();
       btn.textContent = '＋ 上傳論文';
@@ -736,16 +731,9 @@ const DOC_TYPE_LABELS = {
 function showConfirmModal(paperId, detection, btn) {
   const modal = document.getElementById('confirm-modal');
   const select = document.getElementById('doc-type-select');
-  const reason = document.getElementById('confirm-reason');
-  const desc = document.getElementById('confirm-desc');
 
-  const docType = detection?.doc_type || 'academic';
-  const confidence = detection?.confidence || '';
-  const detectionReason = detection?.reason || '';
-
-  select.value = docType;
-  desc.textContent = `AI 偵測結果：${DOC_TYPE_LABELS[docType] || docType}（信心度：${confidence}）`;
-  reason.textContent = detectionReason;
+  // 預設選 academic
+  select.value = 'academic';
 
   modal.classList.add('show');
 
