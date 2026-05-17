@@ -15,6 +15,7 @@ from processor.md_restore_processor import RestoreProcessor
 from processor.extra_info_processor import ExtraInfoProcessor
 from processor.rag_processor import RagProcessor
 from processor.image_caption_processor import ImageCaptionProcessor
+from processor.slides_processor import SlidesProcessor
 
 logger = logging.getLogger(__name__)
 
