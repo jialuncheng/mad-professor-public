@@ -11,9 +11,10 @@ from utils.text_utils import load_caption_map
 class RagProcessor:
     """RAG 处理器：将 JSON 转换为 Markdown 和符合检索需求的JSON树结构，并生成向量库"""
 
-    def __init__(self):
+    def __init__(self, embedder=None):
         """初始化 RAG 处理器"""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.embedder = embedder if embedder is not None else EmbeddingModel.get_instance()
 
     def process(self, input_path: str, output_md_path: str, output_tree_json_path: str,
                 vector_store_path: str, images_info_path: str = None) -> Tuple[str, str, str]:
@@ -98,7 +99,7 @@ class RagProcessor:
         # 创建向量存储
         vector_store = FAISS.from_documents(
             documents=docs,
-            embedding=EmbeddingModel.get_instance(),
+            embedding=self.embedder,
             distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
         )
         

@@ -30,7 +30,7 @@ def _setup_logging():
     fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.WARNING)
     for h in root_logger.handlers[:]:
         root_logger.removeHandler(h)
 
@@ -67,9 +67,7 @@ logger = logging.getLogger(__name__)
 # 全域設定
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "output"
-DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR.mkdir(exist_ok=True)
-DATA_DIR.mkdir(exist_ok=True)
 
 # 全域狀態
 ai_core = None
@@ -148,8 +146,9 @@ async def upload_paper(
         return JSONResponse(status_code=415, content={"error": "僅支援 PDF 格式"})
 
     paper_id = paper_manager.sanitize_paper_id(file.filename)
-    clean_filename = paper_id + '.pdf'
-    pdf_path = DATA_DIR / clean_filename
+    paper_dir = OUTPUT_DIR / paper_id
+    paper_dir.mkdir(exist_ok=True)
+    pdf_path = paper_dir / "original.pdf"
 
     # 儲存上傳的 PDF
     with open(pdf_path, 'wb') as f:
@@ -191,7 +190,7 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
         pipeline = PipelineCore(on_progress=on_progress)
         output_paths2 = await loop.run_in_executor(
             None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
-                existing_paths=output_paths)
+                existing_paths=output_paths, paper_id=paper_id)
         )
 
         # 檢查是否在處理過程中被刪除
@@ -358,6 +357,12 @@ async def delete_paper(paper_id: str):
             processing_tasks[paper_id]['status'] = 'cancelled'
 
     paper_manager.delete_paper(OUTPUT_DIR, paper_id)
+
+    # 清理記憶體殘留（消除鬼魂論文）
+    with tasks_lock:
+        processing_tasks.pop(paper_id, None)
+    ai_core.remove_paper(paper_id)
+
     return {"status": "ok", "deleted": paper_id}
 
 # ── 對話紀錄匯出 ──
@@ -419,4 +424,4 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=8080, reload=False, log_level="warning", access_log=False)

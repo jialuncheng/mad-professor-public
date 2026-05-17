@@ -31,9 +31,9 @@ EMPTY_CHECK_PROMPT = """這是一張投影片的截圖。請判斷這張投影�
 class SlidesProcessor:
     """簡報 PDF 處理器：使用 PyMuPDF 渲染每頁，再用 Vision 辨識內容"""
 
-    def __init__(self):
+    def __init__(self, llm=None):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.llm = llm if llm is not None else LLMClient.get_instance()
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
         """

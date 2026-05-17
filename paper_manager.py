@@ -58,6 +58,8 @@ def update_papers_index(output_dir: Path, paper_id: str, final_paths: dict) -> N
             except ValueError:
                 path_dict[key] = str(path)
 
+    path_dict['original_pdf'] = str(Path(paper_id) / 'original.pdf')
+
     paper_entry = {
         'id': paper_id,
         'title': title,

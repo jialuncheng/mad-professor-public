@@ -11,10 +11,10 @@ FORMULA_ANALYSIS_PROMPT_PATH = "prompt/translate/formula_analysis_prompt.txt"
 class ExtraInfoProcessor:
     """额外信息处理器，用于生成论文各章节的总结信息和问题"""
 
-    def __init__(self):
+    def __init__(self, llm=None):
         """初始化额外信息处理器"""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.llm = llm if llm is not None else LLMClient.get_instance()
         self.abstract_text = ""
         
     def _read_file(self, filepath: str) -> str:

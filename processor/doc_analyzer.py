@@ -29,9 +29,9 @@ STRUCTURE_PROMPTS = {
 class DocAnalyzer:
     """文件結構分析器：偵測文件類型、修正標題層級、分析文件結構"""
 
-    def __init__(self):
+    def __init__(self, llm=None):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.llm = llm if llm is not None else LLMClient.get_instance()
 
     def _read_prompt(self, path: str) -> str:
         try:

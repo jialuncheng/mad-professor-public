@@ -10,10 +10,10 @@ CONTENT_TRANSLATE_PROMPT_PATH = "prompt/translate/content_translate_prompt.txt"
 class TranslateProcessor:
     """翻译处理器, 使用LLM进行对论文json文件分段翻译"""
 
-    def __init__(self):
+    def __init__(self, llm=None):
         """初始化翻译处理器"""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.llm = llm if llm is not None else LLMClient.get_instance()
         
         # 保存已翻译的摘要，用于后续翻译的上下文
         self.translated_abstract = ""

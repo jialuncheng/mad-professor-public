@@ -116,6 +116,13 @@ class RagRetriever:
         """檢查是否已有向量庫路徑"""
         return bool(self.paper_vector_paths)
 
+    def remove_paper(self, paper_id: str) -> None:
+        """移除該論文的向量快取（FAISS 實例、路徑映射、rag_tree）"""
+        self.vector_stores.pop(paper_id, None)
+        self.paper_vector_paths.pop(paper_id, None)
+        self.rag_trees.pop(paper_id, None)
+        logger.info(f"已移除論文向量快取: {paper_id}")
+
     def retrieve_with_context(self, query: str, paper_id: str, top_k: int = 5) -> str:
         """從向量庫檢索相關內容，回傳結構化字串"""
         if not self.is_ready():

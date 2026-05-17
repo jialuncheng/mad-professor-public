@@ -21,7 +21,7 @@ class AIProfessorChat:
         self.retriever = None
         self.llm_client = None
         try:
-            self.llm_client = LLMClient()
+            self.llm_client = LLMClient.get_instance()
             self.logger.info("AI對話助手初始化完成")
         except Exception as e:
             self.logger.error(f"初始化AI對話組件失敗: {str(e)}")

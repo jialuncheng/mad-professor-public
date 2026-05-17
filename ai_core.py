@@ -90,3 +90,14 @@ class AICore:
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")
             return False
+
+    def remove_paper(self, paper_id: str) -> None:
+        """移除該論文的所有記憶體快取（_paper_cache、retriever、當前對話上下文）"""
+        if paper_id in self._paper_cache:
+            del self._paper_cache[paper_id]
+        if self.retriever:
+            self.retriever.remove_paper(paper_id)
+        if self.ai_chat.current_paper_id == paper_id:
+            self.ai_chat.current_paper_id = None
+            self.ai_chat.current_paper_data = None
+        self.logger.info(f"已移除論文快取: {paper_id}")

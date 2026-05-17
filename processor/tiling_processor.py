@@ -14,7 +14,7 @@ class TilingProcessor:
     使用向量相似度计算最佳切分点
     """
     
-    def __init__(self, min_length: int = 500, max_length: int = 2500, window_size: int = 3, step_size: int = 1):
+    def __init__(self, min_length: int = 500, max_length: int = 2500, window_size: int = 3, step_size: int = 1, embedder=None):
         """
         初始化平铺处理器
         
@@ -29,6 +29,7 @@ class TilingProcessor:
         self.max_length = max_length
         self.window_size = window_size
         self.step_size = step_size
+        self.embedder = embedder if embedder is not None else EmbeddingModel.get_instance()
     
     def process(self, input_path: str, output_path: str) -> Path:
         """
@@ -213,7 +214,7 @@ class TilingProcessor:
                 blocks.append('\n'.join(window))
         
         # 计算每个块的嵌入向量 - 使用统一的EmbeddingModel
-        embedding_model = EmbeddingModel.get_instance()
+        embedding_model = self.embedder
         block_embeddings = [embedding_model.embed_query(block) for block in blocks]
         
         # 计算相邻块之间的相似度                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       

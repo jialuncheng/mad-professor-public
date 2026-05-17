@@ -12,9 +12,9 @@ MIME_TYPES = {
 class ImageCaptionProcessor:
     """Vision 圖片說明生成器：掃描 images/ 目錄，為每張圖片生成 caption，輸出 images_info.md"""
 
-    def __init__(self):
+    def __init__(self, llm=None):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.llm = LLMClient()
+        self.llm = llm if llm is not None else LLMClient.get_instance()
 
     def process(self, images_dir: str, output_path: str) -> Optional[Path]:
         """

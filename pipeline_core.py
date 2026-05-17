@@ -183,7 +183,8 @@ class PipelineCore:
             return paper_dir / f"{paper_name}{identifier}.json"
 
     def process(self, pdf_path: str, output_dir: Optional[str] = None,
-                existing_paths: Optional[Dict] = None) -> Dict:
+                existing_paths: Optional[Dict] = None,
+                paper_id: Optional[str] = None) -> Dict:
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
@@ -191,7 +192,7 @@ class PipelineCore:
         base_output_dir = Path(output_dir) if output_dir else pdf_path.parent
         base_output_dir.mkdir(exist_ok=True, parents=True)
 
-        self.paper_info['paper_id'] = pdf_path.stem
+        self.paper_info['paper_id'] = paper_id if paper_id is not None else pdf_path.stem
         paper_output_dir = base_output_dir / self.paper_info['paper_id']
         paper_output_dir.mkdir(exist_ok=True)
         self.paper_info['output_dir'] = paper_output_dir
