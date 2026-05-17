@@ -142,6 +142,7 @@ class RagProcessor:
         restructured_paper = {
             "title": paper_data.get("title", ""),
             "translated_title": paper_data.get("translated_title", ""),
+            "summary": paper_data.get("summary", ""),
             "abstract": {
                 "content": paper_data.get("abstract", {}).get("content", ""),
                 "translated_content": paper_data.get("abstract", {}).get("translated_content", "")

@@ -409,6 +409,11 @@ class PipelineCore:
         if not input_path:
             raise ValueError("未找到翻譯 JSON 文件")
         output_path = self._get_stage_output_path('extra_info', paper_dir, paper_name)
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+        if doc_type in ('news', 'web'):
+            return self.extra_info_processor.generate_document_summary(
+                str(input_path), str(output_path)
+            )
         return self.extra_info_processor.process(str(input_path), str(output_path))
 
     def _stage_rag(self, pdf_path, paper_dir, paper_name, output_paths):

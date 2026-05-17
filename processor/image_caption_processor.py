@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import LLMClient
 
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
@@ -48,13 +49,24 @@ class ImageCaptionProcessor:
 
         self.logger.info(f"開始處理 {len(image_files)} 張圖片")
 
+        # 並行生成 caption，結果依 image_files 原索引回填以保證輸出順序
+        captions = [""] * len(image_files)
+        max_workers = min(4, len(image_files))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {
+                executor.submit(self._generate_caption, img_path): i
+                for i, img_path in enumerate(image_files)
+            }
+            for future in as_completed(future_to_idx):
+                i = future_to_idx[future]
+                captions[i] = future.result()
+
         lines = []
         for idx, img_path in enumerate(image_files, 1):
             self.logger.info(f"  [{idx}/{len(image_files)}] {img_path.name}")
-            caption = self._generate_caption(img_path)
             src = f"images/{img_path.name}"
             lines.append(f"## {src}")
-            lines.append(caption)
+            lines.append(captions[idx - 1])
             lines.append("")
 
         output_path.write_text('\n'.join(lines), encoding='utf-8')

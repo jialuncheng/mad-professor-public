@@ -70,7 +70,70 @@ class ExtraInfoProcessor:
         except Exception as e:
             self.logger.error(f"章节总结生成失败: {str(e)}", exc_info=True)
             raise
-    
+
+    def generate_document_summary(self, input_path: str, output_path: str) -> Path:
+        """簡化模式（news/web）：對整份文件做一次總摘要，不做章節遞迴。
+
+        - 遞迴收集所有章節翻譯內容（跳過 abstract / references）
+        - 一次 LLM 呼叫產生整體摘要，寫入頂層 data['summary']
+        - 不設定各 section 的 summary 欄位
+        """
+        try:
+            input_path = Path(input_path)
+            output_path = Path(output_path)
+
+            self.logger.info(f"開始生成整體文件摘要（簡化模式）: {input_path}")
+            with input_path.open('r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            contents = []
+
+            def _collect(sections):
+                for section in sections:
+                    if section.get("type") in ["abstract", "references"]:
+                        continue
+                    for item in section.get("content", []):
+                        if isinstance(item, dict):
+                            if item.get("type") == "text" and item.get("translated_content"):
+                                contents.append(item["translated_content"])
+                            elif item.get("type") == "formula" and item.get("content"):
+                                contents.append(item["content"])
+                    if section.get("children"):
+                        _collect(section["children"])
+
+            if "sections" in data:
+                _collect(data["sections"])
+
+            combined_text = "\n\n".join(contents)
+
+            if combined_text.strip():
+                system_prompt = self._read_file(SUMMARY_PROMPT_PATH)
+                user_prompt = (
+                    f"文件内容:\n{combined_text}\n\n"
+                    "请根据要求生成这份文件的整体总结，只需输出总结文段，无需任何额外的解释说明:"
+                )
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+                try:
+                    data["summary"] = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+                except Exception as e:
+                    self.logger.error(f"生成整體文件摘要失敗: {str(e)}")
+                    data["summary"] = ""
+            else:
+                self.logger.warning("文件無可用內容，整體摘要留空")
+                data["summary"] = ""
+
+            with output_path.open('w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            self.logger.info(f"整體文件摘要完成，結果已保存到: {output_path}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"整體文件摘要生成失敗: {str(e)}", exc_info=True)
+            raise
+
     def extract_abstract(self, data):
         """
         从数据中提取摘要信息并保存到类变量

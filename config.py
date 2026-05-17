@@ -124,10 +124,18 @@ class LLMClient:
             system_instruction=system_instruction
         )
 
-        response = self.client.models.generate_content(
-            model=model, contents=contents, config=config
-        )
-        return response.text
+        import time
+        for attempt in range(3):
+            try:
+                response = self.client.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+                return response.text
+            except Exception as e:
+                if '429' in str(e) and attempt < 2:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                raise
 
 
 # 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
