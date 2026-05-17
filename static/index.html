@@ -388,10 +388,10 @@
 
 <!-- 左側論文列表 -->
 <div id="sidebar">
-  <h1>📚 論文列表</h1>
+  <h1>📚 文件列表</h1>
   <div id="paper-list"></div>
   <div id="sidebar-bottom">
-    <button id="upload-btn">＋ 上傳論文</button>
+    <button id="upload-btn">＋ 上傳文件</button>
     <button id="help-btn" title="上傳說明">？</button>
     <button id="cleanup-btn" title="清理殘餘檔案">🗑</button>
   </div>
@@ -402,7 +402,7 @@
   <div id="help-box">
     <h3>📄 文件上傳流程</h3>
     <ol>
-      <li>點擊「＋ 上傳論文」，選擇 PDF 檔案</li>
+      <li>點擊「＋ 上傳文件」，選擇 PDF 檔案</li>
       <li>選擇文件類型（學術論文、簡報、書籍等）</li>
       <li>點擊「確認，開始處理」</li>
       <li>等待處理完成（含翻譯、建立向量索引）</li>
@@ -451,7 +451,7 @@
     <button id="export-btn" style="display:none" title="匯出對話紀錄">↓ MD</button>
   </div>
   <div id="chat-messages">
-    <div class="chat-empty">選擇論文後開始提問</div>
+    <div class="chat-empty">選擇文件後開始提問</div>
   </div>
   <div id="chat-input-area">
     <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..." disabled></textarea>
@@ -564,7 +564,7 @@ async function deletePaper(paperId, title) {
       document.getElementById('content-toolbar').style.display = 'none';
       document.getElementById('empty-state').style.display = 'flex';
       document.getElementById('paper-content').style.display = 'none';
-      document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇論文後開始提問</div>';
+      document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇文件後開始提問</div>';
       document.getElementById('chat-input').disabled = true;
       document.getElementById('send-btn').disabled = true;
     }
@@ -581,7 +581,7 @@ async function loadChatHistory(paperId) {
     const res = await fetch(`/api/papers/${paperId}/chat/history`);
     const history = await res.json();
     if (!history.length) {
-      messages.innerHTML = '<div class="chat-empty">針對論文提問</div>';
+      messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
       return;
     }
     history.forEach(msg => {
@@ -598,7 +598,7 @@ async function loadChatHistory(paperId) {
     });
     messages.scrollTop = messages.scrollHeight;
   } catch(e) {
-    messages.innerHTML = '<div class="chat-empty">針對論文提問</div>';
+    messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
   }
 }
 
@@ -713,7 +713,7 @@ document.getElementById('upload-btn').onclick = () => {
       const paperId = data.paper_id;
 
       // 上傳完成，立即顯示文件類型選擇框
-      btn.textContent = '等待確認...';
+      btn.textContent = '選擇類型...';
       showConfirmModal(paperId, null, btn);
 
     } catch (err) {
