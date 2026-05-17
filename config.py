@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Optional, List, Dict, Any, Generator
 from google import genai
 from google.genai import types
@@ -11,11 +12,14 @@ from llm.message_utils import _convert_messages
 
 class LLMClient:
     _instance: Optional['LLMClient'] = None
+    _lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(LLMClient, cls).__new__(cls)
-            cls._instance._initialized = False
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(LLMClient, cls).__new__(cls)
+                    cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
@@ -133,6 +137,7 @@ class EmbeddingModel(Embeddings):
     """使用 Gemini Embedding 2 API，符合 LangChain Embeddings 介面"""
 
     _instance: Optional['EmbeddingModel'] = None
+    _lock = threading.Lock()
 
     def __init__(self):
         self.client = genai.Client(api_key=GEMINI_API_KEY)
@@ -143,7 +148,9 @@ class EmbeddingModel(Embeddings):
     @classmethod
     def get_instance(cls) -> 'EmbeddingModel':
         if cls._instance is None:
-            cls._instance = cls()
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
         return cls._instance
 
     def embed_documents(self, texts: list) -> list:
