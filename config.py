@@ -50,9 +50,7 @@ class LLMClient:
                 model=model, contents=contents, config=config
             ):
                 if chunk.text:
-                    print(chunk.text, end='', flush=True)
                     full_response += chunk.text
-            print()
             return full_response
         else:
             response = self.client.models.generate_content(
