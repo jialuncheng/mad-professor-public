@@ -81,6 +81,10 @@ class TranslateProcessor:
             # 翻译当前章节标题
             if "title" in section:
                 title = section["title"]
+                if not title.strip():
+                    # 空標題不翻譯
+                    section["translated_title"] = ""
+                    continue
                 self.logger.info(f"翻译章节标题: {title}")
                 section["translated_title"] = self.translate_text("title", title)
             

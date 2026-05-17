@@ -46,16 +46,15 @@ class RestoreProcessor:
         if vision_captions is None:
             vision_captions = {}
         """处理文档的一个章节，递归处理子章节"""
-        # 处理标题
+        # 处理标题（空標題不輸出）
         title_prefix = "#" * level
         
-        # 英文标题
-        en_title = f"{title_prefix} {section['title']}"
-        self._write_to_md(output_path_en, en_title)
-        
-        # 中文标题
-        zh_title = f"{title_prefix} {section.get('translated_title')}"
-        self._write_to_md(output_path_zh, zh_title)
+        if section['title'].strip():
+            en_title = f"{title_prefix} {section['title']}"
+            self._write_to_md(output_path_en, en_title)
+            
+            zh_title = f"{title_prefix} {section.get('translated_title') or section['title']}"
+            self._write_to_md(output_path_zh, zh_title)
         
         # 处理正文内容
         if 'content' in section and section['content']:
