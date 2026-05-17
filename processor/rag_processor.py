@@ -28,6 +28,9 @@ class RagProcessor:
                     current_src = line[3:].strip()
                 elif current_src and line.strip():
                     caption_map[current_src] = line.strip()
+                    # 也存只有檔名的版本
+                    from pathlib import Path as _Path
+                    caption_map[_Path(current_src).name] = line.strip()
                     current_src = None
             self.logger.info(f"載入 caption_map: {len(caption_map)} 張圖片")
         except Exception as e:

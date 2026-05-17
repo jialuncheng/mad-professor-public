@@ -224,9 +224,14 @@ class RestoreProcessor:
             current_src = None
             for line in lines:
                 if line.startswith('## '):
-                    current_src = line[3:].strip()
+                    src = line[3:].strip()
+                    # 同時存完整路徑和只有檔名，方便對應
+                    current_src = src
                 elif current_src and line.strip():
                     caption_map[current_src] = line.strip()
+                    # 也存只有檔名的版本
+                    from pathlib import Path as _Path
+                    caption_map[_Path(current_src).name] = line.strip()
                     current_src = None
         except Exception as e:
             self.logger.warning(f"讀取 images_info.md 失敗: {str(e)}")
