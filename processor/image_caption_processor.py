@@ -32,8 +32,9 @@ class ImageCaptionProcessor:
         output_path = Path(output_path)
 
         if not images_dir.exists():
-            self.logger.warning(f"images 目錄不存在: {images_dir}")
-            return None
+            self.logger.warning(f"images 目錄不存在: {images_dir}，建立空的 images_info.md")
+            output_path.write_text('', encoding='utf-8')
+            return output_path
 
         image_files = sorted([
             f for f in images_dir.iterdir()
