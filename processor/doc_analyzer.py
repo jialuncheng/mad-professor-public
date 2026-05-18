@@ -82,7 +82,13 @@ class DocAnalyzer:
                     first_section_line = i
                     break
 
-            analysis_end = min(first_section_line + 10, 500, len(lines))
+            FLAT_DOC_TYPES = ('news', 'web')
+            max_lines = 120 if doc_type in FLAT_DOC_TYPES else 500
+            analysis_end = min(first_section_line + 10, max_lines, len(lines))
+            self.logger.info(
+                f"structure 分析範圍: {analysis_end} 行"
+                f"（doc_type={doc_type}, 上限={max_lines}）"
+            )
             analysis_lines = lines[:analysis_end]
             numbered = '\n'.join(
                 f'{i}: {line}' for i, line in enumerate(analysis_lines) if line.strip()
