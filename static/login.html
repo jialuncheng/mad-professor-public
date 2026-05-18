@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入 — Mad Professor</title>
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #fafafa;
+      --color-border: #e5e5e5;
+      --color-border-strong: #d4d4d4;
+      --color-text: #171717;
+      --color-text-muted: #737373;
+      --color-text-subtle: #a3a3a3;
+      --color-accent: #171717;
+      --color-accent-hover: #404040;
+      --color-danger: #dc2626;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --radius-md: 4px;
+      --font-sm: 13px;
+      --font-base: 14px;
+      --font-xl: 20px;
+      --transition: 150ms ease;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-surface);
+      color: var(--color-text);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #login-box {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-6);
+      width: 320px;
+    }
+    #login-box h1 {
+      font-size: var(--font-xl);
+      font-weight: 600;
+      margin-bottom: var(--space-5);
+    }
+    #login-box label {
+      display: block;
+      font-size: var(--font-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    #login-box input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      color: var(--color-text);
+      background: var(--color-bg);
+      outline: none;
+      margin-bottom: var(--space-4);
+      font-family: inherit;
+    }
+    #login-box input:focus { border-color: var(--color-accent); }
+    #login-box button {
+      width: 100%;
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-accent);
+      color: #ffffff;
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    #login-box button:hover { background: var(--color-accent-hover); }
+    #error-msg {
+      display: none;
+      color: var(--color-danger);
+      font-size: var(--font-sm);
+      margin-bottom: var(--space-4);
+    }
+  </style>
+</head>
+<body>
+  <div id="login-box">
+    <h1>登入</h1>
+    <div id="error-msg"></div>
+    <form method="POST" action="/login">
+      <label for="username">帳號</label>
+      <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+      <label for="password">密碼</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">登入</button>
+    </form>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const err = params.get('error');
+    if (err) {
+      const box = document.getElementById('error-msg');
+      box.textContent = err === 'locked'
+        ? '嘗試過多，請 1 分鐘後再試。'
+        : '帳號或密碼錯誤。';
+      box.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

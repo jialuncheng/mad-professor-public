@@ -8,13 +8,18 @@ from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse
+import time
+import bcrypt
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Request
+from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+import settings
 import paper_manager
 from pipeline_core import PipelineCore
 from ai_core import AICore
@@ -100,6 +105,99 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── 登入 / Session ──
+
+if settings.ENVIRONMENT != "production":
+    logger.warning("執行於 development 模式，cookie 不強制 HTTPS")
+else:
+    logger.info("執行於 production 模式")
+
+if not settings.SESSION_SECRET:
+    logger.warning("SESSION_SECRET 未設定，使用臨時密鑰（重啟即失效，請於 .env 設定）")
+if not settings.AUTH_PASSWORD_HASH:
+    logger.warning("AUTH_PASSWORD_HASH 未設定，將無法登入（請用 scripts/generate_password_hash.py 產生）")
+
+_login_attempts: dict = {}  # ip -> [失敗時間戳]
+_login_lock = threading.Lock()
+
+_PUBLIC_PREFIXES = ("/static/login",)
+_PUBLIC_PATHS = {"/login", "/logout", "/api/health"}
+
+
+def _is_public(path: str) -> bool:
+    if path in _PUBLIC_PATHS:
+        return True
+    return any(path.startswith(p) for p in _PUBLIC_PREFIXES)
+
+
+@app.middleware("http")
+async def auth_guard(request: Request, call_next):
+    path = request.url.path
+    if _is_public(path) or request.session.get("auth"):
+        return await call_next(request)
+    # 未登入：API/SSE 回 401 JSON，其餘導向登入頁
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=401, content={"error": "未登入"})
+    return RedirectResponse(url="/login", status_code=302)
+
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SESSION_SECRET or "insecure-dev-secret-change-me",
+    session_cookie="session",
+    https_only=(settings.ENVIRONMENT == "production"),
+    same_site="strict",
+    max_age=None,
+)
+
+
+@app.get("/login")
+async def login_page():
+    p = BASE_DIR / "static" / "login.html"
+    if p.exists():
+        return HTMLResponse(p.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>login.html not found</h1>", status_code=500)
+
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    with _login_lock:
+        fails = [t for t in _login_attempts.get(ip, []) if now - t < 60]
+        _login_attempts[ip] = fails
+        if len(fails) >= 5:
+            return RedirectResponse(url="/login?error=locked", status_code=303)
+
+    ok = False
+    if settings.AUTH_PASSWORD_HASH and username == settings.AUTH_USERNAME:
+        try:
+            ok = bcrypt.checkpw(
+                password.encode("utf-8"),
+                settings.AUTH_PASSWORD_HASH.encode("utf-8"),
+            )
+        except Exception as e:
+            logger.warning(f"密碼驗證失敗: {str(e)}")
+            ok = False
+
+    if ok:
+        with _login_lock:
+            _login_attempts.pop(ip, None)
+        request.session["auth"] = True
+        request.session["user"] = username
+        return RedirectResponse(url="/", status_code=303)
+
+    with _login_lock:
+        _login_attempts.setdefault(ip, []).append(now)
+    return RedirectResponse(url="/login?error=invalid", status_code=303)
+
+
+@app.post("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
 
 @app.get("/")
 async def root():
