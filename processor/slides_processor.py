@@ -21,6 +21,9 @@ SLIDE_PROMPT = """這是一張投影片的截圖。請分析並提取以下內�
   "figure_description": "圖表描述（沒有圖表則為空字串）"
 }
 
+如果該頁完全空白、只有頁碼、或只有純裝飾元素，請回傳三個欄位都是空字串：
+{"title": "", "content": "", "figure_description": ""}
+
 只輸出 JSON，不要任何解釋。"""
 
 EMPTY_CHECK_PROMPT = """這是一張投影片的截圖。請判斷這張投影片是否為空白或幾乎沒有實質內容（例如：完全空白、只有頁碼、只有裝飾性圖案、只有背景）。
@@ -87,9 +90,20 @@ class SlidesProcessor:
                 pix = page.get_pixmap(matrix=mat, clip=clip)
                 img_data = pix.tobytes("jpeg")
 
-                # 空白判斷
-                if self._is_empty(img_data, page_num + 1, clip_idx + 1):
-                    self.logger.info(f"  頁 {page_num + 1} 子圖 {clip_idx + 1}: 空白，跳過")
+                # 直接辨識（移除 _is_empty 預檢，從結果判斷空白）
+                result = self._analyze_slide(img_data, slide_counter + 1)
+                if not result:
+                    self.logger.warning(
+                        f"  頁 {page_num + 1} 子圖 {clip_idx + 1}: JSON 解析失敗，跳過"
+                    )
+                    continue
+
+                slide_title = result.get("title", "").strip()
+                content = result.get("content", "").strip()
+                figure_desc = result.get("figure_description", "").strip()
+
+                if not slide_title and not content and not figure_desc:
+                    self.logger.info(f"slide {slide_counter + 1}: 內容皆空，跳過")
                     continue
 
                 slide_counter += 1
@@ -97,17 +111,9 @@ class SlidesProcessor:
                 img_path = images_dir / img_filename
                 img_path.write_bytes(img_data)
 
-                self.logger.info(f"  [slide {slide_counter}] 頁 {page_num + 1} 子圖 {clip_idx + 1}")
-
-                result = self._analyze_slide(img_data, slide_counter)
-                if not result:
-                    continue
-
-                slide_title = result.get("title", "").strip()
-                content = result.get("content", "").strip()
-                figure_desc = result.get("figure_description", "").strip()
-
-                is_first_slide = False
+                self.logger.info(
+                    f"slide {slide_counter}: 標題={slide_title[:20]}, 內容字數={len(content)}"
+                )
 
                 if slide_title:
                     lines.append(f"## {slide_title}")
