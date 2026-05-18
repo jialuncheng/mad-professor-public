@@ -1,5 +1,6 @@
 import logging
 import json
+import threading
 from typing import AsyncGenerator, Optional, Dict, Any
 from AI_professor_chat import AIProfessorChat
 from rag_retriever import RagRetriever
@@ -15,6 +16,7 @@ class AICore:
         self.ai_chat = AIProfessorChat()
         self.retriever: Optional[RagRetriever] = None
         self.is_generating = False
+        self._generating_lock = threading.Lock()
         self._paper_cache: Dict[str, Any] = {}
 
     def init_rag_retriever(self, base_path: str) -> bool:
@@ -48,6 +50,10 @@ class AICore:
         Yields:
             dict: {'sentence': str, 'emotion': str, 'done': bool}
         """
+        if not self._generating_lock.acquire(blocking=False):
+            yield {'sentence': '目前有其他對話正在生成中，請稍候再試。',
+                   'emotion': 'neutral', 'done': True}
+            return
         try:
             self.is_generating = True
 
@@ -73,6 +79,7 @@ class AICore:
             yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}', 'emotion': 'neutral', 'done': True}
         finally:
             self.is_generating = False
+            self._generating_lock.release()
 
     def cancel(self):
         """取消當前生成"""
