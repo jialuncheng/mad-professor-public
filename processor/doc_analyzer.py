@@ -1,5 +1,6 @@
 import re
 import json
+import time
 import logging
 from pathlib import Path
 from config import LLMClient
@@ -46,8 +47,14 @@ class DocAnalyzer:
             self.logger.warning(f"未知文件類型 {doc_type}，使用 academic")
             doc_type = 'academic'
 
+        t1 = time.time()
         self._fix_heading_levels(markdown_path, doc_type)
+        t2 = time.time()
+        self.logger.info(f"[analyze] heading fix 完成（耗時 {t2 - t1:.1f}s）")
+
         self._analyze_document_structure(markdown_path, doc_type)
+        t3 = time.time()
+        self.logger.info(f"[analyze] structure 完成（耗時 {t3 - t2:.1f}s）")
         return markdown_path
 
     def _fix_heading_levels(self, markdown_path: Path, doc_type: str):
@@ -56,6 +63,7 @@ class DocAnalyzer:
             content = markdown_path.read_text(encoding='utf-8')
             lines = content.split('\n')
             heading_lines = [f"行{i}: {line}" for i, line in enumerate(lines) if line.startswith('#')]
+            self.logger.info(f"[analyze] heading fix 輸入: {len(heading_lines)} 行 heading")
             if not heading_lines:
                 return
 
