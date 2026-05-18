@@ -93,40 +93,70 @@ class PDFProcessor:
             raise
 
     def _copy_images(self, paper_name: str, output_dir: Path, task_id: str = None):
-        """從 mineru-lab 複製圖片目錄。
+        """複製 MinerU 解析出的圖片目錄（雙模式，best-effort，永不 raise）。
 
-        優先用 MinerU 回傳的 task_id 直接定位（並發安全、免 ssh 猜目錄）；
-        無 task_id 時退回 ls -t | head -1（不可靠，僅 fallback）。
+        MINERU_HOST 有值 → 遠端模式：scp（無 task_id 時退回 ssh ls -t）。
+        MINERU_HOST 為空 → 本地/bind-mount 模式：MINERU_OUTPUT_DIR 視為
+        本機可讀路徑，用 shutil.copytree 複製（無 task_id 時取最新子目錄）。
         """
         try:
             dst = str(output_dir / "images")
 
-            if task_id:
-                self.logger.info(f"MinerU task_id: {task_id}")
-                src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{task_id}/{paper_name}/auto/images/"
-            else:
-                self.logger.warning(
-                    "無 task_id，退回 ls -t | head -1 猜目錄（多份並發時不可靠）"
-                )
-                result = subprocess.run(
-                    ["ssh", self.MINERU_HOST,
-                     f"ls -t {self.MINERU_OUTPUT_DIR} | head -1"],
-                    capture_output=True, text=True, timeout=30
-                )
-                latest_task = result.stdout.strip()
-                if not latest_task:
-                    self.logger.warning("找不到 mineru-lab 的輸出目錄")
-                    return
-                src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
+            if self.MINERU_HOST:
+                if task_id:
+                    self.logger.info(f"MinerU task_id: {task_id}")
+                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{task_id}/{paper_name}/auto/images/"
+                else:
+                    self.logger.warning(
+                        "無 task_id，退回 ls -t | head -1 猜目錄（多份並發時不可靠）"
+                    )
+                    result = subprocess.run(
+                        ["ssh", self.MINERU_HOST,
+                         f"ls -t {self.MINERU_OUTPUT_DIR} | head -1"],
+                        capture_output=True, text=True, timeout=30
+                    )
+                    latest_task = result.stdout.strip()
+                    if not latest_task:
+                        self.logger.warning("找不到 mineru-lab 的輸出目錄")
+                        return
+                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
 
-            self.logger.info(f"scp 來源: {src}")
-            scp_result = subprocess.run(
-                ["scp", "-r", src, dst],
-                capture_output=True, text=True, timeout=60
-            )
-            if scp_result.returncode == 0:
-                self.logger.info(f"圖片複製成功: {dst}")
+                self.logger.info(f"scp 來源: {src}")
+                scp_result = subprocess.run(
+                    ["scp", "-r", src, dst],
+                    capture_output=True, text=True, timeout=60
+                )
+                if scp_result.returncode == 0:
+                    self.logger.info(f"圖片複製成功: {dst}")
+                else:
+                    self.logger.warning(f"圖片複製失敗: {scp_result.stderr}")
             else:
-                self.logger.warning(f"圖片複製失敗: {scp_result.stderr}")
+                if not self.MINERU_OUTPUT_DIR:
+                    self.logger.warning("本地模式但 MINERU_OUTPUT_DIR 未設定，跳過圖片複製")
+                    return
+
+                if task_id:
+                    self.logger.info(f"MinerU task_id: {task_id}（本地模式）")
+                    src = Path(self.MINERU_OUTPUT_DIR) / task_id / paper_name / "auto" / "images"
+                else:
+                    self.logger.warning(
+                        "無 task_id，本地掃最新子目錄猜目錄（多份並發時不可靠）"
+                    )
+                    output_root = Path(self.MINERU_OUTPUT_DIR)
+                    if not output_root.is_dir():
+                        self.logger.warning(f"本地 MINERU_OUTPUT_DIR 不存在: {output_root}")
+                        return
+                    subdirs = [d for d in output_root.iterdir() if d.is_dir()]
+                    if not subdirs:
+                        self.logger.warning("本地 MINERU_OUTPUT_DIR 內無子目錄")
+                        return
+                    latest = max(subdirs, key=lambda d: d.stat().st_mtime)
+                    src = latest / paper_name / "auto" / "images"
+
+                if src.is_dir():
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
+                    self.logger.info(f"圖片複製成功（本地）: {dst}")
+                else:
+                    self.logger.warning(f"找不到本地圖片目錄: {src}")
         except Exception as e:
             self.logger.warning(f"複製圖片時出錯: {str(e)}")
