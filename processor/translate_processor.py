@@ -44,8 +44,12 @@ class TranslateProcessor:
             # 1. 翻译标题
             self.translate_titles(data)
             
-            # 2. 翻译abstract
-            self.translate_abstract(data)
+            # 2. 翻译abstract（slides/news/web 本就無 abstract，跳過以免雜訊 warning）
+            doc_type_no_abstract = ('slides', 'news', 'web')
+            if self.doc_type in doc_type_no_abstract:
+                self.logger.info(f"doc_type={self.doc_type}，無 abstract 段落，跳過摘要翻譯")
+            else:
+                self.translate_abstract(data)
             
             # 3. 翻译sections内容
             self.translate_content(data)
