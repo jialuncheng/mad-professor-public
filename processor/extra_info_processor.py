@@ -3,6 +3,7 @@ import logging
 import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import settings
 from config import LLMClient
 
 SUMMARY_PROMPT_PATH = "prompt/translate/summary_generation_prompt.txt"
@@ -121,7 +122,7 @@ class ExtraInfoProcessor:
                     {"role": "user", "content": user_prompt}
                 ]
                 try:
-                    data["summary"] = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+                    data["summary"] = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
                 except Exception as e:
                     self.logger.error(f"生成整體文件摘要失敗: {str(e)}")
                     data["summary"] = ""
@@ -364,7 +365,7 @@ class ExtraInfoProcessor:
         ]
         
         try:
-            summary = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+            summary = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return summary
         except Exception as e:
             self.logger.error(f"生成章节 {section.get('title', '未命名章节')} 的总结失败: {str(e)}")
@@ -465,7 +466,7 @@ class ExtraInfoProcessor:
         ]
         
         try:
-            questions = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+            questions = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return questions
         except Exception as e:
             self.logger.error(f"生成文本块问题失败: {str(e)}")
@@ -502,7 +503,7 @@ class ExtraInfoProcessor:
         ]
         
         try:
-            questions = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+            questions = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return questions
         except Exception as e:
             self.logger.error(f"生成{graph_type_text}块问题失败: {str(e)}")
@@ -595,7 +596,7 @@ class ExtraInfoProcessor:
 
         try:
             # 调用 LLM 生成公式解析
-            formula_analysis = self.llm.chat(messages, stream=True).replace("\n", " ").strip()
+            formula_analysis = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return formula_analysis
         except Exception as e:
             self.logger.error(f"生成公式解析失败: {str(e)}")

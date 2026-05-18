@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import Optional
 import fitz  # PyMuPDF
+import settings
 from config import LLMClient
 from utils.text_utils import strip_json_fence
 
@@ -157,7 +158,8 @@ class SlidesProcessor:
             result_text = self.llm.chat_with_image(
                 messages=[{"role": "user", "content": SLIDE_PROMPT}],
                 image_data=img_data,
-                mime_type="image/jpeg"
+                mime_type="image/jpeg",
+                model=settings.LLM_VISION_MODEL
             )
             result_text = strip_json_fence(result_text)
             return json.loads(result_text)

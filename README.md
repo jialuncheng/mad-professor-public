@@ -87,6 +87,9 @@ Web 介面：<http://localhost:8080>
 | `LLM_CHAT_MODEL` | 可選 | `gemini-3.1-flash-lite` | 問答對話使用的模型。 |
 | `EMBEDDING_MODEL` | 可選 | `gemini-embedding-001` | 向量嵌入模型（文字）。`gemini-embedding-001` 支援批次嵌入，效能優於 `gemini-embedding-2`。 |
 | `LLM_DOMAIN_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | 主題領域判斷模型。 |
+| `LLM_DOC_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | doc_analyzer 的 heading fix / structure 分析（後台，建議 Flash）。 |
+| `LLM_VISION_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | image_caption 與 slides 的 Vision 辨識（後台，建議 Flash）。 |
+| `LLM_EXTRA_INFO_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | extra_info 章節摘要／問題／公式解析（後台，建議 Flash）。 |
 | `MINERU_API_URL` | 視部署 | `http://localhost:8000/file_parse` | MinerU 解析 API 端點。 |
 | `MINERU_HOST` | 視部署 | `user@localhost` | 透過 ssh/scp 取回圖片用的遠端主機。留空則跳過圖片複製（不影響其餘流程）。 |
 | `MINERU_OUTPUT_DIR` | 視部署 | `/home/user/output` | MinerU 在遠端主機上的輸出目錄絕對路徑。留空則跳過圖片複製。 |
@@ -97,8 +100,12 @@ Web 介面：<http://localhost:8080>
 
 **模型選擇建議**
 
-- `LLM_TRANSLATE_MODEL` / `LLM_CHAT_MODEL`：吞吐量大、成本敏感，建議用 flash 等級（如 `gemini-3.1-flash-lite`）。
-- `LLM_DOMAIN_MODEL`：只在每份文件呼叫一次、且影響後續術語準確度，建議用 Pro 等級（如 `gemini-2.5-pro`）。
+設計理念：**面對使用者的回答用 Pro、後台批次處理用 Flash**。Chat／Web search 是使用者直接看到的輸出，品質優先；doc_analyzer／image_caption／slides／extra_info／translate 是離線批次步驟，速度與成本優先，降階對使用者體驗無直接影響。
+
+- `LLM_CHAT_MODEL`：使用者問答（含 Web search grounding）直接使用，建議 **Pro 等級**（如 `gemini-3.1-pro-preview`）。
+- `LLM_DOMAIN_MODEL`：只在每份文件呼叫一次、且影響後續術語準確度，建議 Pro 等級（如 `gemini-2.5-pro`）。
+- `LLM_TRANSLATE_MODEL`：全文逐段翻譯、量大，建議 **Flash 等級**（如 `gemini-3.1-flash-lite`）。
+- `LLM_DOC_MODEL` / `LLM_VISION_MODEL` / `LLM_EXTRA_INFO_MODEL`：後台處理，**留空即沿用 `LLM_CHAT_MODEL`（行為不變）**；設為 Flash 等級可大幅降低 analyze／圖說／摘要耗時與成本。
 - `EMBEDDING_MODEL`：建向量庫與查詢必須使用**同一個** embedding 模型；中途更換需重建所有論文向量庫。
 
 ---

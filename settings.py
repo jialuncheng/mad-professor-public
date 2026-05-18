@@ -7,6 +7,13 @@ TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-2.0-flash")
 CHAT_MODEL = os.getenv("LLM_CHAT_MODEL", "gemini-2.0-flash")
 # 主題領域判斷模型（可選，未設定時 fallback 到 CHAT_MODEL）
 LLM_DOMAIN_MODEL = os.getenv("LLM_DOMAIN_MODEL", CHAT_MODEL)
+# 後台處理模型細分（皆可選，未設定時 fallback 到 CHAT_MODEL，行為不變）
+# doc_analyzer 的 heading fix / structure 分析
+LLM_DOC_MODEL = os.getenv("LLM_DOC_MODEL", CHAT_MODEL)
+# image_caption 與 slides 的 Vision 辨識
+LLM_VISION_MODEL = os.getenv("LLM_VISION_MODEL", CHAT_MODEL)
+# extra_info 章節摘要 / 問題 / 公式解析
+LLM_EXTRA_INFO_MODEL = os.getenv("LLM_EXTRA_INFO_MODEL", CHAT_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 

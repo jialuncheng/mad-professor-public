@@ -3,6 +3,7 @@ import json
 import time
 import logging
 from pathlib import Path
+import settings
 from config import LLMClient
 from utils.heading_utils import fix_heading_levels
 from utils.text_utils import strip_json_fence
@@ -70,7 +71,7 @@ class DocAnalyzer:
             prompt_template = self._read_prompt(HEADING_FIX_PROMPTS[doc_type])
             prompt = prompt_template.replace('{headings}', '\n'.join(heading_lines))
 
-            new_text = fix_heading_levels(content, self.llm, prompt)
+            new_text = fix_heading_levels(content, self.llm, prompt, model=settings.LLM_DOC_MODEL)
 
             markdown_path.write_text(new_text, encoding='utf-8')
             self.logger.info(f"標題層級修正完成: {markdown_path}")
@@ -106,7 +107,8 @@ class DocAnalyzer:
             prompt = prompt_template.replace('{content}', numbered)
 
             result_text = self.llm.chat(
-                [{'role': 'user', 'content': prompt}], stream=False
+                [{'role': 'user', 'content': prompt}], stream=False,
+                model=settings.LLM_DOC_MODEL
             ).strip()
             result_text = strip_json_fence(result_text)
             structure = json.loads(result_text)

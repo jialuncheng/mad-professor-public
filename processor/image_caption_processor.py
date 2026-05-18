@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import settings
 from config import LLMClient
 
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
@@ -87,7 +88,8 @@ class ImageCaptionProcessor:
                     "如果是照片或顯微鏡圖，說明拍攝內容。"
                     "聚焦在學術或科學意義上，不要描述圖片風格。"}],
                 image_data=img_data,
-                mime_type=mime
+                mime_type=mime,
+                model=settings.LLM_VISION_MODEL
             )
             caption = result.strip()
             self.logger.info(f"  {img_path.name}: {caption[:60]}...")
