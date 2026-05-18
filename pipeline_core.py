@@ -16,12 +16,13 @@ from processor.extra_info_processor import ExtraInfoProcessor
 from processor.rag_processor import RagProcessor
 from processor.image_caption_processor import ImageCaptionProcessor
 from processor.slides_processor import SlidesProcessor
+from processor.domain_detector import DomainDetector
 
 logger = logging.getLogger(__name__)
 
 # 階段清單的唯一權威來源（順序即執行順序）
 STAGE_NAMES = [
-    "pdf2md", "analyze", "md2json", "json_process", "tiling",
+    "pdf2md", "analyze", "detect_domain", "md2json", "json_process", "tiling",
     "translate", "image_caption", "md_restore", "extra_info", "rag"
 ]
 
@@ -31,6 +32,7 @@ class PipelineCore:
     STAGE_DISPLAY_NAMES = {
         'pdf2md': 'PDF 轉 Markdown',
         'analyze': '文件結構分析',
+        'detect_domain': '主題領域偵測',
         'md2json': 'Markdown 轉 JSON',
         'json_process': 'JSON 處理',
         'tiling': '分段處理',
@@ -49,6 +51,7 @@ class PipelineCore:
         self.stage_identifiers = {
             'pdf2md': '',
             'analyze': '_doc_structure',
+            'detect_domain': '_domain',
             'md2json': '_structured',
             'json_process': '_processed',
             'tiling': '_tiled',
@@ -62,6 +65,7 @@ class PipelineCore:
         self.available_stages = {
             'pdf2md': self._stage_pdf_to_md,
             'analyze': self._stage_analyze,
+            'detect_domain': self._stage_detect_domain,
             'md2json': self._stage_md_to_json,
             'json_process': self._stage_json_process,
             'tiling': self._stage_tiling,
@@ -144,6 +148,12 @@ class PipelineCore:
             self._rag_processor = RagProcessor()
         return self._rag_processor
 
+    @property
+    def domain_detector(self):
+        if not hasattr(self, '_domain_detector'):
+            self._domain_detector = DomainDetector()
+        return self._domain_detector
+
     TOTAL_STAGES = len(STAGE_NAMES)
 
     def _emit_progress(self, stage: str, index: int):
@@ -203,6 +213,55 @@ class PipelineCore:
         i = 0
         while i < len(self.stages):
             stage = self.stages[i]
+
+            # 偵測到 analyze，嘗試與 detect_domain 並行（detect_domain 失敗 soft）
+            if stage == 'analyze' and 'detect_domain' in self.stages:
+                analyze_done = self._check_stage_exists('analyze', paper_output_dir, self.paper_info['paper_id'], output_paths)
+                domain_done = '_domain' in output_paths
+
+                if not analyze_done or not domain_done:
+                    self.logger.info("並行執行: analyze + detect_domain")
+                    self._emit_progress('analyze', i + 1)
+
+                    with ThreadPoolExecutor(max_workers=2) as executor:
+                        futures = {}
+                        if not analyze_done:
+                            futures[executor.submit(
+                                self.available_stages['analyze'],
+                                pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
+                            )] = 'analyze'
+                        if not domain_done:
+                            futures[executor.submit(
+                                self.available_stages['detect_domain'],
+                                pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
+                            )] = 'detect_domain'
+
+                        for future in as_completed(futures):
+                            s = futures[future]
+                            try:
+                                result = future.result()
+                                if s == 'detect_domain':
+                                    output_paths['_domain'] = result or ''
+                                else:
+                                    output_paths[s] = result
+                                self.logger.info(f"階段 {s} 完成")
+                            except Exception as e:
+                                self.logger.error(f"階段 {s} 失敗: {str(e)}")
+                                if s == 'analyze':
+                                    raise
+                                # detect_domain 失敗：soft fallback，不中止
+                                output_paths['_domain'] = ''
+
+                # 跳過 detect_domain（已並行處理）
+                if i + 1 < len(self.stages) and self.stages[i + 1] == 'detect_domain':
+                    i += 2
+                else:
+                    i += 1
+                continue
+
+            if stage == 'detect_domain':
+                i += 1
+                continue
 
             # 偵測到 translate，嘗試與 image_caption 並行
             if stage == 'translate' and 'image_caption' in self.stages:
@@ -356,6 +415,14 @@ class PipelineCore:
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
         return self.doc_analyzer.analyze(markdown_path, doc_type)
 
+    def _stage_detect_domain(self, pdf_path, paper_dir, paper_name, output_paths):
+        """讀 PDF 第一頁判斷主題領域；永不 raise，失敗回 ''（soft fallback）。"""
+        try:
+            return self.domain_detector.detect(str(pdf_path)) or ''
+        except Exception as e:
+            self.logger.warning(f"detect_domain 階段失敗（soft，忽略）: {str(e)}")
+            return ''
+
     def _stage_md_to_json(self, pdf_path, paper_dir, paper_name, output_paths):
         markdown_path = output_paths.get('pdf2md')
         if not markdown_path:
@@ -383,7 +450,8 @@ class PipelineCore:
             raise ValueError("未找到 JSON 文件")
         output_path = self._get_stage_output_path('translate', paper_dir, paper_name)
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
-        return self.translate_processor.process(str(input_path), str(output_path), doc_type=doc_type)
+        domain = output_paths.get('_domain', '')
+        return self.translate_processor.process(str(input_path), str(output_path), doc_type=doc_type, domain=domain)
 
     def _stage_image_caption(self, pdf_path, paper_dir, paper_name, output_paths):
         """Vision 圖片說明生成，與 translate 並行執行"""
@@ -410,11 +478,12 @@ class PipelineCore:
             raise ValueError("未找到翻譯 JSON 文件")
         output_path = self._get_stage_output_path('extra_info', paper_dir, paper_name)
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+        domain = output_paths.get('_domain', '')
         if doc_type in ('news', 'web', 'slides'):
             return self.extra_info_processor.generate_document_summary(
-                str(input_path), str(output_path)
+                str(input_path), str(output_path), domain=domain
             )
-        return self.extra_info_processor.process(str(input_path), str(output_path))
+        return self.extra_info_processor.process(str(input_path), str(output_path), domain=domain)
 
     def _stage_rag(self, pdf_path, paper_dir, paper_name, output_paths):
         input_path = output_paths.get('extra_info') or output_paths.get('translate')

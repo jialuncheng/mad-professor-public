@@ -27,7 +27,7 @@ class TranslateProcessor:
             self.logger.warning(f"读取文件 {filepath} 失败: {str(e)}")
             return ""
         
-    def process(self, input_path: str, output_path: str, doc_type: str = 'academic') -> Path:
+    def process(self, input_path: str, output_path: str, doc_type: str = 'academic', domain: str = '') -> Path:
         """
         讀取 input.json，分階段進行翻譯。
         首先翻譯所有標題，然後翻譯摘要，最後遞迴翻譯每個章節的文字和圖說。
@@ -37,6 +37,7 @@ class TranslateProcessor:
             output_path = Path(output_path)
 
             self.doc_type = doc_type  # 儲存文件類型供翻譯時使用
+            self.domain = domain  # 主題領域（空字串時不影響任何輸出）
             self.logger.info(f"開始翻譯JSON文件: {input_path}")
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -229,6 +230,9 @@ class TranslateProcessor:
         hint = style_hints.get(doc_type, '')
         if hint:
             system_prompt = system_prompt + '\n\n' + hint
+        domain = getattr(self, 'domain', '')
+        if domain:
+            system_prompt = system_prompt + f"\n\n本文件主題領域：{domain}，請以該領域標準術語翻譯。"
         
         # 构建用户提示词
         if text_type == "title":

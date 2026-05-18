@@ -28,7 +28,7 @@ class ExtraInfoProcessor:
             self.logger.warning(f"读取文件 {filepath} 失败: {str(e)}")
             return ""
     
-    def process(self, input_path: str, output_path: str, skip_questions: bool = True) -> Path:
+    def process(self, input_path: str, output_path: str, skip_questions: bool = True, domain: str = '') -> Path:
         """
         读取JSON文件，自下而上为各章节生成总结
         
@@ -44,6 +44,7 @@ class ExtraInfoProcessor:
             input_path = Path(input_path)
             output_path = Path(output_path)
 
+            self.domain = domain  # 主題領域（空字串時不影響任何輸出）
             self.logger.info(f"开始生成章节总结: {input_path}")
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -73,7 +74,7 @@ class ExtraInfoProcessor:
             self.logger.error(f"章节总结生成失败: {str(e)}", exc_info=True)
             raise
 
-    def generate_document_summary(self, input_path: str, output_path: str) -> Path:
+    def generate_document_summary(self, input_path: str, output_path: str, domain: str = '') -> Path:
         """簡化模式（news/web）：對整份文件做一次總摘要，不做章節遞迴。
 
         - 遞迴收集所有章節翻譯內容（跳過 abstract / references）
@@ -110,8 +111,9 @@ class ExtraInfoProcessor:
 
             if combined_text.strip():
                 system_prompt = self._read_file(SUMMARY_PROMPT_PATH)
+                domain_prefix = f"本文件主題領域：{domain}\n\n" if domain else ""
                 user_prompt = (
-                    f"文件内容:\n{combined_text}\n\n"
+                    f"{domain_prefix}文件内容:\n{combined_text}\n\n"
                     "请根据要求生成这份文件的整体总结，只需输出总结文段，无需任何额外的解释说明:"
                 )
                 messages = [
@@ -337,7 +339,12 @@ class ExtraInfoProcessor:
         
         # 构建用户提示词
         user_prompt = f"章节标题: {section.get('translated_title', section.get('title', '未命名章节'))}\n\n"
-        
+
+        # 主題領域（空字串時不影響輸出）
+        domain = getattr(self, 'domain', '')
+        if domain:
+            user_prompt = f"本文件主題領域：{domain}\n\n" + user_prompt
+
         # 添加摘要作为背景信息
         if self.abstract_text:
             user_prompt += f"论文摘要背景:\n{self.abstract_text}\n\n"
