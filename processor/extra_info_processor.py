@@ -1,6 +1,8 @@
 import json
 import logging
+import time
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import LLMClient
 
 SUMMARY_PROMPT_PATH = "prompt/translate/summary_generation_prompt.txt"
@@ -158,7 +160,7 @@ class ExtraInfoProcessor:
         
         self.logger.warning("未找到摘要信息")
     
-    def generate_section_summaries(self, sections):
+    def generate_section_summaries(self, sections, depth=0):
         """
         自下而上递归生成所有章节的总结
         
@@ -168,31 +170,114 @@ class ExtraInfoProcessor:
         Returns:
             list: 当前层级所有章节的总结列表，每个元素为{"title": 章节标题, "summary": 章节总结}的字典
         """
+        self.logger.info(f"[depth={depth}] 進入本層，sibling 數量={len(sections)}")
+        level_t0 = time.time()
         all_summaries = []
-        
-        for section in sections:
+
+        # Phase 1：依原順序、序列遞迴處理每節 children（先子後父），收集本層待並行任務
+        tasks = []  # [(orig_index, section, children_summaries)]
+        for idx, section in enumerate(sections):
             # 跳过abstract和references类型的章节
             if section.get("type") in ["abstract", "references"]:
                 self.logger.info(f"跳过 {section.get('title')} 章节的总结生成")
                 continue
-            
-            # 收集子章节总结
+
+            # 收集子章节总结（遞迴序列處理，子層完成後才回到本層並行）
             children_summaries = []
             if "children" in section and section["children"]:
-                # 递归处理子章节，获取子章节的总结列表
-                children_summaries = self.generate_section_summaries(section["children"])
-                
-            # 生成当前章节的总结
-            self.logger.info(f"生成 {section.get('title', '未命名章节')} 的总结")
-            section_summary = self.generate_summary_for_section(section, children_summaries)
-            
+                children_summaries = self.generate_section_summaries(
+                    section["children"], depth + 1
+                )
+
+            title = section.get('title', '未命名章节')
+            own_text = "\n\n".join(
+                item["translated_content"] if item.get("type") == "text" else item.get("content", "")
+                for item in section.get("content", [])
+                if isinstance(item, dict) and (
+                    (item.get("type") == "text" and item.get("translated_content"))
+                    or (item.get("type") == "formula" and item.get("content"))
+                )
+            )
+            child_count = len(section["children"]) if section.get("children") else 0
+            self.logger.info(
+                f"[depth={depth}] 開始處理: {title}"
+                f"（content 字數={len(own_text)}，children={child_count}）"
+            )
+            self.logger.info(f"生成 {title} 的总结")
+            tasks.append((idx, section, children_summaries))
+
+        # Phase 2：同層 sibling 並行生成各自摘要（彼此獨立；父依賴子已於 Phase 1 完成）
+        results = {}
+        if tasks:
+            with ThreadPoolExecutor(max_workers=min(4, len(tasks))) as executor:
+                future_to_idx = {
+                    executor.submit(self._summary_task, sec, cs, depth): i
+                    for i, sec, cs in tasks
+                }
+                for future in as_completed(future_to_idx):
+                    i = future_to_idx[future]
+                    results[i] = future.result()
+
+        # Phase 3：依原 sibling 順序回填，輸出與序列版本逐字相同
+        for idx, section, _cs in tasks:
+            section_summary = results.get(idx, "")
             if section_summary:
                 section["summary"] = section_summary
-                # 将当前章节的标题和总结作为字典添加到列表中
                 title = section.get('translated_title', section.get('title', '未命名章节'))
                 all_summaries.append({"title": title, "summary": section_summary})
-                
+
+        self.logger.info(
+            f"[depth={depth}] 本層 {len(tasks)} 節並行完成，總耗時 "
+            f"{time.time() - level_t0:.1f}s"
+        )
         return all_summaries
+
+    def _summary_task(self, section, children_summaries, depth):
+        """單節摘要工作單元（供 ThreadPoolExecutor）；計時 + 除錯 log。
+
+        generate_summary_for_section 內部邏輯完全保留、不修改；
+        此處僅做讀取式鏡像以分類除錯 log，不影響任何業務輸出。
+        """
+        title = section.get('title', '未命名章节')
+        t0 = time.time()
+
+        contents = []
+        for item in section.get("content", []):
+            if isinstance(item, dict):
+                if item.get("type") == "text" and item.get("translated_content"):
+                    contents.append(item["translated_content"])
+                elif item.get("type") == "formula" and item.get("content"):
+                    contents.append(item["content"])
+        combined_text = "\n\n".join(contents) if contents else ""
+        children_summaries_text = ""
+        if children_summaries:
+            sub = [f"{c['title']}核心内容:\n{c['summary']}" for c in children_summaries]
+            children_summaries_text = "子章节：\n" + "\n\n".join(sub)
+        total_content = ""
+        if combined_text:
+            total_content += combined_text
+        if children_summaries_text:
+            total_content += "\n\n" + children_summaries_text if total_content else children_summaries_text
+        if (contents or children_summaries) and len(total_content) <= 100:
+            self.logger.debug(f"[depth={depth}] 跳過 LLM（內容過短）: {title}")
+
+        try:
+            section_summary = self.generate_summary_for_section(section, children_summaries)
+        except Exception as e:
+            self.logger.warning(f"[depth={depth}] LLM 失敗: {title}, error={e}")
+            raise
+
+        dt = time.time() - t0
+        if section_summary:
+            self.logger.info(
+                f"[depth={depth}] 完成: {title}"
+                f"（耗時 {dt:.1f}s，summary 長度={len(section_summary)}）"
+            )
+        else:
+            self.logger.warning(
+                f"[depth={depth}] LLM 未產生 summary（回傳空）: {title}（耗時 {dt:.1f}s）"
+            )
+        return section_summary
     
     def generate_summary_for_section(self, section, children_summaries=None):
         """
