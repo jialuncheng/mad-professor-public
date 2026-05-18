@@ -90,7 +90,7 @@ class SlidesProcessor:
                 pix = page.get_pixmap(matrix=mat, clip=clip)
                 img_data = pix.tobytes("jpeg")
 
-                # 直接辨識（移除 _is_empty 預檢，從結果判斷空白）
+                # 直接辨識，從結果判斷空白
                 result = self._analyze_slide(img_data, slide_counter + 1)
                 if not result:
                     self.logger.warning(

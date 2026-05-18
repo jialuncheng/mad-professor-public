@@ -391,7 +391,7 @@ class PipelineCore:
             {k: str(v) for k, v in final_paths.items() if v}
         )
 
-    # ── 各階段方法（與 pipeline.py 相同，只是移除 Qt 依賴） ──
+    # ── 各階段方法 ──
 
     def _stage_pdf_to_md(self, pdf_path, paper_dir, paper_name, output_paths):
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')

@@ -219,7 +219,6 @@ class RagProcessor:
     def _generate_key_map(self, sections: List[Dict], title: str, parent_path="", parent_json_path="") -> Dict[str, str]:
         """
         生成 key_map，关键路径映射表
-        修复：正确处理子章节的JSON路径
         """
         key_map = {}
         

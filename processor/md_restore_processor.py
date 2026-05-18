@@ -44,9 +44,9 @@ class RestoreProcessor:
             f.write(content + "\n\n")
     
     def _process_section(self, section, output_path_en, output_path_zh, level=1, vision_captions=None):
+        """处理文档的一个章节，递归处理子章节"""
         if vision_captions is None:
             vision_captions = {}
-        """处理文档的一个章节，递归处理子章节"""
         # 处理标题（空標題不輸出）
         title_prefix = "#" * level
         

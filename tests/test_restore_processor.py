@@ -1,4 +1,3 @@
-# test_restore_processor.py
 import sys
 sys.path.insert(0, '/workspaces/Python/mad-professor-public')
 
