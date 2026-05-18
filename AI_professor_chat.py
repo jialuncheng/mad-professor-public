@@ -20,6 +20,7 @@ class AIProfessorChat:
         self.current_paper_data = None
         self.retriever = None
         self.llm_client = None
+        self.last_grounding_sources = None
         try:
             self.llm_client = LLMClient.get_instance()
             self.logger.info("AI對話助手初始化完成")
@@ -45,11 +46,13 @@ class AIProfessorChat:
             return False
 
     def process_query_stream(self, query: str, visible_content: str = None,
-                             paper_id: str = None, paper_data: Dict[str, Any] = None) -> Generator[str, None, None]:
+                             paper_id: str = None, paper_data: Dict[str, Any] = None,
+                             use_web_search: bool = False) -> Generator[str, None, None]:
         """流式處理用戶查詢，逐句 yield 回答"""
         try:
             effective_paper_id = paper_id
             effective_paper_data = paper_data
+            self.last_grounding_sources = None
 
             if not self.llm_client:
                 yield "AI服務尚未初始化，請稍後再試。"
@@ -92,10 +95,16 @@ class AIProfessorChat:
             # 串流回答
             full_response = ""
             for sentence in self.llm_client.chat_stream_by_sentence(
-                messages=final_messages, temperature=0.7
+                messages=final_messages, temperature=0.7,
+                use_web_search=use_web_search
             ):
                 full_response += sentence
                 yield sentence
+
+            # 串流結束後，從 LLMClient 取回本次 grounding 來源（side-channel）
+            self.last_grounding_sources = getattr(
+                self.llm_client, '_last_grounding_sources', None
+            )
 
             self.conversation_history.append({"role": "assistant", "content": full_response})
 

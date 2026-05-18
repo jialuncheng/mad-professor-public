@@ -212,6 +212,7 @@ class ChatRequest(BaseModel):
     query: str
     paper_id: Optional[str] = None
     visible_content: Optional[str] = None
+    use_web_search: Optional[bool] = False
 
 
 # ── 論文列表 ──
@@ -385,7 +386,8 @@ async def chat(paper_id: str, request: ChatRequest):
             gen = ai_core.query_stream(
                 query=request.query,
                 paper_id=paper_id,
-                visible_content=request.visible_content
+                visible_content=request.visible_content,
+                use_web_search=request.use_web_search
             )
 
             for chunk in gen:

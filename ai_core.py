@@ -42,13 +42,15 @@ class AICore:
         return self.ai_chat.set_paper_context(paper_id, paper_data)
 
     def query_stream(self, query: str, paper_id: Optional[str] = None,
-                     visible_content: Optional[str] = None):
+                     visible_content: Optional[str] = None,
+                     use_web_search: bool = False):
         """
         同步 generator，逐句回傳 AI 回答。
         Web API 用 SSE 推送每個 chunk。
 
         Yields:
             dict: {'sentence': str, 'emotion': str, 'done': bool}
+            done=True 時另帶 'grounding_sources': list[{'title','uri'}]
         """
         if not self._generating_lock.acquire(blocking=False):
             yield {'sentence': '目前有其他對話正在生成中，請稍候再試。',
@@ -63,7 +65,8 @@ class AICore:
                 self.logger.warning(f"paper_id {paper_id} 不在快取中，以無論文模式回答")
 
             for sentence in self.ai_chat.process_query_stream(
-                query, visible_content, paper_id=paper_id, paper_data=paper_data
+                query, visible_content, paper_id=paper_id, paper_data=paper_data,
+                use_web_search=use_web_search
             ):
                 if not self.is_generating:
                     break
@@ -72,11 +75,13 @@ class AICore:
                     'done': False
                 }
 
-            yield {'sentence': '', 'emotion': 'neutral', 'done': True}
+            yield {'sentence': '', 'emotion': 'neutral', 'done': True,
+                   'grounding_sources': self.ai_chat.last_grounding_sources or []}
 
         except Exception as e:
             self.logger.error(f"query_stream 失敗: {str(e)}")
-            yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}', 'emotion': 'neutral', 'done': True}
+            yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}',
+                   'emotion': 'neutral', 'done': True, 'grounding_sources': []}
         finally:
             self.is_generating = False
             self._generating_lock.release()
