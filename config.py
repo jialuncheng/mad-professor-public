@@ -159,31 +159,78 @@ class EmbeddingModel(Embeddings):
                     cls._instance = cls()
         return cls._instance
 
-    def embed_documents(self, texts: list) -> list:
-        """批次 embed 文字列表（用於建立向量庫）"""
+    def _embed_one(self, text):
+        """逐筆 embed（fallback 用），保留原 429 retry 行為"""
         import time
+        for attempt in range(3):
+            try:
+                result = self.client.models.embed_content(
+                    model=self.model,
+                    contents=[text],
+                    config=types.EmbedContentConfig(
+                        task_type="RETRIEVAL_DOCUMENT",
+                        output_dimensionality=768
+                    )
+                )
+                return result.embeddings[0].values
+            except Exception as e:
+                if '429' in str(e) and attempt < 2:
+                    wait = 15 * (attempt + 1)
+                    self.logger.warning(f"Rate limit，等待 {wait} 秒後重試...")
+                    time.sleep(wait)
+                else:
+                    raise
+
+    def embed_documents(self, texts: list) -> list:
+        """即時批次 embed 文字列表（用於建立向量庫）。
+
+        依索引順序拼接，保證回傳順序與輸入完全一致；
+        每批保留 429 retry；非 429（或數量不符）該批退回逐筆。
+        """
+        import time
+        BATCH_SIZE = 32
         embeddings = []
-        for text in texts:
+        total = len(texts)
+        for start in range(0, total, BATCH_SIZE):
+            batch = texts[start:start + BATCH_SIZE]
+            batch_no = start // BATCH_SIZE + 1
             for attempt in range(3):
                 try:
                     result = self.client.models.embed_content(
                         model=self.model,
-                        contents=[text],
+                        contents=batch,
                         config=types.EmbedContentConfig(
                             task_type="RETRIEVAL_DOCUMENT",
                             output_dimensionality=768
                         )
                     )
-                    embeddings.append(result.embeddings[0].values)
+                    if len(result.embeddings) != len(batch):
+                        raise RuntimeError(
+                            f"批次回傳數量不符: 期望 {len(batch)} 實得 {len(result.embeddings)}"
+                        )
+                    embeddings.extend(e.values for e in result.embeddings)
+                    self.logger.info(
+                        f"批次 {batch_no} 完成（{len(batch)} 筆，"
+                        f"{start + len(batch)}/{total}）"
+                    )
                     break
                 except Exception as e:
                     if '429' in str(e) and attempt < 2:
                         wait = 15 * (attempt + 1)
                         self.logger.warning(f"Rate limit，等待 {wait} 秒後重試...")
                         time.sleep(wait)
-                    else:
-                        raise
-            time.sleep(0.3)
+                        continue
+                    # 非 429（或重試耗盡）→ 該批退回逐筆，保證可靠性
+                    self.logger.warning(
+                        f"批次 {batch_no} 失敗（{str(e)}），退回逐筆模式"
+                    )
+                    for text in batch:
+                        embeddings.append(self._embed_one(text))
+                    self.logger.info(
+                        f"批次 {batch_no} 逐筆完成（{len(batch)} 筆，"
+                        f"{start + len(batch)}/{total}）"
+                    )
+                    break
         return embeddings
 
     def embed_query(self, text: str) -> list:
