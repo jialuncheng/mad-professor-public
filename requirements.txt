@@ -1,13 +1,16 @@
 # Web Server
 fastapi
 uvicorn
-python-multipart
+python-multipart      # FastAPI Form 解析（/login），非直接 import 但執行期必需
+starlette             # 直接 import（SessionMiddleware），fastapi 亦會帶入
+pydantic              # 直接 import（BaseModel），fastapi 亦會帶入
 
 # Gemini API（LLM + Embedding）
 google-genai
 
 # RAG
-langchain
+langchain             # 注意：未被直接 import，保留供 langchain-community 相依
+langchain-core        # 直接 import（Embeddings 介面）
 langchain-community
 langchain-text-splitters
 faiss-cpu
