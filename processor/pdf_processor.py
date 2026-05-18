@@ -53,6 +53,10 @@ class PDFProcessor:
             if response.status_code != 200:
                 raise RuntimeError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
 
+            task_id = response.headers.get("x-mineru-task-id")
+            if not task_id:
+                self.logger.warning("MinerU 未回傳 x-mineru-task-id header")
+
             paper_name = pdf_path.stem
 
             # 解壓 ZIP 到暫存目錄
@@ -71,7 +75,7 @@ class PDFProcessor:
             markdown_path.write_text(md_text, encoding='utf-8')
 
             # 從 mineru-lab 複製圖片
-            self._copy_images(paper_name, output_dir)
+            self._copy_images(paper_name, output_dir, task_id)
 
             # 清理暫存目錄
             shutil.rmtree(output_dir / "_tmp", ignore_errors=True)
@@ -88,22 +92,34 @@ class PDFProcessor:
             self.logger.error(f"PDF 處理失敗: {str(e)}", exc_info=True)
             raise
 
-    def _copy_images(self, paper_name: str, output_dir: Path):
-        """從 mineru-lab 複製最新的圖片目錄"""
-        try:
-            result = subprocess.run(
-                ["ssh", self.MINERU_HOST,
-                 f"ls -t {self.MINERU_OUTPUT_DIR} | head -1"],
-                capture_output=True, text=True, timeout=30
-            )
-            latest_task = result.stdout.strip()
-            if not latest_task:
-                self.logger.warning("找不到 mineru-lab 的輸出目錄")
-                return
+    def _copy_images(self, paper_name: str, output_dir: Path, task_id: str = None):
+        """從 mineru-lab 複製圖片目錄。
 
-            src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
+        優先用 MinerU 回傳的 task_id 直接定位（並發安全、免 ssh 猜目錄）；
+        無 task_id 時退回 ls -t | head -1（不可靠，僅 fallback）。
+        """
+        try:
             dst = str(output_dir / "images")
 
+            if task_id:
+                self.logger.info(f"MinerU task_id: {task_id}")
+                src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{task_id}/{paper_name}/auto/images/"
+            else:
+                self.logger.warning(
+                    "無 task_id，退回 ls -t | head -1 猜目錄（多份並發時不可靠）"
+                )
+                result = subprocess.run(
+                    ["ssh", self.MINERU_HOST,
+                     f"ls -t {self.MINERU_OUTPUT_DIR} | head -1"],
+                    capture_output=True, text=True, timeout=30
+                )
+                latest_task = result.stdout.strip()
+                if not latest_task:
+                    self.logger.warning("找不到 mineru-lab 的輸出目錄")
+                    return
+                src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
+
+            self.logger.info(f"scp 來源: {src}")
             scp_result = subprocess.run(
                 ["scp", "-r", src, dst],
                 capture_output=True, text=True, timeout=60

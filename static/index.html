@@ -90,7 +90,9 @@
       border-right: 1px solid var(--color-border);
     }
     #sidebar h1 {
-      padding: var(--space-5) var(--space-4) var(--space-5) var(--space-8);
+      display: flex;
+      align-items: center;
+      padding: var(--space-3) var(--space-4) var(--space-3) 44px;
       font-size: var(--font-base);
       font-weight: 600;
       border-bottom: 1px solid var(--color-border);
@@ -366,7 +368,7 @@
 <!-- 左側論文列表 -->
 <div id="sidebar">
   <button id="sidebar-toggle" class="panel-toggle" title="收合/展開左側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <h1><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M8 4h9a2 2 0 0 1 2 2v12"/><path d="M6 8h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/></svg>文件列表</h1>
+  <h1>文件列表</h1>
   <div id="paper-list"></div>
   <div id="sidebar-bottom">
     <button id="upload-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件</button>
@@ -428,7 +430,7 @@
 <div id="chat-panel">
   <div id="chat-header">
     <button id="chat-toggle" class="panel-toggle" title="收合/展開右側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-    <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>AI 問答</span>
+    <span>AI 問答</span>
     <button id="export-btn" style="display:none" title="匯出對話紀錄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>MD</button>
   </div>
   <div id="chat-messages">
