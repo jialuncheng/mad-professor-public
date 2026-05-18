@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import logging
+import time
 from typing import Optional, Dict, List, Union, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import paper_manager
@@ -225,12 +226,15 @@ class PipelineCore:
 
                     with ThreadPoolExecutor(max_workers=2) as executor:
                         futures = {}
+                        start_times = {}
                         if not analyze_done:
+                            start_times['analyze'] = time.time()
                             futures[executor.submit(
                                 self.available_stages['analyze'],
                                 pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
                             )] = 'analyze'
                         if not domain_done:
+                            start_times['detect_domain'] = time.time()
                             futures[executor.submit(
                                 self.available_stages['detect_domain'],
                                 pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
@@ -238,6 +242,7 @@ class PipelineCore:
 
                         for future in as_completed(futures):
                             s = futures[future]
+                            duration = time.time() - start_times[s]
                             try:
                                 result = future.result()
                                 if s == 'detect_domain':
@@ -245,8 +250,10 @@ class PipelineCore:
                                 else:
                                     output_paths[s] = result
                                 self.logger.info(f"階段 {s} 完成")
+                                self.logger.info(f"[並行] {s} 完成（耗時 {duration:.1f}s）")
                             except Exception as e:
                                 self.logger.error(f"階段 {s} 失敗: {str(e)}")
+                                self.logger.error(f"[並行] {s} 失敗（耗時 {duration:.1f}s）: {e}")
                                 if s == 'analyze':
                                     raise
                                 # detect_domain 失敗：soft fallback，不中止
