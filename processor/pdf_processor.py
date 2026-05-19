@@ -50,9 +50,16 @@ class PDFProcessor:
             _post_t0 = time.time()
 
             with open(pdf_path, "rb") as f:
+                # multipart filename 與本機檔名解耦：強制送
+                # f"{MINERU_PAPER_NAME}.pdf"（預設 original.pdf）。
+                # Phase 4.7b 後本機檔名 = {paper_id}.pdf，若直接送
+                # pdf_path.name，MinerU 會據此命名 ZIP 內子目錄/.md，
+                # 與既有 _tmp/{MINERU_PAPER_NAME}/auto/... 查找路徑不符
+                # （長檔名直接 ENOENT）。固定送此名使兩端恆一致。
+                mineru_upload_name = f"{self.MINERU_PAPER_NAME}.pdf"
                 response = requests.post(
                     self.MINERU_API_URL,
-                    files={"files": (pdf_path.name, f, "application/pdf")},
+                    files={"files": (mineru_upload_name, f, "application/pdf")},
                     data={
                         "return_md": "true",
                         "response_format_zip": "true",
