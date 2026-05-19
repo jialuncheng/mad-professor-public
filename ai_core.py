@@ -49,12 +49,12 @@ class AICore:
         Web API 用 SSE 推送每個 chunk。
 
         Yields:
-            dict: {'sentence': str, 'emotion': str, 'done': bool}
+            dict: {'sentence': str, 'done': bool}
             done=True 時另帶 'grounding_sources': list[{'title','uri'}]
         """
         if not self._generating_lock.acquire(blocking=False):
             yield {'sentence': '目前有其他對話正在生成中，請稍候再試。',
-                   'emotion': 'neutral', 'done': True}
+                   'done': True}
             return
         try:
             self.is_generating = True
@@ -75,13 +75,13 @@ class AICore:
                     'done': False
                 }
 
-            yield {'sentence': '', 'emotion': 'neutral', 'done': True,
+            yield {'sentence': '', 'done': True,
                    'grounding_sources': self.ai_chat.last_grounding_sources or []}
 
         except Exception as e:
             self.logger.error(f"query_stream 失敗: {str(e)}")
             yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}',
-                   'emotion': 'neutral', 'done': True, 'grounding_sources': []}
+                   'done': True, 'grounding_sources': []}
         finally:
             self.is_generating = False
             self._generating_lock.release()

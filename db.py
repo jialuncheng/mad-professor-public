@@ -1,0 +1,88 @@
+"""DB 連線層（Phase 0：建設用，核心模組尚未 import 此檔）。
+
+- 同步 SQLAlchemy 2.0 engine（SQLite，可換 PG：只改 DATABASE_URL）
+- 每連線 PRAGMA：foreign_keys=ON / journal_mode=WAL / busy_timeout=5000（僅 sqlite）
+- SessionLocal：expire_on_commit=False
+- get_db()：FastAPI Depends 用（Phase 0 已備好，尚未被任何端點使用）
+- init_db()：Base.metadata.create_all() 建表（首版 schema，無需 Alembic）
+
+Phase 0 邊界：web_server / paper_manager / pipeline_core / ai_core 皆不得 import 本檔。
+即使 .db 不存在，系統行為與現在 100% 相同。
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
+
+import settings
+
+DATABASE_URL = settings.DATABASE_URL
+_IS_SQLITE = DATABASE_URL.startswith("sqlite")
+
+# SQLite 需 check_same_thread=False（請求執行緒 / pipeline 執行緒共用 engine）
+_connect_args = {"check_same_thread": False} if _IS_SQLITE else {}
+
+engine: Engine = create_engine(
+    DATABASE_URL,
+    connect_args=_connect_args,
+    pool_pre_ping=True,
+    future=True,
+)
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """每條 SQLite 連線啟用 FK 強制 / WAL / busy_timeout。
+
+    SQLite 的 FK 約束預設不強制，必須逐連線 PRAGMA foreign_keys=ON，
+    否則 models 內所有 ON DELETE 行為失效。非 sqlite（如 PG）跳過。
+    """
+    if not _IS_SQLITE:
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+    finally:
+        cursor.close()
+
+
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, expire_on_commit=False, class_=Session
+)
+
+
+def get_db():
+    """FastAPI 依賴注入用的 session generator（Phase 0 尚未接線）。"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def _ensure_sqlite_dir() -> None:
+    """確保 sqlite 檔案的父目錄存在（例：data/）。"""
+    if not _IS_SQLITE:
+        return
+    # 形如 sqlite:////abs/path.db 或 sqlite:///rel/path.db
+    raw = DATABASE_URL.split("sqlite:///", 1)[-1]
+    if raw and raw != ":memory:":
+        Path(raw).parent.mkdir(parents=True, exist_ok=True)
+
+
+def init_db() -> None:
+    """建立所有資料表（首版 schema）。可重複呼叫（已存在不重建）。"""
+    _ensure_sqlite_dir()
+    from models import Base  # 延遲 import，避免 db <-> models 循環
+
+    Base.metadata.create_all(bind=engine)
+
+
+if __name__ == "__main__":
+    init_db()
+    print(f"init_db 完成：{DATABASE_URL}")

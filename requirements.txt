@@ -31,3 +31,7 @@ requests>=2.31.0                # 輔助：寬鬆鎖定接受 patch/minor 更新
 # 登入 / Session
 bcrypt>=5.0.0                   # 輔助：寬鬆鎖定接受 patch/minor 更新
 itsdangerous>=2.2.0             # 輔助：寬鬆鎖定接受 patch/minor 更新
+
+# 資料庫（Phase 0：建設用，核心模組尚未接線）
+SQLAlchemy==2.0.43              # 核心：精確鎖定避免 breaking change（安裝後依實際版本確認）
+# alembic 暫不加（Phase 1 schema 演進才需要）

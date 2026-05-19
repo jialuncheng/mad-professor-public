@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 load_dotenv()
 
@@ -24,3 +25,9 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "admin")
 AUTH_PASSWORD_HASH = os.getenv("AUTH_PASSWORD_HASH", "")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "")
+
+# ── 資料庫（Phase 0：僅建設，預設未接線；核心模組不 import）──
+_BASE_DIR = Path(__file__).resolve().parent
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", f"sqlite:///{_BASE_DIR / 'data' / 'mad-professor.db'}"
+)

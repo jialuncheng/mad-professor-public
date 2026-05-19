@@ -119,6 +119,15 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+# SQLite DB (Phase 0)
+# 只忽略 data/ 內的 DB 檔，保留目錄本身（data/.gitkeep 需可追蹤）
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.db
+*.db-wal
+*.db-shm
+
 # Logs
 logs/
 
