@@ -62,10 +62,21 @@ cp .env.example .env   # install.sh 已自動做過，可略過
 
 - `GEMINI_API_KEY` — Gemini API 金鑰
 - `MINERU_API_URL` — MinerU 解析服務端點
+- `AUTH_USERNAME` — 登入帳號（預設 `admin`；migration 會依此建立 user）
 - `AUTH_PASSWORD_HASH` — 登入密碼 hash（見〈五、登入功能〉）
 - `SESSION_SECRET` — session 簽章密鑰（見〈五、登入功能〉）
 
-### 3. 啟動
+### 3. 初始化資料庫
+
+`install.sh` 已建立 `data/` 並初始化 schema。設好 `.env` 後，再執行 migration 建立 admin user（讀 `.env` 的 `AUTH_USERNAME` / `AUTH_PASSWORD_HASH`）：
+
+```bash
+source venv/bin/activate
+python -c "from db import init_db; init_db()"   # 建表（idempotent，install.sh 已做過）
+python scripts/migrate_to_db.py                 # 建立 admin user（可先加 --dry-run 預覽）
+```
+
+### 4. 啟動
 
 ```bash
 source venv/bin/activate
@@ -90,6 +101,7 @@ Web 介面：<http://localhost:8080>
 | `LLM_DOC_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | doc_analyzer 的 heading fix / structure 分析（後台，建議 Flash）。 |
 | `LLM_VISION_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | image_caption 與 slides 的 Vision 辨識（後台，建議 Flash）。 |
 | `LLM_EXTRA_INFO_MODEL` | 可選 | 未設定時用 `LLM_CHAT_MODEL` | extra_info 章節摘要／問題／公式解析（後台，建議 Flash）。 |
+| `DATABASE_URL` | 可選 | `sqlite:///<root>/data/mad-professor.db` | SQLAlchemy DB 連線字串。預設 SQLite，未來可換 PostgreSQL（改成 `postgresql://...`）。 |
 | `MINERU_API_URL` | 視部署 | `http://localhost:8000/file_parse` | MinerU 解析 API 端點。 |
 | `MINERU_HOST` | 視部署 | `user@localhost` | 透過 ssh/scp 取回圖片用的遠端主機。留空則跳過圖片複製（不影響其餘流程）。 |
 | `MINERU_OUTPUT_DIR` | 視部署 | `/home/user/output` | MinerU 在遠端主機上的輸出目錄絕對路徑。留空則跳過圖片複製。 |
@@ -208,11 +220,13 @@ sudo systemctl status mineru
 ```text
 web_server.py          ← HTTP 路由、SSE、背景任務、登入
 pipeline_core.py       ← 處理階段編排、並行、進度回報
-paper_manager.py       ← 論文索引管理、資源載入
+paper_manager.py       ← 論文/對話 DB 存取層、資源載入（DB-backed）
 ai_core.py             ← AI 介面（單一生成鎖、論文快取）
 AI_professor_chat.py   ← 問答流程、RAG 檢索、決策路由
 rag_retriever.py       ← 向量庫檢索
 config.py / settings.py← LLMClient、EmbeddingModel、環境設定
+db.py                  ← SQLAlchemy engine / session / init_db
+models.py              ← ORM 表：User、Paper、Folder、Conversation
 llm/                   ← Gemini 訊息格式轉換
 
 processor/
@@ -237,7 +251,16 @@ prompt/
 
 scripts/
   generate_password_hash.py  ← 產生登入密碼 bcrypt hash
+  migrate_to_db.py           ← 一次性 import 腳本（支援 --dry-run / --rollback）
+
+data/                  ← SQLite DB 檔位置（已 gitignore）
 ```
+
+**資料持久化**
+
+- 論文 metadata、對話歷史、使用者：DB（`data/mad-professor.db`，SQLite + SQLAlchemy）
+- PDF / Markdown / 圖片 / 向量庫：檔案系統（`output/{owner_id}/{paper_uuid}/`）
+- 已完全廢除舊的 `papers_index.json` 與 `chat_history.json`（改由 DB）
 
 **如何加入新文件類型**
 
@@ -279,6 +302,16 @@ Caddy 會自動申請並續期 Let's Encrypt 憑證。設定 `ENVIRONMENT=produc
 
 > SSE 串流（問答、進度）走長連線，反向代理需停用對該路徑的緩衝（Caddy `reverse_proxy` 預設即可，Nginx 需 `proxy_buffering off;`）。
 
+**備份策略**
+
+```bash
+# DB（一致性快照，勿直接 cp 含 WAL 的檔）
+sqlite3 data/mad-professor.db ".backup 'backup-$(date +%Y%m%d).db'"
+
+# 檔案（PDF / Markdown / 圖片 / 向量庫）
+tar czf output-$(date +%Y%m%d).tar.gz output/
+```
+
 ---
 
 ## 十、使用流程
@@ -306,6 +339,12 @@ Caddy 會自動申請並續期 Let's Encrypt 憑證。設定 `ENVIRONMENT=produc
 - **登入功能**：單帳號 bcrypt + session，可安全部署公網
 - **Pipeline 解耦與並行優化**：階段化編排，`analyze`∥`detect_domain`、`translate`∥`image_caption` 並行
 - **主題領域偵測**：首頁自動判斷領域，注入翻譯與摘要提升術語準確度
+- **DB 化**：論文 metadata、對話歷史、使用者改用 SQLite + SQLAlchemy，廢除 `papers_index.json` / `chat_history.json`
+- **文件閱讀提前**：`md_restore` 完成後內容立即可讀，`rag` 完成後 AI 問答才解鎖
+- **Web Search**：可開「搜網」開關，AI 結合 RAG + Google Search 回答，來源連結持久化至 DB
+- **LLM model 細分**：後台（doc / vision / extra_info / translate）用 Flash、面對使用者（chat / web search / domain）用 Pro，速度與品質兼顧
+- **字元清理**：pdf2md 後 NFKC 正規化（拆解 ligature 連字）、移除桌面版 emotion 殘留
+- **套件精簡**：移除程式未使用的 `langchain` meta 套件（保留 langchain-core/-community/-text-splitters）
 
 ---
 
@@ -324,3 +363,4 @@ Apache License — 詳見 LICENSE 文件。
 - [LangChain](https://github.com/langchain-ai/langchain) — RAG 向量檢索框架
 - [FAISS](https://github.com/facebookresearch/faiss) — 向量相似度搜尋
 - [FastAPI](https://github.com/tiangolo/fastapi) — Web 框架
+- [SQLAlchemy](https://www.sqlalchemy.org/) — ORM 與 DB 抽象層

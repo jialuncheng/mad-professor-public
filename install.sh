@@ -62,7 +62,18 @@ else
   WARN "找不到 .env 與 .env.example，請手動建立 .env。"
 fi
 
-# ── 5 & 6. 提示後續步驟 ──
+# ── 5. 建立 data/ 目錄並初始化 DB schema ──
+INFO "建立 data/ 目錄（SQLite DB 位置）..."
+mkdir -p data
+
+INFO "初始化資料庫 schema（idempotent，不存在才建表）..."
+if python -c "from db import init_db; init_db()"; then
+  INFO "DB schema 初始化完成（data/mad-professor.db）。"
+else
+  WARN "DB init 失敗，請啟動前手動執行：python -c \"from db import init_db; init_db()\""
+fi
+
+# ── 6 & 7. 提示後續步驟 ──
 INFO "=== 安裝完成 ==="
 cat <<'EOF'
 
@@ -71,6 +82,7 @@ cat <<'EOF'
   1. 編輯 .env，至少填入下列必填項：
        GEMINI_API_KEY        Gemini API 金鑰（必填）
        MINERU_API_URL        MinerU 解析服務端點
+       AUTH_USERNAME         登入帳號（預設 admin）
        AUTH_PASSWORD_HASH    登入密碼 bcrypt hash
        SESSION_SECRET        Session cookie 簽章密鑰
 
@@ -82,7 +94,12 @@ cat <<'EOF'
   3. 產生 SESSION_SECRET 並貼到 .env：
        python -c "import secrets; print(secrets.token_urlsafe(48))"
 
-  4. 啟動服務：
+  4. 建立 admin user（讀取 .env 的 AUTH_USERNAME / AUTH_PASSWORD_HASH）：
+       source venv/bin/activate
+       python scripts/migrate_to_db.py
+     （首次安裝可先跑 python scripts/migrate_to_db.py --dry-run 預覽）
+
+  5. 啟動服務：
        source venv/bin/activate
        python web_server.py
 
