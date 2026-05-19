@@ -17,7 +17,7 @@ from typing import Optional
 
 import settings
 import db
-from models import User, Paper, Conversation
+from models import User, Paper, Conversation, Folder
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +144,7 @@ def _to_dict(output_dir, p: Paper) -> dict:
         'id': p.paper_uuid,
         'title': p.title or '',
         'translated_title': p.translated_title or '',
+        'folder_id': p.folder_id,
         'paths': _paths_dict(output_dir, p.owner_id, p.paper_uuid),
     }
 
@@ -343,3 +344,184 @@ def load_paper_resources(output_dir, owner_id: int, paper_uuid: str,
     if rtree.exists():
         ai_core.load_paper_cache(paper_uuid, str(rtree))
     logger.info(f"論文資源載入完成: owner={owner_id} {paper_uuid}")
+
+
+# ─────────────────────── 資料夾（Phase 3.1） ───────────────────────
+# 注意：以下函式接收外部傳入的 SQLAlchemy session（與 web_server 端點共用一個
+# session/交易），mutation 內部 commit；唯讀函式不 commit。owner_id 一律由
+# 呼叫端（session 解析）顯式提供，跨 owner 視為不存在。
+
+UNSET = object()  # PATCH sentinel：區分「未提供」vs「設為 None」
+MAX_FOLDER_DEPTH = 5
+MAX_FOLDER_NAME = 50
+
+
+def _folder_to_dict(f: Folder) -> dict:
+    return {
+        'id': f.id,
+        'name': f.name,
+        'parent_id': f.parent_id,
+        'sort_order': f.sort_order,
+        'created_at': f.created_at.isoformat() if f.created_at is not None else None,
+    }
+
+
+def _get_folder_row(session, owner_id: int, folder_id: int):
+    return session.query(Folder).filter_by(
+        id=folder_id, owner_id=owner_id
+    ).one_or_none()
+
+
+def _folder_depth(session, owner_id: int, folder_id) -> int:
+    """folder_id 該資料夾自身的深度（root=1）；folder_id None → 0。"""
+    depth = 0
+    pid = folder_id
+    seen = set()
+    while pid is not None and pid not in seen:
+        seen.add(pid)
+        f = _get_folder_row(session, owner_id, pid)
+        if f is None:
+            break
+        depth += 1
+        pid = f.parent_id
+    return depth
+
+
+def _descendant_ids(session, owner_id: int, folder_id: int) -> set:
+    """folder_id 自身 + 所有子孫 id（防環用）。"""
+    result = {folder_id}
+    stack = [folder_id]
+    while stack:
+        cur = stack.pop()
+        for (cid,) in session.query(Folder.id).filter_by(
+            owner_id=owner_id, parent_id=cur
+        ).all():
+            if cid not in result:
+                result.add(cid)
+                stack.append(cid)
+    return result
+
+
+def _check_name(name: str) -> str:
+    n = (name or "").strip()
+    if not (1 <= len(n) <= MAX_FOLDER_NAME):
+        raise ValueError(f"資料夾名稱需 1–{MAX_FOLDER_NAME} 字元")
+    return n
+
+
+def _check_sibling_dup(session, owner_id, parent_id, name, exclude_id=None):
+    q = session.query(Folder.id).filter_by(
+        owner_id=owner_id, parent_id=parent_id, name=name
+    )
+    if exclude_id is not None:
+        q = q.filter(Folder.id != exclude_id)
+    if q.first() is not None:
+        raise ValueError(f"同層已存在同名資料夾「{name}」")
+
+
+def list_folders(session, owner_id: int) -> list:
+    """flat list（前端自行建樹）；依 parent_id、sort_order、id 排序。"""
+    rows = (
+        session.query(Folder)
+        .filter_by(owner_id=owner_id)
+        .order_by(Folder.parent_id.asc().nullsfirst(),
+                  Folder.sort_order.asc(), Folder.id.asc())
+        .all()
+    )
+    return [_folder_to_dict(f) for f in rows]
+
+
+def get_folder(session, owner_id: int, folder_id: int):
+    """單一資料夾（owner 不符回 None）。"""
+    return _get_folder_row(session, owner_id, folder_id)
+
+
+def create_folder(session, owner_id: int, name: str,
+                   parent_id=None) -> Folder:
+    name = _check_name(name)
+    if parent_id is not None:
+        parent = _get_folder_row(session, owner_id, parent_id)
+        if parent is None:
+            raise ValueError("上層資料夾不存在")
+    new_depth = _folder_depth(session, owner_id, parent_id) + 1
+    if new_depth > MAX_FOLDER_DEPTH:
+        raise ValueError(f"資料夾巢狀深度上限為 {MAX_FOLDER_DEPTH} 層")
+    _check_sibling_dup(session, owner_id, parent_id, name)
+    f = Folder(owner_id=owner_id, name=name, parent_id=parent_id, sort_order=0)
+    session.add(f)
+    session.commit()
+    logger.info(f"建立資料夾: owner={owner_id} id={f.id} {name}")
+    return f
+
+
+def update_folder(session, owner_id: int, folder_id: int,
+                   name=None, parent_id=UNSET, sort_order=None) -> Folder:
+    f = _get_folder_row(session, owner_id, folder_id)
+    if f is None:
+        raise ValueError("資料夾不存在")
+
+    new_name = f.name if name is None else _check_name(name)
+    new_parent = f.parent_id if parent_id is UNSET else parent_id
+
+    if parent_id is not UNSET and new_parent is not None:
+        if new_parent == folder_id:
+            raise ValueError("不可將資料夾移到自己底下")
+        parent = _get_folder_row(session, owner_id, new_parent)
+        if parent is None:
+            raise ValueError("目標上層資料夾不存在")
+        if new_parent in _descendant_ids(session, owner_id, folder_id):
+            raise ValueError("不可將資料夾移到自己的子孫底下")
+        # 深度：新位置（父深度 + 自身子樹高度）不可超限
+        sub = _descendant_ids(session, owner_id, folder_id)
+        max_rel = 0
+        for sid in sub:
+            d = _folder_depth(session, owner_id, sid)
+            base = _folder_depth(session, owner_id, folder_id)
+            max_rel = max(max_rel, d - base)
+        if _folder_depth(session, owner_id, new_parent) + 1 + max_rel > MAX_FOLDER_DEPTH:
+            raise ValueError(f"移動後巢狀深度將超過 {MAX_FOLDER_DEPTH} 層")
+
+    if new_name != f.name or new_parent != f.parent_id:
+        _check_sibling_dup(session, owner_id, new_parent, new_name,
+                           exclude_id=folder_id)
+
+    f.name = new_name
+    if parent_id is not UNSET:
+        f.parent_id = new_parent
+    if sort_order is not None:
+        f.sort_order = sort_order
+    session.commit()
+    logger.info(f"更新資料夾: owner={owner_id} id={folder_id}")
+    return f
+
+
+def delete_folder(session, owner_id: int, folder_id: int) -> int:
+    """刪除資料夾。子資料夾 DB CASCADE、論文 folder_id DB SET NULL。
+
+    回傳被刪除的資料夾數（自身 + 子孫）。
+    """
+    f = _get_folder_row(session, owner_id, folder_id)
+    if f is None:
+        raise ValueError("資料夾不存在")
+    removed = len(_descendant_ids(session, owner_id, folder_id))
+    session.delete(f)
+    session.commit()
+    logger.info(f"刪除資料夾: owner={owner_id} id={folder_id}（含子共 {removed} 個）")
+    return removed
+
+
+def set_paper_folder(session, owner_id: int, paper_uuid: str,
+                     folder_id):
+    """把論文移到某資料夾（folder_id=None → 未分類/根）。回傳更新後 Paper。"""
+    p = session.query(Paper).filter_by(
+        owner_id=owner_id, paper_uuid=paper_uuid
+    ).one_or_none()
+    if p is None:
+        raise ValueError("論文不存在")
+    if folder_id is not None:
+        if _get_folder_row(session, owner_id, folder_id) is None:
+            raise ValueError("目標資料夾不存在")
+    p.folder_id = folder_id
+    session.commit()
+    logger.info(f"論文歸檔: owner={owner_id} {paper_uuid} → folder={folder_id}")
+    return p

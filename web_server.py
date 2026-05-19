@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 import settings
+import db
 import paper_manager
 from pipeline_core import PipelineCore
 from ai_core import AICore
@@ -555,6 +556,94 @@ async def cleanup_orphaned(current_user: CurrentUser = Depends(get_current_user)
     """清理當前使用者目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。"""
     removed = paper_manager.cleanup_orphaned(OUTPUT_DIR, current_user.id)
     return {"status": "ok", "removed": removed, "count": len(removed)}
+
+# ── 資料夾（Phase 3.1） ──
+
+class FolderCreate(BaseModel):
+    name: str
+    parent_id: Optional[int] = None
+
+class FolderUpdate(BaseModel):
+    name: Optional[str] = None
+    parent_id: Optional[int] = None      # PATCH：以 model_fields_set 區分「未提供」vs「設為 null」
+    sort_order: Optional[int] = None
+
+class PaperUpdate(BaseModel):
+    folder_id: Optional[int] = None      # 同上；未提供＝不改，提供 null＝移到未分類
+
+
+@app.get("/api/folders")
+async def list_folders(current_user: CurrentUser = Depends(get_current_user)):
+    """列出當前使用者所有資料夾（flat list，階層由前端建樹）。"""
+    with db.SessionLocal() as s:
+        return paper_manager.list_folders(s, current_user.id)
+
+
+@app.post("/api/folders")
+async def create_folder(req: FolderCreate,
+                         current_user: CurrentUser = Depends(get_current_user)):
+    """建立資料夾。失敗（名稱/深度/同名/上層不存在）回 400。"""
+    with db.SessionLocal() as s:
+        try:
+            f = paper_manager.create_folder(
+                s, current_user.id, req.name, parent_id=req.parent_id
+            )
+            return paper_manager._folder_to_dict(f)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.patch("/api/folders/{folder_id}")
+async def update_folder(folder_id: int, req: FolderUpdate,
+                         current_user: CurrentUser = Depends(get_current_user)):
+    """改名 / 移動（parent_id）/ 排序。未提供的欄位不變。"""
+    provided = req.model_fields_set
+    if not ({"name", "parent_id", "sort_order"} & provided):
+        raise HTTPException(status_code=400, detail="未提供任何可更新欄位")
+    with db.SessionLocal() as s:
+        if paper_manager.get_folder(s, current_user.id, folder_id) is None:
+            raise HTTPException(status_code=404, detail="資料夾不存在")
+        try:
+            f = paper_manager.update_folder(
+                s, current_user.id, folder_id,
+                name=req.name if "name" in provided else None,
+                parent_id=(req.parent_id if "parent_id" in provided
+                           else paper_manager.UNSET),
+                sort_order=req.sort_order if "sort_order" in provided else None,
+            )
+            return paper_manager._folder_to_dict(f)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/folders/{folder_id}")
+async def delete_folder(folder_id: int,
+                         current_user: CurrentUser = Depends(get_current_user)):
+    """刪除資料夾（子資料夾連帶刪除，論文 folder_id 設為 NULL）。"""
+    with db.SessionLocal() as s:
+        if paper_manager.get_folder(s, current_user.id, folder_id) is None:
+            raise HTTPException(status_code=404, detail="資料夾不存在")
+        removed = paper_manager.delete_folder(s, current_user.id, folder_id)
+        return {"status": "ok", "deleted_folders": removed}
+
+
+@app.patch("/api/papers/{paper_uuid}")
+async def update_paper(paper_uuid: str, req: PaperUpdate,
+                       current_user: CurrentUser = Depends(get_current_user)):
+    """目前僅支援設定 folder_id（None＝移到未分類）。"""
+    if "folder_id" not in req.model_fields_set:
+        raise HTTPException(status_code=400, detail="未提供可更新欄位（folder_id）")
+    if not paper_manager.paper_exists(current_user.id, paper_uuid):
+        raise HTTPException(status_code=404, detail="論文不存在")
+    with db.SessionLocal() as s:
+        try:
+            p = paper_manager.set_paper_folder(
+                s, current_user.id, paper_uuid, req.folder_id
+            )
+            return {"status": "ok", "paper_id": paper_uuid,
+                    "folder_id": p.folder_id}
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 # ── 健康檢查 ──
 
