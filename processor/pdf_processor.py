@@ -56,7 +56,9 @@ class PDFProcessor:
                     data={
                         "return_md": "true",
                         "response_format_zip": "true",
-                        "backend": "pipeline"
+                        "backend": "pipeline",
+                        # MinerU 3.1.6 預設 return_images=False，不設則 ZIP 無圖
+                        "return_images": "true",
                     },
                     timeout=300
                 )
@@ -135,19 +137,34 @@ class PDFProcessor:
             raise
 
     def _copy_images(self, output_dir: Path, task_id: str = None):
-        """複製 MinerU 解析出的圖片目錄（雙模式，best-effort，永不 raise）。
+        """複製 MinerU 解析出的圖片目錄（best-effort，永不 raise）。
+
+        優先序：
+        1. **ZIP 自帶圖**：return_images=true 後 ZIP 內已含
+           _tmp/{MINERU_PAPER_NAME}/auto/images/，直接 copytree，無需 scp。
+        2. Fallback（向後相容，僅 #1 無圖時）：MinerU server 端取圖——
+           MINERU_HOST 有值 → scp（無 task_id 時退回 ssh ls -t）；
+           MINERU_HOST 為空 → 本地 MINERU_OUTPUT_DIR copytree。
 
         MinerU 端子目錄名用 self.MINERU_PAPER_NAME（固定 "original"，因
         web_server 一律以 original.pdf 送 MinerU），與本機 paper_name
         （pdf_path.stem）無關——後者僅用於本機 markdown 檔名。
-
-        MINERU_HOST 有值 → 遠端模式：scp（無 task_id 時退回 ssh ls -t）。
-        MINERU_HOST 為空 → 本地/bind-mount 模式：MINERU_OUTPUT_DIR 視為
-        本機可讀路徑，用 shutil.copytree 複製（無 task_id 時取最新子目錄）。
+        須在 rmtree(_tmp) 之前呼叫（process() 既有順序已滿足）。
         """
         try:
             dst = str(output_dir / "images")
             mineru_name = self.MINERU_PAPER_NAME
+
+            # ── 第一優先：ZIP 內已含圖（return_images=true）──
+            tmp_images = output_dir / "_tmp" / mineru_name / "auto" / "images"
+            if tmp_images.is_dir():
+                shutil.copytree(tmp_images, dst, dirs_exist_ok=True)
+                n = len([p for p in Path(dst).iterdir() if p.is_file()])
+                self.logger.info(f"[copy_images] 從 ZIP 取得 {n} 張圖")
+                return
+            self.logger.info(
+                f"[copy_images] _tmp 無圖（{tmp_images}）→ 退回 server 端取圖"
+            )
 
             if self.MINERU_HOST:
                 if task_id:
