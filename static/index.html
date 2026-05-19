@@ -160,6 +160,69 @@
     }
     .paper-item:hover .delete-btn { opacity: 1; }
     .delete-btn:hover { color: var(--color-danger); background: transparent; }
+
+    /* ── 資料夾樹（Phase 3.2） ── */
+    #folder-tree {
+      max-height: 38%;
+      overflow-y: auto;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-sm);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      margin: 0 var(--space-2);
+      transition: background var(--transition);
+    }
+    .folder-item:hover { background: var(--color-border); }
+    .folder-item.active { background: var(--color-text); color: #ffffff; }
+    .folder-item .chevron {
+      width: 12px; flex-shrink: 0; text-align: center;
+      color: var(--color-text-muted); font-size: 10px;
+    }
+    .folder-item.active .chevron { color: #ffffff; }
+    .folder-item .fname {
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .folder-item .menu-btn {
+      margin-left: auto; flex-shrink: 0;
+      border: none; background: transparent; cursor: pointer;
+      color: inherit; opacity: 0; padding: 0 var(--space-1);
+      transition: opacity var(--transition);
+    }
+    .folder-item:hover .menu-btn { opacity: 1; }
+    .paper-move-btn {
+      border: none; background: transparent; cursor: pointer;
+      color: var(--color-text-muted); flex-shrink: 0;
+      opacity: 0; padding: var(--space-1);
+      transition: opacity var(--transition);
+    }
+    .paper-item:hover .paper-move-btn { opacity: 1; }
+    .paper-move-btn:hover { color: var(--color-text); }
+    .ctx-popup {
+      position: fixed; z-index: 100;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-1);
+      min-width: 160px; max-height: 260px; overflow-y: auto;
+    }
+    .ctx-popup button {
+      display: block; width: 100%; text-align: left;
+      border: none; background: transparent; cursor: pointer;
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-sm); color: var(--color-text);
+      border-radius: var(--radius-sm);
+    }
+    .ctx-popup button:hover { background: var(--color-border); }
+
     #sidebar-bottom {
       display: flex;
       gap: var(--space-2);
@@ -170,7 +233,7 @@
       align-items: center;
     }
     #upload-btn { flex: 1; font-weight: 500; }
-    #help-btn, #cleanup-btn { flex-shrink: 0; }
+    #help-btn, #cleanup-btn, #new-folder-btn { flex-shrink: 0; }
 
     /* 彈窗（無陰影，改用粗邊框） */
     #help-modal, #confirm-modal {
@@ -419,9 +482,11 @@
 <div id="sidebar">
   <button id="sidebar-toggle" class="panel-toggle" title="收合/展開左側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
   <h1>文件列表</h1>
+  <div id="folder-tree"></div>
   <div id="paper-list"></div>
   <div id="sidebar-bottom">
     <button id="upload-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件</button>
+    <button id="new-folder-btn" title="新增資料夾"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M12 11v4M10 13h4"/></svg></button>
     <button id="help-btn" title="上傳說明"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.4 2.3c-.8.4-1.1.9-1.1 1.7v.4"/><path d="M12 17h.01"/></svg></button>
     <button id="cleanup-btn" title="清理殘餘檔案"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>
     <button id="logout-btn" class="btn-ghost" title="登出"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M15 12H4M9 7l-5 5 5 5M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/></svg></button>
@@ -503,7 +568,16 @@ let useWebSearch = false;
 // paperId -> 'reading_ready'（md_restore 完成、可閱讀）| 'done'（全部完成、可問答）
 // 不在 map 中 = 來自 papers_index 的既有論文，視為 done。重整頁面後清空靠此規則重建。
 const paperReadiness = new Map();
-const UPLOAD_BTN_LABEL = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件';
+// ── 資料夾狀態（Phase 3.2，filter 模型）──
+let currentFolderId = 'all';   // 'all' | 'uncategorized' | folder_id(int)
+let folders = [];              // server flat list
+let allPapers = [];            // GET /api/papers 快取（client-side filter）
+let foldersOpen = new Set();   // 展開的 folder id（localStorage 持久化）
+try {
+  const _sv = localStorage.getItem('foldersOpen');
+  if (_sv) foldersOpen = new Set(JSON.parse(_sv));
+} catch (e) {}
+const UPLOAD_BTN_LABEL ='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件';
 
 function setBusy(busy) {
   isProcessing = busy;
@@ -511,13 +585,202 @@ function setBusy(busy) {
   document.getElementById('cleanup-btn').disabled = busy;
 }
 
-// 載入論文列表
-async function loadPapers() {
-  const res = await fetch(`${API}/api/papers`);
-  const papers = await res.json();
+// ── 資料夾 API 包裝 ──
+async function loadFolders() {
+  try {
+    const res = await fetch(`${API}/api/folders`, { credentials: 'include' });
+    folders = res.ok ? await res.json() : [];
+  } catch (e) { folders = []; }
+  renderFolderTree();
+}
+async function createFolderApi(name, parentId = null) {
+  const res = await fetch(`${API}/api/folders`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, parent_id: parentId })
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '建立失敗');
+  return res.json();
+}
+async function updateFolderApi(id, patches) {
+  const res = await fetch(`${API}/api/folders/${id}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patches)
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '更新失敗');
+  return res.json();
+}
+async function deleteFolderApi(id) {
+  const res = await fetch(`${API}/api/folders/${id}`, {
+    method: 'DELETE', credentials: 'include'
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '刪除失敗');
+  return res.json();
+}
+async function setPaperFolderApi(paperUuid, folderId) {
+  const res = await fetch(`${API}/api/papers/${paperUuid}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_id: folderId })
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '移動失敗');
+  return res.json();
+}
+
+// ── 樹建構 / 子孫 ──
+function buildTree(list) {
+  const map = new Map(list.map(f => [f.id, { ...f, children: [] }]));
+  const roots = [];
+  map.forEach(node => {
+    if (node.parent_id != null && map.has(node.parent_id)) {
+      map.get(node.parent_id).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  (function sortRec(ns) {
+    ns.sort((a, b) => (a.sort_order - b.sort_order) || (a.id - b.id));
+    ns.forEach(n => sortRec(n.children));
+  })(roots);
+  return roots;
+}
+function folderDescendants(id) {
+  const ids = new Set([id]);
+  let added = true;
+  while (added) {
+    added = false;
+    folders.forEach(f => {
+      if (f.parent_id != null && ids.has(f.parent_id) && !ids.has(f.id)) {
+        ids.add(f.id); added = true;
+      }
+    });
+  }
+  return ids;
+}
+
+// ── popup（改名/刪除/新增子；移動論文 picker）──
+function closePopups() {
+  document.querySelectorAll('.ctx-popup').forEach(el => el.remove());
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.ctx-popup') && !e.target.closest('.menu-btn')
+      && !e.target.closest('.paper-move-btn')) closePopups();
+});
+function openPopup(x, y, items) {
+  closePopups();
+  const pop = document.createElement('div');
+  pop.className = 'ctx-popup';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    b.onclick = (ev) => { ev.stopPropagation(); closePopups(); it.action(); };
+    pop.appendChild(b);
+  });
+  document.body.appendChild(pop);
+  const r = pop.getBoundingClientRect();
+  pop.style.left = Math.min(x, window.innerWidth - r.width - 8) + 'px';
+  pop.style.top = Math.min(y, window.innerHeight - r.height - 8) + 'px';
+}
+
+// ── 資料夾樹渲染 ──
+function renderFolderTree() {
+  const box = document.getElementById('folder-tree');
+  box.innerHTML = '';
+  const fixed = [
+    { key: 'all', name: '全部' },
+    { key: 'uncategorized', name: '未分類' },
+  ];
+  fixed.forEach(fx => {
+    const row = document.createElement('div');
+    row.className = 'folder-item' + (currentFolderId === fx.key ? ' active' : '');
+    row.innerHTML = `<span class="chevron"></span><span class="fname"></span>`;
+    row.querySelector('.fname').textContent = fx.name;
+    row.onclick = () => selectFolder(fx.key);
+    box.appendChild(row);
+  });
+  const tree = buildTree(folders);
+  const render = (node, depth) => {
+    const hasChildren = node.children.length > 0;
+    const open = foldersOpen.has(node.id);
+    const row = document.createElement('div');
+    row.className = 'folder-item' + (currentFolderId === node.id ? ' active' : '');
+    row.style.paddingLeft = (12 + depth * 12) + 'px';
+    const chev = hasChildren ? (open ? '▾' : '▸') : '';
+    row.innerHTML =
+      `<span class="chevron">${chev}</span>` +
+      `<span class="fname"></span>` +
+      `<button class="menu-btn" title="資料夾選單">⋯</button>`;
+    row.querySelector('.fname').textContent = node.name;
+    row.querySelector('.chevron').onclick = (e) => {
+      if (!hasChildren) return;
+      e.stopPropagation();
+      if (open) foldersOpen.delete(node.id); else foldersOpen.add(node.id);
+      localStorage.setItem('foldersOpen', JSON.stringify([...foldersOpen]));
+      renderFolderTree();
+    };
+    row.querySelector('.menu-btn').onclick = (e) => {
+      e.stopPropagation();
+      const rb = e.target.getBoundingClientRect();
+      openPopup(rb.left, rb.bottom, [
+        { label: '改名', action: () => folderRename(node) },
+        { label: '新增子資料夾', action: () => folderCreateSub(node.id) },
+        { label: '刪除', action: () => folderDelete(node) },
+      ]);
+    };
+    row.onclick = () => selectFolder(node.id);
+    box.appendChild(row);
+    if (hasChildren && open) node.children.forEach(c => render(c, depth + 1));
+  };
+  tree.forEach(n => render(n, 0));
+}
+
+function selectFolder(key) {
+  currentFolderId = key;
+  renderFolderTree();
+  renderPapers();
+}
+
+// ── 資料夾操作（prompt/confirm）──
+async function folderCreate(parentId) {
+  const name = prompt('資料夾名稱：');
+  if (name == null) return;
+  const n = name.trim();
+  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
+  try { await createFolderApi(n, parentId); await loadFolders(); }
+  catch (e) { alert(e.message); }
+}
+function folderCreateSub(pid) { folderCreate(pid); }
+async function folderRename(node) {
+  const name = prompt('新名稱：', node.name);
+  if (name == null) return;
+  const n = name.trim();
+  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
+  try { await updateFolderApi(node.id, { name: n }); await loadFolders(); }
+  catch (e) { alert(e.message); }
+}
+async function folderDelete(node) {
+  if (!confirm(`刪除「${node.name}」？\n子資料夾會一併刪除，內部論文回到未分類。`)) return;
+  try {
+    await deleteFolderApi(node.id);
+    if (currentFolderId === node.id) currentFolderId = 'all';
+    await loadFolders();
+    await loadPapers();
+  } catch (e) { alert(e.message); }
+}
+
+// ── 論文清單（filter 模型）──
+function papersInCurrentFolder() {
+  if (currentFolderId === 'all') return allPapers;
+  if (currentFolderId === 'uncategorized')
+    return allPapers.filter(p => p.folder_id == null);
+  const ids = folderDescendants(currentFolderId);
+  return allPapers.filter(p => p.folder_id != null && ids.has(p.folder_id));
+}
+function renderPapers() {
   const list = document.getElementById('paper-list');
   list.innerHTML = '';
-  papers.forEach(p => {
+  papersInCurrentFolder().forEach(p => {
     const item = document.createElement('div');
     item.className = 'paper-item';
     item.dataset.id = p.id;
@@ -527,6 +790,7 @@ async function loadPapers() {
           <div class="paper-title-zh">${p.translated_title || p.title}</div>
           <div class="paper-title-en">${p.title}</div>
         </div>
+        <button class="paper-move-btn" title="移動到資料夾"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg></button>
         <button class="delete-btn" title="刪除論文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
     `;
@@ -534,9 +798,39 @@ async function loadPapers() {
       e.stopPropagation();
       deletePaper(p.id, p.translated_title || p.title);
     };
+    item.querySelector('.paper-move-btn').onclick = (e) => {
+      e.stopPropagation();
+      const rb = e.target.getBoundingClientRect();
+      const flat = [];
+      const walk = (ns, d) => ns.forEach(n => {
+        flat.push({ id: n.id, label: '　'.repeat(d) + n.name });
+        walk(n.children, d + 1);
+      });
+      walk(buildTree(folders), 0);
+      openPopup(rb.left, rb.bottom, [
+        { label: '未分類', action: () => movePaper(p.id, null) },
+        ...flat.map(f => ({
+          label: f.label, action: () => movePaper(p.id, f.id)
+        })),
+      ]);
+    };
     item.onclick = () => loadPaper(p.id, p.translated_title || p.title);
+    if (p.id === currentPaperId) item.classList.add('active');
     list.appendChild(item);
   });
+}
+async function movePaper(uuid, folderId) {
+  try {
+    await setPaperFolderApi(uuid, folderId);
+    await loadPapers();
+  } catch (e) { alert(e.message); }
+}
+
+// 載入論文列表（fetch → 快取 → 依當前資料夾渲染）
+async function loadPapers() {
+  const res = await fetch(`${API}/api/papers`);
+  allPapers = await res.json();
+  renderPapers();
 }
 
 // 載入論文內容
@@ -978,7 +1272,13 @@ document.getElementById('help-modal').onclick = (e) => {
   }
 };
 
-loadPapers();
+// 初始化：先載資料夾樹再載論文（filter 依賴 folders 建子孫集）
+(async () => { await loadFolders(); await loadPapers(); })();
+
+// 新增資料夾：當前選中為某資料夾則建在其下，否則建在根
+document.getElementById('new-folder-btn').onclick = () => {
+  folderCreate(typeof currentFolderId === 'number' ? currentFolderId : null);
+};
 
 // 階段一：側欄收合切換
 document.getElementById('sidebar-toggle').onclick = () => {
