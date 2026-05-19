@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
@@ -16,27 +15,13 @@ class RagRetriever:
         self.paper_vector_paths: Dict[str, str] = {}
         self.rag_trees: Dict[str, Dict] = {}
         self.base_path = base_path
+        # 向量庫路徑與 rag_tree 由 paper_manager（DB 來源）透過
+        # add_paper / set_rag_tree 註冊，不再讀 papers_index.json。
 
-        if base_path:
-            self._preload_index(base_path)
-
-    def _preload_index(self, base_path: str):
-        """同步載入所有論文的向量庫路徑索引"""
-        try:
-            index_path = Path(base_path) / "papers_index.json"
-            if not index_path.exists():
-                logger.warning(f"論文索引不存在: {index_path}")
-                return
-            with open(index_path, 'r', encoding='utf-8') as f:
-                papers_index = json.load(f)
-            for paper in papers_index:
-                paper_id = paper.get('id')
-                vector_store_path = paper.get('paths', {}).get('rag_vector_store')
-                if paper_id and vector_store_path:
-                    self.paper_vector_paths[paper_id] = str(Path(base_path) / vector_store_path)
-            logger.info(f"预加载了 {len(self.paper_vector_paths)} 篇论文的向量库路径")
-        except Exception as e:
-            logger.error(f"預載論文索引失敗: {str(e)}")
+    def set_rag_tree(self, paper_id: str, tree: Dict) -> None:
+        """由 ai_core 載入 rag_tree 後註冊到記憶體（取代讀 papers_index.json）。"""
+        if tree:
+            self.rag_trees[paper_id] = tree
 
     def add_paper(self, paper_id: str, vector_store_path: str) -> bool:
         """新增論文向量庫"""
@@ -83,34 +68,8 @@ class RagRetriever:
         return None
 
     def load_rag_tree(self, paper_id: str) -> Dict:
-        """載入論文的 RAG tree"""
-        if paper_id in self.rag_trees:
-            return self.rag_trees[paper_id]
-        try:
-            if not self.base_path:
-                return {}
-            index_path = Path(self.base_path) / "papers_index.json"
-            if not index_path.exists():
-                return {}
-            with open(index_path, 'r', encoding='utf-8') as f:
-                papers_index = json.load(f)
-            rag_tree_path = None
-            for paper in papers_index:
-                if paper.get('id') == paper_id:
-                    rag_tree_path = paper.get('paths', {}).get('rag_tree')
-                    break
-            if not rag_tree_path:
-                return {}
-            full_path = Path(self.base_path) / rag_tree_path
-            if not full_path.exists():
-                return {}
-            with open(full_path, 'r', encoding='utf-8') as f:
-                rag_tree = json.load(f)
-            self.rag_trees[paper_id] = rag_tree
-            return rag_tree
-        except Exception as e:
-            logger.error(f"載入 RAG tree 失敗: {str(e)}")
-            return {}
+        """回傳記憶體中的 RAG tree（由 set_rag_tree 註冊；不再讀 papers_index.json）。"""
+        return self.rag_trees.get(paper_id, {})
 
     def is_ready(self) -> bool:
         """檢查是否已有向量庫路徑"""

@@ -11,7 +11,9 @@ from contextlib import asynccontextmanager
 import time
 import bcrypt
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Request
+from collections import namedtuple
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Request, Depends
 from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -90,7 +92,13 @@ async def lifespan(app: FastAPI):
     ai_core = AICore()
     ai_core.init_rag_retriever(str(OUTPUT_DIR))
 
-    # 載入已有論文的向量庫
+    if (OUTPUT_DIR / "papers_index.json").exists():
+        logger.warning(
+            "偵測到舊 papers_index.json：系統已改用 DB，此檔不再被讀寫，"
+            "請確認已執行 scripts/migrate_to_db.py（可安全刪除）"
+        )
+
+    # 載入已有論文的向量庫（DB 來源）
     paper_manager.preload_vector_stores(OUTPUT_DIR, ai_core)
 
     logger.info("Web server 初始化完成")
@@ -215,12 +223,28 @@ class ChatRequest(BaseModel):
     use_web_search: Optional[bool] = False
 
 
+# ── 使用者 context（從 session 解析；Phase 1 僅單一 admin）──
+
+CurrentUser = namedtuple("CurrentUser", ["id", "username"])
+
+
+def get_current_user(request: Request) -> CurrentUser:
+    """由 session["user"] 解析 DB User；找不到且為 admin 則建立。"""
+    username = request.session.get("user")
+    info = paper_manager.get_user_by_username(username) if username else None
+    if info is None and username and username == settings.AUTH_USERNAME:
+        info = paper_manager.ensure_admin()
+    if info is None:
+        raise HTTPException(status_code=401, detail="未登入或使用者不存在")
+    return CurrentUser(id=info[0], username=info[1])
+
+
 # ── 論文列表 ──
 
 @app.get("/api/papers")
-async def list_papers():
-    """取得所有論文列表"""
-    return paper_manager.load_papers_index(OUTPUT_DIR)
+async def list_papers(current_user: CurrentUser = Depends(get_current_user)):
+    """取得當前使用者的論文列表"""
+    return paper_manager.list_papers(OUTPUT_DIR, current_user.id)
 
 
 # ── 論文上傳 ──
@@ -228,7 +252,8 @@ async def list_papers():
 @app.post("/api/papers/upload")
 async def upload_paper(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """上傳 PDF 並開始處理"""
     if not file.filename.endswith('.pdf'):
@@ -245,8 +270,8 @@ async def upload_paper(
         return JSONResponse(status_code=415, content={"error": "僅支援 PDF 格式"})
 
     paper_id = paper_manager.sanitize_paper_id(file.filename)
-    paper_dir = OUTPUT_DIR / paper_id
-    paper_dir.mkdir(exist_ok=True)
+    paper_dir = paper_manager.paper_dir(OUTPUT_DIR, current_user.id, paper_id)
+    paper_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = paper_dir / "original.pdf"
 
     # 儲存上傳的 PDF
@@ -268,13 +293,14 @@ async def upload_paper(
         processing_tasks[paper_id] = {
             'status': 'waiting_confirm',
             'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
-            '_pdf_path': str(pdf_path)
+            '_pdf_path': str(pdf_path),
+            '_owner_id': current_user.id
         }
 
     return {'paper_id': paper_id, 'status': 'waiting_confirm', 'suggested_doc_type': suggested_doc_type}
 
 
-async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
+async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: str):
     """在背景執行 pipeline（使用者確認文件類型後觸發）"""
     try:
         def on_progress(info):
@@ -289,7 +315,7 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
         pipeline = PipelineCore(on_progress=on_progress)
         output_paths2 = await loop.run_in_executor(
             None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
-                existing_paths=output_paths, paper_id=paper_id)
+                owner_id=owner_id, existing_paths=output_paths, paper_id=paper_id)
         )
 
         # 檢查是否在處理過程中被刪除
@@ -298,8 +324,7 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
                 logger.info(f"論文已被刪除，取消後續處理: {paper_id}")
                 return
 
-        final = output_paths2.get('final', {})
-        paper_manager.load_paper_resources(OUTPUT_DIR, paper_id, final, ai_core)
+        paper_manager.load_paper_resources(OUTPUT_DIR, owner_id, paper_id, ai_core)
 
         with tasks_lock:
             processing_tasks[paper_id]['status'] = 'done'
@@ -315,13 +340,16 @@ async def run_pipeline(paper_id: str, pdf_path: str, doc_type: str):
 # ── 處理進度（SSE） ──
 
 @app.get("/api/papers/{paper_id}/status")
-async def paper_status(paper_id: str):
+async def paper_status(paper_id: str,
+                       current_user: CurrentUser = Depends(get_current_user)):
     """取得論文處理進度（SSE）"""
     async def event_stream():
         while True:
             with tasks_lock:
                 task = processing_tasks.get(paper_id)
-                if task is not None:
+                if task is not None and task.get('_owner_id') != current_user.id:
+                    task = None
+                elif task is not None:
                     task = dict(task)
             if not task:
                 yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
@@ -340,11 +368,14 @@ async def paper_status(paper_id: str):
 # ── 論文內容 ──
 
 @app.get("/api/papers/{paper_id}/content")
-async def paper_content(paper_id: str, lang: str = "zh"):
+async def paper_content(paper_id: str, lang: str = "zh",
+                        current_user: CurrentUser = Depends(get_current_user)):
     """取得論文 Markdown 內容"""
-    paper_dir = OUTPUT_DIR / paper_id
     lang_key = "zh" if lang == "zh" else "en"
-    md_path = paper_dir / f"final_{paper_id}_{lang_key}.md"
+    if lang_key == "zh":
+        md_path = paper_manager.article_zh_path(OUTPUT_DIR, current_user.id, paper_id)
+    else:
+        md_path = paper_manager.article_en_path(OUTPUT_DIR, current_user.id, paper_id)
 
     if not md_path.exists():
         raise HTTPException(status_code=404, detail="論文內容不存在")
@@ -356,11 +387,15 @@ async def paper_content(paper_id: str, lang: str = "zh"):
 # ── 圖片靜態檔案 ──
 
 @app.get("/api/papers/{paper_id}/images/{filename}")
-async def paper_image(paper_id: str, filename: str):
+async def paper_image(paper_id: str, filename: str,
+                      current_user: CurrentUser = Depends(get_current_user)):
     """取得論文圖片"""
     # ① 去除任何目錄層級，只取純檔名
     safe_filename = Path(filename).name
-    image_path = OUTPUT_DIR / paper_id / "images" / safe_filename
+    image_path = (
+        paper_manager.images_path(OUTPUT_DIR, current_user.id, paper_id)
+        / safe_filename
+    )
 
     # ② 確認解析後路徑仍位於 OUTPUT_DIR 之內（防止 ../ 逃逸）
     try:
@@ -378,7 +413,8 @@ async def paper_image(paper_id: str, filename: str):
 # ── AI 問答（SSE 串流） ──
 
 @app.post("/api/papers/{paper_id}/chat")
-async def chat(paper_id: str, request: ChatRequest):
+async def chat(paper_id: str, request: ChatRequest,
+                current_user: CurrentUser = Depends(get_current_user)):
     """AI 問答，SSE 串流回傳"""
     async def event_stream():
         try:
@@ -406,17 +442,18 @@ class ChatHistory(BaseModel):
     messages: list
 
 @app.get("/api/papers/{paper_id}/chat/history")
-async def get_chat_history(paper_id: str):
+async def get_chat_history(paper_id: str,
+                           current_user: CurrentUser = Depends(get_current_user)):
     """取得對話紀錄"""
-    return paper_manager.load_chat_history(OUTPUT_DIR, paper_id)
+    return paper_manager.load_chat_history(OUTPUT_DIR, current_user.id, paper_id)
 
 @app.post("/api/papers/{paper_id}/chat/history")
-async def save_chat_history(paper_id: str, history: ChatHistory):
+async def save_chat_history(paper_id: str, history: ChatHistory,
+                            current_user: CurrentUser = Depends(get_current_user)):
     """儲存對話紀錄"""
-    paper_dir = OUTPUT_DIR / paper_id
-    if not paper_dir.exists():
+    if not paper_manager.paper_exists(current_user.id, paper_id):
         raise HTTPException(status_code=404, detail="論文不存在")
-    paper_manager.save_chat_history(OUTPUT_DIR, paper_id, history.messages)
+    paper_manager.save_chat_history(OUTPUT_DIR, current_user.id, paper_id, history.messages)
     return {"status": "ok"}
 
 # ── 文件類型確認 ──
@@ -425,7 +462,9 @@ class ConfirmTypeRequest(BaseModel):
     doc_type: str
 
 @app.post("/api/papers/{paper_id}/confirm_type")
-async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_tasks: BackgroundTasks):
+async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
+                       background_tasks: BackgroundTasks,
+                       current_user: CurrentUser = Depends(get_current_user)):
     """使用者選擇文件類型後，開始處理"""
     valid_types = ['academic', 'book', 'technical', 'slides', 'web', 'news']
     if request.doc_type not in valid_types:
@@ -433,30 +472,37 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest, background_ta
 
     with tasks_lock:
         task = processing_tasks.get(paper_id)
-        pdf_path = task.get('_pdf_path') if task else None
+        if not task or task.get('_owner_id') != current_user.id:
+            raise HTTPException(status_code=404, detail="任務不存在")
+        pdf_path = task.get('_pdf_path')
     if not pdf_path:
         raise HTTPException(status_code=500, detail="找不到原始 PDF 路徑")
 
     with tasks_lock:
         processing_tasks[paper_id]['status'] = 'processing'
-    background_tasks.add_task(run_pipeline, paper_id, pdf_path, request.doc_type)
+    background_tasks.add_task(
+        run_pipeline, current_user.id, paper_id, pdf_path, request.doc_type
+    )
     return {"status": "ok", "doc_type": request.doc_type}
 
 # ── 刪除論文 ──
 
 @app.delete("/api/papers/{paper_id}")
-async def delete_paper(paper_id: str):
+async def delete_paper(paper_id: str,
+                       current_user: CurrentUser = Depends(get_current_user)):
     """刪除論文及其所有相關檔案"""
-    paper_dir = OUTPUT_DIR / paper_id
-    if not paper_dir.exists():
+    with tasks_lock:
+        task = processing_tasks.get(paper_id)
+        task_owned = bool(task) and task.get('_owner_id') == current_user.id
+    if not task_owned and not paper_manager.paper_exists(current_user.id, paper_id):
         raise HTTPException(status_code=404, detail="論文不存在")
 
     # 標記任務為已取消，避免 pipeline 完成後重新寫入
     with tasks_lock:
-        if paper_id in processing_tasks:
+        if paper_id in processing_tasks and task_owned:
             processing_tasks[paper_id]['status'] = 'cancelled'
 
-    paper_manager.delete_paper(OUTPUT_DIR, paper_id)
+    paper_manager.delete_paper(OUTPUT_DIR, current_user.id, paper_id)
 
     # 清理記憶體殘留（消除鬼魂論文）
     with tasks_lock:
@@ -468,16 +514,16 @@ async def delete_paper(paper_id: str):
 # ── 對話紀錄匯出 ──
 
 @app.get("/api/papers/{paper_id}/chat/export")
-async def export_chat_history(paper_id: str):
+async def export_chat_history(paper_id: str,
+                              current_user: CurrentUser = Depends(get_current_user)):
     """匯出對話紀錄為 Markdown"""
-    history = paper_manager.load_chat_history(OUTPUT_DIR, paper_id)
+    history = paper_manager.load_chat_history(OUTPUT_DIR, current_user.id, paper_id)
     if not history:
         raise HTTPException(status_code=404, detail="沒有對話紀錄")
 
     # 取得論文標題
-    papers = paper_manager.load_papers_index(OUTPUT_DIR)
-    paper = next((p for p in papers if p['id'] == paper_id), None)
-    title = paper.get('translated_title') or paper.get('title', paper_id) if paper else paper_id
+    paper = paper_manager.get_paper(OUTPUT_DIR, current_user.id, paper_id)
+    title = (paper.get('translated_title') or paper.get('title') or paper_id) if paper else paper_id
 
     # 產生 Markdown
     lines = [f"# {title} — 對話紀錄", ""]
@@ -500,19 +546,9 @@ async def export_chat_history(paper_id: str):
 # ── 清理殘餘檔案 ──
 
 @app.post("/api/cleanup")
-async def cleanup_orphaned():
-    """清理不在 papers_index 裡的殘餘目錄"""
-    import shutil
-    papers = paper_manager.load_papers_index(OUTPUT_DIR)
-    valid_ids = {p['id'] for p in papers}
-
-    removed = []
-    for item in OUTPUT_DIR.iterdir():
-        if item.is_dir() and item.name not in valid_ids:
-            shutil.rmtree(item)
-            removed.append(item.name)
-            logger.info(f"清理殘餘目錄: {item.name}")
-
+async def cleanup_orphaned(current_user: CurrentUser = Depends(get_current_user)):
+    """清理當前使用者目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。"""
+    removed = paper_manager.cleanup_orphaned(OUTPUT_DIR, current_user.id)
     return {"status": "ok", "removed": removed, "count": len(removed)}
 
 # ── 健康檢查 ──

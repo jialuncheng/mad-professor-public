@@ -194,14 +194,22 @@ class PipelineCore:
             return paper_dir / f"{paper_name}{identifier}.json"
 
     def process(self, pdf_path: str, output_dir: Optional[str] = None,
+                owner_id: Optional[int] = None,
                 existing_paths: Optional[Dict] = None,
                 paper_id: Optional[str] = None) -> Dict:
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
 
-        base_output_dir = Path(output_dir) if output_dir else pdf_path.parent
+        root_output_dir = Path(output_dir) if output_dir else pdf_path.parent
+        # 路徑統一 output/{owner_id}/{paper_uuid}/
+        base_output_dir = (
+            root_output_dir / str(owner_id) if owner_id is not None
+            else root_output_dir
+        )
         base_output_dir.mkdir(exist_ok=True, parents=True)
+        self._root_output_dir = root_output_dir
+        self._owner_id = owner_id
 
         self.paper_info['paper_id'] = paper_id if paper_id is not None else pdf_path.stem
         paper_output_dir = base_output_dir / self.paper_info['paper_id']
@@ -349,8 +357,13 @@ class PipelineCore:
         if images_dir.exists():
             final_paths['images'] = images_dir
 
-        if final_paths:
-            self._update_global_index(base_output_dir, final_paths)
+        if final_paths and self._owner_id is not None:
+            paper_manager.upsert_paper(
+                self._root_output_dir,
+                self._owner_id,
+                self.paper_info['paper_id'],
+                {k: str(v) for k, v in final_paths.items() if v},
+            )
             output_paths['final'] = final_paths
 
         return output_paths
@@ -391,12 +404,6 @@ class PipelineCore:
 
         return False
 
-    def _update_global_index(self, base_output_dir: Path, final_paths: Dict) -> None:
-        paper_manager.update_papers_index(
-            base_output_dir,
-            self.paper_info['paper_id'],
-            {k: str(v) for k, v in final_paths.items() if v}
-        )
 
     # ── 各階段方法 ──
 

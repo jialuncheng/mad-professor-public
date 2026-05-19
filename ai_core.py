@@ -96,6 +96,9 @@ class AICore:
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
             self._paper_cache[paper_id] = paper_data
+            # 同步註冊到 retriever（取代其讀 papers_index.json）
+            if self.retriever:
+                self.retriever.set_rag_tree(paper_id, paper_data)
             return True
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")
