@@ -657,6 +657,17 @@ async function deletePaper(paperId, title) {
   }
 }
 
+// 在 AI 訊息泡泡後渲染來源區塊
+function renderSources(aiMsg, sources) {
+  if (!sources || !sources.length) return;
+  const div = document.createElement('div');
+  div.className = 'msg-sources';
+  div.innerHTML = '來源：' + sources.map(s =>
+    `<a href="${s.uri}" target="_blank" rel="noopener">${s.title}</a>`
+  ).join('、');
+  aiMsg.appendChild(div);
+}
+
 async function loadChatHistory(paperId) {
   const messages = document.getElementById('chat-messages');
   messages.innerHTML = '';
@@ -676,6 +687,10 @@ async function loadChatHistory(paperId) {
         div.className = 'msg-ai';
         const formatted = msg.content.replace(/\n(?!\n)/g, '\n\n');
         div.innerHTML = marked.parse(formatted);
+        if (msg.grounding_sources && msg.grounding_sources.length > 0) {
+          div.dataset.groundingSources = JSON.stringify(msg.grounding_sources);
+          renderSources(div, msg.grounding_sources);
+        }
       }
       messages.appendChild(div);
     });
@@ -685,13 +700,22 @@ async function loadChatHistory(paperId) {
   }
 }
 
-// 儲存對話紀錄
+// 儲存對話紀錄（content 排除來源區塊；grounding_sources 由 dataset 帶上）
 async function saveChatHistory(paperId) {
   const msgs = document.querySelectorAll('#chat-messages .msg-user, #chat-messages .msg-ai');
-  const history = Array.from(msgs).map(el => ({
-    role: el.classList.contains('msg-user') ? 'user' : 'assistant',
-    content: el.classList.contains('msg-user') ? el.textContent : el.innerText
-  }));
+  const history = Array.from(msgs).map(el => {
+    if (el.classList.contains('msg-user')) {
+      return { role: 'user', content: el.textContent };
+    }
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.msg-sources').forEach(n => n.remove());
+    const entry = { role: 'assistant', content: clone.innerText };
+    if (el.dataset.groundingSources) {
+      try { entry.grounding_sources = JSON.parse(el.dataset.groundingSources); }
+      catch (e) {}
+    }
+    return entry;
+  });
   try {
     await fetch(`/api/papers/${paperId}/chat/history`, {
       method: 'POST',
@@ -757,12 +781,8 @@ async function sendMessage() {
           isStreaming = false;
           document.getElementById('send-btn').disabled = false;
           if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
-            const sources = document.createElement('div');
-            sources.className = 'msg-sources';
-            sources.innerHTML = '來源：' + chunk.grounding_sources.map(s =>
-              `<a href="${s.uri}" target="_blank" rel="noopener">${s.title}</a>`
-            ).join('、');
-            aiMsg.appendChild(sources);
+            aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
+            renderSources(aiMsg, chunk.grounding_sources);
           }
           await saveChatHistory(currentPaperId);
         }

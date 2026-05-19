@@ -444,16 +444,20 @@ class ChatHistory(BaseModel):
 @app.get("/api/papers/{paper_id}/chat/history")
 async def get_chat_history(paper_id: str,
                            current_user: CurrentUser = Depends(get_current_user)):
-    """取得對話紀錄"""
-    return paper_manager.load_chat_history(OUTPUT_DIR, current_user.id, paper_id)
+    """取得對話紀錄（DB conversations）"""
+    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
+    if db_id is None:
+        return []
+    return paper_manager.load_chat_history(db_id, current_user.id)
 
 @app.post("/api/papers/{paper_id}/chat/history")
 async def save_chat_history(paper_id: str, history: ChatHistory,
                             current_user: CurrentUser = Depends(get_current_user)):
-    """儲存對話紀錄"""
-    if not paper_manager.paper_exists(current_user.id, paper_id):
+    """儲存對話紀錄（整包覆寫 conversations）"""
+    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
+    if db_id is None:
         raise HTTPException(status_code=404, detail="論文不存在")
-    paper_manager.save_chat_history(OUTPUT_DIR, current_user.id, paper_id, history.messages)
+    paper_manager.save_chat_history(db_id, current_user.id, history.messages)
     return {"status": "ok"}
 
 # ── 文件類型確認 ──
@@ -517,7 +521,8 @@ async def delete_paper(paper_id: str,
 async def export_chat_history(paper_id: str,
                               current_user: CurrentUser = Depends(get_current_user)):
     """匯出對話紀錄為 Markdown"""
-    history = paper_manager.load_chat_history(OUTPUT_DIR, current_user.id, paper_id)
+    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
+    history = paper_manager.load_chat_history(db_id, current_user.id) if db_id else []
     if not history:
         raise HTTPException(status_code=404, detail="沒有對話紀錄")
 

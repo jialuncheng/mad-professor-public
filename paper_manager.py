@@ -5,8 +5,8 @@
 - owner_id 由呼叫端（web_server 從 session 解析）顯式傳入。
 - 對外 paper 識別 = paper_uuid（= sanitize_paper_id 字串），URL 不變；
   paper.id（DB INT PK）僅內部。
-- chat_history 仍走 JSON（Phase 1.6 才改 conversations 表），
-  路徑為 output/{owner_id}/{paper_uuid}/chat_history.json。
+- 對話歷史已存 conversations 表（Phase 1.6）；chat_history.json 完全廢除。
+  load/save_chat_history 接收 paper.id（INT），不是 paper_uuid。
 """
 import re
 import json
@@ -17,7 +17,7 @@ from typing import Optional
 
 import settings
 import db
-from models import User, Paper
+from models import User, Paper, Conversation
 
 logger = logging.getLogger(__name__)
 
@@ -243,26 +243,72 @@ def cleanup_orphaned(output_dir, owner_id: int) -> list:
     return removed
 
 
-# ─────────────────────── 對話紀錄（仍走 JSON；Phase 1.6 改 DB） ───────────────────────
+# ─────────────────────── 對話紀錄（conversations 表，Phase 1.6） ───────────────────────
 
-def load_chat_history(output_dir, owner_id: int, paper_uuid: str) -> list:
-    history_path = paper_dir(output_dir, owner_id, paper_uuid) / "chat_history.json"
-    if not history_path.exists():
-        return []
-    try:
-        with open(history_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return []
+def get_paper_db_id(owner_id: int, paper_uuid: str) -> Optional[int]:
+    """由 (owner_id, paper_uuid) 取 Paper.id（INT PK）；無則 None。"""
+    _ensure_db()
+    with db.SessionLocal() as s:
+        row = s.query(Paper.id).filter_by(
+            owner_id=owner_id, paper_uuid=paper_uuid
+        ).one_or_none()
+        return row[0] if row else None
 
 
-def save_chat_history(output_dir, owner_id: int, paper_uuid: str,
-                      messages: list) -> None:
-    history_path = paper_dir(output_dir, owner_id, paper_uuid) / "chat_history.json"
-    history_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(history_path, 'w', encoding='utf-8') as f:
-        json.dump(messages, f, ensure_ascii=False, indent=2)
-    logger.info(f"對話紀錄已儲存: owner={owner_id} {paper_uuid}")
+def load_chat_history(paper_db_id: int, user_id: int) -> list:
+    """讀該 paper 的對話（依 id 順序＝寫入順序）。
+
+    回傳 list[{role, content, grounding_sources?, created_at}]。
+    grounding_sources 僅在非空時附帶；created_at 為 ISO 字串。
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        rows = (
+            s.query(Conversation)
+            .filter_by(paper_id=paper_db_id)
+            .order_by(Conversation.id)
+            .all()
+        )
+        out = []
+        for c in rows:
+            item = {"role": c.role, "content": c.content}
+            if c.grounding_sources:
+                item["grounding_sources"] = c.grounding_sources
+            if c.created_at is not None:
+                item["created_at"] = c.created_at.isoformat()
+            out.append(item)
+        return out
+
+
+def save_chat_history(paper_db_id: int, user_id: int, history: list) -> None:
+    """整包覆寫：刪該 paper 既有 conversations，再批次 insert。
+
+    history 每筆 dict 可選帶 grounding_sources（list）。寫入順序＝id 順序。
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        s.query(Conversation).filter_by(paper_id=paper_db_id).delete()
+        for m in history or []:
+            if not isinstance(m, dict):
+                continue
+            gs = m.get("grounding_sources")
+            s.add(Conversation(
+                paper_id=paper_db_id,
+                user_id=user_id,
+                role=m.get("role", "user"),
+                content=m.get("content", ""),
+                grounding_sources=gs if gs else None,
+            ))
+        s.commit()
+    logger.info(f"對話紀錄已儲存: paper_id={paper_db_id}（{len(history or [])} 則）")
+
+
+def delete_conversations(paper_db_id: int) -> None:
+    """刪除該 paper 的所有對話（刪 paper 時 DB 已 cascade，此為顯式輔助）。"""
+    _ensure_db()
+    with db.SessionLocal() as s:
+        s.query(Conversation).filter_by(paper_id=paper_db_id).delete()
+        s.commit()
 
 
 # ─────────────────────── 向量庫 / 資源載入 ───────────────────────
