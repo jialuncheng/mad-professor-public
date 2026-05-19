@@ -17,6 +17,7 @@ LLM 看第一頁 > PDF metadata > MinerU。本模組只負責 PDF metadata 與�
 from __future__ import annotations
 
 import re
+import json
 import logging
 from pathlib import Path
 from typing import Optional
@@ -24,6 +25,52 @@ from typing import Optional
 import fitz  # PyMuPDF
 
 logger = logging.getLogger(__name__)
+
+# Stage A 第二來源（LLM 看第一頁）prompt
+_STAGE_A_PROMPT = """你是一個文件 metadata 抽取助手。
+
+以下是 PDF 文件第一頁的原始文字（保留原始換行）：
+---
+{page1_text}
+---
+
+我也附上了第一頁的渲染圖（看版面排版判斷標題位置）。
+請從這頁文字與圖片中抽取以下 metadata：
+
+1. title（標題）：通常是字體最大、置中、最上方的文字
+2. translated_title（中文翻譯）：將 title 翻譯為繁體中文
+3. authors（作者）：以陣列形式回傳
+4. publication_date（日期）：若有，格式 YYYY-MM-DD
+5. abstract（摘要）：若有完整 abstract 段落，整段內容
+6. journal_or_conference（期刊/會議）：若有
+7. doi：若有
+8. keywords（關鍵字）：以陣列形式回傳
+9. publisher（出版社）：若有
+10. organization（機構）：若有（如 NVIDIA, arXiv, IEEE 等）
+11. version（版本）：若有
+
+注意事項：
+- 排除「Contents / 目錄 / Introduction / 前言 / Abstract / 摘要」這類章節名作為 title
+- 排除頁碼、頁首頁尾
+- 找不到的欄位填 null（陣列填空陣列）
+- 不要編造，找不到就 null
+- title 要找主標題，不是副標
+- 對於部分機構（如 NVIDIA），可能以 logo 形式出現在頁首，請從圖片判讀
+
+回傳純 JSON（不要 markdown 包裹、不要任何說明）：
+{
+  "title": null,
+  "translated_title": null,
+  "authors": [],
+  "publication_date": null,
+  "abstract": null,
+  "journal_or_conference": null,
+  "doi": null,
+  "keywords": [],
+  "publisher": null,
+  "organization": null,
+  "version": null
+}"""
 
 # Schema 版本；未來改結構需 bump（JSON 欄位免 migration 的配套）
 SCHEMA_VERSION = 2
@@ -258,3 +305,180 @@ def fill_from_pdf_metadata(metadata: dict, pdf_meta: dict) -> dict:
     except Exception as e:
         logger.warning(f"fill_from_pdf_metadata 失敗（soft）: {e}")
     return metadata
+
+
+# ─────────────────────── Stage A 第二來源：LLM 看第一頁 ───────────────────────
+
+_LLM_FLAT_KEYS = [
+    "title", "translated_title", "authors", "publication_date", "abstract",
+    "journal_or_conference", "doi", "keywords", "publisher",
+    "organization", "version",
+]
+
+
+def _coerce_llm_meta(raw: dict) -> dict:
+    """把 LLM 回傳 dict 正規化為固定 flat 結構（缺鍵補 None/[]）。"""
+    out = {}
+    for k in _LLM_FLAT_KEYS:
+        v = raw.get(k)
+        if k in ("authors", "keywords"):
+            if isinstance(v, list):
+                out[k] = [str(x).strip() for x in v if str(x).strip()]
+            elif isinstance(v, str) and v.strip():
+                out[k] = [v.strip()]
+            else:
+                out[k] = []
+        else:
+            if isinstance(v, str):
+                v = v.strip()
+                out[k] = v or None
+            elif v in (None, [], {}):
+                out[k] = None
+            else:
+                out[k] = v
+    pd = date_to_iso(out.get("publication_date")) if out.get("publication_date") else None
+    out["publication_date"] = pd
+    return out
+
+
+def extract_metadata_from_first_page_llm(pdf_path, llm=None) -> Optional[dict]:
+    """用 LLM 看 PDF 第一頁原始文字＋渲染圖抽 metadata（含 translated_title）。
+
+    Returns flat dict（同 fitz 結構 + translated_title）；第一頁無文字 / LLM 失敗
+    / JSON 解析失敗 → None。**永遠 soft fail，不 raise**。
+
+    llm：可注入測試替身（需有 chat_with_image 或 chat）；None 時用
+    config.LLMClient.get_instance()（延遲 import，避免模組載入即需金鑰）。
+    """
+    try:
+        text = get_first_page_text(pdf_path)
+        if not text:
+            return None
+        text = text[:4000]  # 與 domain_detector 一致上限
+        img = get_first_page_render(pdf_path)
+        prompt = _STAGE_A_PROMPT.replace("{page1_text}", text)
+
+        if llm is None:
+            from config import LLMClient  # 延遲 import
+            import settings
+            llm = LLMClient.get_instance()
+            model = getattr(settings, "LLM_DOC_MODEL", None)
+        else:
+            model = None
+
+        messages = [{"role": "user", "content": prompt}]
+        if img is not None and hasattr(llm, "chat_with_image"):
+            resp = llm.chat_with_image(
+                messages=messages, image_data=img,
+                mime_type="image/png", model=model,
+            )
+        else:
+            resp = llm.chat(messages, stream=False, model=model)
+
+        if not resp:
+            return None
+        from utils.text_utils import strip_json_fence
+        data = json.loads(strip_json_fence(resp))
+        if not isinstance(data, dict):
+            return None
+        return _coerce_llm_meta(data)
+    except Exception as e:
+        logger.warning(f"extract_metadata_from_first_page_llm 失敗（soft）: "
+                        f"{pdf_path} - {e}")
+        return None
+
+
+def fill_from_llm_page1(metadata: dict, llm_meta: Optional[dict]) -> dict:
+    """把 LLM 第一頁結果填進結構，source='llm_page1'，信任度 high。
+
+    與 fill_from_pdf_metadata 對稱（先到先得 + 一律寫 alternates）。實際
+    fitz↔LLM 的取捨/衝突由 merge_stage_a 處理；此函式僅負責「單來源填入」，
+    使「empty + fill_pdf」與「empty + fill_llm」兩結構可獨立建立後再 merge。
+    """
+    if not llm_meta:
+        return metadata
+    try:
+        mapping = {
+            "title": "title",
+            "translated_title": "translated_title",
+            "authors": "authors",
+            "publication_date": "publication_date",
+            "abstract": "abstract",
+            "journal_or_conference": "journal_or_conference",
+            "doi": "doi",
+            "keywords": "keywords",
+            "publisher": "publisher",
+            "organization": "organization",
+            "version": "version",
+        }
+        for fld in mapping:
+            _set_field(metadata, fld, llm_meta.get(fld), "llm_page1", "high")
+    except Exception as e:
+        logger.warning(f"fill_from_llm_page1 失敗（soft）: {e}")
+    return metadata
+
+
+# ─────────────────────── Stage A 即時比對（雙來源先決）───────────────────────
+
+def _norm(v):
+    if isinstance(v, str):
+        return re.sub(r"\s+", " ", v).strip().casefold()
+    if isinstance(v, list):
+        return [re.sub(r"\s+", " ", str(x)).strip().casefold() for x in v]
+    return v
+
+
+def _is_empty(v):
+    return v is None or v == [] or v == "" or v == {}
+
+
+def merge_stage_a(pdf_filled: dict, llm_filled: dict) -> dict:
+    """比對「empty+fill_pdf」與「empty+fill_llm」兩結構，依雙來源先決規則合併。
+
+    每欄位：
+    - 兩者皆有且一致 → source='both_agree'、confidence='high'
+    - 一有一空 → 用有的、source=該來源、confidence='high'
+    - 兩者衝突 → 取 LLM（信任排序 LLM>pdf）、
+      source='llm_page1 (conflict with pdf_metadata)'、confidence='medium'
+    - 兩者皆空 → value None/[]、source/confidence None（等 Stage B）
+    alternates：一律保留兩來源原值（debug/Stage B 用）。
+    **abstract 強制空（永遠等 Stage B）**，LLM abstract 僅留 alternates。
+    """
+    out = create_empty_metadata()
+    for fld in _ALL_FIELDS:
+        is_list = fld in _LIST_FIELDS
+        pv = pdf_filled.get(fld, {}).get("value")
+        lv = llm_filled.get(fld, {}).get("value")
+        alt = {}
+        if not _is_empty(pv):
+            alt["pdf_metadata"] = pv
+        if not _is_empty(lv):
+            alt["llm_page1"] = lv
+        # 併入兩來源已存的 alternates（保留更早記錄）
+        for src_struct in (pdf_filled.get(fld, {}), llm_filled.get(fld, {})):
+            for k, v in (src_struct.get("alternates") or {}).items():
+                alt.setdefault(k, v)
+
+        if fld == "abstract":
+            out[fld] = {"value": None, "source": None,
+                        "confidence": None, "alternates": alt}
+            continue
+
+        pe, le = _is_empty(pv), _is_empty(lv)
+        if pe and le:
+            out[fld] = {"value": ([] if is_list else None),
+                        "source": None, "confidence": None, "alternates": alt}
+        elif pe and not le:
+            out[fld] = {"value": lv, "source": "llm_page1",
+                        "confidence": "high", "alternates": alt}
+        elif le and not pe:
+            out[fld] = {"value": pv, "source": "pdf_metadata",
+                        "confidence": "high", "alternates": alt}
+        elif _norm(pv) == _norm(lv):
+            out[fld] = {"value": lv, "source": "both_agree",
+                        "confidence": "high", "alternates": alt}
+        else:
+            out[fld] = {"value": lv,
+                        "source": "llm_page1 (conflict with pdf_metadata)",
+                        "confidence": "medium", "alternates": alt}
+    return out

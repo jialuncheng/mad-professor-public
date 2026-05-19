@@ -14,16 +14,34 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import json  # noqa: E402
+
 from processor.metadata_extractor import (  # noqa: E402
     SCHEMA_VERSION,
     create_empty_metadata,
     extract_pdf_metadata,
     fill_from_pdf_metadata,
+    fill_from_llm_page1,
+    extract_metadata_from_first_page_llm,
+    merge_stage_a,
     date_to_iso,
     parse_authors,
     get_first_page_text,
     get_first_page_render,
 )
+import settings  # noqa: E402
+
+
+class FakeLLM:
+    """測試替身：回傳預設 JSON 字串，不打 API。"""
+    def __init__(self, payload: dict):
+        self._s = json.dumps(payload, ensure_ascii=False)
+
+    def chat_with_image(self, messages, image_data, mime_type, model=None):
+        return self._s
+
+    def chat(self, messages, stream=False, model=None):
+        return self._s
 
 
 # ── 合成 PDF fixture（確定性）──
@@ -177,3 +195,106 @@ def test_real_project_pdf_if_present(rel):
     assert pm["creation_date"] is None or len(pm["creation_date"]) == 10
     meta = fill_from_pdf_metadata(create_empty_metadata(), pm)
     assert meta["_schema_version"] == 2
+
+
+# ── Phase 4.3：LLM 第一頁抽取（注入 FakeLLM，不打 API）──
+
+def test_llm_extract_from_synthetic_first_page(synthetic_pdf):
+    fake = FakeLLM({
+        "title": "My Test Paper", "translated_title": "我的測試論文",
+        "authors": ["Alice", "Bob"], "publication_date": "2024-01-15",
+        "abstract": "An abstract.", "organization": "NVIDIA",
+        "keywords": ["k1"], "doi": None, "publisher": None,
+        "journal_or_conference": None, "version": None,
+    })
+    m = extract_metadata_from_first_page_llm(synthetic_pdf, llm=fake)
+    assert m is not None
+    assert m["title"] == "My Test Paper"
+    assert m["translated_title"] == "我的測試論文"
+    assert m["authors"] == ["Alice", "Bob"]
+    assert m["publication_date"] == "2024-01-15"
+    assert m["organization"] == "NVIDIA"
+
+
+def test_llm_returns_none_for_invalid_pdf():
+    fake = FakeLLM({"title": "x"})
+    assert extract_metadata_from_first_page_llm("/no/such.pdf", llm=fake) is None
+
+
+def test_llm_returns_none_for_empty_first_page(tmp_path):
+    p = tmp_path / "blank.pdf"
+    d = fitz.open(); d.new_page(); d.save(str(p)); d.close()  # 全白頁
+    assert extract_metadata_from_first_page_llm(str(p), llm=FakeLLM({})) is None
+
+
+def test_llm_bad_json_soft_fail(synthetic_pdf):
+    class BadLLM:
+        def chat_with_image(self, **k): return "not json at all"
+        def chat(self, *a, **k): return "not json at all"
+    assert extract_metadata_from_first_page_llm(synthetic_pdf, llm=BadLLM()) is None
+
+
+def _one(field, value, src="pdf_metadata", conf="high"):
+    m = create_empty_metadata()
+    m[field]["value"] = value
+    m[field]["source"] = src
+    m[field]["confidence"] = conf
+    return m
+
+
+def test_merge_stage_a_both_agree():
+    pdfm = _one("authors", ["Alice"], "pdf_metadata")
+    llmm = _one("authors", ["alice"], "llm_page1")   # 大小寫差異視為一致
+    out = merge_stage_a(pdfm, llmm)
+    assert out["authors"]["source"] == "both_agree"
+    assert out["authors"]["confidence"] == "high"
+
+
+def test_merge_stage_a_conflict():
+    pdfm = _one("title", "X")
+    llmm = _one("title", "Y", "llm_page1")
+    out = merge_stage_a(pdfm, llmm)
+    assert out["title"]["value"] == "Y"            # LLM 優先
+    assert out["title"]["confidence"] == "medium"
+    assert "conflict" in out["title"]["source"]
+    assert out["title"]["alternates"]["pdf_metadata"] == "X"
+    assert out["title"]["alternates"]["llm_page1"] == "Y"
+
+
+def test_merge_stage_a_one_empty():
+    pdfm = create_empty_metadata()                 # title 空
+    llmm = _one("title", "From LLM", "llm_page1")
+    out = merge_stage_a(pdfm, llmm)
+    assert out["title"]["value"] == "From LLM"
+    assert out["title"]["source"] == "llm_page1"
+    assert out["title"]["confidence"] == "high"
+
+
+def test_merge_stage_a_both_empty():
+    out = merge_stage_a(create_empty_metadata(), create_empty_metadata())
+    assert out["title"]["value"] is None
+    assert out["title"]["confidence"] is None
+    assert out["authors"]["value"] == []
+
+
+def test_merge_stage_a_abstract_always_empty():
+    pdfm = create_empty_metadata()
+    llmm = _one("abstract", "LLM abstract here", "llm_page1")
+    out = merge_stage_a(pdfm, llmm)
+    assert out["abstract"]["value"] is None        # 永遠等 Stage B
+    assert out["abstract"]["alternates"]["llm_page1"] == "LLM abstract here"
+
+
+@pytest.mark.skipif(not settings.GEMINI_API_KEY,
+                    reason="無 GEMINI_API_KEY，跳過真實 LLM 測試")
+@pytest.mark.parametrize("rel,exp_title", [
+    ("output/1/800-vdc-architecture-for-ai-infrastructure/original.pdf",
+     "800 VDC Architecture"),
+])
+def test_real_pdf_with_llm(rel, exp_title):
+    pdf = ROOT / rel
+    if not pdf.exists():
+        pytest.skip(f"真實 PDF 不存在：{rel}")
+    m = extract_metadata_from_first_page_llm(str(pdf))
+    assert m is not None
+    assert m["title"] and exp_title.lower() in m["title"].lower()
