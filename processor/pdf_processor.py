@@ -5,6 +5,7 @@ import zipfile
 import io
 import subprocess
 import shutil
+import unicodedata
 from pathlib import Path
 from utils.text_utils import CONTROL_CHAR_PATTERN
 
@@ -72,6 +73,8 @@ class PDFProcessor:
             # 清除控制字元（MinerU 解析特殊字元時可能產生）
             md_text = markdown_path.read_text(encoding='utf-8')
             md_text = CONTROL_CHAR_PATTERN.sub('', md_text)
+            # NFKC 正規化：拆解連字 ligature（ﬁ→fi, ﬂ→fl, ﬃ→ffi…）等相容字元
+            md_text = unicodedata.normalize('NFKC', md_text)
             markdown_path.write_text(md_text, encoding='utf-8')
 
             # 從 mineru-lab 複製圖片
