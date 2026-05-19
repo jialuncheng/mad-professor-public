@@ -18,6 +18,11 @@ from processor.rag_processor import RagProcessor
 from processor.image_caption_processor import ImageCaptionProcessor
 from processor.slides_processor import SlidesProcessor
 from processor.domain_detector import DomainDetector
+from processor.metadata_extractor import (
+    extract_pdf_metadata, extract_metadata_from_first_page_llm,
+    create_empty_metadata, fill_from_pdf_metadata, fill_from_llm_page1,
+    merge_stage_a, fill_abstract_stage_b,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +216,25 @@ class PipelineCore:
         self._root_output_dir = root_output_dir
         self._owner_id = owner_id
 
+        # ── Metadata Stage A（fitz + LLM 第一頁 + 雙來源比對）──
+        # 設計為與 pdf2md 並行；但既有 pipeline 為同步 + ThreadPoolExecutor 架構，
+        # 改 async 風險過高（會破壞 web_server run_in_executor），故此處改採
+        # 「pdf2md 前序列執行」——Stage A（fitz + 1 次 LLM）相對 MinerU（數分鐘）
+        # 極短，序列化對總牆鐘影響可忽略；全程 soft fail，絕不中止 pipeline。
+        self._metadata = create_empty_metadata()
+        try:
+            _pdf_meta = extract_pdf_metadata(pdf_path)
+            _llm_meta = extract_metadata_from_first_page_llm(pdf_path)
+            _a = fill_from_pdf_metadata(create_empty_metadata(), _pdf_meta)
+            _b = fill_from_llm_page1(create_empty_metadata(), _llm_meta)
+            self._metadata = merge_stage_a(_a, _b)
+            self.logger.info(
+                f"[metadata] Stage A 完成（title="
+                f"{self._metadata.get('title', {}).get('value')!r}）"
+            )
+        except Exception as e:
+            self.logger.warning(f"[metadata] Stage A 失敗（soft，忽略）: {e}")
+
         self.paper_info['paper_id'] = paper_id if paper_id is not None else pdf_path.stem
         paper_output_dir = base_output_dir / self.paper_info['paper_id']
         paper_output_dir.mkdir(exist_ok=True)
@@ -357,12 +381,30 @@ class PipelineCore:
         if images_dir.exists():
             final_paths['images'] = images_dir
 
+        # ── Metadata 最小 Stage B：只補 abstract（看 MinerU markdown）──
+        # abstract 在 Stage A 永遠為空（設計：純文字首頁排版不可靠），此處用
+        # MinerU 轉出的 markdown 補；規則找不到才 LLM。全程 soft fail。
+        try:
+            md_path = output_paths.get('pdf2md')
+            md_text = None
+            if md_path and Path(md_path).exists():
+                md_text = Path(md_path).read_text(encoding='utf-8', errors='ignore')
+            if md_text:
+                fill_abstract_stage_b(self._metadata, md_text)
+                self.logger.info(
+                    f"[metadata] Stage B 完成（abstract="
+                    f"{'有' if self._metadata.get('abstract', {}).get('value') else '無'}）"
+                )
+        except Exception as e:
+            self.logger.warning(f"[metadata] Stage B 失敗（soft，忽略）: {e}")
+
         if final_paths and self._owner_id is not None:
             paper_manager.upsert_paper(
                 self._root_output_dir,
                 self._owner_id,
                 self.paper_info['paper_id'],
                 {k: str(v) for k, v in final_paths.items() if v},
+                metadata=self._metadata,
             )
             output_paths['final'] = final_paths
 

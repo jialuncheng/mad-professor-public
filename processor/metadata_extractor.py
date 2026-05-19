@@ -482,3 +482,116 @@ def merge_stage_a(pdf_filled: dict, llm_filled: dict) -> dict:
                         "source": "llm_page1 (conflict with pdf_metadata)",
                         "confidence": "medium", "alternates": alt}
     return out
+
+
+# ─────────────────────── 最小 Stage B：只補 abstract ───────────────────────
+
+_ABSTRACT_HEADING = re.compile(
+    r"^#{1,6}\s*(?:abstract|摘要)\s*$", re.IGNORECASE | re.MULTILINE
+)
+_ANY_HEADING = re.compile(r"^#{1,6}\s+\S", re.MULTILINE)
+_ABSTRACT_LLM_PROMPT = (
+    "以下是文件 MinerU 轉出的 markdown 開頭。請只擷取「摘要 / Abstract」段落的"
+    "原文文字（不要標題、不要其他段落、不要解釋）。若找不到摘要，只回 NONE。\n\n"
+    "---\n{md}\n---"
+)
+
+
+def extract_abstract_from_markdown(markdown_text, llm=None) -> Optional[str]:
+    """從 MinerU markdown 抽 abstract。先規則（標題下段落），找不到才 LLM。
+
+    回 abstract 文字 | None。**絕不 raise**。
+    """
+    try:
+        if not markdown_text or not isinstance(markdown_text, str):
+            return None
+        m = _ABSTRACT_HEADING.search(markdown_text)
+        if m:
+            rest = markdown_text[m.end():]
+            nxt = _ANY_HEADING.search(rest)
+            seg = (rest[:nxt.start()] if nxt else rest).strip()
+            seg = re.sub(r"\n{3,}", "\n\n", seg)
+            if len(seg) >= 20:
+                return seg
+        # 規則找不到 → LLM 看開頭 3000 字
+        head = markdown_text[:3000]
+        if llm is None:
+            try:
+                from config import LLMClient
+                import settings
+                llm = LLMClient.get_instance()
+                model = getattr(settings, "LLM_DOC_MODEL", None)
+            except Exception:
+                return None
+        else:
+            model = None
+        resp = llm.chat(
+            [{"role": "user",
+              "content": _ABSTRACT_LLM_PROMPT.replace("{md}", head)}],
+            stream=False, model=model,
+        )
+        if not resp:
+            return None
+        resp = resp.strip()
+        if not resp or resp.upper().startswith("NONE"):
+            return None
+        return resp
+    except Exception as e:
+        logger.warning(f"extract_abstract_from_markdown 失敗（soft）: {e}")
+        return None
+
+
+def fill_abstract_stage_b(metadata: dict, markdown_text, llm=None) -> dict:
+    """最小 Stage B：只補 abstract。已有值則不覆寫；恆標記 _stage_b_ran=True。"""
+    try:
+        metadata["_stage_b_ran"] = True
+        f = metadata.get("abstract") or {}
+        if f.get("value"):
+            return metadata
+        ab = extract_abstract_from_markdown(markdown_text, llm=llm)
+        if ab:
+            metadata["abstract"] = {
+                "value": ab, "source": "mineru", "confidence": "high",
+                "alternates": {**f.get("alternates", {}), "mineru": ab},
+            }
+    except Exception as e:
+        logger.warning(f"fill_abstract_stage_b 失敗（soft）: {e}")
+    return metadata
+
+
+def _read_rag_tree_title(rag_tree_path) -> Optional[str]:
+    try:
+        if not rag_tree_path:
+            return None
+        p = Path(rag_tree_path)
+        if not p.exists():
+            return None
+        data = json.loads(p.read_text(encoding="utf-8"))
+        t = (data.get("title") or "").strip()
+        return t or None
+    except Exception:
+        return None
+
+
+def resolve_title(metadata: Optional[dict], rag_tree_path,
+                  paper_uuid: str) -> str:
+    """title fallback 鏈（不會回空）：
+    1. metadata['title'].value
+    2. metadata['title'].alternates 任一非空
+    3. rag_tree 的 title（既有邏輯）
+    4. paper_uuid（最終 fallback）
+    """
+    try:
+        if metadata:
+            tf = metadata.get("title") or {}
+            if tf.get("value"):
+                return tf["value"]
+            for v in (tf.get("alternates") or {}).values():
+                if v:
+                    return v if isinstance(v, str) else str(v)
+        rt = _read_rag_tree_title(rag_tree_path)
+        if rt:
+            return rt
+    except Exception as e:
+        logger.warning(f"resolve_title 失敗（soft）: {e}")
+    return paper_uuid

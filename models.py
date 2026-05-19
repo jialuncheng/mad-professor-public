@@ -129,6 +129,9 @@ class Paper(Base):
     last_opened_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True
     )
+    # Phase 4.5：metadata schema v2（JSON 字串；SQLite 用 Text + 應用層 json）
+    # 屬性名不可叫 metadata（SQLAlchemy DeclarativeBase 保留字）
+    metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     owner: Mapped["User"] = relationship(back_populates="papers")
     folder: Mapped[Optional["Folder"]] = relationship(back_populates="papers")

@@ -140,11 +140,18 @@ def _paths_dict(output_dir, owner_id, paper_uuid) -> dict:
 # ─────────────────────── Repository ───────────────────────
 
 def _to_dict(output_dir, p: Paper) -> dict:
+    meta = None
+    if p.metadata_json:
+        try:
+            meta = json.loads(p.metadata_json)
+        except Exception:
+            meta = None
     return {
         'id': p.paper_uuid,
         'title': p.title or '',
         'translated_title': p.translated_title or '',
         'folder_id': p.folder_id,
+        'metadata': meta,            # Phase 4.5；舊資料/解析失敗為 None（前端 optional）
         'paths': _paths_dict(output_dir, p.owner_id, p.paper_uuid),
     }
 
@@ -180,10 +187,29 @@ def paper_exists(owner_id: int, paper_uuid: str) -> bool:
 
 
 def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
-                 final_paths: dict) -> None:
-    """pipeline 完成時呼叫：upsert Paper row。"""
+                 final_paths: dict, metadata: Optional[dict] = None) -> None:
+    """pipeline 完成時呼叫：upsert Paper row。
+
+    Phase 4.5：title 來源改為 metadata（fallback 鏈 metadata→rag_tree→paper_uuid，
+    見 metadata_extractor.resolve_title），不破壞既有行為（metadata=None 時等同舊
+    版以 rag_tree 為準）。metadata 整包存 metadata_json，title/translated_title
+    同步鏡寫既有欄位以相容 _to_dict / 列表 / 排序。
+    """
     _ensure_db()
-    title, translated_title = _read_title_from_rag_tree(final_paths)
+    rt_title, rt_tt = _read_title_from_rag_tree(final_paths)
+    from processor.metadata_extractor import resolve_title  # 延遲 import 避免循環
+    title = resolve_title(metadata, final_paths.get('rag_tree'), paper_uuid)
+    if not title:                       # resolve_title 理論上不會空，雙保險
+        title = rt_title or paper_uuid
+    m_tt = (metadata.get('translated_title', {}).get('value')
+            if metadata else None)
+    translated_title = m_tt or rt_tt or ''
+    meta_json = None
+    if metadata is not None:
+        try:
+            meta_json = json.dumps(metadata, ensure_ascii=False)
+        except Exception:
+            meta_json = None
     with db.SessionLocal() as s:
         p = s.query(Paper).filter_by(
             owner_id=owner_id, paper_uuid=paper_uuid
@@ -195,6 +221,7 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 title=title,
                 translated_title=translated_title,
                 status='done',
+                metadata_json=meta_json,
             )
             s.add(p)
         else:
@@ -202,6 +229,8 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 p.title = title
             if translated_title:
                 p.translated_title = translated_title
+            if meta_json is not None:
+                p.metadata_json = meta_json
             p.status = 'done'
         s.commit()
     logger.info(f"papers DB 更新完成: owner={owner_id} {paper_uuid}")
