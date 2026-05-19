@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mad Professor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    :root {
+      /* 色彩 - 蜜思凡德羅黑白灰 */
+      --color-bg: #ffffff;
+      --color-surface: #fafafa;
+      --color-border: #e5e5e5;
+      --color-border-strong: #d4d4d4;
+      --color-divider: #d4d4d4;
+      --color-text: #171717;
+      --color-text-muted: #737373;
+      --color-text-subtle: #a3a3a3;
+      --color-accent: #171717;
+      --color-accent-hover: #404040;
+      --color-danger: #dc2626;
+
+      /* 間距 scale (4px 基準) */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-8: 48px;
+
+      /* 圓角 (極小) */
+      --radius-sm: 2px;
+      --radius-md: 4px;
+
+      /* 字級 scale */
+      --font-xs: 12px;
+      --font-sm: 13px;
+      --font-base: 14px;
+      --font-lg: 16px;
+      --font-xl: 20px;
+      --font-2xl: 28px;
+
+      /* 按鈕系統（Phase 3.3 規範） */
+      --btn-h: 32px;
+      --btn-pad-x: var(--space-4);
+      --btn-min-w: 64px;
+      --btn-icon: 32px;
+      --toolbar-h: 48px;
+      --pad-panel: var(--space-4);
+      --gap-btn-tight: var(--space-1);   /* 4px：密集排列（左欄底部三鈕） */
+      --gap-btn: var(--space-2);         /* 8px：一般族群 */
+      --gap-btn-loose: var(--space-3);   /* 12px：不同功能群（標題列） */
+
+      /* 過渡 */
+      --transition: 150ms ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      height: 100vh;
+      display: flex;
+    }
+
+    /* 共用按鈕系統 */
+    .btn-primary, #upload-btn, #send-btn, #confirm-ok-btn, #help-close-btn {
+      background: var(--color-accent);
+      color: #ffffff;
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-md);
+      height: var(--btn-h);
+      min-width: var(--btn-min-w);
+      padding: 0 var(--btn-pad-x);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      font-size: var(--font-base);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .btn-primary:hover, #upload-btn:hover, #send-btn:hover,
+    #confirm-ok-btn:hover, #help-close-btn:hover { background: var(--color-accent-hover); }
+    .btn-ghost, #help-btn, #cleanup-btn, #lang-toggle, #print-btn, #export-btn {
+      background: transparent;
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      height: var(--btn-h);
+      min-width: var(--btn-min-w);
+      padding: 0 var(--btn-pad-x);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      font-size: var(--font-sm);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .btn-ghost:hover, #help-btn:hover, #cleanup-btn:hover, #lang-toggle:hover,
+    #print-btn:hover, #export-btn:hover { background: var(--color-surface); }
+    /* 統一 disabled 視覺 */
+    .btn-ghost:disabled, .icon-only:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* icon-only：正方、無最小寬與水平內距 */
+    .icon-only {
+      width: var(--btn-icon);
+      height: var(--btn-icon);
+      min-width: 0;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .btn-ghost.active {
+      background: var(--color-text);
+      color: #ffffff;
+      border-color: var(--color-text);
+    }
+
+    /* 左側論文列表 */
+    #sidebar {
+      width: 260px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      border-right: 2px solid var(--color-divider);
+    }
+    #sidebar h1 {
+      height: var(--toolbar-h);
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap-btn-loose);
+      padding: 0 44px 0 var(--pad-panel);   /* 右側 44px 讓位給浮動漢堡 */
+      font-size: var(--font-base);
+      font-weight: 600;
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+    #sidebar h1 .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #paper-list { flex: 1; overflow-y: auto; padding: var(--space-2); }
+    .paper-item {
+      padding: var(--space-3);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      margin-bottom: var(--space-1);
+      transition: background var(--transition);
+    }
+    .paper-item:hover { background: var(--color-border); }
+    .paper-item.active { background: var(--color-text); color: #ffffff; }
+    .paper-title-zh {
+      font-size: var(--font-sm);
+      font-weight: 500;
+      line-height: 1.4;
+      margin-bottom: var(--space-1);
+    }
+    .paper-title-en {
+      font-size: var(--font-xs);
+      color: var(--color-text-muted);
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .paper-item.active .paper-title-en { color: var(--color-border); }
+    .paper-item-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+    .paper-item-titles { flex: 1; min-width: 0; }
+
+    /* ── 資料夾樹（Phase 3.2） ── */
+    #folder-tree {
+      max-height: 38%;
+      overflow-y: auto;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-sm);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      margin: 0 var(--space-2);
+      transition: background var(--transition);
+    }
+    .folder-item:hover { background: var(--color-border); }
+    .folder-item.active { background: var(--color-text); color: #ffffff; }
+    .folder-item .chevron {
+      width: 12px; flex-shrink: 0; text-align: center;
+      color: var(--color-text-muted); font-size: 10px;
+    }
+    .folder-item.active .chevron { color: #ffffff; }
+    .folder-item .fname {
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .folder-item .menu-btn {
+      margin-left: auto; flex-shrink: 0;
+      border: none; background: transparent; cursor: pointer;
+      color: inherit; opacity: 0; padding: 0 var(--space-1);
+      transition: opacity var(--transition);
+    }
+    .folder-item:hover .menu-btn { opacity: 1; }
+    .paper-menu-btn {
+      border: none; background: transparent; cursor: pointer;
+      color: var(--color-text-muted); flex-shrink: 0;
+      opacity: 0; width: 24px; height: 24px; min-width: 0; padding: 0;
+      font-size: var(--font-base); line-height: 1;
+      transition: opacity var(--transition), color var(--transition);
+    }
+    .paper-item:hover .paper-menu-btn { opacity: 1; }
+    .paper-menu-btn:hover { color: var(--color-text); background: transparent; }
+    .ctx-popup {
+      position: fixed; z-index: 100;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-1);
+      min-width: 160px; max-height: 260px; overflow-y: auto;
+    }
+    .ctx-popup button {
+      display: block; width: 100%; text-align: left;
+      border: none; background: transparent; cursor: pointer;
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-sm); color: var(--color-text);
+      border-radius: var(--radius-sm);
+    }
+    .ctx-popup button:hover { background: var(--color-border); }
+
+    #sidebar-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-btn);
+      padding: var(--pad-panel);
+      border-top: 1px solid var(--color-border);
+      box-sizing: border-box;
+    }
+    #sidebar-bottom .sb-row {
+      display: flex;
+      gap: var(--gap-btn-tight);
+    }
+    #sidebar-bottom .sb-row > button {
+      flex: 1;
+      min-width: 0;
+      width: auto;          /* 覆寫 .icon-only 的固定寬，改等寬平分 */
+    }
+    #upload-btn { width: 100%; font-weight: 500; }
+
+    /* 彈窗（無陰影，改用粗邊框） */
+    #help-modal, #confirm-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #help-modal.show, #confirm-modal.show { display: flex; }
+    #help-box, #confirm-box {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-6);
+    }
+    #help-box { width: 420px; }
+    #confirm-box { width: 380px; }
+    #help-box h3, #confirm-box h3 { font-size: var(--font-lg); color: var(--color-text); margin-bottom: var(--space-4); }
+    #help-box ol { padding-left: var(--space-5); color: var(--color-text); font-size: var(--font-base); line-height: 2; }
+    #help-box li { margin-bottom: var(--space-1); }
+    #help-box .step-note { font-size: var(--font-xs); color: var(--color-text-subtle); margin-top: var(--space-1); }
+    #help-close-btn { margin-top: var(--space-5); width: 100%; }
+    #confirm-box h3 { margin-bottom: var(--space-2); }
+    #confirm-box p { font-size: var(--font-sm); color: var(--color-text-muted); margin-bottom: var(--space-2); }
+    #doc-type-select {
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      margin-bottom: var(--space-2);
+      outline: none;
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    #doc-type-select:focus { border-color: var(--color-accent); }
+    #confirm-reason {
+      font-size: var(--font-xs);
+      color: var(--color-text-subtle);
+      margin-bottom: var(--space-5);
+      font-style: italic;
+    }
+    #confirm-box-btns { display: flex; gap: var(--space-2); justify-content: flex-end; }
+
+    /* 中間論文內容 */
+    #content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #content-toolbar {
+      height: var(--toolbar-h);
+      box-sizing: border-box;
+      padding: 0 var(--pad-panel);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: var(--gap-btn-loose);
+    }
+    #content-toolbar h2 { font-size: var(--font-base); color: var(--color-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    @media print {
+      * { overflow: visible !important; height: auto !important; }
+      body { display: block !important; height: auto !important; }
+      #sidebar, #chat-panel, #content-toolbar, #print-btn, #lang-toggle { display: none !important; }
+      #content-area { display: block !important; width: 100% !important; overflow: visible !important; }
+      #paper-content {
+        display: block !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 20px !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+        position: static !important;
+      }
+      #empty-state { display: none !important; }
+    }
+    #paper-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-6) var(--space-8);
+      background: var(--color-bg);
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    #paper-content h1 { font-size: var(--font-2xl); font-weight: 700; color: var(--color-text); margin-bottom: var(--space-5); line-height: 1.3; }
+    #paper-content h2 { font-size: var(--font-xl); font-weight: 600; color: var(--color-text); margin: var(--space-6) 0 var(--space-3); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2); }
+    #paper-content h3 { font-size: var(--font-lg); font-weight: 600; color: var(--color-text); margin: var(--space-5) 0 var(--space-2); }
+    #paper-content p { font-size: var(--font-base); line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-4); }
+    #paper-content img { max-width: 100%; border-radius: var(--radius-sm); margin: var(--space-4) 0; }
+    #paper-content em { color: var(--color-text-muted); font-size: var(--font-sm); }
+    #paper-content table { border-collapse: collapse; width: 100%; margin: var(--space-4) 0; }
+    #paper-content td, #paper-content th { border: 1px solid var(--color-border); padding: var(--space-2) var(--space-3); font-size: var(--font-base); }
+    #empty-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-subtle);
+      font-size: var(--font-base);
+    }
+
+    /* 右側 AI 問答 */
+    #chat-panel {
+      width: 420px;
+      background: var(--color-bg);
+      border-left: 2px solid var(--color-divider);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    #chat-header {
+      height: var(--toolbar-h);
+      box-sizing: border-box;
+      padding: 0 44px 0 var(--pad-panel);
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-base);
+      font-weight: 600;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap-btn-loose);
+    }
+    #chat-header-actions { display: flex; align-items: center; gap: var(--gap-btn-loose); }
+    #export-btn { font-size: var(--font-xs); padding: var(--space-1) var(--space-3); min-width: 0; }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .msg-user {
+      background: var(--color-accent);
+      color: #ffffff;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      line-height: 1.6;
+      align-self: flex-end;
+      max-width: 80%;
+      white-space: pre-wrap;
+    }
+    .msg-ai {
+      background: var(--color-bg);
+      color: var(--color-text);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      line-height: 1.8;
+      align-self: flex-start;
+      max-width: 95%;
+      border: 1px solid var(--color-border);
+    }
+    .msg-ai p { margin-bottom: var(--space-2); }
+    .msg-ai p:last-child { margin-bottom: 0; }
+    .msg-ai ul, .msg-ai ol { margin: var(--space-2) 0 var(--space-2) var(--space-5); }
+    .msg-ai li { margin-bottom: var(--space-1); }
+    .msg-sources {
+      font-size: var(--font-sm);
+      color: var(--color-text-subtle);
+      margin-top: var(--space-2);
+      padding-top: var(--space-2);
+      border-top: 1px dashed var(--color-border);
+    }
+    .msg-sources a {
+      color: var(--color-text-muted);
+      text-decoration: underline;
+    }
+    .msg-sources a:hover { color: var(--color-text); }
+    .msg-system {
+      font-size: var(--font-sm);
+      color: var(--color-text-subtle);
+      text-align: center;
+      margin-top: var(--space-6);
+      padding: var(--space-3);
+    }
+    #chat-input-area {
+      padding: var(--pad-panel);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      gap: var(--gap-btn);
+      box-sizing: border-box;
+      align-items: flex-end;
+    }
+    #chat-input {
+      flex: 1;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-base);
+      line-height: 1.4;
+      resize: none;
+      min-height: var(--btn-h);
+      max-height: 132px;          /* 約 5 行後 scroll */
+      overflow-y: auto;
+      outline: none;
+      color: var(--color-text);
+      background: var(--color-bg);
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    #chat-input:focus { border-color: var(--color-accent); }
+    #send-btn { font-weight: 500; white-space: nowrap; }
+    #send-btn:disabled {
+      background: var(--color-text-subtle);
+      border-color: var(--color-text-subtle);
+      cursor: not-allowed;
+    }
+    .chat-empty {
+      text-align: center;
+      color: var(--color-text-subtle);
+      font-size: var(--font-sm);
+      margin-top: var(--space-8);
+    }
+
+    /* 階段一：側欄收合 */
+    #sidebar.collapsed { width: 0; overflow: hidden; }
+    #chat-panel.collapsed { width: 0; overflow: hidden; }
+    .panel-toggle {
+      position: fixed;
+      z-index: 50;
+      top: 8px;
+      width: var(--btn-icon);
+      height: var(--btn-icon);
+      padding: 0;
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--font-base);
+      line-height: 1;
+    }
+    .panel-toggle:hover { background: var(--color-surface); }
+    /* 漢堡視覺對齊側欄標題列右端（260 寬 − 12 − 32 ≈ 216）；
+       保持 fixed 以確保 sidebar collapsed(width:0) 時仍可點擊再展開 */
+    #sidebar-toggle { left: 216px; }
+    #chat-toggle { right: var(--space-3); }
+  </style>
+</head>
+<body>
+
+<!-- 左側論文列表 -->
+<div id="sidebar">
+  <button id="sidebar-toggle" class="panel-toggle" title="收合/展開左側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <h1>
+    <span class="title">文件列表</span>
+    <button id="new-folder-btn" class="icon-only" title="新增資料夾"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M12 11v4M10 13h4"/></svg></button>
+  </h1>
+  <div id="folder-tree"></div>
+  <div id="paper-list"></div>
+  <div id="sidebar-bottom">
+    <div class="sb-row">
+      <button id="help-btn" class="icon-only" title="上傳說明"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.4 2.3c-.8.4-1.1.9-1.1 1.7v.4"/><path d="M12 17h.01"/></svg></button>
+      <button id="cleanup-btn" class="icon-only" title="清理殘餘檔案"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>
+      <button id="logout-btn" class="btn-ghost icon-only" title="登出"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M15 12H4M9 7l-5 5 5 5M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/></svg></button>
+    </div>
+    <button id="upload-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件</button>
+  </div>
+</div>
+
+<!-- 說明框 -->
+<div id="help-modal">
+  <div id="help-box">
+    <h3><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>文件上傳流程</h3>
+    <ol>
+      <li>點擊「＋ 上傳文件」，選擇 PDF 檔案</li>
+      <li>選擇文件類型（學術論文、簡報、書籍等）</li>
+      <li>點擊「確認，開始處理」</li>
+      <li>等待處理完成（含翻譯、建立向量索引）</li>
+      <li>完成後論文出現在左側列表</li>
+    </ol>
+    <p class="step-note">僅支援 PDF 格式</p>
+    <p class="step-note">檔案大小上限：100 MB</p>
+    <p class="step-note">支援類型：學術論文、書籍、技術文件、簡報、新聞、網頁存檔</p>
+    <p class="step-note">問答使用 Ctrl+Enter 送出</p>
+    <button id="help-close-btn">了解了</button>
+  </div>
+</div>
+
+<!-- 中間論文內容 -->
+<div id="content-area">
+  <div id="content-toolbar" style="display:none">
+    <h2 id="current-title">論文標題</h2>
+    <button id="lang-toggle" class="icon-only" title="切換中英文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 8h13M9 4v4M11 16l4-9 4 9M12.5 13h5"/><path d="M3 8c0 4 3 7 7 8"/></svg></button>
+    <button id="print-btn" class="icon-only" title="列印論文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 9V4h10v5"/><path d="M7 19h10v-6H7z"/><path d="M7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2"/></svg></button>
+  </div>
+  <div id="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>從左側選擇文件</div>
+  <div id="paper-content" style="display:none"></div>
+</div>
+
+<!-- 文件類型確認框 -->
+<div id="confirm-modal">
+  <div id="confirm-box">
+    <h3>選擇文件類型</h3>
+    <p id="confirm-desc">請選擇文件類型，系統將根據類型選擇最佳解析方式。</p>
+    <select id="doc-type-select">
+      <option value="academic">學術論文</option>
+      <option value="book">書籍</option>
+      <option value="technical">技術文件</option>
+      <option value="slides">簡報</option>
+      <option value="web">網頁存檔</option>
+      <option value="news">新聞文章</option>
+    </select>
+    <div id="confirm-box-btns">
+      <button id="confirm-ok-btn">確認，開始處理</button>
+    </div>
+  </div>
+</div>
+
+<!-- 右側 AI 問答 -->
+<div id="chat-panel">
+  <div id="chat-header">
+    <button id="chat-toggle" class="panel-toggle" title="收合/展開右側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <span>AI 問答</span>
+    <div id="chat-header-actions">
+      <button id="web-search-toggle" class="btn-ghost" type="button">開啟搜尋</button>
+      <button id="export-btn" style="display:none" title="匯出對話紀錄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>MD</button>
+    </div>
+  </div>
+  <div id="chat-messages">
+    <div class="chat-empty">選擇文件後開始提問</div>
+  </div>
+  <div id="chat-input-area">
+    <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..." disabled></textarea>
+    <button id="send-btn" disabled>送出</button>
+  </div>
+</div>
+
+<script>
+const API = '';
+let currentPaperId = null;
+let currentLang = 'zh';
+let isProcessing = false;
+let useWebSearch = false;
+// paperId -> 'reading_ready'（md_restore 完成、可閱讀）| 'done'（全部完成、可問答）
+// 不在 map 中 = 來自 papers_index 的既有論文，視為 done。重整頁面後清空靠此規則重建。
+const paperReadiness = new Map();
+// ── 資料夾狀態（Phase 3.2，filter 模型）──
+let currentFolderId = 'all';   // 'all' | 'uncategorized' | folder_id(int)
+let folders = [];              // server flat list
+let allPapers = [];            // GET /api/papers 快取（client-side filter）
+let foldersOpen = new Set();   // 展開的 folder id（localStorage 持久化）
+try {
+  const _sv = localStorage.getItem('foldersOpen');
+  if (_sv) foldersOpen = new Set(JSON.parse(_sv));
+} catch (e) {}
+const UPLOAD_BTN_LABEL ='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件';
+
+function setBusy(busy) {
+  isProcessing = busy;
+  document.getElementById('upload-btn').disabled = busy;
+  document.getElementById('cleanup-btn').disabled = busy;
+}
+
+// ── 資料夾 API 包裝 ──
+async function loadFolders() {
+  try {
+    const res = await fetch(`${API}/api/folders`, { credentials: 'include' });
+    folders = res.ok ? await res.json() : [];
+  } catch (e) { folders = []; }
+  renderFolderTree();
+}
+async function createFolderApi(name, parentId = null) {
+  const res = await fetch(`${API}/api/folders`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, parent_id: parentId })
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '建立失敗');
+  return res.json();
+}
+async function updateFolderApi(id, patches) {
+  const res = await fetch(`${API}/api/folders/${id}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patches)
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '更新失敗');
+  return res.json();
+}
+async function deleteFolderApi(id) {
+  const res = await fetch(`${API}/api/folders/${id}`, {
+    method: 'DELETE', credentials: 'include'
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '刪除失敗');
+  return res.json();
+}
+async function setPaperFolderApi(paperUuid, folderId) {
+  const res = await fetch(`${API}/api/papers/${paperUuid}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_id: folderId })
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || '移動失敗');
+  return res.json();
+}
+
+// ── 樹建構 / 子孫 ──
+function buildTree(list) {
+  const map = new Map(list.map(f => [f.id, { ...f, children: [] }]));
+  const roots = [];
+  map.forEach(node => {
+    if (node.parent_id != null && map.has(node.parent_id)) {
+      map.get(node.parent_id).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  (function sortRec(ns) {
+    ns.sort((a, b) => (a.sort_order - b.sort_order) || (a.id - b.id));
+    ns.forEach(n => sortRec(n.children));
+  })(roots);
+  return roots;
+}
+function folderDescendants(id) {
+  const ids = new Set([id]);
+  let added = true;
+  while (added) {
+    added = false;
+    folders.forEach(f => {
+      if (f.parent_id != null && ids.has(f.parent_id) && !ids.has(f.id)) {
+        ids.add(f.id); added = true;
+      }
+    });
+  }
+  return ids;
+}
+
+// ── popup（改名/刪除/新增子；移動論文 picker）──
+function closePopups() {
+  document.querySelectorAll('.ctx-popup').forEach(el => el.remove());
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.ctx-popup') && !e.target.closest('.menu-btn')
+      && !e.target.closest('.paper-menu-btn')) closePopups();
+});
+function openPopup(x, y, items) {
+  closePopups();
+  const pop = document.createElement('div');
+  pop.className = 'ctx-popup';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    if (it.danger) b.style.color = 'var(--color-danger)';
+    if (it.disabled) {
+      b.disabled = true;
+      b.style.color = 'var(--color-text-subtle)';
+      b.style.cursor = 'not-allowed';
+      if (it.title) b.title = it.title;
+    } else {
+      b.onclick = (ev) => { ev.stopPropagation(); closePopups(); it.action(); };
+    }
+    pop.appendChild(b);
+  });
+  document.body.appendChild(pop);
+  const r = pop.getBoundingClientRect();
+  pop.style.left = Math.min(x, window.innerWidth - r.width - 8) + 'px';
+  pop.style.top = Math.min(y, window.innerHeight - r.height - 8) + 'px';
+}
+
+// ── 資料夾樹渲染 ──
+function renderFolderTree() {
+  const box = document.getElementById('folder-tree');
+  box.innerHTML = '';
+  const fixed = [
+    { key: 'all', name: '全部' },
+    { key: 'uncategorized', name: '未分類' },
+  ];
+  fixed.forEach(fx => {
+    const row = document.createElement('div');
+    row.className = 'folder-item' + (currentFolderId === fx.key ? ' active' : '');
+    row.innerHTML = `<span class="chevron"></span><span class="fname"></span>`;
+    row.querySelector('.fname').textContent = fx.name;
+    row.onclick = () => selectFolder(fx.key);
+    box.appendChild(row);
+  });
+  const tree = buildTree(folders);
+  const render = (node, depth) => {
+    const hasChildren = node.children.length > 0;
+    const open = foldersOpen.has(node.id);
+    const row = document.createElement('div');
+    row.className = 'folder-item' + (currentFolderId === node.id ? ' active' : '');
+    row.style.paddingLeft = (12 + depth * 12) + 'px';
+    const chev = hasChildren ? (open ? '▾' : '▸') : '';
+    row.innerHTML =
+      `<span class="chevron">${chev}</span>` +
+      `<span class="fname"></span>` +
+      `<button class="menu-btn" title="資料夾選單">⋯</button>`;
+    row.querySelector('.fname').textContent = node.name;
+    row.querySelector('.chevron').onclick = (e) => {
+      if (!hasChildren) return;
+      e.stopPropagation();
+      if (open) foldersOpen.delete(node.id); else foldersOpen.add(node.id);
+      localStorage.setItem('foldersOpen', JSON.stringify([...foldersOpen]));
+      renderFolderTree();
+    };
+    row.querySelector('.menu-btn').onclick = (e) => {
+      e.stopPropagation();
+      const rb = e.target.getBoundingClientRect();
+      openPopup(rb.left, rb.bottom, [
+        { label: '改名', action: () => folderRename(node) },
+        { label: '新增子資料夾', action: () => folderCreateSub(node.id) },
+        { label: '刪除', action: () => folderDelete(node) },
+      ]);
+    };
+    row.onclick = () => selectFolder(node.id);
+    box.appendChild(row);
+    if (hasChildren && open) node.children.forEach(c => render(c, depth + 1));
+  };
+  tree.forEach(n => render(n, 0));
+}
+
+function selectFolder(key) {
+  currentFolderId = key;
+  renderFolderTree();
+  renderPapers();
+}
+
+// ── 資料夾操作（prompt/confirm）──
+async function folderCreate(parentId) {
+  const name = prompt('資料夾名稱：');
+  if (name == null) return;
+  const n = name.trim();
+  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
+  try { await createFolderApi(n, parentId); await loadFolders(); }
+  catch (e) { alert(e.message); }
+}
+function folderCreateSub(pid) { folderCreate(pid); }
+async function folderRename(node) {
+  const name = prompt('新名稱：', node.name);
+  if (name == null) return;
+  const n = name.trim();
+  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
+  try { await updateFolderApi(node.id, { name: n }); await loadFolders(); }
+  catch (e) { alert(e.message); }
+}
+async function folderDelete(node) {
+  if (!confirm(`刪除「${node.name}」？\n子資料夾會一併刪除，內部論文回到未分類。`)) return;
+  try {
+    await deleteFolderApi(node.id);
+    if (currentFolderId === node.id) currentFolderId = 'all';
+    await loadFolders();
+    await loadPapers();
+  } catch (e) { alert(e.message); }
+}
+
+// ── 論文清單（filter 模型）──
+function papersInCurrentFolder() {
+  if (currentFolderId === 'all') return allPapers;
+  if (currentFolderId === 'uncategorized')
+    return allPapers.filter(p => p.folder_id == null);
+  const ids = folderDescendants(currentFolderId);
+  return allPapers.filter(p => p.folder_id != null && ids.has(p.folder_id));
+}
+function renderPapers() {
+  const list = document.getElementById('paper-list');
+  list.innerHTML = '';
+  papersInCurrentFolder().forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'paper-item';
+    item.dataset.id = p.id;
+    item.innerHTML = `
+      <div class="paper-item-header">
+        <div class="paper-item-titles">
+          <div class="paper-title-zh">${p.translated_title || p.title}</div>
+          <div class="paper-title-en">${p.title}</div>
+        </div>
+        <button class="paper-menu-btn icon-only" title="更多">⋯</button>
+      </div>
+    `;
+    const openMovePicker = (rb) => {
+      const flat = [];
+      const walk = (ns, d) => ns.forEach(n => {
+        flat.push({ id: n.id, label: '　'.repeat(d) + n.name });
+        walk(n.children, d + 1);
+      });
+      walk(buildTree(folders), 0);
+      openPopup(rb.left, rb.bottom, [
+        { label: '未分類', action: () => movePaper(p.id, null) },
+        ...flat.map(f => ({
+          label: f.label, action: () => movePaper(p.id, f.id)
+        })),
+      ]);
+    };
+    item.querySelector('.paper-menu-btn').onclick = (e) => {
+      e.stopPropagation();
+      const rb = e.target.getBoundingClientRect();
+      openPopup(rb.left, rb.bottom, [
+        { label: '刪除文件', danger: true,
+          action: () => deletePaper(p.id, p.translated_title || p.title) },
+        { label: '移動到資料夾 ▸',
+          action: () => openMovePicker(rb) },
+        { label: '刪除對話', disabled: true,
+          title: '即將上線（Phase 3.4）' },
+      ]);
+    };
+    item.onclick = () => loadPaper(p.id, p.translated_title || p.title);
+    if (p.id === currentPaperId) item.classList.add('active');
+    list.appendChild(item);
+  });
+}
+async function movePaper(uuid, folderId) {
+  try {
+    await setPaperFolderApi(uuid, folderId);
+    await loadPapers();
+  } catch (e) { alert(e.message); }
+}
+
+// 載入論文列表（fetch → 快取 → 依當前資料夾渲染）
+async function loadPapers() {
+  const res = await fetch(`${API}/api/papers`);
+  allPapers = await res.json();
+  renderPapers();
+}
+
+// 載入論文內容
+async function loadPaper(paperId, title) {
+  currentPaperId = paperId;
+
+  document.querySelectorAll('.paper-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === paperId);
+  });
+
+  document.getElementById('content-toolbar').style.display = 'flex';
+  document.getElementById('current-title').textContent = title;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('paper-content').style.display = 'block';
+  document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
+
+  await fetchContent(paperId, currentLang);
+
+  const chatPanel = document.getElementById('chat-panel');
+  const status = paperReadiness.get(paperId);
+  if (status === 'reading_ready') {
+    // 內容可讀，但 RAG 尚未就緒：收合並鎖住問答，顯示等候訊息
+    chatPanel.classList.add('collapsed');
+    disableChat();
+    showReadingReadyMessage();
+  } else {
+    // 'done' 或不在 map（既有 papers_index 論文，視為 done）：展開、解鎖
+    chatPanel.classList.remove('collapsed');
+    removeReadingReadyMessage();
+    enableChat();
+    await loadChatHistory(paperId);
+  }
+}
+
+// 取得論文 Markdown 內容
+async function fetchContent(paperId, lang) {
+  const res = await fetch(`${API}/api/papers/${paperId}/content?lang=${lang}`);
+  const data = await res.json();
+
+  // 把圖片路徑換成 API 路徑
+  const content = data.content.replace(
+    /!\[([^\]]*)\]\(images\/([^)]+)\)/g,
+    `![$1](/api/papers/${paperId}/images/$2)`
+  );
+
+  document.getElementById('paper-content').innerHTML = marked.parse(content);
+}
+
+// 列印
+document.getElementById('print-btn').onclick = () => {
+  const original = document.title;
+  const title = document.getElementById('current-title').textContent.trim();
+  if (title) document.title = title;
+  window.print();
+  document.title = original;
+};
+
+// 切換語言
+document.getElementById('lang-toggle').onclick = async () => {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  // icon-only：以 title 提示下一步動作（取代原 textContent，避免覆蓋 SVG）
+  document.getElementById('lang-toggle').title = currentLang === 'zh' ? '切換英文' : '切換中文';
+  if (currentPaperId) await fetchContent(currentPaperId, currentLang);
+};// 聊天功能
+let isStreaming = false;
+
+function enableChat() {
+  document.getElementById('chat-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('web-search-toggle').disabled = false;
+  document.getElementById('export-btn').style.display = 'block';
+}
+
+function disableChat() {
+  document.getElementById('chat-input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('web-search-toggle').disabled = true;
+}
+
+function showReadingReadyMessage() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages || document.getElementById('reading-ready-msg')) return;
+  const m = document.createElement('div');
+  m.className = 'msg-system';
+  m.id = 'reading-ready-msg';
+  m.textContent = '內容已可閱讀，AI 問答準備中…';
+  messages.innerHTML = '';
+  messages.appendChild(m);
+}
+
+function removeReadingReadyMessage() {
+  const m = document.getElementById('reading-ready-msg');
+  if (m) m.remove();
+}
+
+document.getElementById('export-btn').onclick = () => {
+  if (!currentPaperId) return;
+  window.location.href = `/api/papers/${currentPaperId}/chat/export`;
+};
+
+// 載入對話紀錄
+async function deletePaper(paperId, title) {
+  if (!confirm(`確定要刪除「${title}」嗎？\n此操作無法還原。`)) return;
+  try {
+    const res = await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('刪除失敗');
+    if (currentPaperId === paperId) {
+      currentPaperId = null;
+      document.getElementById('content-toolbar').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'flex';
+      document.getElementById('paper-content').style.display = 'none';
+      document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇文件後開始提問</div>';
+      document.getElementById('chat-input').disabled = true;
+      document.getElementById('send-btn').disabled = true;
+    }
+    await loadPapers();
+  } catch(e) {
+    alert('刪除失敗：' + e.message);
+  }
+}
+
+// 在 AI 訊息泡泡後渲染來源區塊
+function renderSources(aiMsg, sources) {
+  if (!sources || !sources.length) return;
+  const div = document.createElement('div');
+  div.className = 'msg-sources';
+  div.innerHTML = '來源：' + sources.map(s =>
+    `<a href="${s.uri}" target="_blank" rel="noopener">${s.title}</a>`
+  ).join('、');
+  aiMsg.appendChild(div);
+}
+
+async function loadChatHistory(paperId) {
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML = '';
+  try {
+    const res = await fetch(`/api/papers/${paperId}/chat/history`);
+    const history = await res.json();
+    if (!history.length) {
+      messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
+      return;
+    }
+    history.forEach(msg => {
+      const div = document.createElement('div');
+      if (msg.role === 'user') {
+        div.className = 'msg-user';
+        div.textContent = msg.content;
+      } else {
+        div.className = 'msg-ai';
+        const formatted = msg.content.replace(/\n(?!\n)/g, '\n\n');
+        div.innerHTML = marked.parse(formatted);
+        if (msg.grounding_sources && msg.grounding_sources.length > 0) {
+          div.dataset.groundingSources = JSON.stringify(msg.grounding_sources);
+          renderSources(div, msg.grounding_sources);
+        }
+      }
+      messages.appendChild(div);
+    });
+    messages.scrollTop = messages.scrollHeight;
+  } catch(e) {
+    messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
+  }
+}
+
+// 儲存對話紀錄（content 排除來源區塊；grounding_sources 由 dataset 帶上）
+async function saveChatHistory(paperId) {
+  const msgs = document.querySelectorAll('#chat-messages .msg-user, #chat-messages .msg-ai');
+  const history = Array.from(msgs).map(el => {
+    if (el.classList.contains('msg-user')) {
+      return { role: 'user', content: el.textContent };
+    }
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.msg-sources').forEach(n => n.remove());
+    const entry = { role: 'assistant', content: clone.innerText };
+    if (el.dataset.groundingSources) {
+      try { entry.grounding_sources = JSON.parse(el.dataset.groundingSources); }
+      catch (e) {}
+    }
+    return entry;
+  });
+  try {
+    await fetch(`/api/papers/${paperId}/chat/history`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({messages: history})
+    });
+  } catch(e) {}
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const query = input.value.trim();
+  if (!query || isStreaming || !currentPaperId) return;
+
+  input.value = '';
+  autosizeChatInput();
+  isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  // 顯示用戶訊息
+  const messages = document.getElementById('chat-messages');
+  const userMsg = document.createElement('div');
+  userMsg.className = 'msg-user';
+  userMsg.style.whiteSpace = 'pre-wrap';
+  userMsg.textContent = query;
+  messages.appendChild(userMsg);
+
+  // 建立 AI 訊息泡泡
+  const aiMsg = document.createElement('div');
+  aiMsg.className = 'msg-ai';
+  aiMsg.textContent = '▋';
+  messages.appendChild(aiMsg);
+  messages.scrollTop = messages.scrollHeight;
+
+  // SSE 串流
+  const res = await fetch(`/api/papers/${currentPaperId}/chat`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({query, paper_id: currentPaperId, use_web_search: useWebSearch})
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let accumulated = '';
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+
+    const text = decoder.decode(value);
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const chunk = JSON.parse(line.slice(6));
+        if (chunk.sentence) {
+          accumulated += chunk.sentence;
+          // 把單換行轉成 Markdown 段落（兩個換行）
+          const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
+          aiMsg.innerHTML = marked.parse(formatted);
+          messages.scrollTop = messages.scrollHeight;
+        }
+        if (chunk.done) {
+          isStreaming = false;
+          document.getElementById('send-btn').disabled = false;
+          if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
+            aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
+            renderSources(aiMsg, chunk.grounding_sources);
+          }
+          await saveChatHistory(currentPaperId);
+        }
+      } catch {}
+    }
+  }
+}
+
+document.getElementById('send-btn').onclick = sendMessage;
+document.getElementById('web-search-toggle').onclick = () => {
+  useWebSearch = !useWebSearch;
+  document.getElementById('web-search-toggle').classList.toggle('active', useWebSearch);
+};
+// I5：textarea 依內容自動長高（1 行起，最多 ~5 行後 scroll）
+function autosizeChatInput() {
+  const ta = document.getElementById('chat-input');
+  ta.style.height = 'auto';
+  const max = parseInt(getComputedStyle(ta).maxHeight, 10) || 132;
+  ta.style.height = Math.min(ta.scrollHeight, max) + 'px';
+}
+document.getElementById('chat-input').addEventListener('input', autosizeChatInput);
+document.getElementById('chat-input').onkeydown = (e) => {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+};
+
+// 上傳論文
+document.getElementById('upload-btn').onclick = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('upload-btn');
+    btn.textContent = '上傳中...';
+    btn.disabled = true;
+    setBusy(true);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/papers/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const paperId = data.paper_id;
+
+      // 上傳完成，立即顯示文件類型選擇框
+      btn.textContent = '選擇類型...';
+      showConfirmModal(paperId, data.suggested_doc_type, btn);
+
+    } catch (err) {
+      btn.innerHTML = UPLOAD_BTN_LABEL;
+      btn.disabled = false;
+      setBusy(false);
+      alert('上傳失敗：' + err.message);
+    }
+  };
+  input.click();
+};
+
+// 追蹤處理進度
+function trackProgress(paperId, btn) {
+  const evtSource = new EventSource(`/api/papers/${paperId}/status`);
+
+  evtSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.status === 'processing') {
+      const p = data.progress;
+      btn.textContent = `${p.stage_name}... ${p.progress}%`;
+      // index >= 10（extra_info=10, rag=11）代表 md_restore 已完成、中文版可讀
+      if (p && p.index >= 10) {
+        const r = paperReadiness.get(paperId);
+        if (r !== 'reading_ready' && r !== 'done') {
+          paperReadiness.set(paperId, 'reading_ready');
+          // 只在使用者沒在看別篇時自動開啟（不打斷正在閱讀的論文）
+          if (currentPaperId === null || currentPaperId === paperId) {
+            loadPaper(paperId, '（內容已就緒，AI 問答準備中）');
+          }
+        }
+      }
+    } else if (data.status === 'done') {
+      evtSource.close();
+      btn.innerHTML = UPLOAD_BTN_LABEL;
+      btn.disabled = false;
+      setBusy(false);
+      paperReadiness.set(paperId, 'done');
+      loadPapers().then(() => {
+        // 回填工具列標題為真實標題（不重 fetch 內容，直接讀剛重建的側欄）
+        if (currentPaperId === paperId) {
+          const el = document.querySelector(`.paper-item[data-id="${paperId}"] .paper-title-zh`);
+          if (el) document.getElementById('current-title').textContent = el.textContent;
+        }
+      });
+      if (currentPaperId === paperId) {
+        document.getElementById('chat-panel').classList.remove('collapsed');
+        removeReadingReadyMessage();
+        enableChat();
+        loadChatHistory(paperId);
+      }
+    } else if (data.status === 'error') {
+      evtSource.close();
+      btn.innerHTML = UPLOAD_BTN_LABEL;
+      btn.disabled = false;
+      setBusy(false);
+      alert('處理失敗：' + (data.error || '未知錯誤'));
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    btn.innerHTML = UPLOAD_BTN_LABEL;
+    btn.disabled = false;
+    setBusy(false);
+  };
+}
+
+// 文件類型確認
+const DOC_TYPE_LABELS = {
+  academic: '學術論文',
+  book: '書籍',
+  technical: '技術文件',
+  slides: '簡報',
+  web: '網頁存檔',
+  news: '新聞文章'
+};
+
+function showConfirmModal(paperId, detection, btn) {
+  const modal = document.getElementById('confirm-modal');
+  const select = document.getElementById('doc-type-select');
+
+  // 預設選偵測值，無則 academic
+  select.value = detection || 'academic';
+
+  const desc = document.getElementById('confirm-desc');
+  if (detection === 'slides') {
+    desc.textContent = '系統偵測為簡報，已預設選『簡報』，可手動調整';
+  } else {
+    desc.textContent = '請選擇文件類型，系統將根據類型選擇最佳解析方式。';
+  }
+
+  modal.classList.add('show');
+
+  document.getElementById('confirm-ok-btn').onclick = async () => {
+    const selectedType = select.value;
+    modal.classList.remove('show');
+    btn.textContent = '處理中...';
+    btn.disabled = true;
+
+    try {
+      await fetch(`/api/papers/${paperId}/confirm_type`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({doc_type: selectedType})
+      });
+      // 重新追蹤進度
+      trackProgress(paperId, btn);
+    } catch(e) {
+      btn.innerHTML = UPLOAD_BTN_LABEL;
+      btn.disabled = false;
+      setBusy(false);
+      alert('確認失敗：' + e.message);
+    }
+  };
+}
+
+// 清理殘餘檔案
+document.getElementById('cleanup-btn').onclick = async () => {
+  if (isProcessing) return;
+  if (!confirm('確定要清理殘餘檔案嗎？\n此操作會刪除所有不在論文列表中的目錄。')) return;
+  try {
+    const res = await fetch('/api/cleanup', { method: 'POST' });
+    const data = await res.json();
+    if (data.count === 0) {
+      alert('沒有殘餘檔案需要清理。');
+    } else {
+      alert(`已清理 ${data.count} 個殘餘目錄：\n${data.removed.join('\n')}`);
+    }
+  } catch(e) {
+    alert('清理失敗：' + e.message);
+  }
+};
+
+// 說明框
+document.getElementById('help-btn').onclick = () => {
+  document.getElementById('help-modal').classList.add('show');
+};
+document.getElementById('help-close-btn').onclick = () => {
+  document.getElementById('help-modal').classList.remove('show');
+};
+document.getElementById('help-modal').onclick = (e) => {
+  if (e.target === document.getElementById('help-modal')) {
+    document.getElementById('help-modal').classList.remove('show');
+  }
+};
+
+// 初始化：先載資料夾樹再載論文（filter 依賴 folders 建子孫集）
+(async () => { await loadFolders(); await loadPapers(); })();
+
+// 新增資料夾：當前選中為某資料夾則建在其下，否則建在根
+document.getElementById('new-folder-btn').onclick = () => {
+  folderCreate(typeof currentFolderId === 'number' ? currentFolderId : null);
+};
+
+// 階段一：側欄收合切換
+document.getElementById('sidebar-toggle').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+};
+document.getElementById('chat-toggle').onclick = () => {
+  document.getElementById('chat-panel').classList.toggle('collapsed');
+};
+
+// 登出
+document.getElementById('logout-btn').onclick = async () => {
+  try {
+    await fetch('/logout', { method: 'POST' });
+  } catch (e) { /* 忽略，仍導向登入頁 */ }
+  location.href = '/login';
+};
+</script>
+</body>
+</html>
