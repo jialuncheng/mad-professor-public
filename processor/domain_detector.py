@@ -1,4 +1,5 @@
 import logging
+import time
 
 import fitz  # PyMuPDF
 
@@ -29,6 +30,7 @@ class DomainDetector:
         """讀第一頁判斷主題領域；任何失敗回 ''（soft fallback）。"""
         self.logger.info(f"開始偵測 domain: {pdf_path}")
         self.logger.info(f"使用模型: {settings.LLM_DOMAIN_MODEL}")
+        self.logger.info(f"[domain] 開始 pdf={pdf_path}")
         doc = None
         try:
             doc = fitz.open(str(pdf_path))
@@ -42,17 +44,25 @@ class DomainDetector:
             img_data = page.get_pixmap(matrix=fitz.Matrix(2, 2)).tobytes("jpeg")
 
             prompt = DOMAIN_PROMPT.replace("{first_page_text}", first_page_text)
+            self.logger.info("[domain] 呼叫 LLM")
+            _t = time.time()
             result = self.llm.chat_with_image(
                 messages=[{"role": "user", "content": prompt}],
                 image_data=img_data,
                 mime_type="image/jpeg",
                 model=settings.LLM_DOMAIN_MODEL,
             )
+            self.logger.info(
+                f"[domain] LLM 回應 耗時={time.time() - _t:.2f}s "
+                f"result={(result or '').strip()!r}"
+            )
             domain = (result or "").strip()
             if not domain:
                 self.logger.info("結果為空，跳過 domain")
+                self.logger.info("[domain] 完成 domain=''")
                 return ""
             self.logger.info(f"偵測結果: {domain}")
+            self.logger.info(f"[domain] 完成 domain={domain!r}")
             return domain
         except Exception as e:
             self.logger.warning(f"偵測失敗: {e}")

@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -32,6 +33,17 @@ class ImageCaptionProcessor:
         """
         images_dir = Path(images_dir)
         output_path = Path(output_path)
+
+        _ic_t0 = time.time()
+        _ic_count = (
+            len([f for f in images_dir.iterdir()
+                 if f.suffix.lower() in SUPPORTED_EXTENSIONS])
+            if images_dir.is_dir() else 0
+        )
+        self.logger.info(
+            f"[image_caption] 開始 images_dir={images_dir} "
+            f"exists={images_dir.exists()} file_count={_ic_count}"
+        )
 
         if not images_dir.exists():
             self.logger.warning(f"images 目錄不存在: {images_dir}，建立空的 images_info.md")
@@ -72,10 +84,15 @@ class ImageCaptionProcessor:
 
         output_path.write_text('\n'.join(lines), encoding='utf-8')
         self.logger.info(f"images_info.md 已生成: {output_path}（{len(image_files)} 張圖片）")
+        self.logger.info(
+            f"[image_caption] 完成 處理 {len(image_files)} 張圖 "
+            f"耗時={time.time() - _ic_t0:.2f}s"
+        )
         return output_path
 
     def _generate_caption(self, img_path: Path) -> str:
         """用 Vision 為單張圖片生成說明"""
+        _cap_t0 = time.time()
         try:
             img_data = img_path.read_bytes()
             mime = MIME_TYPES.get(img_path.suffix.lower(), 'image/jpeg')
@@ -93,8 +110,16 @@ class ImageCaptionProcessor:
             )
             caption = result.strip()
             self.logger.info(f"  {img_path.name}: {caption[:60]}...")
+            self.logger.debug(
+                f"[image_caption] 處理 {img_path.name} "
+                f"耗時={time.time() - _cap_t0:.2f}s"
+            )
             return caption
 
         except Exception as e:
             self.logger.warning(f"  {img_path.name} 生成失敗: {str(e)}")
+            self.logger.debug(
+                f"[image_caption] 處理 {img_path.name} 失敗 "
+                f"耗時={time.time() - _cap_t0:.2f}s"
+            )
             return ""

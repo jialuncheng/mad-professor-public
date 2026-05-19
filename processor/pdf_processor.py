@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import logging
 import zipfile
@@ -42,6 +43,11 @@ class PDFProcessor:
 
         try:
             self.logger.info(f"呼叫 MinerU API 處理 PDF: {pdf_path}")
+            self.logger.info(f"[pdf_processor] 開始 pdf={pdf_path}")
+            self.logger.info(
+                f"[pdf_processor] POST MinerU API URL={self.MINERU_API_URL}"
+            )
+            _post_t0 = time.time()
 
             with open(pdf_path, "rb") as f:
                 response = requests.post(
@@ -54,6 +60,13 @@ class PDFProcessor:
                     },
                     timeout=300
                 )
+
+            self.logger.info(
+                f"[pdf_processor] MinerU 回應 status={response.status_code} "
+                f"耗時={time.time() - _post_t0:.2f}s "
+                f"content_length={len(response.content)} "
+                f"task_id={response.headers.get('x-mineru-task-id')}"
+            )
 
             if response.status_code != 200:
                 raise RuntimeError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
@@ -68,11 +81,26 @@ class PDFProcessor:
             # 解壓 ZIP 到暫存目錄
             with zipfile.ZipFile(io.BytesIO(response.content)) as z:
                 z.extractall(output_dir / "_tmp")
+                self.logger.info(
+                    f"[pdf_processor] ZIP 解壓完成 內容={z.namelist()}"
+                )
+
+            _tmp_root = output_dir / "_tmp"
+            _tmp_files = (
+                [str(p.relative_to(_tmp_root))
+                 for p in sorted(_tmp_root.rglob("*")) if p.is_file()]
+                if _tmp_root.exists() else []
+            )
+            self.logger.info(f"[pdf_processor] _tmp 內容: {_tmp_files}")
 
             # ZIP 內結構由 MinerU 端命名（= 上傳檔 stem，固定 original）；
             # 落地後的本機 md 檔名沿用 paper_name（不改既有下游路徑預期）
             tmp_md = output_dir / "_tmp" / mineru_name / "auto" / f"{mineru_name}.md"
             markdown_path = output_dir / f"{paper_name}.md"
+            self.logger.info(
+                f"[pdf_processor] markdown 搬移 from={tmp_md} "
+                f"to={markdown_path} from_exists={tmp_md.exists()}"
+            )
             if tmp_md.exists():
                 tmp_md.rename(markdown_path)
 
@@ -84,9 +112,14 @@ class PDFProcessor:
             markdown_path.write_text(md_text, encoding='utf-8')
 
             # 從 mineru-lab 複製圖片（MinerU 端目錄名固定，與 paper_name 解耦）
+            self.logger.info(
+                f"[pdf_processor] 呼叫 _copy_images task_id={task_id} "
+                f"dst={output_dir / 'images'}"
+            )
             self._copy_images(output_dir, task_id)
 
             # 清理暫存目錄
+            self.logger.info(f"[pdf_processor] rmtree _tmp: {output_dir / '_tmp'}")
             shutil.rmtree(output_dir / "_tmp", ignore_errors=True)
 
             if not markdown_path.exists():
@@ -136,9 +169,15 @@ class PDFProcessor:
                     src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{mineru_name}/auto/images/"
 
                 self.logger.info(f"scp 來源: {src}")
+                self.logger.info(f"[copy_images] 遠端模式 src={src} dst={dst}")
                 scp_result = subprocess.run(
                     ["scp", "-r", src, dst],
                     capture_output=True, text=True, timeout=60
+                )
+                self.logger.info(
+                    f"[copy_images] scp returncode={scp_result.returncode} "
+                    f"stderr={scp_result.stderr.strip()!r} "
+                    f"stdout={scp_result.stdout.strip()!r}"
                 )
                 if scp_result.returncode == 0:
                     self.logger.info(f"圖片複製成功: {dst}")
@@ -167,10 +206,23 @@ class PDFProcessor:
                     latest = max(subdirs, key=lambda d: d.stat().st_mtime)
                     src = latest / mineru_name / "auto" / "images"
 
+                self.logger.info(
+                    f"[copy_images] 本地模式 src={src} exists={src.is_dir()}"
+                )
                 if src.is_dir():
                     shutil.copytree(src, dst, dirs_exist_ok=True)
                     self.logger.info(f"圖片複製成功（本地）: {dst}")
                 else:
                     self.logger.warning(f"找不到本地圖片目錄: {src}")
+
+            _dst_p = Path(dst)
+            _dst_files = (
+                sorted(p.name for p in _dst_p.iterdir())
+                if _dst_p.is_dir() else []
+            )
+            self.logger.info(
+                f"[copy_images] 完成 dst={dst} 內容({len(_dst_files)})="
+                f"{_dst_files}"
+            )
         except Exception as e:
             self.logger.warning(f"複製圖片時出錯: {str(e)}")
