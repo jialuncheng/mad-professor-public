@@ -67,24 +67,140 @@ def _resolve_paper_src(paper_uuid: str, admin_id) -> Path | None:
     return None
 
 
+def _probe_db():
+    """唯讀探查 DB 現況；**不建立任何檔案/表、不呼叫 init_db**。
+
+    回傳 (status, admin_exists, admin_id, migrated_uuids)：
+      status: 'ok'（有 DB 可查）| 'absent'（DB 尚未建立）| 'unavailable'（無法檢查）
+    """
+    try:
+        url = settings.DATABASE_URL
+    except Exception:
+        return ("unavailable", None, None, set())
+    if url.startswith("sqlite:///"):
+        dbfile = url.split("sqlite:///", 1)[-1]
+        if dbfile and dbfile != ":memory:" and not Path(dbfile).exists():
+            return ("absent", False, None, set())  # 檔案不存在 = 全新，不連線（避免建檔）
+    try:
+        import db as _db
+        from models import Paper, User
+    except Exception:
+        return ("unavailable", None, None, set())
+    try:
+        with _db.SessionLocal() as s:
+            admin = (
+                s.query(User)
+                .filter_by(username=settings.AUTH_USERNAME)
+                .one_or_none()
+            )
+            admin_id = admin.id if admin else None
+            uuids = (
+                {u for (u,) in s.query(Paper.paper_uuid).all()} if admin else set()
+            )
+            return ("ok", admin is not None, admin_id, uuids)
+    except Exception:
+        return ("unavailable", None, None, set())
+
+
+def _count_conversations(src) -> int:
+    if src is None:
+        return 0
+    hist = src / "chat_history.json"
+    if not hist.exists():
+        return 0
+    try:
+        return len(json.loads(hist.read_text(encoding="utf-8")) or [])
+    except (json.JSONDecodeError, OSError):
+        return 0
+
+
 def do_dry_run() -> int:
     index = _load_index()
-    total_conv = 0
-    for entry in index:
-        pid = entry.get("id")
-        src = OUTPUT_DIR / str(pid)
-        hist = src / "chat_history.json"
-        if hist.exists():
-            try:
-                total_conv += len(json.loads(hist.read_text(encoding="utf-8")) or [])
-            except (json.JSONDecodeError, OSError):
-                pass
-    _log("=== DRY RUN（不寫入、不搬檔）===")
-    _log(f"admin user：{settings.AUTH_USERNAME}"
-         f"{'（警告：AUTH_PASSWORD_HASH 為空）' if not settings.AUTH_PASSWORD_HASH else ''}")
-    _log(f"papers 待建立：{len(index)} 筆")
-    _log(f"conversations 待建立：約 {total_conv} 則（grounding_sources=NULL）")
-    _log(f"目錄搬移：output/<id>/ → output/<admin_id>/<id>/（{len(index)} 個）")
+    db_status, admin_exists, admin_id, migrated_uuids = _probe_db()
+    admin_label = str(admin_id) if admin_id is not None else "<admin_id>"
+
+    index_ids = {str(e.get("id")) for e in index}
+
+    # output/ 內未對應 papers_index 的頂層目錄（排除數字 owner 目錄、papers_index.json）
+    orphans = []
+    if OUTPUT_DIR.exists():
+        for child in sorted(OUTPUT_DIR.iterdir()):
+            if (
+                child.is_dir()
+                and not child.name.isdigit()
+                and child.name not in index_ids
+            ):
+                orphans.append(child.name)
+
+    add_papers = 0
+    add_conv = 0
+    move_dirs = 0
+    dangling = []
+
+    _log("=== DRY RUN ===")
+    _log("")
+    _log("User:")
+    _log(f"  username: {settings.AUTH_USERNAME}")
+    if db_status == "ok":
+        _log(f"  DB 已存在: {'Yes' if admin_exists else 'No'}"
+             f"{f' (id={admin_id})' if admin_id is not None else ''}")
+    elif db_status == "absent":
+        _log("  DB 已存在: No (DB 尚未建立，視為全新)")
+    else:
+        _log("  DB 已存在: 無法檢查 (缺 sqlalchemy/dotenv 或無法連線；視為全新)")
+    if not settings.AUTH_PASSWORD_HASH:
+        _log("  警告: AUTH_PASSWORD_HASH 為空（migrate 時 password_hash 將為空字串）")
+    _log("")
+
+    _log(f"Papers 計畫 ({len(index)} 筆):")
+    for i, entry in enumerate(index, 1):
+        pid = str(entry.get("id"))
+        src = _resolve_paper_src(pid, admin_id)
+        conv = _count_conversations(src)
+        migrated = pid in migrated_uuids
+        legacy = OUTPUT_DIR / pid
+        if src is None:
+            dangling.append(pid)
+        else:
+            if not migrated:
+                add_papers += 1
+                add_conv += conv
+            if legacy.is_dir() and not (
+                admin_id is not None
+                and (OUTPUT_DIR / str(admin_id) / pid).exists()
+            ):
+                move_dirs += 1
+
+        _log(f"  {i}. {pid}")
+        _log(f"     title: {entry.get('title') or '(無)'}")
+        _log(f"     translated_title: {entry.get('translated_title') or '(無)'}")
+        _log(f"     conversations: {conv} 則")
+        _log(f"     已 migrated: {'Yes' if migrated else 'No'}")
+        if src is None:
+            _log("     移動: ⚠ 無對應 output 目錄（dangling，將跳過）")
+        else:
+            _log(f"     移動: output/{pid}/ → output/{admin_label}/{pid}/"
+                 f"{'（已在新位置）' if (admin_id is not None and (OUTPUT_DIR / str(admin_id) / pid).exists()) else ''}")
+    _log("")
+
+    _log(f"Orphan 目錄 (output 內未在 papers_index): {len(orphans)}")
+    for name in orphans:
+        _log(f"  - {name}  → 建議跳過 + warning（不搬移）")
+    _log("")
+
+    _log(f"Dangling 紀錄 (papers_index 但無 output 目錄): {len(dangling)}")
+    for pid in dangling:
+        _log(f"  - {pid}  → 建議跳過 + warning")
+    _log("")
+
+    est = max(1, round(add_papers * 0.5))
+    _log("摘要:")
+    _log(f"  新增 {add_papers} papers, {add_conv} conversations, 搬移 {move_dirs} 目錄")
+    _log(f"  跳過 {len(orphans)} orphans, {len(dangling)} dangling")
+    _log(f"  paper_uuid = 舊 paper_id（不另加 __uuid8，相容舊資料；"
+         f"路徑為 output/{admin_label}/<舊 paper_id>/）")
+    _log(f"  預估 ~{est} 秒（每 paper 0.5 秒）")
+    _log("")
     _log("未做任何變更。")
     return 0
 
