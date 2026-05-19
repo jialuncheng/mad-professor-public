@@ -166,6 +166,7 @@ def _to_dict(output_dir, p: Paper) -> dict:
         'translated_title': p.translated_title or '',
         'folder_id': p.folder_id,
         'metadata': meta,            # Phase 4.5；舊資料/解析失敗為 None（前端 optional）
+        'original_filename': p.original_filename,  # Phase 4.7a；舊資料為 None
         'paths': _paths_dict(output_dir, p.owner_id, p.paper_uuid),
     }
 
@@ -203,7 +204,8 @@ def paper_exists(owner_id: int, paper_uuid: str) -> bool:
 def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                  final_paths: dict, metadata: Optional[dict] = None,
                  domain: Optional[str] = None,
-                 doc_type: Optional[str] = None) -> None:
+                 doc_type: Optional[str] = None,
+                 original_filename: Optional[str] = None) -> None:
     """pipeline 完成時呼叫：upsert Paper row。
 
     Phase 4.5：title 來源改為 metadata（fallback 鏈 metadata→rag_tree→paper_uuid，
@@ -214,6 +216,9 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
     domain / doc_type 由 pipeline_core 從 output_paths 帶入（_domain /
     _confirmed_doc_type）；None 或空字串視為「未提供」，create 時不寫、update
     時不覆蓋既有值（避免一次失敗的 detect_domain 清掉先前正確的 domain）。
+
+    original_filename（Phase 4.7a）：使用者上傳的原始檔名（未 sanitize）；
+    同 domain/doc_type 的空值不覆蓋策略。
     """
     _ensure_db()
     rt_title, rt_tt = _read_title_from_rag_tree(final_paths)
@@ -232,6 +237,7 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
             meta_json = None
     domain_val = (domain or '').strip() or None
     doc_type_val = (doc_type or '').strip() or None
+    orig_fn_val = (original_filename or '').strip() or None
     with db.SessionLocal() as s:
         p = s.query(Paper).filter_by(
             owner_id=owner_id, paper_uuid=paper_uuid
@@ -246,6 +252,7 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 doc_type=doc_type_val,
                 status='done',
                 metadata_json=meta_json,
+                original_filename=orig_fn_val,
             )
             s.add(p)
         else:
@@ -257,6 +264,8 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 p.domain = domain_val
             if doc_type_val:
                 p.doc_type = doc_type_val
+            if orig_fn_val:
+                p.original_filename = orig_fn_val
             if meta_json is not None:
                 p.metadata_json = meta_json
             p.status = 'done'

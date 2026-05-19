@@ -201,7 +201,8 @@ class PipelineCore:
     def process(self, pdf_path: str, output_dir: Optional[str] = None,
                 owner_id: Optional[int] = None,
                 existing_paths: Optional[Dict] = None,
-                paper_id: Optional[str] = None) -> Dict:
+                paper_id: Optional[str] = None,
+                original_filename: Optional[str] = None) -> Dict:
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
@@ -459,6 +460,7 @@ class PipelineCore:
                 metadata=self._metadata,
                 domain=output_paths.get('_domain'),
                 doc_type=output_paths.get('_confirmed_doc_type', 'academic'),
+                original_filename=original_filename,
             )
             output_paths['final'] = final_paths
             self.logger.info("[pipeline] DB 寫入完成")

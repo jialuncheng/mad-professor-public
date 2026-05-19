@@ -295,13 +295,15 @@ async def upload_paper(
             'status': 'waiting_confirm',
             'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
             '_pdf_path': str(pdf_path),
-            '_owner_id': current_user.id
+            '_owner_id': current_user.id,
+            '_original_filename': file.filename,  # Phase 4.7a：原始檔名（未 sanitize）
         }
 
     return {'paper_id': paper_id, 'status': 'waiting_confirm', 'suggested_doc_type': suggested_doc_type}
 
 
-async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: str):
+async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: str,
+                       original_filename: Optional[str] = None):
     """在背景執行 pipeline（使用者確認文件類型後觸發）"""
     try:
         def on_progress(info):
@@ -316,7 +318,8 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
         pipeline = PipelineCore(on_progress=on_progress)
         output_paths2 = await loop.run_in_executor(
             None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
-                owner_id=owner_id, existing_paths=output_paths, paper_id=paper_id)
+                owner_id=owner_id, existing_paths=output_paths, paper_id=paper_id,
+                original_filename=original_filename)
         )
 
         # 檢查是否在處理過程中被刪除
@@ -480,13 +483,15 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
         if not task or task.get('_owner_id') != current_user.id:
             raise HTTPException(status_code=404, detail="任務不存在")
         pdf_path = task.get('_pdf_path')
+        original_filename = task.get('_original_filename')
     if not pdf_path:
         raise HTTPException(status_code=500, detail="找不到原始 PDF 路徑")
 
     with tasks_lock:
         processing_tasks[paper_id]['status'] = 'processing'
     background_tasks.add_task(
-        run_pipeline, current_user.id, paper_id, pdf_path, request.doc_type
+        run_pipeline, current_user.id, paper_id, pdf_path, request.doc_type,
+        original_filename
     )
     return {"status": "ok", "doc_type": request.doc_type}
 

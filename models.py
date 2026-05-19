@@ -132,6 +132,12 @@ class Paper(Base):
     # Phase 4.5：metadata schema v2（JSON 字串；SQLite 用 Text + 應用層 json）
     # 屬性名不可叫 metadata（SQLAlchemy DeclarativeBase 保留字）
     metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Phase 4.7a：使用者上傳的原始檔名（中文/空格/特殊字元原樣保留）；
+    # paper_uuid 經 sanitize 會損失資訊，此欄供下載真檔名 / 追溯 / debug。
+    # nullable：4.7a 之前的舊資料無此欄。
+    original_filename: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
 
     owner: Mapped["User"] = relationship(back_populates="papers")
     folder: Mapped[Optional["Folder"]] = relationship(back_populates="papers")
