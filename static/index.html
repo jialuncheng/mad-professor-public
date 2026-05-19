@@ -345,6 +345,13 @@
       text-decoration: underline;
     }
     .msg-sources a:hover { color: var(--color-text); }
+    .msg-system {
+      font-size: var(--font-sm);
+      color: var(--color-text-subtle);
+      text-align: center;
+      margin-top: var(--space-6);
+      padding: var(--space-3);
+    }
     #chat-input-area {
       padding: var(--space-3);
       border-top: 1px solid var(--color-border);
@@ -493,6 +500,9 @@ let currentPaperId = null;
 let currentLang = 'zh';
 let isProcessing = false;
 let useWebSearch = false;
+// paperId -> 'reading_ready'（md_restore 完成、可閱讀）| 'done'（全部完成、可問答）
+// 不在 map 中 = 來自 papers_index 的既有論文，視為 done。重整頁面後清空靠此規則重建。
+const paperReadiness = new Map();
 const UPLOAD_BTN_LABEL = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件';
 
 function setBusy(busy) {
@@ -544,8 +554,21 @@ async function loadPaper(paperId, title) {
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
 
   await fetchContent(paperId, currentLang);
-  enableChat();
-  await loadChatHistory(paperId);
+
+  const chatPanel = document.getElementById('chat-panel');
+  const status = paperReadiness.get(paperId);
+  if (status === 'reading_ready') {
+    // 內容可讀，但 RAG 尚未就緒：收合並鎖住問答，顯示等候訊息
+    chatPanel.classList.add('collapsed');
+    disableChat();
+    showReadingReadyMessage();
+  } else {
+    // 'done' 或不在 map（既有 papers_index 論文，視為 done）：展開、解鎖
+    chatPanel.classList.remove('collapsed');
+    removeReadingReadyMessage();
+    enableChat();
+    await loadChatHistory(paperId);
+  }
 }
 
 // 取得論文 Markdown 內容
@@ -582,7 +605,30 @@ let isStreaming = false;
 function enableChat() {
   document.getElementById('chat-input').disabled = false;
   document.getElementById('send-btn').disabled = false;
+  document.getElementById('web-search-toggle').disabled = false;
   document.getElementById('export-btn').style.display = 'block';
+}
+
+function disableChat() {
+  document.getElementById('chat-input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('web-search-toggle').disabled = true;
+}
+
+function showReadingReadyMessage() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages || document.getElementById('reading-ready-msg')) return;
+  const m = document.createElement('div');
+  m.className = 'msg-system';
+  m.id = 'reading-ready-msg';
+  m.textContent = '內容已可閱讀，AI 問答準備中…';
+  messages.innerHTML = '';
+  messages.appendChild(m);
+}
+
+function removeReadingReadyMessage() {
+  const m = document.getElementById('reading-ready-msg');
+  if (m) m.remove();
 }
 
 document.getElementById('export-btn').onclick = () => {
@@ -786,12 +832,36 @@ function trackProgress(paperId, btn) {
     if (data.status === 'processing') {
       const p = data.progress;
       btn.textContent = `${p.stage_name}... ${p.progress}%`;
+      // index >= 10（extra_info=10, rag=11）代表 md_restore 已完成、中文版可讀
+      if (p && p.index >= 10) {
+        const r = paperReadiness.get(paperId);
+        if (r !== 'reading_ready' && r !== 'done') {
+          paperReadiness.set(paperId, 'reading_ready');
+          // 只在使用者沒在看別篇時自動開啟（不打斷正在閱讀的論文）
+          if (currentPaperId === null || currentPaperId === paperId) {
+            loadPaper(paperId, '（內容已就緒，AI 問答準備中）');
+          }
+        }
+      }
     } else if (data.status === 'done') {
       evtSource.close();
       btn.innerHTML = UPLOAD_BTN_LABEL;
       btn.disabled = false;
       setBusy(false);
-      loadPapers();  // 重新載入論文列表
+      paperReadiness.set(paperId, 'done');
+      loadPapers().then(() => {
+        // 回填工具列標題為真實標題（不重 fetch 內容，直接讀剛重建的側欄）
+        if (currentPaperId === paperId) {
+          const el = document.querySelector(`.paper-item[data-id="${paperId}"] .paper-title-zh`);
+          if (el) document.getElementById('current-title').textContent = el.textContent;
+        }
+      });
+      if (currentPaperId === paperId) {
+        document.getElementById('chat-panel').classList.remove('collapsed');
+        removeReadingReadyMessage();
+        enableChat();
+        loadChatHistory(paperId);
+      }
     } else if (data.status === 'error') {
       evtSource.close();
       btn.innerHTML = UPLOAD_BTN_LABEL;
