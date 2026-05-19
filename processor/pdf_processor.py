@@ -25,6 +25,10 @@ class PDFProcessor:
         self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://localhost:8000/file_parse")
         self.MINERU_HOST = os.getenv("MINERU_HOST", "")
         self.MINERU_OUTPUT_DIR = os.getenv("MINERU_OUTPUT_DIR", "")
+        # MinerU 端輸出子目錄名（= 上傳檔名 stem）。web_server 一律存成
+        # original.pdf 後才送 MinerU，故 MinerU 端固定為 "original"，與本機
+        # paper_name（pdf_path.stem）解耦；可用 env 覆寫以防上游改名。
+        self.MINERU_PAPER_NAME = os.getenv("MINERU_PAPER_NAME", "original")
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
@@ -58,14 +62,16 @@ class PDFProcessor:
             if not task_id:
                 self.logger.warning("MinerU 未回傳 x-mineru-task-id header")
 
-            paper_name = pdf_path.stem
+            paper_name = pdf_path.stem            # 本機輸出檔名用
+            mineru_name = self.MINERU_PAPER_NAME  # MinerU 端 ZIP 內目錄/檔名（固定）
 
             # 解壓 ZIP 到暫存目錄
             with zipfile.ZipFile(io.BytesIO(response.content)) as z:
                 z.extractall(output_dir / "_tmp")
 
-            # 把 Markdown 移到正確位置
-            tmp_md = output_dir / "_tmp" / paper_name / "auto" / f"{paper_name}.md"
+            # ZIP 內結構由 MinerU 端命名（= 上傳檔 stem，固定 original）；
+            # 落地後的本機 md 檔名沿用 paper_name（不改既有下游路徑預期）
+            tmp_md = output_dir / "_tmp" / mineru_name / "auto" / f"{mineru_name}.md"
             markdown_path = output_dir / f"{paper_name}.md"
             if tmp_md.exists():
                 tmp_md.rename(markdown_path)
@@ -77,8 +83,8 @@ class PDFProcessor:
             md_text = unicodedata.normalize('NFKC', md_text)
             markdown_path.write_text(md_text, encoding='utf-8')
 
-            # 從 mineru-lab 複製圖片
-            self._copy_images(paper_name, output_dir, task_id)
+            # 從 mineru-lab 複製圖片（MinerU 端目錄名固定，與 paper_name 解耦）
+            self._copy_images(output_dir, task_id)
 
             # 清理暫存目錄
             shutil.rmtree(output_dir / "_tmp", ignore_errors=True)
@@ -95,8 +101,12 @@ class PDFProcessor:
             self.logger.error(f"PDF 處理失敗: {str(e)}", exc_info=True)
             raise
 
-    def _copy_images(self, paper_name: str, output_dir: Path, task_id: str = None):
+    def _copy_images(self, output_dir: Path, task_id: str = None):
         """複製 MinerU 解析出的圖片目錄（雙模式，best-effort，永不 raise）。
+
+        MinerU 端子目錄名用 self.MINERU_PAPER_NAME（固定 "original"，因
+        web_server 一律以 original.pdf 送 MinerU），與本機 paper_name
+        （pdf_path.stem）無關——後者僅用於本機 markdown 檔名。
 
         MINERU_HOST 有值 → 遠端模式：scp（無 task_id 時退回 ssh ls -t）。
         MINERU_HOST 為空 → 本地/bind-mount 模式：MINERU_OUTPUT_DIR 視為
@@ -104,11 +114,12 @@ class PDFProcessor:
         """
         try:
             dst = str(output_dir / "images")
+            mineru_name = self.MINERU_PAPER_NAME
 
             if self.MINERU_HOST:
                 if task_id:
                     self.logger.info(f"MinerU task_id: {task_id}")
-                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{task_id}/{paper_name}/auto/images/"
+                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{task_id}/{mineru_name}/auto/images/"
                 else:
                     self.logger.warning(
                         "無 task_id，退回 ls -t | head -1 猜目錄（多份並發時不可靠）"
@@ -122,7 +133,7 @@ class PDFProcessor:
                     if not latest_task:
                         self.logger.warning("找不到 mineru-lab 的輸出目錄")
                         return
-                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{paper_name}/auto/images/"
+                    src = f"{self.MINERU_HOST}:{self.MINERU_OUTPUT_DIR}/{latest_task}/{mineru_name}/auto/images/"
 
                 self.logger.info(f"scp 來源: {src}")
                 scp_result = subprocess.run(
@@ -140,7 +151,7 @@ class PDFProcessor:
 
                 if task_id:
                     self.logger.info(f"MinerU task_id: {task_id}（本地模式）")
-                    src = Path(self.MINERU_OUTPUT_DIR) / task_id / paper_name / "auto" / "images"
+                    src = Path(self.MINERU_OUTPUT_DIR) / task_id / mineru_name / "auto" / "images"
                 else:
                     self.logger.warning(
                         "無 task_id，本地掃最新子目錄猜目錄（多份並發時不可靠）"
@@ -154,7 +165,7 @@ class PDFProcessor:
                         self.logger.warning("本地 MINERU_OUTPUT_DIR 內無子目錄")
                         return
                     latest = max(subdirs, key=lambda d: d.stat().st_mtime)
-                    src = latest / paper_name / "auto" / "images"
+                    src = latest / mineru_name / "auto" / "images"
 
                 if src.is_dir():
                     shutil.copytree(src, dst, dirs_exist_ok=True)

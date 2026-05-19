@@ -187,13 +187,19 @@ def paper_exists(owner_id: int, paper_uuid: str) -> bool:
 
 
 def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
-                 final_paths: dict, metadata: Optional[dict] = None) -> None:
+                 final_paths: dict, metadata: Optional[dict] = None,
+                 domain: Optional[str] = None,
+                 doc_type: Optional[str] = None) -> None:
     """pipeline 完成時呼叫：upsert Paper row。
 
     Phase 4.5：title 來源改為 metadata（fallback 鏈 metadata→rag_tree→paper_uuid，
     見 metadata_extractor.resolve_title），不破壞既有行為（metadata=None 時等同舊
     版以 rag_tree 為準）。metadata 整包存 metadata_json，title/translated_title
     同步鏡寫既有欄位以相容 _to_dict / 列表 / 排序。
+
+    domain / doc_type 由 pipeline_core 從 output_paths 帶入（_domain /
+    _confirmed_doc_type）；None 或空字串視為「未提供」，create 時不寫、update
+    時不覆蓋既有值（避免一次失敗的 detect_domain 清掉先前正確的 domain）。
     """
     _ensure_db()
     rt_title, rt_tt = _read_title_from_rag_tree(final_paths)
@@ -210,6 +216,8 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
             meta_json = json.dumps(metadata, ensure_ascii=False)
         except Exception:
             meta_json = None
+    domain_val = (domain or '').strip() or None
+    doc_type_val = (doc_type or '').strip() or None
     with db.SessionLocal() as s:
         p = s.query(Paper).filter_by(
             owner_id=owner_id, paper_uuid=paper_uuid
@@ -220,6 +228,8 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 paper_uuid=paper_uuid,
                 title=title,
                 translated_title=translated_title,
+                domain=domain_val,
+                doc_type=doc_type_val,
                 status='done',
                 metadata_json=meta_json,
             )
@@ -229,6 +239,10 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
                 p.title = title
             if translated_title:
                 p.translated_title = translated_title
+            if domain_val:
+                p.domain = domain_val
+            if doc_type_val:
+                p.doc_type = doc_type_val
             if meta_json is not None:
                 p.metadata_json = meta_json
             p.status = 'done'

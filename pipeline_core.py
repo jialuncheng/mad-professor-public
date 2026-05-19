@@ -405,6 +405,8 @@ class PipelineCore:
                 self.paper_info['paper_id'],
                 {k: str(v) for k, v in final_paths.items() if v},
                 metadata=self._metadata,
+                domain=output_paths.get('_domain'),
+                doc_type=output_paths.get('_confirmed_doc_type', 'academic'),
             )
             output_paths['final'] = final_paths
 
