@@ -48,7 +48,9 @@
       --btn-icon: 32px;
       --toolbar-h: 48px;
       --pad-panel: var(--space-4);
-      --gap-btn: var(--space-2);
+      --gap-btn-tight: var(--space-1);   /* 4px：密集排列（左欄底部三鈕） */
+      --gap-btn: var(--space-2);         /* 8px：一般族群 */
+      --gap-btn-loose: var(--space-3);   /* 12px：不同功能群（標題列） */
 
       /* 過渡 */
       --transition: 150ms ease;
@@ -82,7 +84,7 @@
     }
     .btn-primary:hover, #upload-btn:hover, #send-btn:hover,
     #confirm-ok-btn:hover, #help-close-btn:hover { background: var(--color-accent-hover); }
-    .btn-ghost, #help-btn, #cleanup-btn, #lang-toggle, #print-btn, #export-btn, .delete-btn {
+    .btn-ghost, #help-btn, #cleanup-btn, #lang-toggle, #print-btn, #export-btn {
       background: transparent;
       color: var(--color-text);
       border: 1px solid var(--color-border);
@@ -99,7 +101,9 @@
       transition: background var(--transition);
     }
     .btn-ghost:hover, #help-btn:hover, #cleanup-btn:hover, #lang-toggle:hover,
-    #print-btn:hover, #export-btn:hover, .delete-btn:hover { background: var(--color-surface); }
+    #print-btn:hover, #export-btn:hover { background: var(--color-surface); }
+    /* 統一 disabled 視覺 */
+    .btn-ghost:disabled, .icon-only:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     /* icon-only：正方、無最小寬與水平內距 */
     .icon-only {
       width: var(--btn-icon);
@@ -109,9 +113,9 @@
       flex-shrink: 0;
     }
     .btn-ghost.active {
-      background: var(--color-accent);
+      background: var(--color-text);
       color: #ffffff;
-      border-color: var(--color-accent);
+      border-color: var(--color-text);
     }
 
     /* 左側論文列表 */
@@ -130,14 +134,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--gap-btn);
-      padding: 0 var(--pad-panel) 0 44px;
+      gap: var(--gap-btn-loose);
+      padding: 0 44px 0 var(--pad-panel);   /* 右側 44px 讓位給浮動漢堡 */
       font-size: var(--font-base);
       font-weight: 600;
       border-bottom: 1px solid var(--color-border);
       color: var(--color-text);
     }
-    #sidebar h1 .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    #sidebar h1 .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #paper-list { flex: 1; overflow-y: auto; padding: var(--space-2); }
     .paper-item {
       padding: var(--space-3);
@@ -147,7 +151,7 @@
       transition: background var(--transition);
     }
     .paper-item:hover { background: var(--color-border); }
-    .paper-item.active { background: var(--color-accent); color: #ffffff; }
+    .paper-item.active { background: var(--color-text); color: #ffffff; }
     .paper-title-zh {
       font-size: var(--font-sm);
       font-weight: 500;
@@ -171,17 +175,6 @@
       gap: var(--space-2);
     }
     .paper-item-titles { flex: 1; min-width: 0; }
-    .delete-btn {
-      border: none;
-      padding: var(--space-1);
-      font-size: var(--font-base);
-      flex-shrink: 0;
-      opacity: 0;
-      color: var(--color-text-muted);
-      transition: opacity var(--transition), color var(--transition);
-    }
-    .paper-item:hover .delete-btn { opacity: 1; }
-    .delete-btn:hover { color: var(--color-danger); background: transparent; }
 
     /* ── 資料夾樹（Phase 3.2） ── */
     #folder-tree {
@@ -220,14 +213,6 @@
       transition: opacity var(--transition);
     }
     .folder-item:hover .menu-btn { opacity: 1; }
-    .paper-move-btn {
-      border: none; background: transparent; cursor: pointer;
-      color: var(--color-text-muted); flex-shrink: 0;
-      opacity: 0; padding: var(--space-1);
-      transition: opacity var(--transition);
-    }
-    .paper-item:hover .paper-move-btn { opacity: 1; }
-    .paper-move-btn:hover { color: var(--color-text); }
     .paper-menu-btn {
       border: none; background: transparent; cursor: pointer;
       color: var(--color-text-muted); flex-shrink: 0;
@@ -264,8 +249,12 @@
     }
     #sidebar-bottom .sb-row {
       display: flex;
-      gap: var(--gap-btn);
-      justify-content: flex-start;
+      gap: var(--gap-btn-tight);
+    }
+    #sidebar-bottom .sb-row > button {
+      flex: 1;
+      min-width: 0;
+      width: auto;          /* 覆寫 .icon-only 的固定寬，改等寬平分 */
     }
     #upload-btn { width: 100%; font-weight: 500; }
 
@@ -330,10 +319,9 @@
       border-bottom: 1px solid var(--color-border);
       display: flex;
       align-items: center;
-      gap: var(--gap-btn);
+      gap: var(--gap-btn-loose);
     }
     #content-toolbar h2 { font-size: var(--font-base); color: var(--color-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-    .toolbar-btn { min-width: 88px; }
     @media print {
       * { overflow: visible !important; height: auto !important; }
       body { display: block !important; height: auto !important; }
@@ -397,10 +385,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--gap-btn);
+      gap: var(--gap-btn-loose);
     }
-    #chat-header-actions { display: flex; align-items: center; gap: var(--gap-btn); }
-    #export-btn { font-size: var(--font-xs); padding: var(--space-1) var(--space-3); }
+    #chat-header-actions { display: flex; align-items: center; gap: var(--gap-btn-loose); }
+    #export-btn { font-size: var(--font-xs); padding: var(--space-1) var(--space-3); min-width: 0; }
     #chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -511,8 +499,10 @@
       font-size: var(--font-base);
       line-height: 1;
     }
-    .panel-toggle:hover { background: var(--color-border); }
-    #sidebar-toggle { left: var(--space-3); }
+    .panel-toggle:hover { background: var(--color-surface); }
+    /* 漢堡視覺對齊側欄標題列右端（260 寬 − 12 − 32 ≈ 216）；
+       保持 fixed 以確保 sidebar collapsed(width:0) 時仍可點擊再展開 */
+    #sidebar-toggle { left: 216px; }
     #chat-toggle { right: var(--space-3); }
   </style>
 </head>
@@ -560,8 +550,8 @@
 <div id="content-area">
   <div id="content-toolbar" style="display:none">
     <h2 id="current-title">論文標題</h2>
-    <button id="lang-toggle" class="toolbar-btn">切換英文</button>
-    <button id="print-btn" class="toolbar-btn" title="列印論文">列印</button>
+    <button id="lang-toggle" class="icon-only" title="切換中英文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 8h13M9 4v4M11 16l4-9 4 9M12.5 13h5"/><path d="M3 8c0 4 3 7 7 8"/></svg></button>
+    <button id="print-btn" class="icon-only" title="列印論文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 9V4h10v5"/><path d="M7 19h10v-6H7z"/><path d="M7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2"/></svg></button>
   </div>
   <div id="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>從左側選擇文件</div>
   <div id="paper-content" style="display:none"></div>
@@ -950,7 +940,8 @@ document.getElementById('print-btn').onclick = () => {
 // 切換語言
 document.getElementById('lang-toggle').onclick = async () => {
   currentLang = currentLang === 'zh' ? 'en' : 'zh';
-  document.getElementById('lang-toggle').textContent = currentLang === 'zh' ? '切換英文' : '切換中文';
+  // icon-only：以 title 提示下一步動作（取代原 textContent，避免覆蓋 SVG）
+  document.getElementById('lang-toggle').title = currentLang === 'zh' ? '切換英文' : '切換中文';
   if (currentPaperId) await fetchContent(currentPaperId, currentLang);
 };// 聊天功能
 let isStreaming = false;
