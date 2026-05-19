@@ -115,7 +115,21 @@ def images_path(output_dir, owner_id, paper_uuid) -> Path:
 
 
 def original_pdf_path(output_dir, owner_id, paper_uuid) -> Path:
-    return paper_dir(output_dir, owner_id, paper_uuid) / "original.pdf"
+    """回傳論文的 PDF 路徑。
+
+    新規範（Phase 4.7b）：檔名 = paper_uuid + .pdf（與資料夾名一致，便於辨識）。
+    向後相容：若新檔名不存在但舊 original.pdf 存在，回傳舊路徑（讓既有
+    DB 資料仍可讀；新建論文一律走新規範）。皆不存在 → 回新規範路徑
+    （供上傳寫入用）。
+    """
+    dir_ = paper_dir(output_dir, owner_id, paper_uuid)
+    new_path = dir_ / f"{paper_uuid}.pdf"
+    old_path = dir_ / "original.pdf"
+    if new_path.exists():
+        return new_path
+    if old_path.exists():
+        return old_path
+    return new_path
 
 
 def _rel(output_dir, p: Path) -> str:

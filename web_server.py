@@ -273,7 +273,7 @@ async def upload_paper(
     paper_id = paper_manager.sanitize_paper_id(file.filename)
     paper_dir = paper_manager.paper_dir(OUTPUT_DIR, current_user.id, paper_id)
     paper_dir.mkdir(parents=True, exist_ok=True)
-    pdf_path = paper_dir / "original.pdf"
+    pdf_path = paper_dir / f"{paper_id}.pdf"
 
     # 儲存上傳的 PDF
     with open(pdf_path, 'wb') as f:

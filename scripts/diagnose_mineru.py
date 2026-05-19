@@ -35,8 +35,9 @@ class FakeResp:
 def make_zip(include_md=True, include_images=True, inner="original") -> bytes:
     """產生 MinerU 風格 ZIP：<inner>/auto/<inner>.md + <inner>/auto/images/*。
 
-    inner = MinerU 端據「上傳檔名 stem」命名的目錄。本系統一律上傳
-    original.pdf，故正常情況 inner='original'。
+    inner = MinerU 端輸出子目錄名。Phase 4.7b 後 web_server 上傳檔名改為
+    {paper_id}.pdf，但 MinerU 端命名與本機檔名解耦（由 MINERU_PAPER_NAME
+    env 固定為 "original"），故 inner 仍維持 'original'。
     """
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
@@ -70,8 +71,10 @@ def run_scenario(name, desc, resp_factory, *, mineru_output_dir_state):
     out_dir = tmp / "out"
     out_dir.mkdir(parents=True)
 
-    # 假 PDF（內容不重要，process 只檢查 exists 並 open 後丟給 requests）
-    pdf = tmp / "original.pdf"
+    # 假 PDF（內容不重要，process 只檢查 exists 並 open 後丟給 requests）。
+    # Phase 4.7b：web_server 上傳檔名 = {paper_id}.pdf，此處同步反映
+    # （MinerU 端 inner 名仍 "original"，由 MINERU_PAPER_NAME 解耦）。
+    pdf = tmp / f"diag-{name}.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
 
     # 模擬本地模式（MINERU_HOST 空）+ MINERU_OUTPUT_DIR 的三種狀態，
