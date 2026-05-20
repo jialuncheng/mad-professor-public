@@ -2220,8 +2220,9 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
   input.type = 'file';
   input.accept = '.pdf';
   input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;  // 使用者取消選檔
+    const file = files[0];
 
     const btn = document.getElementById('upload-btn');
     btn.textContent = '上傳中...';
