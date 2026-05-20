@@ -216,6 +216,8 @@ class PipelineCore:
         base_output_dir.mkdir(exist_ok=True, parents=True)
         self._root_output_dir = root_output_dir
         self._owner_id = owner_id
+        # Phase 4.7d Commit 1：_stage_md_restore 需用此值做最終 fallback
+        self._original_filename = original_filename
 
         _pipe_t0 = time.time()
         _doc_type = (existing_paths or {}).get('_confirmed_doc_type', 'academic')
@@ -605,9 +607,16 @@ class PipelineCore:
             raise ValueError("未找到翻譯 JSON 文件")
         paths = self._get_stage_output_path('md_restore', paper_dir, paper_name)
         images_info_path = self._get_stage_output_path('image_caption', paper_dir, paper_name)
+        # Phase 4.7d Commit 1：傳 metadata/doc_type/domain 給 RestoreProcessor
+        # 走 title 三軸融合（v2 §4.1）
         en_path, zh_path = self.restore_processor.process(
             str(input_path), str(paths['en']), str(paths['zh']),
-            images_info_path=str(images_info_path) if images_info_path.exists() else None
+            images_info_path=str(images_info_path) if images_info_path.exists() else None,
+            metadata=getattr(self, '_metadata', None),
+            doc_type=output_paths.get('_confirmed_doc_type', 'academic'),
+            domain=output_paths.get('_domain', '') or '',
+            original_filename=getattr(self, '_original_filename', None),
+            paper_uuid=paper_name,
         )
         return {'en': Path(en_path), 'zh': Path(zh_path)}
 

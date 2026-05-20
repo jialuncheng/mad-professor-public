@@ -1,8 +1,215 @@
 import json
 import logging
+import re
 from pathlib import Path
 from collections import defaultdict
+from difflib import SequenceMatcher
+from typing import Optional
 from utils.text_utils import load_caption_map, CONTROL_CHAR_PATTERN
+
+logger = logging.getLogger(__name__)
+
+# ───────────────── Phase 4.7d Commit 1：title 三軸融合（v2 §3.1 §4.1 §5 §6） ─────────────────
+# 黑名單（中英 + PDF 匯出器預設值 + 履歷 label）
+TITLE_BLACKLIST_EXACT = {
+    # 章節 label
+    "contents", "table of contents", "目錄", "目次",
+    "abstract", "摘要", "summary", "executive summary",
+    "introduction", "前言", "緒論", "intro",
+    "references", "参考文献", "參考文獻", "bibliography",
+    "acknowledgements", "acknowledgments", "致謝",
+    "appendix", "附錄",
+    "preface", "序",
+    # PDF 匯出器預設值
+    "untitled", "untitled document", "untitled1",
+    "document", "document1", "document2",
+    "未命名", "未命名文件",
+    "powerpoint presentation", "slide 1", "slide1",
+    "presentation",
+    # 履歷 label
+    "resume", "cv", "curriculum vitae", "履歷", "個人簡歷",
+}
+TITLE_BLACKLIST_PATTERN = [
+    r"^第\s*\d+\s*頁$",
+    r"^page\s*\d+$",
+    r"^chapter\s*\d+$",
+    r"^第\s*\d+\s*章$",
+    r"^slide\s*\d+$",
+    r"^section\s*\d+$",
+    r"^\d+$",
+    r"^[\d.]+$",
+]
+# 中文 domain token 排除字
+_DOM_STOPS_CN = {"的", "與", "和", "之", "對", "在", "及", "或"}
+
+
+def _title_in_blacklist(title: str) -> bool:
+    """v2 §3.1：title 是否為已知雜訊（章節 label / 頁碼 / 預設值）。"""
+    if not title:
+        return False
+    t = title.strip().casefold()
+    if t in TITLE_BLACKLIST_EXACT:
+        return True
+    for pat in TITLE_BLACKLIST_PATTERN:
+        if re.match(pat, t, re.IGNORECASE):
+            return True
+    return False
+
+
+def _title_sim(a: str, b: str) -> bool:
+    """v2 §6：相似度三段（相等 / 包含 / SequenceMatcher.ratio() >= 0.7）。"""
+    if not a or not b:
+        return False
+    A = re.sub(r"\s+", "", a).casefold()
+    B = re.sub(r"\s+", "", b).casefold()
+    if A == B:
+        return True
+    if A in B or B in A:
+        return True
+    return SequenceMatcher(None, A, B).ratio() >= 0.7
+
+
+def _tokenize_for_domain(s: str) -> set:
+    """v2 §5.1：英文 token + 中文 2/3-gram；去停用詞。"""
+    if not s:
+        return set()
+    tokens = set()
+    for m in re.finditer(r"[A-Za-z][A-Za-z0-9-]*", s):
+        tokens.add(m.group().casefold())
+    for chunk in re.findall(r"[一-鿿]+", s):
+        if len(chunk) >= 2:
+            for i in range(len(chunk) - 1):
+                tokens.add(chunk[i:i+2])
+        if len(chunk) >= 3:
+            for i in range(len(chunk) - 2):
+                tokens.add(chunk[i:i+3])
+    return tokens - _DOM_STOPS_CN
+
+
+def _dom_match(value: str, domain: str) -> bool:
+    """v2 §5.1：value 與 domain 的 token 交集 ≥ 1。domain 空則一律 False。"""
+    if not domain:
+        return False
+    return len(_tokenize_for_domain(value) & _tokenize_for_domain(domain)) >= 1
+
+
+def _resolve_title(
+    data: dict,
+    metadata: Optional[dict],
+    doc_type: Optional[str],
+    domain: str,
+    original_filename: Optional[str] = None,
+    paper_uuid: Optional[str] = None,
+) -> tuple:
+    """三軸融合 title（v2 §4.1 25 狀況決策樹）。
+
+    Returns:
+        (title_en, title_zh, confidence_log)
+    """
+    raw_en = (data.get('title') or '').strip()
+    raw_zh = (data.get('translated_title') or raw_en).strip()
+
+    m = metadata or {}
+    m_title = ((m.get('title') or {}).get('value') or '').strip()
+    m_trans = ((m.get('translated_title') or {}).get('value') or '').strip()
+    m_source = ((m.get('title') or {}).get('source') or '')
+    m_cand = ((m.get('candidate_name') or {}).get('value') or '').strip()
+
+    def _fallback():
+        fb = (original_filename or '').strip()
+        if fb.lower().endswith('.pdf'):
+            fb = fb[:-4].strip()
+        fb = fb or (paper_uuid or 'untitled')
+        return (fb, fb, 'low (fallback to filename/uuid)')
+
+    # #1 resume 短路（doc_type-specific）
+    if doc_type == 'resume' and m_cand:
+        return (m_cand, m_cand, 'high (resume candidate_name)')
+
+    # #2-#3 resume 無 candidate_name → raw 是姓名
+    if doc_type == 'resume' and not m_cand:
+        if raw_en and not _title_in_blacklist(raw_en):
+            return (raw_en, raw_zh, 'medium (resume raw=name)')
+        return _fallback()
+
+    # #4 全空 fallback
+    if not raw_en and not m_title:
+        return _fallback()
+
+    # #5-#6 raw 空、metadata 有
+    if not raw_en and m_title:
+        if _title_in_blacklist(m_title):
+            return _fallback()
+        return (m_title, m_trans or m_title, 'high (metadata only)')
+
+    # #7-#8 raw 有、metadata 空
+    if raw_en and not m_title:
+        if _title_in_blacklist(raw_en):
+            return _fallback()
+        return (raw_en, raw_zh, 'medium (raw only)')
+
+    # 兩者皆有
+    raw_bl = _title_in_blacklist(raw_en)
+    sim = _title_sim(raw_en, m_title)
+
+    # #9-#10 both_agree（雙路確認）
+    if m_source == 'both_agree':
+        return (m_title, m_trans or m_title, 'high (both_agree)')
+
+    # #20 manual（保留）
+    if m_source == 'manual':
+        return (m_title, m_trans or m_title, 'high (manual override)')
+
+    # #11-#13 llm_page1
+    if m_source == 'llm_page1':
+        if sim:
+            return (m_title, m_trans or m_title, 'high (llm sim raw)')
+        if raw_bl:
+            return (m_title, m_trans or m_title, 'high (raw blacklisted)')
+        # #13 都合法但不同 → domain 仲裁（v2 §5.2）
+        arb_R = _dom_match(raw_en, domain)
+        arb_M = _dom_match(m_title, domain)
+        if arb_M and arb_R:
+            return (m_title, m_trans or m_title, 'medium (dom both match, take M)')
+        if arb_M and not arb_R:
+            return (m_title, m_trans or m_title, 'medium (dom match M)')
+        if arb_R and not arb_M:
+            return (raw_en, raw_zh, 'medium (dom match raw)')
+        logger.warning(
+            f"[md_restore] title 仲裁失敗 raw={raw_en!r} M={m_title!r} "
+            f"domain={domain!r}，保守取 raw"
+        )
+        return (raw_en, raw_zh, 'low (dom both fail, take raw)')
+
+    # #14-#16 pdf_metadata（baron 核心觀察：99% 是垃圾預設值，raw 勝）
+    if m_source == 'pdf_metadata':
+        if sim:
+            return (m_title, m_trans or m_title, 'medium (pdf_meta sim raw)')
+        if raw_bl:
+            return (m_title, m_trans or m_title, 'medium (raw blacklisted, only pdf_meta)')
+        return (raw_en, raw_zh, 'medium (pdf_meta untrustworthy, take raw)')
+
+    # #17-#19 llm_page1 (conflict with pdf_metadata)
+    if 'conflict' in m_source.lower():
+        if sim:
+            return (m_title, m_trans or m_title, 'medium (conflict sim raw)')
+        if raw_bl:
+            return (m_title, m_trans or m_title, 'medium (raw blacklisted)')
+        arb_R = _dom_match(raw_en, domain)
+        arb_M = _dom_match(m_title, domain)
+        if arb_M:
+            return (m_title, m_trans or m_title, 'medium (conflict, dom match M)')
+        if arb_R:
+            return (raw_en, raw_zh, 'medium (conflict, dom match raw)')
+        logger.warning(
+            f"[md_restore] conflict 仲裁失敗 raw={raw_en!r} M={m_title!r}，保守取 raw"
+        )
+        return (raw_en, raw_zh, 'low (conflict, take raw)')
+
+    # #24 未知 source 兜底
+    logger.warning(f"[md_restore] 未知 metadata.title.source={m_source!r}，保守取 raw")
+    return (raw_en, raw_zh, 'low (unknown source)')
+
 
 class RestoreProcessor:
     """恢复处理器, 将提供的json文件还原成中英两篇md文档"""
@@ -214,10 +421,19 @@ class RestoreProcessor:
                 self._process_section(child, output_path_en, output_path_zh, level + 1, vision_captions)
     
     def process(self, input_path: str, output_path_en: str, output_path_zh: str,
-                images_info_path: str = None) -> tuple:
+                images_info_path: str = None,
+                metadata: Optional[dict] = None,
+                doc_type: Optional[str] = None,
+                domain: str = '',
+                original_filename: Optional[str] = None,
+                paper_uuid: Optional[str] = None) -> tuple:
         """
         读取 input.json，恢复成中英文两篇md文档
         1. 中文用翻译部分；如果没有翻译则保留英文原文
+
+        Phase 4.7d Commit 1：title 改走三軸融合（v2 §4.1 25 狀況決策樹）。
+        新增 metadata/doc_type/domain/original_filename/paper_uuid 參數；
+        皆有預設值，舊 caller 不傳則退回「只看 data['title']」舊行為。
         """
         try:
             input_path = Path(input_path)
@@ -240,11 +456,22 @@ class RestoreProcessor:
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # 处理文档标题
-            title_en = data.get('title', '')
+            # Phase 4.7d Commit 1：title 三軸融合（v2 §4.1）。舊 caller
+            # 不傳 metadata/doc_type/domain 時 _resolve_title 退回「raw only」分支、
+            # 行為與舊版等效。
+            title_en, title_zh, conf_log = _resolve_title(
+                data, metadata, doc_type, domain, original_filename, paper_uuid
+            )
+            self.logger.info(
+                f"[md_restore] 三軸融合 title: {conf_log}"
+            )
+            self.logger.info(
+                f"  raw_en={data.get('title')!r} -> final_en={title_en!r}"
+            )
+            self.logger.info(
+                f"  raw_zh={data.get('translated_title')!r} -> final_zh={title_zh!r}"
+            )
             self._write_to_md(output_path_en, f"# {title_en}")
-            
-            title_zh = data.get('translated_title', title_en)
             self._write_to_md(output_path_zh, f"# {title_zh}")
             
             # 处理作者信息
