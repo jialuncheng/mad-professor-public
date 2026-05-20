@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_community.vectorstores.faiss import FAISS
+from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,8 @@ class RagRetriever:
             store = FAISS.load_local(
                 vector_store_path,
                 EmbeddingModel.get_instance(),
-                allow_dangerous_deserialization=True
+                allow_dangerous_deserialization=True,
+                distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT,  # 對齊建立端（rag_processor）
             )
             logger.info(f"成功加载向量库: {vector_store_path}")
             return store
@@ -97,7 +99,11 @@ class RagRetriever:
                 return ""
 
             docs_with_scores = vector_store.similarity_search_with_score(query=query, k=top_k)
-            filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > 0.6]
+            # IP metric 下 score 為 inner product 值（越大越相似），與建立端
+            # MAX_INNER_PRODUCT 對齊。實測 Gemini embedding 768 dim 下：
+            # 相關 query top score 約 0.23-0.27，無關 query 約 0.17-0.20。
+            # 門檻 0.22 可有效區分。
+            filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > 0.22]
 
             if not filtered_docs:
                 return ""
