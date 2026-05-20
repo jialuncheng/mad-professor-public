@@ -919,6 +919,53 @@
   }
   *::-webkit-scrollbar-track { background: transparent; }
 
+  /* ── 列印：只印中欄文章 ──
+     業務 JS 已將 #current-title 寫進 document.title（print-btn handler），
+     瀏覽器列印時頁眉/頁尾自動帶入；此 CSS 僅負責隱藏非文章 UI。 */
+  @media print {
+    /* 隱藏所有非文章區塊 */
+    #sidebar,
+    #chat-panel,
+    #content-toolbar,
+    #empty-state,
+    #tooltip,
+    .modal-mask {
+      display: none !important;
+    }
+
+    /* 中欄全寬輸出 */
+    body, html, main {
+      background: white !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    #paper-content {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 16px !important;
+      color: black !important;
+      font-size: 12pt;
+      line-height: 1.6;
+    }
+
+    /* 文章內元素列印優化 */
+    #paper-content h1,
+    #paper-content h2,
+    #paper-content h3 {
+      page-break-after: avoid;
+    }
+    #paper-content img,
+    #paper-content figure {
+      max-width: 100% !important;
+      page-break-inside: avoid;
+    }
+    #paper-content p,
+    #paper-content li {
+      orphans: 3;
+      widows: 3;
+    }
+  }
 </style>
 <!-- 主題版型：切換 href 即可換主題。可選：themes/mies.css、themes/kahn.css。
      置於 </style> 之後是刻意安排：CSS 後出者勝，讓主題 :root 覆寫主檔 fallback。-->
