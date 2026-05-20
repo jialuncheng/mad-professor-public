@@ -1963,22 +1963,34 @@ function papersInCurrentFolder() {
   const ids = folderDescendants(currentFolderId);
   return allPapers.filter(p => p.folder_id != null && ids.has(p.folder_id));
 }
-// Phase 4.7c：title fallback 鏈（meta.candidate_name → meta.title → meta.translated_title
-// → DB translated_title → DB title → original_filename(去 .pdf) → 「未命名文件」）
+// Phase 4.7c：title fallback 鏈（中文優先）。原 commit 4 把 metadata.title
+// (英文原文) 放前面導致 paper-item 全變英文；本輪改為中文優先。
+function stripPdfExt(s) {
+  if (!s) return '';
+  return s.toLowerCase().endsWith('.pdf') ? s.slice(0, -4) : s;
+}
 function resolveDisplayTitle(p) {
   const m = p.metadata || {};
+  // resume 特判：candidate_name 通常不翻譯，優先用
   if (p.doc_type === 'resume' && m.candidate_name && m.candidate_name.value)
     return m.candidate_name.value;
-  const mtVal = m.title && m.title.value;
-  const mttVal = m.translated_title && m.translated_title.value;
-  let ofn = p.original_filename || '';
-  if (ofn && ofn.toLowerCase().endsWith('.pdf')) ofn = ofn.slice(0, -4);
-  return mtVal || mttVal || p.translated_title || p.title || ofn || '未命名文件';
+  // 中文優先序：metadata.translated_title → DB.translated_title →
+  //            metadata.title → DB.title → original_filename(去 .pdf) → 「未命名文件」
+  return (m.translated_title && m.translated_title.value)
+      || p.translated_title
+      || (m.title && m.title.value)
+      || p.title
+      || stripPdfExt(p.original_filename)
+      || '未命名文件';
 }
 function resolveDisplaySubtitle(p) {
   if (p.doc_type === 'resume') return '';
   const m = p.metadata || {};
-  return (m.title && m.title.value) || p.title || '';
+  // displayTitle 已是中文時，副標顯示原文 title；已是原文時副標留空避免重複
+  if ((m.translated_title && m.translated_title.value) || p.translated_title) {
+    return (m.title && m.title.value) || p.title || '';
+  }
+  return '';
 }
 // Phase 4.7c step 5：依 doc_type 分支渲染中欄 metadata hero。
 // 缺項靜默省略；只有 title 是 always-show。HTML escape 防 XSS（metadata 值可
