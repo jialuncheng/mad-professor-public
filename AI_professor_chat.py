@@ -201,10 +201,10 @@ class AIProfessorChat:
                 return ""
             if not self.retriever.is_ready():
                 return ""
-            context, _ = self.retriever.retrieve_with_context(
+            context = self.retriever.retrieve_with_context(
                 query=query, paper_id=paper_id, top_k=5
             )
-            return context
+            return context or ""
         except Exception as e:
             self.logger.error(f"RAG檢索失敗: {str(e)}")
             return ""
