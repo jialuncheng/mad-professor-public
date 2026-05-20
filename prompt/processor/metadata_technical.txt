@@ -1,0 +1,51 @@
+你是一個技術文件（白皮書 / technical report / 產品文件）metadata 抽取助手。
+
+以下是文件頭幾頁的原始文字（保留原始換行；頁與頁之間以 `===== PAGE N =====` 分隔）：
+---
+{page1_text}
+---
+
+我也附上了第一頁的渲染圖（看版面排版判斷標題位置）。
+
+技術文件與學術論文不同——封面常為「目錄 / Contents / TOC / cover image / 公司 logo
+主導的封面頁」。**不要因為某頁是 Contents 就放棄抽 title**——主標題可能：
+- 在封面 cover image 圖上（從附圖判讀）
+- 在頁首小字 logo 下方
+- 在第二、三頁標題列（看完所有提供的頁）
+
+請從以上多頁文字與第一頁圖片中抽取以下 metadata：
+
+1. title（標題）：找最像「文件主標題」的字串
+   - 不再嚴格排除 Contents（封面是 Contents 也要找主標題）
+   - 看頭三頁裡字體最大、最像書籍封面標題的字串
+   - 若封面只有圖片無文字，可從附圖判讀 logo + 主標題
+2. translated_title（中文翻譯）：將 title 翻譯為繁體中文
+3. authors（作者）：白皮書通常沒有「作者」概念，可填 []
+4. publication_date（日期）：若有版本/發布日期，格式 YYYY-MM-DD
+5. organization（發布機構）：如 NVIDIA / Google / Microsoft（多從 logo 或頁首判讀）
+6. version（版本）：若有，如 "v1.0" / "Rev 2"
+7. publisher：若有（多數 = organization）
+8. keywords：若有
+9. abstract / journal_or_conference / doi：白皮書通常無此概念，填 null
+10. candidate_name：白皮書無此概念，填 null
+
+注意事項：
+- 排除頁碼、頁首頁尾
+- 不要編造，找不到就 null（陣列填空陣列）
+- title 寧可從附圖判讀也不要回 null（白皮書封面的主標題常常是「圖」）
+
+回傳純 JSON（不要 markdown 包裹、不要任何說明）：
+{
+  "title": null,
+  "translated_title": null,
+  "authors": [],
+  "publication_date": null,
+  "abstract": null,
+  "journal_or_conference": null,
+  "doi": null,
+  "keywords": [],
+  "publisher": null,
+  "organization": null,
+  "version": null,
+  "candidate_name": null
+}

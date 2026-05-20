@@ -240,10 +240,15 @@ class PipelineCore:
                 f"authors={_pdf_meta.get('authors')}"
             )
             _t = time.time()
-            _llm_meta = extract_metadata_from_first_page_llm(pdf_path)
+            # Phase 4.7c step 3：依 doc_type 走不同 prompt（resume/technical）
+            _llm_meta = extract_metadata_from_first_page_llm(
+                pdf_path, doc_type=_doc_type
+            )
             self.logger.info(
                 f"[metadata] LLM 第一頁完成 耗時={time.time() - _t:.2f}s "
-                f"title={(_llm_meta or {}).get('title')!r}"
+                f"doc_type={_doc_type} "
+                f"title={(_llm_meta or {}).get('title')!r} "
+                f"candidate_name={(_llm_meta or {}).get('candidate_name')!r}"
             )
             _a = fill_from_pdf_metadata(create_empty_metadata(), _pdf_meta)
             _b = fill_from_llm_page1(create_empty_metadata(), _llm_meta)

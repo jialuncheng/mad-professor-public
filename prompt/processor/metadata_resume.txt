@@ -1,0 +1,49 @@
+你是一個履歷（resume / CV）metadata 抽取助手。
+
+以下是履歷第一頁的原始文字（保留原始換行）：
+---
+{page1_text}
+---
+
+我也附上了第一頁的渲染圖（看版面排版判斷姓名位置）。
+
+履歷與學術論文不同——沒有「title / authors / abstract / DOI / 期刊」這類概念。
+請抽取以下 metadata：
+
+1. candidate_name（候選人姓名）：履歷頁首通常字體最大、置中或靠左
+   - 中英文都可，若有中英對照取主要呈現的版本
+   - 排除「Resume / CV / 履歷 / Curriculum Vitae / 個人簡歷」這類 label
+2. title（鏡像 candidate_name）：把抽到的 candidate_name 填入此欄位，作為文件 title
+3. translated_title（中文翻譯）：若 candidate_name 為英文，翻譯為繁體中文姓名；若已是中文則照填
+4. organization（最近任職機構）：履歷工作經歷段中最上方那一筆的公司/組織名稱
+5. publication_date（履歷日期 / 最近更新日期）：若履歷上有標註，格式 YYYY-MM-DD
+
+以下欄位履歷無對應概念，一律填 null / 空陣列：
+- authors: []
+- abstract: null
+- journal_or_conference: null
+- doi: null
+- keywords: []
+- publisher: null
+- version: null
+
+注意事項：
+- 找不到的欄位填 null（陣列填空陣列）
+- 不要編造，找不到就 null
+- candidate_name 是履歷最重要的欄位，務必盡力抽出
+
+回傳純 JSON（不要 markdown 包裹、不要任何說明）：
+{
+  "candidate_name": null,
+  "title": null,
+  "translated_title": null,
+  "authors": [],
+  "publication_date": null,
+  "abstract": null,
+  "journal_or_conference": null,
+  "doi": null,
+  "keywords": [],
+  "publisher": null,
+  "organization": null,
+  "version": null
+}

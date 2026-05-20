@@ -26,51 +26,26 @@ import fitz  # PyMuPDF
 
 logger = logging.getLogger(__name__)
 
-# Stage A 第二來源（LLM 看第一頁）prompt
-_STAGE_A_PROMPT = """你是一個文件 metadata 抽取助手。
-
-以下是 PDF 文件第一頁的原始文字（保留原始換行）：
----
-{page1_text}
----
-
-我也附上了第一頁的渲染圖（看版面排版判斷標題位置）。
-請從這頁文字與圖片中抽取以下 metadata：
-
-1. title（標題）：通常是字體最大、置中、最上方的文字
-2. translated_title（中文翻譯）：將 title 翻譯為繁體中文
-3. authors（作者）：以陣列形式回傳
-4. publication_date（日期）：若有，格式 YYYY-MM-DD
-5. abstract（摘要）：若有完整 abstract 段落，整段內容
-6. journal_or_conference（期刊/會議）：若有
-7. doi：若有
-8. keywords（關鍵字）：以陣列形式回傳
-9. publisher（出版社）：若有
-10. organization（機構）：若有（如 NVIDIA, arXiv, IEEE 等）
-11. version（版本）：若有
-
-注意事項：
-- 排除「Contents / 目錄 / Introduction / 前言 / Abstract / 摘要」這類章節名作為 title
-- 排除頁碼、頁首頁尾
-- 找不到的欄位填 null（陣列填空陣列）
-- 不要編造，找不到就 null
-- title 要找主標題，不是副標
-- 對於部分機構（如 NVIDIA），可能以 logo 形式出現在頁首，請從圖片判讀
-
-回傳純 JSON（不要 markdown 包裹、不要任何說明）：
-{
-  "title": null,
-  "translated_title": null,
-  "authors": [],
-  "publication_date": null,
-  "abstract": null,
-  "journal_or_conference": null,
-  "doi": null,
-  "keywords": [],
-  "publisher": null,
-  "organization": null,
-  "version": null
-}"""
+# Stage A 第二來源（LLM 看第一頁）prompt：Phase 4.7c step 3 起改為 doc_type
+# 分支讀外部檔（prompt/processor/metadata_{doc_type}.txt），由
+# _load_stage_a_prompt 載入。未知 doc_type 一律 fallback academic。
+#
+# === doc_type-registry ===
+# 新增 doc_type 須同步新增 prompt/processor/metadata_{doc_type}.txt 或在
+# _PROMPT_BY_DOC_TYPE 顯式映射到既有檔。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+_PROMPT_BY_DOC_TYPE = {
+    "academic":  "prompt/processor/metadata_academic.txt",
+    "resume":    "prompt/processor/metadata_resume.txt",
+    "technical": "prompt/processor/metadata_technical.txt",
+    # 以下 doc_type 暫共用 academic prompt（4.7c §C-5：暫不規劃）
+    "book":      "prompt/processor/metadata_academic.txt",
+    "news":      "prompt/processor/metadata_academic.txt",
+    "slides":    "prompt/processor/metadata_academic.txt",
+    "web":       "prompt/processor/metadata_academic.txt",
+}
+# 走 multi-page（讀頭 N 頁文字）的 doc_type；其他僅 page 1
+_MULTI_PAGE_DOC_TYPES = {"technical"}
+_MULTI_PAGE_N = 3
 
 # Schema 版本；未來改結構需 bump（JSON 欄位免 migration 的配套）
 SCHEMA_VERSION = 2
@@ -343,22 +318,75 @@ def _coerce_llm_meta(raw: dict) -> dict:
     return out
 
 
-def extract_metadata_from_first_page_llm(pdf_path, llm=None) -> Optional[dict]:
-    """用 LLM 看 PDF 第一頁原始文字＋渲染圖抽 metadata（含 translated_title）。
+def _load_stage_a_prompt(doc_type: Optional[str]) -> str:
+    """依 doc_type 載入對應 prompt 檔；未知/None 一律 academic。soft fail：
+    讀檔失敗回 academic 內建 fallback 訊息（仍能跑、信心度降但不 break）。"""
+    rel = _PROMPT_BY_DOC_TYPE.get((doc_type or "").strip() or "academic",
+                                  _PROMPT_BY_DOC_TYPE["academic"])
+    try:
+        from pathlib import Path as _P
+        base = _P(__file__).resolve().parent.parent
+        return (base / rel).read_text(encoding="utf-8")
+    except Exception as e:
+        logger.warning(f"_load_stage_a_prompt 失敗（soft，用最簡 fallback）: {rel} - {e}")
+        return ("從以下第一頁文字抽 title/translated_title/authors/"
+                "publication_date 等欄位，回 JSON：\n---\n{page1_text}\n---")
 
-    Returns flat dict（同 fitz 結構 + translated_title）；第一頁無文字 / LLM 失敗
-    / JSON 解析失敗 → None。**永遠 soft fail，不 raise**。
 
+def _get_multi_page_text(pdf_path, n: int = _MULTI_PAGE_N,
+                        per_page_limit: int = 1500) -> Optional[str]:
+    """抽 PDF 頭 n 頁原始文字，頁與頁之間以 `===== PAGE k =====` 分隔。
+    每頁截至 per_page_limit 字元避免單頁炸 token。**絕不 raise**，全失敗回 None。"""
+    doc = None
+    try:
+        doc = fitz.open(str(pdf_path))
+        if doc.page_count < 1:
+            return None
+        parts = []
+        for i in range(min(n, doc.page_count)):
+            try:
+                t = (doc[i].get_text() or "").strip()
+                if t:
+                    parts.append(f"===== PAGE {i+1} =====\n{t[:per_page_limit]}")
+            except Exception:
+                continue
+        if not parts:
+            return None
+        return "\n\n".join(parts)
+    except Exception as e:
+        logger.warning(f"_get_multi_page_text 失敗（soft）: {pdf_path} - {e}")
+        return None
+    finally:
+        if doc is not None:
+            try:
+                doc.close()
+            except Exception:
+                pass
+
+
+def extract_metadata_from_first_page_llm(pdf_path, llm=None,
+                                          doc_type: Optional[str] = None
+                                          ) -> Optional[dict]:
+    """用 LLM 看 PDF 第一頁（或頭 N 頁，依 doc_type）原始文字＋渲染圖抽 metadata。
+
+    Returns flat dict（同 fitz 結構 + translated_title + candidate_name）；
+    第一頁無文字 / LLM 失敗 / JSON 解析失敗 → None。**永遠 soft fail，不 raise**。
+
+    doc_type：影響 prompt 選擇與是否多頁讀文字（Phase 4.7c step 3）。
     llm：可注入測試替身（需有 chat_with_image 或 chat）；None 時用
     config.LLMClient.get_instance()（延遲 import，避免模組載入即需金鑰）。
     """
     try:
-        text = get_first_page_text(pdf_path)
+        dt = (doc_type or "").strip() or "academic"
+        if dt in _MULTI_PAGE_DOC_TYPES:
+            text = _get_multi_page_text(pdf_path)
+        else:
+            text = get_first_page_text(pdf_path)
         if not text:
             return None
-        text = text[:4000]  # 與 domain_detector 一致上限
+        text = text[:6000 if dt in _MULTI_PAGE_DOC_TYPES else 4000]
         img = get_first_page_render(pdf_path)
-        prompt = _STAGE_A_PROMPT.replace("{page1_text}", text)
+        prompt = _load_stage_a_prompt(dt).replace("{page1_text}", text)
 
         if llm is None:
             from config import LLMClient  # 延遲 import
