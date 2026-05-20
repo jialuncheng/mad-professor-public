@@ -223,7 +223,8 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
     _ensure_db()
     rt_title, rt_tt = _read_title_from_rag_tree(final_paths)
     from processor.metadata_extractor import resolve_title  # 延遲 import 避免循環
-    title = resolve_title(metadata, final_paths.get('rag_tree'), paper_uuid)
+    title = resolve_title(metadata, final_paths.get('rag_tree'), paper_uuid,
+                          original_filename=original_filename)
     if not title:                       # resolve_title 理論上不會空，雙保險
         title = rt_title or paper_uuid
     m_tt = (metadata.get('translated_title', {}).get('value')

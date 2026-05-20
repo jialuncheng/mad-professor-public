@@ -574,12 +574,14 @@ def _read_rag_tree_title(rag_tree_path) -> Optional[str]:
 
 
 def resolve_title(metadata: Optional[dict], rag_tree_path,
-                  paper_uuid: str) -> str:
+                  paper_uuid: str,
+                  original_filename: Optional[str] = None) -> str:
     """title fallback 鏈（不會回空）：
     1. metadata['title'].value
     2. metadata['title'].alternates 任一非空
     3. rag_tree 的 title（既有邏輯）
-    4. paper_uuid（最終 fallback）
+    4. original_filename（去 .pdf 後綴；Phase 4.7c step 1）
+    5. paper_uuid（最終 fallback）
     """
     try:
         if metadata:
@@ -592,6 +594,12 @@ def resolve_title(metadata: Optional[dict], rag_tree_path,
         rt = _read_rag_tree_title(rag_tree_path)
         if rt:
             return rt
+        if original_filename:
+            ofn = original_filename.strip()
+            if ofn.lower().endswith(".pdf"):
+                ofn = ofn[:-4].strip()
+            if ofn:
+                return ofn
     except Exception as e:
         logger.warning(f"resolve_title 失敗（soft）: {e}")
     return paper_uuid
