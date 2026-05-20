@@ -923,6 +923,25 @@
      業務 JS 已將 #current-title 寫進 document.title（print-btn handler），
      瀏覽器列印時頁眉/頁尾自動帶入；此 CSS 僅負責隱藏非文章 UI。 */
   @media print {
+    /* 解除 viewport 高度與 scroll 限制，讓 #paper-content 展開到實際內容高度
+       （否則 #content-area overflow:hidden + #paper-content flex:1+overflow-y:auto
+       會把列印限制在當前可見範圍）。 */
+    html, body {
+      height: auto !important;
+      overflow: visible !important;
+    }
+    main, #content-area {
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;     /* 解除 flex 限制 */
+    }
+    #paper-content {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+      flex: none !important;          /* 解除 flex: 1 */
+    }
+
     /* 隱藏所有非文章區塊 */
     #sidebar,
     #chat-panel,
