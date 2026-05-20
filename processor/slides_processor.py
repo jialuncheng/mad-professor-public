@@ -6,6 +6,7 @@ import fitz  # PyMuPDF
 import settings
 from config import LLMClient
 from utils.text_utils import strip_json_fence
+from processor.pdf_parser import PDFParser, PDFParseError  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,16 @@ EMPTY_CHECK_PROMPT = """這是一張投影片的截圖。請判斷這張投影�
 請只回答 "empty" 或 "has_content"，不要其他文字。"""
 
 
-class SlidesProcessor:
+class SlidesProcessor(PDFParser):
     """簡報 PDF 處理器：使用 PyMuPDF 渲染每頁，再用 Vision 辨識內容"""
 
     def __init__(self, llm=None):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.llm = llm if llm is not None else LLMClient.get_instance()
+
+    def parse(self, pdf_path: str, output_dir: str) -> Path:
+        """Implements PDFParser.parse()."""
+        return self.process(pdf_path, output_dir)
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
         """
