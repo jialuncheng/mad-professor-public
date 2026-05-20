@@ -206,6 +206,7 @@ class MarkdownProcessor:
     def parse(self, content: str, structure: dict = None) -> Dict[str, Any]:
         lines = content.split('\n')
         result = {'title': '', 'authors_info': '', 'sections': []}
+        doc_type = (structure or {}).get('document_type', 'academic')
 
         # 從 doc_analyzer 的 structure 取得 authors 行號集合
         # 只有在 authors/publication_info 類型的行才放進 authors_info
@@ -255,7 +256,12 @@ class MarkdownProcessor:
 
                 if not has_started:
                     result['title'] = title_text
-                    collecting_authors = True
+                    # collecting_authors=True 表示「H1 後到 H2 前是 authors 區塊」，
+                    # 適用學術論文與新聞（標題後跟作者/byline）；簡報沒有此區塊，
+                    # 第一頁標題後直接是內容，不啟用收集（否則第一頁會被吞進
+                    # authors_info 且 translate 跳過 → 中譯缺第一頁）。
+                    SLIDES_DOC_TYPES = ('slides',)
+                    collecting_authors = doc_type not in SLIDES_DOC_TYPES
                     has_started = True
                     continue
 
