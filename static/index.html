@@ -361,7 +361,7 @@
   /* === 左欄 sidebar ===
      Kahn：servant space，靠「厚牆」分隔；2px umber 視為結構體 */
   #sidebar {
-    width: 240px;
+    width: 288px;
     background: var(--color-bg);
     color: var(--color-text);
     display: flex;
@@ -695,6 +695,10 @@
   #paper-content h1 { text-wrap: pretty; }
   #paper-content h2 {
     /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
+  }
+  #paper-content img {
+    max-width: 100%;
+    height: auto;
   }
   #paper-content .figure { /* margin 由主題覆寫 */ }
   #paper-content .figure .ph {
@@ -2400,14 +2404,6 @@ document.getElementById('help-modal').onclick = (e) => {
 // 新增資料夾：當前選中為某資料夾則建在其下，否則建在根
 document.getElementById('new-folder-btn').onclick = () => {
   folderCreate(typeof currentFolderId === 'number' ? currentFolderId : null);
-};
-
-// 階段一：側欄收合切換
-document.getElementById('sidebar-toggle').onclick = () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
-};
-document.getElementById('chat-toggle').onclick = () => {
-  document.getElementById('chat-panel').classList.toggle('collapsed');
 };
 
 // 登出

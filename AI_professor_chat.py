@@ -124,7 +124,7 @@ class AIProfessorChat:
         try:
             router_prompt = self._read_file(AI_ROUTER_PROMPT_PATH)
             has_paper = paper_id is not None and paper_data is not None
-            paper_status = "有論文加載" if has_paper else "無論文加載"
+            paper_status = "有文件加載" if has_paper else "無文件加載"
             paper_title = ""
             if has_paper:
                 paper_title = paper_data.get('translated_title', '') or paper_data.get('title', '')
@@ -218,7 +218,7 @@ class AIProfessorChat:
         if paper_data:
             title = paper_data.get('translated_title', '') or paper_data.get('title', '')
         else:
-            title = "無論文"
+            title = "無文件"
 
         explain_prompt = explain_prompt.format(title=title)
 
