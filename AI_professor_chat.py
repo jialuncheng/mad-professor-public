@@ -221,6 +221,14 @@ class AIProfessorChat:
             title = "無論文"
 
         explain_prompt = explain_prompt.format(title=title)
+
+        # 注入 domain（沿用 translate_processor.py:233-235 範式：caller 端條件附加）
+        if paper_data:
+            domain = paper_data.get('_domain', '')
+            if domain:
+                character_prompt = character_prompt + f"\n\n當前文件主題：{domain}"
+                explain_prompt = explain_prompt + f"\n\n當前文件主題：{domain}"
+
         system_message = f"{character_prompt}\n{explain_prompt}"
 
         messages = [{"role": "system", "content": system_message}]

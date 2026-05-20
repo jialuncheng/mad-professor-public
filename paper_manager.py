@@ -386,10 +386,10 @@ def preload_vector_stores(output_dir, ai_core) -> None:
     output_dir = Path(output_dir)
     with db.SessionLocal() as s:
         items = [
-            (p.owner_id, p.paper_uuid)
+            (p.owner_id, p.paper_uuid, p.domain)
             for p in s.query(Paper).filter_by(status='done').all()
         ]
-    for owner_id, paper_uuid in items:
+    for owner_id, paper_uuid, domain in items:
         vstore = vectors_path(output_dir, owner_id, paper_uuid)
         rtree = rag_tree_path(output_dir, owner_id, paper_uuid)
         if vstore.exists():
@@ -397,6 +397,10 @@ def preload_vector_stores(output_dir, ai_core) -> None:
             logger.info(f"預載向量庫: {paper_uuid}")
         if rtree.exists():
             ai_core.load_paper_cache(paper_uuid, str(rtree))
+            # 注入 domain 到 ai_core 的 paper_cache（沿用 translate_processor:233-235 範式）
+            cache = ai_core._paper_cache.get(paper_uuid)
+            if cache is not None and domain:
+                cache['_domain'] = domain
 
 
 def load_paper_resources(output_dir, owner_id: int, paper_uuid: str,
@@ -409,6 +413,15 @@ def load_paper_resources(output_dir, owner_id: int, paper_uuid: str,
         ai_core.add_paper_vector_store(paper_uuid, str(vstore))
     if rtree.exists():
         ai_core.load_paper_cache(paper_uuid, str(rtree))
+        # 注入 domain 到 ai_core 的 paper_cache（沿用 translate_processor:233-235 範式）
+        with db.SessionLocal() as s:
+            row = s.query(Paper.domain).filter_by(
+                owner_id=owner_id, paper_uuid=paper_uuid
+            ).one_or_none()
+            domain = row[0] if row else None
+        cache = ai_core._paper_cache.get(paper_uuid)
+        if cache is not None and domain:
+            cache['_domain'] = domain
     logger.info(f"論文資源載入完成: owner={owner_id} {paper_uuid}")
 
 
