@@ -221,20 +221,27 @@ if (ok) { /* ... */ }
 - 點圓 6px 閃爍（1s）
 - **`pointer-events: none`**：整列禁止點擊，避免誤觸
 
-### 7.4 paper-metadata-hero（中欄）
-Phase 4.7c step 5。位於 `#content-toolbar` 下方、`#paper-content` 上方，
-把後端 metadata（authors / date / journal / abstract / candidate_name 等）端到端顯示。
+### 7.4 #current-title 擴充標題區（中欄）
+Phase 4.7c 修正 2（取代原獨立 hero block）。位於 `#content-toolbar` 下方、
+`#paper-content` 上方，把 metadata 細節（authors / date / journal / abstract /
+candidate_name 等）整合進「擴充的標題區」——單一 multi-row header，視覺上
+不再有兩處 title。
 
 結構：
-- `.hero-title`：22px / 600，always-show（fallback 同 `resolveDisplayTitle`）
-- `.hero-translated`：15px muted；title ≠ translated_title 時才顯示
-- `.hero-meta-row`：12px muted，flex；authors · date · journal/publisher，sep 為 `·`
-- `details.hero-abstract-toggle`：摘要可摺疊（預設摺起）；展開後 `.hero-abstract` 為左側 3px border 卡片
+- `.title-zh`：22px / 600，always-show（fallback 同 `resolveDisplayTitle`，
+  中文優先）
+- `.title-en`：14px muted；當 title-zh 與 metadata.title (原文) 不同時才顯示
+- `.title-meta`：12px muted，flex；authors · date · journal/publisher，
+  分隔符 `.title-meta-sep` (`·`)
+- `details.title-abstract`：摘要可摺疊（預設摺起），summary 文字「顯示摘要」；
+  展開後 `.abstract-body` 為左側 3px border 卡片
+- 整個 `#current-title[hidden]`：未選文件時隱藏
 
 doc_type 分支：
-- academic / technical / book / news / web：完整 hero
-- resume：candidate_name 為 title，副資料 = organization（暫代 latest_employer）；無 abstract / authors
-- slides：title + original_filename；abstract 通常空，靜默省略
+- academic / technical / book / news / web：完整顯示
+- resume：candidate_name 為 .title-zh、organization 為 .title-meta；
+  無 .title-en / authors / date / abstract
+- slides：簡化（.title-zh，可能無 meta，abstract 通常空 → 靜默省略）
 
 fallback：缺項靜默省略；只有 title 是 always-show。
 

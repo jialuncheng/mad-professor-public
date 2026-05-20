@@ -660,13 +660,6 @@
     display: flex; align-items: flex-start;          /* 改 flex-start：標題加高時不會把 icon 往下推 */
     gap: var(--gap-btn-loose);
   }
-  #content-toolbar h2 {
-    /* 字體 / 字級 → 由主題覆寫；不再單行裁切 */
-    color: var(--color-text);
-    flex: 1; min-width: 0;
-    font-weight: 600;
-    line-height: 1.25;                                /* 多行時行距 */
-  }
   /* 痛點 6：中欄 icon 群 normal 間距、同一個 flex 容器 */
   #content-toolbar .toolbar-actions {
     display: flex; align-items: center;
@@ -685,64 +678,65 @@
   #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
     fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* Phase 4.7c step 5：metadata hero——把後端早抽好的 metadata 端到端顯示。
-     缺項靜默省略；只有 title 是 always-show（fallback 同 resolveDisplayTitle）。 */
-  #paper-metadata-hero {
+  /* Phase 4.7c 修正 2：#current-title 擴充標題區（取代 hero）。原 toolbar
+     內 h2 + 獨立 hero block 兩處重複；合併為單一 multi-row header，置於
+     toolbar 與 paper-content 之間。 */
+  #current-title {
     flex-shrink: 0;
-    padding: var(--space-4) var(--pad-panel) var(--space-3);
+    padding: var(--space-3) var(--pad-panel) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
-  #paper-metadata-hero[hidden] { display: none; }
-  #paper-metadata-hero .hero-title {
+  #current-title[hidden] { display: none; }
+  #current-title .title-zh {
     font-size: var(--font-h1, 22px);
     font-weight: 600;
     color: var(--color-text);
     line-height: 1.3;
     margin: 0 0 var(--space-1) 0;
   }
-  #paper-metadata-hero .hero-translated {
-    font-size: var(--font-h2, 15px);
+  #current-title .title-en {
+    font-size: var(--font-h2, 14px);
     color: var(--color-text-subtle);
     line-height: 1.4;
     margin: 0 0 var(--space-2) 0;
   }
-  #paper-metadata-hero .hero-meta-row {
+  #current-title .title-meta {
     font-size: var(--font-small, 12px);
     color: var(--color-text-subtle);
-    margin: 0 0 var(--space-2) 0;
+    margin: var(--space-1) 0 0 0;
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
+    align-items: baseline;
   }
-  #paper-metadata-hero .hero-meta-row .sep {
+  #current-title .title-meta-sep {
     color: var(--color-border);
   }
-  #paper-metadata-hero .hero-abstract {
-    font-size: var(--font-base, 14px);
+  #current-title details.title-abstract {
+    margin-top: var(--space-2);
+    font-size: var(--font-base, 13px);
     color: var(--color-text);
-    line-height: 1.55;
-    margin: var(--space-2) 0 0 0;
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-surface, var(--color-bg));
-    border-left: 3px solid var(--color-border);
-    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
   }
-  #paper-metadata-hero details.hero-abstract-toggle > summary {
+  #current-title details.title-abstract > summary {
     cursor: pointer;
     font-size: var(--font-small, 12px);
     color: var(--color-text-subtle);
     user-select: none;
     list-style: none;
-    margin-top: var(--space-2);
   }
-  #paper-metadata-hero details.hero-abstract-toggle > summary::before {
-    content: "▸ ";
+  #current-title details.title-abstract > summary::before { content: "▸ "; }
+  #current-title details.title-abstract[open] > summary::before { content: "▾ "; }
+  #current-title details.title-abstract[open] > summary {
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
   }
-  #paper-metadata-hero details.hero-abstract-toggle[open] > summary::before {
-    content: "▾ ";
-  }
-  #paper-metadata-hero details.hero-abstract-toggle[open] > summary {
-    margin-bottom: var(--space-1);
+  #current-title details.title-abstract .abstract-body {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface, var(--color-bg));
+    border-left: 3px solid var(--color-border);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
   }
 
   #paper-content {
@@ -1010,6 +1004,7 @@
     #sidebar,
     #chat-panel,
     #content-toolbar,
+    #current-title,
     #empty-state,
     #tooltip,
     .modal-mask,
@@ -1187,7 +1182,6 @@
   <!-- ──── 中欄 ──── -->
   <main id="content-area">
     <div id="content-toolbar">
-      <h2 id="current-title"></h2>
       <div class="toolbar-actions">
         <button id="lang-toggle" class="icon-only" data-tip="語言切換">
           <!-- 切換符號：水平 ⇄；兩條短橫線錯位、不重疊 -->
@@ -1198,12 +1192,12 @@
         </button>
       </div>
     </div>
+    <!-- Phase 4.7c 修正 2：擴充標題區，取代原 toolbar h2 + 獨立 hero block -->
+    <header id="current-title" hidden></header>
     <div id="empty-state" style="display:none">
       <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-6-6a1.5 1.5 0 0 1 0-2l6-6"/></svg>
       從左側選擇文件
     </div>
-    <!-- Phase 4.7c step 5：metadata hero（authors / date / journal / abstract） -->
-    <section id="paper-metadata-hero" hidden></section>
     <div id="paper-content"></div>
   </main>
 
@@ -1992,36 +1986,35 @@ function resolveDisplaySubtitle(p) {
   }
   return '';
 }
-// Phase 4.7c step 5：依 doc_type 分支渲染中欄 metadata hero。
-// 缺項靜默省略；只有 title 是 always-show。HTML escape 防 XSS（metadata 值可
-// 能包含使用者上傳 PDF 內的任意字串）。
+// Phase 4.7c 修正 2：依 doc_type 分支渲染 #current-title 擴充標題區。
+// 取代原 renderMetadataHero（hero block 已移除）。缺項靜默省略；
+// title 是 always-show（同 resolveDisplayTitle fallback 鏈）。
+// HTML escape 防 XSS（metadata 值可能包含 PDF 內任意字串）。
 function _esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-function renderMetadataHero(p) {
-  const el = document.getElementById('paper-metadata-hero');
+function renderTitleHeader(p) {
+  const el = document.getElementById('current-title');
   if (!el) return;
   if (!p) { el.hidden = true; el.innerHTML = ''; return; }
   const m = p.metadata || {};
   const v = (k) => (m[k] && m[k].value) || null;
-  const title = resolveDisplayTitle(p);
-  const parts = [`<h1 class="hero-title">${_esc(title)}</h1>`];
+  const isResume = p.doc_type === 'resume';
 
-  if (p.doc_type === 'resume') {
-    // resume：candidate_name 已當 title；副資料 = current_role + latest_employer
-    // （此兩欄目前 schema 未列入；用 organization 暫代 latest_employer）
-    const subbits = [];
+  // title-zh：同 resolveDisplayTitle 中文優先；title-en：原文（避免重複）
+  const titleZh = resolveDisplayTitle(p);
+  const titleEnRaw = isResume ? '' : (v('title') || p.title || '');
+  const titleEn = (titleEnRaw && titleEnRaw !== titleZh) ? titleEnRaw : '';
+
+  const parts = [`<h1 class="title-zh">${_esc(titleZh)}</h1>`];
+  if (titleEn) parts.push(`<p class="title-en">${_esc(titleEn)}</p>`);
+
+  if (isResume) {
     const org = v('organization');
-    if (org) subbits.push(_esc(org));
-    if (subbits.length)
-      parts.push(`<div class="hero-meta-row">${subbits.join('<span class="sep">·</span>')}</div>`);
+    if (org) parts.push(`<p class="title-meta">${_esc(org)}</p>`);
   } else {
-    // 一般文件：translated_title / authors / date / journal/publisher / abstract
-    const tt = v('translated_title');
-    if (tt && tt !== title)
-      parts.push(`<div class="hero-translated">${_esc(tt)}</div>`);
     const bits = [];
     const authors = v('authors');
     if (Array.isArray(authors) && authors.length)
@@ -2031,13 +2024,13 @@ function renderMetadataHero(p) {
     const venue = v('journal_or_conference') || v('publisher') || v('organization');
     if (venue) bits.push(_esc(venue));
     if (bits.length)
-      parts.push(`<div class="hero-meta-row">${bits.join('<span class="sep">·</span>')}</div>`);
+      parts.push(`<p class="title-meta">${bits.join('<span class="title-meta-sep">·</span>')}</p>`);
     const abstract = v('abstract');
     if (abstract) {
       parts.push(
-        `<details class="hero-abstract-toggle">`
-        + `<summary>摘要</summary>`
-        + `<div class="hero-abstract">${_esc(abstract)}</div>`
+        `<details class="title-abstract">`
+        + `<summary>顯示摘要</summary>`
+        + `<div class="abstract-body">${_esc(abstract)}</div>`
         + `</details>`
       );
     }
@@ -2120,12 +2113,11 @@ async function loadPaper(paperId, title) {
   });
 
   document.getElementById('content-toolbar').style.display = 'flex';
-  document.getElementById('current-title').textContent = title;
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('paper-content').style.display = 'block';
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
-  // Phase 4.7c step 5：渲染 metadata hero（從 allPapers 快取找對應 paper）
-  renderMetadataHero(allPapers.find(p => p.id === paperId));
+  // Phase 4.7c 修正 2：渲染 #current-title 擴充標題區（取代 hero + 原 h2.textContent）
+  renderTitleHeader(allPapers.find(p => p.id === paperId));
 
   await fetchContent(paperId, currentLang);
 
@@ -2162,7 +2154,10 @@ async function fetchContent(paperId, lang) {
 // 列印
 document.getElementById('print-btn').onclick = () => {
   const original = document.title;
-  const title = document.getElementById('current-title').textContent.trim();
+  // Phase 4.7c 修正 2：#current-title 為 multi-row，僅讀 .title-zh 當瀏覽器
+  // 列印標題（避免 .textContent 把 authors / abstract 全串進來）
+  const titleEl = document.querySelector('#current-title .title-zh');
+  const title = titleEl ? titleEl.textContent.trim() : '';
   if (title) document.title = title;
   window.print();
   document.title = original;

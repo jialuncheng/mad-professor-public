@@ -51,21 +51,23 @@
 
 ### 2.2 中欄 `#content-toolbar`
 
+Phase 4.7c 修正 2 後僅保留 icon 按鈕；論文標題已搬至獨立 `#current-title`
+擴充標題區（見 §4.2）。
+
 ```
 ┌────────────────────────────────────────────────────┐
-│ <長論文標題……可多行展開>           [⇄]  [🖨]      │  min-height 48px
+│                                     [⇄]  [🖨]      │  min-height 48px
 └────────────────────────────────────────────────────┘
 ```
 
 | 元素 | id | 用途 |
 |---|---|---|
-| 當前標題 | 🔒 `current-title` (`<h2>`) | 顯示論文標題；字級 = h1 |
 | 切換中/英 | 🔒 `lang-toggle` | toggle `currentLang` 並重抓內容 |
-| 列印 | 🔒 `print-btn` | `window.print()` |
+| 列印 | 🔒 `print-btn` | `window.print()`；瀏覽器標題取 `#current-title .title-zh` |
 
 **契約**
-- 未選文件時 `#content-toolbar { display: none }`（原版邏輯）；本 prototype 永遠顯示便於 demo
-- icon 群 `align-items: center` + `padding-top:4px`，與大標題第一行視覺對齊
+- 未選文件時 `#content-toolbar { display: none }`（loadPaper 內設 `display:flex`）
+- icon 群與 `#current-title` 視覺分屬不同 row，互不重疊
 
 ### 2.3 右欄 `#chat-header`
 
@@ -197,25 +199,30 @@
 
 未選文件時顯示「← 從左側選擇文件」；選後 `display: none`。
 
-### 4.2 metadata hero 🔒 `#paper-metadata-hero`
+### 4.2 擴充標題區 🔒 `#current-title`
 
-Phase 4.7c step 5。位於 `#content-toolbar` 下方、`#paper-content` 上方。
-未選文件時 `hidden`；選後由 `renderMetadataHero(p)` 渲染。
+Phase 4.7c 修正 2。原 toolbar 內 `<h2 id="current-title">` 改為獨立
+`<header id="current-title">` multi-row 結構，位於 `#content-toolbar` 下方、
+`#paper-content` 上方。未選文件時 `hidden`；選後由 `renderTitleHeader(p)` 渲染。
 
 **結構契約**（依 doc_type 分支，缺項靜默省略）
 ```html
-<section id="paper-metadata-hero">
-  <h1 class="hero-title">{title|candidate_name}</h1>
-  <div class="hero-translated">{translated_title}</div>
-  <div class="hero-meta-row">{authors}·{date}·{venue}</div>
-  <details class="hero-abstract-toggle">
-    <summary>摘要</summary>
-    <div class="hero-abstract">{abstract}</div>
+<header id="current-title">
+  <h1 class="title-zh">{titleZh|candidate_name}</h1>
+  <p class="title-en">{title 原文}</p>
+  <p class="title-meta">{authors}·{date}·{venue}</p>
+  <details class="title-abstract">
+    <summary>顯示摘要</summary>
+    <div class="abstract-body">{abstract}</div>
   </details>
-</section>
+</header>
 ```
 
 詳見 `components.md §7.4`。
+
+注意：`#current-title` **不再**位於 `#content-toolbar` 內；toolbar 僅保留
+語言切換 / 列印等 icon 按鈕。列印時 `#current-title` 與 toolbar 一同隱藏，
+瀏覽器列印標題取 `.title-zh` 文字。
 
 ### 4.3 文章 🔒 `#paper-content`
 
