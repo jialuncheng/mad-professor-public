@@ -1663,7 +1663,37 @@ try {
   const _sv = localStorage.getItem('foldersOpen');
   if (_sv) foldersOpen = new Set(JSON.parse(_sv));
 } catch (e) {}
-const UPLOAD_BTN_LABEL ='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件';
+// 插入 .paper-item.uploading 占位列（components §7.3 + dom-reference §3.2 + interaction §9）
+function insertUploadingRow(paperId, filename) {
+  const list = document.getElementById('paper-list');
+  const row = document.createElement('div');
+  row.className = 'paper-item uploading';
+  row.dataset.uploadId = paperId;
+  row.innerHTML = `
+    <div class="paper-item-header">
+      <div class="paper-item-titles">
+        <div class="paper-title-zh"></div>
+        <div class="paper-progress">
+          <span class="paper-progress-dot" aria-hidden="true"></span>
+          <span class="paper-progress-text">等待開始</span>
+        </div>
+      </div>
+    </div>
+    <div class="paper-progress-bar" aria-hidden="true">
+      <div class="paper-progress-fill" style="width:0%"></div>
+    </div>`;
+  // filename 用 textContent 避免 XSS（檔名可能含 < > & 特殊字元）
+  row.querySelector('.paper-title-zh').textContent = filename;
+  list.insertBefore(row, list.firstChild);
+  return row;
+}
+
+function removeUploadingRow(paperId) {
+  const row = document.querySelector(
+    `.paper-item.uploading[data-upload-id="${paperId}"]`
+  );
+  if (row) row.remove();
+}
 
 function setBusy(busy) {
   isProcessing = busy;
@@ -1873,7 +1903,10 @@ function papersInCurrentFolder() {
 }
 function renderPapers() {
   const list = document.getElementById('paper-list');
+  // 保留 .paper-item.uploading 占位列（不受 folder filter 影響、永遠頂端）
+  const uploadingRows = Array.from(list.querySelectorAll('.paper-item.uploading'));
   list.innerHTML = '';
+  uploadingRows.forEach(r => list.appendChild(r));  // 頂端（list 已空）
   papersInCurrentFolder().forEach(p => {
     const item = document.createElement('div');
     item.className = 'paper-item';
@@ -2213,7 +2246,6 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
     const file = files[0];
 
     const btn = document.getElementById('upload-btn');
-    btn.textContent = '上傳中...';
     btn.disabled = true;
     setBusy(true);
 
@@ -2229,11 +2261,10 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
       const paperId = data.paper_id;
 
       // 上傳完成，立即顯示文件類型選擇框
-      btn.textContent = '選擇類型...';
-      showConfirmModal(paperId, data.suggested_doc_type, btn);
+      // 進度顯示在左欄 .paper-item.uploading 占位列（不在按鈕文字上）
+      showConfirmModal(paperId, data.suggested_doc_type, btn, file.name);
 
     } catch (err) {
-      btn.innerHTML = UPLOAD_BTN_LABEL;
       btn.disabled = false;
       setBusy(false);
       alert('上傳失敗：' + err.message);
@@ -2242,7 +2273,7 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
   input.click();
 });
 
-// 追蹤處理進度
+// 追蹤處理進度（更新左欄 .paper-item.uploading 占位列；按鈕僅切 disabled）
 function trackProgress(paperId, btn) {
   const evtSource = new EventSource(`/api/papers/${paperId}/status`);
 
@@ -2251,7 +2282,15 @@ function trackProgress(paperId, btn) {
 
     if (data.status === 'processing') {
       const p = data.progress;
-      btn.textContent = `${p.stage_name}... ${p.progress}%`;
+      // 更新占位列文字 + 進度條（interaction §9）
+      const row = document.querySelector(
+        `.paper-item.uploading[data-upload-id="${paperId}"]`
+      );
+      if (row) {
+        row.querySelector('.paper-progress-text').textContent =
+          `${p.stage_name} ${p.progress}%`;
+        row.querySelector('.paper-progress-fill').style.width = `${p.progress}%`;
+      }
       // index >= 10（extra_info=10, rag=11）代表 md_restore 已完成、中文版可讀
       if (p && p.index >= 10) {
         const r = paperReadiness.get(paperId);
@@ -2265,7 +2304,7 @@ function trackProgress(paperId, btn) {
       }
     } else if (data.status === 'done') {
       evtSource.close();
-      btn.innerHTML = UPLOAD_BTN_LABEL;
+      removeUploadingRow(paperId);
       btn.disabled = false;
       setBusy(false);
       paperReadiness.set(paperId, 'done');
@@ -2284,7 +2323,7 @@ function trackProgress(paperId, btn) {
       }
     } else if (data.status === 'error') {
       evtSource.close();
-      btn.innerHTML = UPLOAD_BTN_LABEL;
+      removeUploadingRow(paperId);
       btn.disabled = false;
       setBusy(false);
       alert('處理失敗：' + (data.error || '未知錯誤'));
@@ -2293,7 +2332,7 @@ function trackProgress(paperId, btn) {
 
   evtSource.onerror = () => {
     evtSource.close();
-    btn.innerHTML = UPLOAD_BTN_LABEL;
+    removeUploadingRow(paperId);
     btn.disabled = false;
     setBusy(false);
   };
@@ -2312,7 +2351,7 @@ const DOC_TYPE_LABELS = {
   resume: '履歷'
 };
 
-function showConfirmModal(paperId, detection, btn) {
+function showConfirmModal(paperId, detection, btn, filename) {
   const modal = document.getElementById('confirm-modal');
   // 衝突 B：prototype 改用自訂 #doc-type-dropdown（無 native select）。
   // 預設選偵測值（無則 academic）：寫 dataset.value + .dropdown-value 文字
@@ -2334,7 +2373,6 @@ function showConfirmModal(paperId, detection, btn) {
   document.getElementById('confirm-ok-btn').onclick = async () => {
     const selectedType = document.getElementById('doc-type-dropdown').dataset.value;
     modal.classList.remove('show');
-    btn.textContent = '處理中...';
     btn.disabled = true;
 
     try {
@@ -2343,10 +2381,10 @@ function showConfirmModal(paperId, detection, btn) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({doc_type: selectedType})
       });
-      // 重新追蹤進度
+      // 依 interaction §9：confirm_type 成功後才插入占位列、再 SSE 追進度
+      insertUploadingRow(paperId, filename);
       trackProgress(paperId, btn);
     } catch(e) {
-      btn.innerHTML = UPLOAD_BTN_LABEL;
       btn.disabled = false;
       setBusy(false);
       alert('確認失敗：' + e.message);
