@@ -9,10 +9,11 @@ import shutil
 import unicodedata
 from pathlib import Path
 from utils.text_utils import CONTROL_CHAR_PATTERN
+from processor.pdf_parser import PDFParser, PDFParseError
 
 logger = logging.getLogger(__name__)
 
-class PDFProcessor:
+class PDFProcessor(PDFParser):
     """PDF處理器：透過本機 MinerU API 將 PDF 轉換為 Markdown 格式"""
 
 
@@ -78,7 +79,7 @@ class PDFProcessor:
             )
 
             if response.status_code != 200:
-                raise RuntimeError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
+                raise PDFParseError(f"MinerU API 回傳錯誤: {response.status_code} {response.text}")
 
             task_id = response.headers.get("x-mineru-task-id")
             if not task_id:
@@ -132,16 +133,24 @@ class PDFProcessor:
             shutil.rmtree(output_dir / "_tmp", ignore_errors=True)
 
             if not markdown_path.exists():
-                raise RuntimeError(f"找不到 Markdown 檔案: {markdown_path}")
+                raise PDFParseError(f"找不到 Markdown 檔案: {markdown_path}")
 
             self.logger.info(f"Markdown 文件已保存到: {markdown_path}")
             return markdown_path
 
-        except requests.exceptions.ConnectionError:
-            raise RuntimeError("無法連接 MinerU API，請確認 MinerU 服務是否已啟動")
+        except requests.exceptions.ConnectionError as e:
+            raise PDFParseError("無法連接 MinerU API，請確認 MinerU 服務是否已啟動") from e
+        except PDFParseError:
+            raise
+        except FileNotFoundError:
+            raise
         except Exception as e:
             self.logger.error(f"PDF 處理失敗: {str(e)}", exc_info=True)
-            raise
+            raise PDFParseError(f"PDF 處理失敗: {str(e)}") from e
+
+    def parse(self, pdf_path: str, output_dir: str) -> Path:
+        """Implements PDFParser.parse()."""
+        return self.process(pdf_path, output_dir)
 
     def _copy_images(self, output_dir: Path, task_id: str = None):
         """複製 MinerU 解析出的圖片目錄（best-effort，永不 raise）。
