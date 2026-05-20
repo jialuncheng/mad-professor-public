@@ -28,7 +28,6 @@ class AIProfessorChat:
         self.current_paper_data = None
         self.retriever = None
         self.llm_client = None
-        self.last_grounding_sources = None
         try:
             self.llm_client = LLMClient.get_instance()
             self.logger.info("AI對話助手初始化完成")
@@ -57,15 +56,21 @@ class AIProfessorChat:
                              owner_id: int = None,
                              paper_id: str = None, paper_data: Dict[str, Any] = None,
                              conversation_history: List[Dict] = None,
-                             use_web_search: bool = False) -> Generator[str, None, None]:
-        """流式處理用戶查詢，逐句 yield 回答（Stage A：history 為參數，無 self state）"""
+                             use_web_search: bool = False) -> Generator[Dict[str, Any], None, None]:
+        """流式處理用戶查詢，逐 chunk yield（Stage A：history 為參數、grounding 由 yield 帶出）。
+
+        Yields:
+            {'type': 'sentence', 'text': str}   串流中每句
+            {'type': 'done', 'reply': str,      串流結束
+             'grounding_sources': list}
+        """
         try:
             effective_paper_id = paper_id
             effective_paper_data = paper_data
-            self.last_grounding_sources = None
 
             if not self.llm_client:
-                yield "AI服務尚未初始化，請稍後再試。"
+                yield {'type': 'sentence', 'text': "AI服務尚未初始化，請稍後再試。"}
+                yield {'type': 'done', 'reply': '', 'grounding_sources': []}
                 return
 
             # 本地對話歷史（不動 caller 的 list）；append 當前 query + 滑動窗 max 10
@@ -111,20 +116,20 @@ class AIProfessorChat:
                 use_web_search=use_web_search
             ):
                 full_response += sentence
-                yield sentence
+                yield {'type': 'sentence', 'text': sentence}
 
             # 串流結束後，從 LLMClient 取回本次 grounding 來源（side-channel）
-            self.last_grounding_sources = getattr(
+            grounding = getattr(
                 self.llm_client, '_last_grounding_sources', None
-            )
+            ) or []
 
-            # Stage A Step 1：assistant reply 累積至 local（不寫 self）；
-            # Step 2 將改 yield 結構，把完整 reply 從 generator 吐給 caller
-            working_history.append({"role": "assistant", "content": full_response})
+            yield {'type': 'done', 'reply': full_response,
+                   'grounding_sources': grounding}
 
         except Exception as e:
             self.logger.error(f"處理查詢失敗: {str(e)}")
-            yield f"抱歉，處理問題時出現錯誤: {str(e)}"
+            yield {'type': 'sentence', 'text': f"抱歉，處理問題時出現錯誤: {str(e)}"}
+            yield {'type': 'done', 'reply': '', 'grounding_sources': []}
 
     def _validate_decision(self, decision_data: Dict) -> bool:
         required_fields = ["function", "query"]

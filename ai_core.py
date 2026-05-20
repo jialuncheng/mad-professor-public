@@ -71,20 +71,21 @@ class AICore:
                     f"paper owner={owner_id} {paper_id} 不在快取中，以無論文模式回答"
                 )
 
-            for sentence in self.ai_chat.process_query_stream(
+            grounding_sources: list = []
+            for chunk in self.ai_chat.process_query_stream(
                 query, visible_content,
                 owner_id=owner_id, paper_id=paper_id, paper_data=paper_data,
                 use_web_search=use_web_search
             ):
                 if not self.is_generating:
                     break
-                yield {
-                    'sentence': sentence,
-                    'done': False
-                }
+                if chunk.get('type') == 'sentence':
+                    yield {'sentence': chunk.get('text', ''), 'done': False}
+                elif chunk.get('type') == 'done':
+                    grounding_sources = chunk.get('grounding_sources') or []
 
             yield {'sentence': '', 'done': True,
-                   'grounding_sources': self.ai_chat.last_grounding_sources or []}
+                   'grounding_sources': grounding_sources}
 
         except Exception as e:
             self.logger.error(f"query_stream 失敗: {str(e)}")
