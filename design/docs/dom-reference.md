@@ -197,7 +197,27 @@
 
 未選文件時顯示「← 從左側選擇文件」；選後 `display: none`。
 
-### 4.2 文章 🔒 `#paper-content`
+### 4.2 metadata hero 🔒 `#paper-metadata-hero`
+
+Phase 4.7c step 5。位於 `#content-toolbar` 下方、`#paper-content` 上方。
+未選文件時 `hidden`；選後由 `renderMetadataHero(p)` 渲染。
+
+**結構契約**（依 doc_type 分支，缺項靜默省略）
+```html
+<section id="paper-metadata-hero">
+  <h1 class="hero-title">{title|candidate_name}</h1>
+  <div class="hero-translated">{translated_title}</div>
+  <div class="hero-meta-row">{authors}·{date}·{venue}</div>
+  <details class="hero-abstract-toggle">
+    <summary>摘要</summary>
+    <div class="hero-abstract">{abstract}</div>
+  </details>
+</section>
+```
+
+詳見 `components.md §7.4`。
+
+### 4.3 文章 🔒 `#paper-content`
 
 容器：`flex:1`、可捲。內容由 `marked.parse()` 渲染 Markdown。
 

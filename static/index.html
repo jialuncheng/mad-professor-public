@@ -685,6 +685,66 @@
   #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
     fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
+  /* Phase 4.7c step 5：metadata hero——把後端早抽好的 metadata 端到端顯示。
+     缺項靜默省略；只有 title 是 always-show（fallback 同 resolveDisplayTitle）。 */
+  #paper-metadata-hero {
+    flex-shrink: 0;
+    padding: var(--space-4) var(--pad-panel) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+  #paper-metadata-hero[hidden] { display: none; }
+  #paper-metadata-hero .hero-title {
+    font-size: var(--font-h1, 22px);
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.3;
+    margin: 0 0 var(--space-1) 0;
+  }
+  #paper-metadata-hero .hero-translated {
+    font-size: var(--font-h2, 15px);
+    color: var(--color-text-subtle);
+    line-height: 1.4;
+    margin: 0 0 var(--space-2) 0;
+  }
+  #paper-metadata-hero .hero-meta-row {
+    font-size: var(--font-small, 12px);
+    color: var(--color-text-subtle);
+    margin: 0 0 var(--space-2) 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  #paper-metadata-hero .hero-meta-row .sep {
+    color: var(--color-border);
+  }
+  #paper-metadata-hero .hero-abstract {
+    font-size: var(--font-base, 14px);
+    color: var(--color-text);
+    line-height: 1.55;
+    margin: var(--space-2) 0 0 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface, var(--color-bg));
+    border-left: 3px solid var(--color-border);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+  }
+  #paper-metadata-hero details.hero-abstract-toggle > summary {
+    cursor: pointer;
+    font-size: var(--font-small, 12px);
+    color: var(--color-text-subtle);
+    user-select: none;
+    list-style: none;
+    margin-top: var(--space-2);
+  }
+  #paper-metadata-hero details.hero-abstract-toggle > summary::before {
+    content: "▸ ";
+  }
+  #paper-metadata-hero details.hero-abstract-toggle[open] > summary::before {
+    content: "▾ ";
+  }
+  #paper-metadata-hero details.hero-abstract-toggle[open] > summary {
+    margin-bottom: var(--space-1);
+  }
+
   #paper-content {
     flex: 1;
     overflow-y: auto;
@@ -1142,6 +1202,8 @@
       <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-6-6a1.5 1.5 0 0 1 0-2l6-6"/></svg>
       從左側選擇文件
     </div>
+    <!-- Phase 4.7c step 5：metadata hero（authors / date / journal / abstract） -->
+    <section id="paper-metadata-hero" hidden></section>
     <div id="paper-content"></div>
   </main>
 
@@ -1918,6 +1980,59 @@ function resolveDisplaySubtitle(p) {
   const m = p.metadata || {};
   return (m.title && m.title.value) || p.title || '';
 }
+// Phase 4.7c step 5：依 doc_type 分支渲染中欄 metadata hero。
+// 缺項靜默省略；只有 title 是 always-show。HTML escape 防 XSS（metadata 值可
+// 能包含使用者上傳 PDF 內的任意字串）。
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function renderMetadataHero(p) {
+  const el = document.getElementById('paper-metadata-hero');
+  if (!el) return;
+  if (!p) { el.hidden = true; el.innerHTML = ''; return; }
+  const m = p.metadata || {};
+  const v = (k) => (m[k] && m[k].value) || null;
+  const title = resolveDisplayTitle(p);
+  const parts = [`<h1 class="hero-title">${_esc(title)}</h1>`];
+
+  if (p.doc_type === 'resume') {
+    // resume：candidate_name 已當 title；副資料 = current_role + latest_employer
+    // （此兩欄目前 schema 未列入；用 organization 暫代 latest_employer）
+    const subbits = [];
+    const org = v('organization');
+    if (org) subbits.push(_esc(org));
+    if (subbits.length)
+      parts.push(`<div class="hero-meta-row">${subbits.join('<span class="sep">·</span>')}</div>`);
+  } else {
+    // 一般文件：translated_title / authors / date / journal/publisher / abstract
+    const tt = v('translated_title');
+    if (tt && tt !== title)
+      parts.push(`<div class="hero-translated">${_esc(tt)}</div>`);
+    const bits = [];
+    const authors = v('authors');
+    if (Array.isArray(authors) && authors.length)
+      bits.push(_esc(authors.join('、')));
+    const date = v('publication_date');
+    if (date) bits.push(_esc(date));
+    const venue = v('journal_or_conference') || v('publisher') || v('organization');
+    if (venue) bits.push(_esc(venue));
+    if (bits.length)
+      parts.push(`<div class="hero-meta-row">${bits.join('<span class="sep">·</span>')}</div>`);
+    const abstract = v('abstract');
+    if (abstract) {
+      parts.push(
+        `<details class="hero-abstract-toggle">`
+        + `<summary>摘要</summary>`
+        + `<div class="hero-abstract">${_esc(abstract)}</div>`
+        + `</details>`
+      );
+    }
+  }
+  el.innerHTML = parts.join('');
+  el.hidden = false;
+}
 function renderPapers() {
   const list = document.getElementById('paper-list');
   // 保留 .paper-item.uploading 占位列（不受 folder filter 影響、永遠頂端）
@@ -1997,6 +2112,8 @@ async function loadPaper(paperId, title) {
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('paper-content').style.display = 'block';
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
+  // Phase 4.7c step 5：渲染 metadata hero（從 allPapers 快取找對應 paper）
+  renderMetadataHero(allPapers.find(p => p.id === paperId));
 
   await fetchContent(paperId, currentLang);
 

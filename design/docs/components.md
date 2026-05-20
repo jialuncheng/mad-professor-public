@@ -221,6 +221,23 @@ if (ok) { /* ... */ }
 - 點圓 6px 閃爍（1s）
 - **`pointer-events: none`**：整列禁止點擊，避免誤觸
 
+### 7.4 paper-metadata-hero（中欄）
+Phase 4.7c step 5。位於 `#content-toolbar` 下方、`#paper-content` 上方，
+把後端 metadata（authors / date / journal / abstract / candidate_name 等）端到端顯示。
+
+結構：
+- `.hero-title`：22px / 600，always-show（fallback 同 `resolveDisplayTitle`）
+- `.hero-translated`：15px muted；title ≠ translated_title 時才顯示
+- `.hero-meta-row`：12px muted，flex；authors · date · journal/publisher，sep 為 `·`
+- `details.hero-abstract-toggle`：摘要可摺疊（預設摺起）；展開後 `.hero-abstract` 為左側 3px border 卡片
+
+doc_type 分支：
+- academic / technical / book / news / web：完整 hero
+- resume：candidate_name 為 title，副資料 = organization（暫代 latest_employer）；無 abstract / authors
+- slides：title + original_filename；abstract 通常空，靜默省略
+
+fallback：缺項靜默省略；只有 title 是 always-show。
+
 ---
 
 ## 8. 訊息泡泡（Message Bubble）
