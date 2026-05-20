@@ -10,7 +10,7 @@ AI_EXPLAIN_PROMPT_PATH = "prompt/ai/ai_explain_prompt.txt"
 AI_ROUTER_PROMPT_PATH = "prompt/ai/ai_router_prompt.txt"
 
 class AIProfessorChat:
-    """AI對話助手 - 學術論文智能問答系統"""
+    """AI對話助手 - 文件智能問答系統"""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -39,10 +39,10 @@ class AIProfessorChat:
         try:
             self.current_paper_id = paper_id
             self.current_paper_data = paper_data
-            self.logger.info(f"已設置論文上下文: {paper_id}")
+            self.logger.info(f"已設置文件上下文: {paper_id}")
             return True
         except Exception as e:
-            self.logger.error(f"設置論文上下文失敗: {str(e)}")
+            self.logger.error(f"設置文件上下文失敗: {str(e)}")
             return False
 
     def process_query_stream(self, query: str, visible_content: str = None,
@@ -241,8 +241,8 @@ class AIProfessorChat:
         if context_info:
             context_type = {
                 "page_content_analysis": "當前頁面內容",
-                "macro_retrieval": "論文概要",
-                "rag_retrieval": "相關論文段落"
+                "macro_retrieval": "文件概要",
+                "rag_retrieval": "相關文件段落"
             }.get(function_name, "參考資訊")
             final_query += f"\n\n{context_type}:\n{context_info}"
 
