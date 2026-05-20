@@ -46,6 +46,7 @@ class AIProfessorChat:
             return False
 
     def process_query_stream(self, query: str, visible_content: str = None,
+                             owner_id: int = None,
                              paper_id: str = None, paper_data: Dict[str, Any] = None,
                              use_web_search: bool = False) -> Generator[str, None, None]:
         """流式處理用戶查詢，逐句 yield 回答"""
@@ -81,7 +82,7 @@ class AIProfessorChat:
             elif function_name == 'macro_retrieval' and effective_paper_data:
                 context_info = self._get_macro_context(optimized_query, effective_paper_data)
             elif function_name == 'rag_retrieval' and effective_paper_id:
-                context_info = self._get_rag_context(optimized_query, effective_paper_id)
+                context_info = self._get_rag_context(optimized_query, owner_id, effective_paper_id)
 
             # 準備訊息
             final_messages = self._prepare_final_messages(
@@ -195,14 +196,15 @@ class AIProfessorChat:
             self.logger.error(f"取得宏觀上下文失敗: {str(e)}")
             return ""
 
-    def _get_rag_context(self, query: str, paper_id: str = None) -> str:
+    def _get_rag_context(self, query: str, owner_id: int = None,
+                          paper_id: str = None) -> str:
         try:
-            if not paper_id or not query or not self.retriever:
+            if not paper_id or not query or not self.retriever or owner_id is None:
                 return ""
             if not self.retriever.is_ready():
                 return ""
             context = self.retriever.retrieve_with_context(
-                query=query, paper_id=paper_id, top_k=5
+                owner_id=owner_id, query=query, paper_id=paper_id, top_k=5
             )
             return context or ""
         except Exception as e:

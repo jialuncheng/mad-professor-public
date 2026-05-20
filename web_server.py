@@ -79,7 +79,8 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 # 全域狀態
 ai_core = None
-processing_tasks: dict = {}  # paper_id -> {'status': str, 'progress': dict}
+processing_tasks: dict = {}  # (owner_id, paper_id) -> {'status': str, 'progress': dict, '_pdf_path': str, '_original_filename': str}
+                              # Phase 0：鍵改 tuple，跨 owner 隔離；不再需要 _owner_id 欄事後比對
 tasks_lock = threading.Lock()
 
 
@@ -294,12 +295,12 @@ async def upload_paper(
         suggested_doc_type = 'academic'
 
     # 上傳完成，立即等待使用者選擇文件類型
+    # Phase 0：鍵 = (owner_id, paper_id) tuple；無需 _owner_id 欄事後比對
     with tasks_lock:
-        processing_tasks[paper_id] = {
+        processing_tasks[(current_user.id, paper_id)] = {
             'status': 'waiting_confirm',
             'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
             '_pdf_path': str(pdf_path),
-            '_owner_id': current_user.id,
             '_original_filename': file.filename,  # Phase 4.7a：原始檔名（未 sanitize）
         }
 
@@ -309,15 +310,18 @@ async def upload_paper(
 async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: str,
                        original_filename: Optional[str] = None):
     """在背景執行 pipeline（使用者確認文件類型後觸發）"""
+    # Phase 0：tuple key
+    task_key = (owner_id, paper_id)
     try:
         def on_progress(info):
             with tasks_lock:
-                processing_tasks[paper_id]['progress'] = info
+                if task_key in processing_tasks:
+                    processing_tasks[task_key]['progress'] = info
 
         loop = asyncio.get_event_loop()
         output_paths = {'_confirmed_doc_type': doc_type}
         with tasks_lock:
-            processing_tasks[paper_id]['status'] = 'processing'
+            processing_tasks[task_key]['status'] = 'processing'
 
         pipeline = PipelineCore(on_progress=on_progress)
         output_paths2 = await loop.run_in_executor(
@@ -328,21 +332,22 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
 
         # 檢查是否在處理過程中被刪除
         with tasks_lock:
-            if processing_tasks.get(paper_id, {}).get('status') == 'cancelled':
-                logger.info(f"論文已被刪除，取消後續處理: {paper_id}")
+            if processing_tasks.get(task_key, {}).get('status') == 'cancelled':
+                logger.info(f"論文已被刪除，取消後續處理: owner={owner_id} {paper_id}")
                 return
 
         paper_manager.load_paper_resources(OUTPUT_DIR, owner_id, paper_id, ai_core)
 
         with tasks_lock:
-            processing_tasks[paper_id]['status'] = 'done'
-        logger.info(f"論文處理完成: {paper_id}")
+            processing_tasks[task_key]['status'] = 'done'
+        logger.info(f"論文處理完成: owner={owner_id} {paper_id}")
 
     except Exception as e:
         with tasks_lock:
-            processing_tasks[paper_id]['status'] = 'error'
-            processing_tasks[paper_id]['error'] = str(e)
-        logger.error(f"論文處理失敗: {paper_id} - {str(e)}")
+            if task_key in processing_tasks:
+                processing_tasks[task_key]['status'] = 'error'
+                processing_tasks[task_key]['error'] = str(e)
+        logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}")
 
 
 # ── 處理進度（SSE） ──
@@ -352,12 +357,12 @@ async def paper_status(paper_id: str,
                        current_user: CurrentUser = Depends(get_current_user)):
     """取得論文處理進度（SSE）"""
     async def event_stream():
+        # Phase 0：tuple key 已隔離 owner；無需 _owner_id 欄事後比對
+        task_key = (current_user.id, paper_id)
         while True:
             with tasks_lock:
-                task = processing_tasks.get(paper_id)
-                if task is not None and task.get('_owner_id') != current_user.id:
-                    task = None
-                elif task is not None:
+                task = processing_tasks.get(task_key)
+                if task is not None:
                     task = dict(task)
             if not task:
                 yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
@@ -429,6 +434,7 @@ async def chat(paper_id: str, request: ChatRequest,
             loop = asyncio.get_event_loop()
             gen = ai_core.query_stream(
                 query=request.query,
+                owner_id=current_user.id,
                 paper_id=paper_id,
                 visible_content=request.visible_content,
                 use_web_search=request.use_web_search
@@ -484,9 +490,11 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
     if request.doc_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
 
+    # Phase 0：tuple key 隔離 owner，不再用 _owner_id 欄
+    task_key = (current_user.id, paper_id)
     with tasks_lock:
-        task = processing_tasks.get(paper_id)
-        if not task or task.get('_owner_id') != current_user.id:
+        task = processing_tasks.get(task_key)
+        if not task:
             raise HTTPException(status_code=404, detail="任務不存在")
         pdf_path = task.get('_pdf_path')
         original_filename = task.get('_original_filename')
@@ -494,7 +502,7 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
         raise HTTPException(status_code=500, detail="找不到原始 PDF 路徑")
 
     with tasks_lock:
-        processing_tasks[paper_id]['status'] = 'processing'
+        processing_tasks[task_key]['status'] = 'processing'
     background_tasks.add_task(
         run_pipeline, current_user.id, paper_id, pdf_path, request.doc_type,
         original_filename
@@ -507,23 +515,24 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
 async def delete_paper(paper_id: str,
                        current_user: CurrentUser = Depends(get_current_user)):
     """刪除論文及其所有相關檔案"""
+    # Phase 0：tuple key 已隔離 owner
+    task_key = (current_user.id, paper_id)
     with tasks_lock:
-        task = processing_tasks.get(paper_id)
-        task_owned = bool(task) and task.get('_owner_id') == current_user.id
-    if not task_owned and not paper_manager.paper_exists(current_user.id, paper_id):
+        task_exists = task_key in processing_tasks
+    if not task_exists and not paper_manager.paper_exists(current_user.id, paper_id):
         raise HTTPException(status_code=404, detail="論文不存在")
 
     # 標記任務為已取消，避免 pipeline 完成後重新寫入
     with tasks_lock:
-        if paper_id in processing_tasks and task_owned:
-            processing_tasks[paper_id]['status'] = 'cancelled'
+        if task_exists:
+            processing_tasks[task_key]['status'] = 'cancelled'
 
     paper_manager.delete_paper(OUTPUT_DIR, current_user.id, paper_id)
 
     # 清理記憶體殘留（消除鬼魂論文）
     with tasks_lock:
-        processing_tasks.pop(paper_id, None)
-    ai_core.remove_paper(paper_id)
+        processing_tasks.pop(task_key, None)
+    ai_core.remove_paper(current_user.id, paper_id)
 
     return {"status": "ok", "deleted": paper_id}
 

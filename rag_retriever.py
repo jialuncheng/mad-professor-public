@@ -12,31 +12,33 @@ class RagRetriever:
     """RAG 檢索器，用於從向量庫中檢索相關內容"""
 
     def __init__(self, base_path: str = None):
-        self.vector_stores: Dict[str, FAISS] = {}
-        self.paper_vector_paths: Dict[str, str] = {}
-        self.rag_trees: Dict[str, Dict] = {}
+        # Phase 0: 鍵改 (owner_id, paper_uuid) tuple，避免跨 owner 相同 sanitize 撞名
+        self.vector_stores: Dict[Tuple[int, str], FAISS] = {}
+        self.paper_vector_paths: Dict[Tuple[int, str], str] = {}
+        self.rag_trees: Dict[Tuple[int, str], Dict] = {}
         self.base_path = base_path
         # 向量庫路徑與 rag_tree 由 paper_manager（DB 來源）透過
         # add_paper / set_rag_tree 註冊，不再讀 papers_index.json。
 
-    def set_rag_tree(self, paper_id: str, tree: Dict) -> None:
+    def set_rag_tree(self, owner_id: int, paper_id: str, tree: Dict) -> None:
         """由 ai_core 載入 rag_tree 後註冊到記憶體（取代讀 papers_index.json）。"""
         if tree:
-            self.rag_trees[paper_id] = tree
+            self.rag_trees[(owner_id, paper_id)] = tree
 
-    def add_paper(self, paper_id: str, vector_store_path: str) -> bool:
+    def add_paper(self, owner_id: int, paper_id: str, vector_store_path: str) -> bool:
         """新增論文向量庫"""
         try:
-            self.paper_vector_paths[paper_id] = vector_store_path
-            logger.info(f"添加新论文向量库: {paper_id} -> {vector_store_path}")
+            key = (owner_id, paper_id)
+            self.paper_vector_paths[key] = vector_store_path
+            logger.info(f"添加新论文向量库: owner={owner_id} {paper_id} -> {vector_store_path}")
             vector_store = self.load_vector_store(vector_store_path)
             if vector_store:
-                self.vector_stores[paper_id] = vector_store
-                logger.info(f"成功加载新论文 {paper_id} 的向量库")
+                self.vector_stores[key] = vector_store
+                logger.info(f"成功加载新论文 owner={owner_id} {paper_id} 的向量库")
                 return True
             return False
         except Exception as e:
-            logger.error(f"添加新论文 {paper_id} 失敗: {str(e)}")
+            logger.error(f"添加新论文 owner={owner_id} {paper_id} 失敗: {str(e)}")
             return False
 
     def load_vector_store(self, vector_store_path: str) -> Optional[FAISS]:
@@ -58,43 +60,45 @@ class RagRetriever:
             logger.error(f"載入向量庫失敗: {str(e)}")
             return None
 
-    def _get_vector_store(self, paper_id: str) -> Optional[FAISS]:
+    def _get_vector_store(self, owner_id: int, paper_id: str) -> Optional[FAISS]:
         """取得向量庫（lazy load）"""
-        if paper_id in self.vector_stores:
-            return self.vector_stores[paper_id]
-        if paper_id in self.paper_vector_paths:
-            store = self.load_vector_store(self.paper_vector_paths[paper_id])
+        key = (owner_id, paper_id)
+        if key in self.vector_stores:
+            return self.vector_stores[key]
+        if key in self.paper_vector_paths:
+            store = self.load_vector_store(self.paper_vector_paths[key])
             if store:
-                self.vector_stores[paper_id] = store
+                self.vector_stores[key] = store
                 return store
         return None
 
-    def load_rag_tree(self, paper_id: str) -> Dict:
+    def load_rag_tree(self, owner_id: int, paper_id: str) -> Dict:
         """回傳記憶體中的 RAG tree（由 set_rag_tree 註冊；不再讀 papers_index.json）。"""
-        return self.rag_trees.get(paper_id, {})
+        return self.rag_trees.get((owner_id, paper_id), {})
 
     def is_ready(self) -> bool:
         """檢查是否已有向量庫路徑"""
         return bool(self.paper_vector_paths)
 
-    def remove_paper(self, paper_id: str) -> None:
+    def remove_paper(self, owner_id: int, paper_id: str) -> None:
         """移除該論文的向量快取（FAISS 實例、路徑映射、rag_tree）"""
-        self.vector_stores.pop(paper_id, None)
-        self.paper_vector_paths.pop(paper_id, None)
-        self.rag_trees.pop(paper_id, None)
-        logger.info(f"已移除論文向量快取: {paper_id}")
+        key = (owner_id, paper_id)
+        self.vector_stores.pop(key, None)
+        self.paper_vector_paths.pop(key, None)
+        self.rag_trees.pop(key, None)
+        logger.info(f"已移除論文向量快取: owner={owner_id} {paper_id}")
 
-    def retrieve_with_context(self, query: str, paper_id: str, top_k: int = 5) -> str:
+    def retrieve_with_context(self, owner_id: int, query: str, paper_id: str, top_k: int = 5) -> str:
         """從向量庫檢索相關內容，回傳結構化字串"""
         if not self.is_ready():
             return ""
 
-        vector_store = self._get_vector_store(paper_id)
+        vector_store = self._get_vector_store(owner_id, paper_id)
         if not vector_store:
             return ""
 
         try:
-            rag_tree = self.load_rag_tree(paper_id)
+            rag_tree = self.load_rag_tree(owner_id, paper_id)
             if not rag_tree:
                 return ""
 

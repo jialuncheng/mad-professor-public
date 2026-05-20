@@ -1,7 +1,7 @@
 import logging
 import json
 import threading
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import AsyncGenerator, Optional, Dict, Any, Tuple
 from AI_professor_chat import AIProfessorChat
 from rag_retriever import RagRetriever
 
@@ -17,7 +17,8 @@ class AICore:
         self.retriever: Optional[RagRetriever] = None
         self.is_generating = False
         self._generating_lock = threading.Lock()
-        self._paper_cache: Dict[str, Any] = {}
+        # Phase 0: 鍵改 (owner_id, paper_uuid) tuple，避免跨 owner 撞名
+        self._paper_cache: Dict[Tuple[int, str], Any] = {}
 
     def init_rag_retriever(self, base_path: str) -> bool:
         """初始化 RAG 檢索器"""
@@ -31,22 +32,25 @@ class AICore:
             self.logger.error(f"初始化 RAG 檢索器失敗: {str(e)}")
             return False
 
-    def add_paper_vector_store(self, paper_id: str, vector_store_path: str) -> bool:
-        """新增論文向量庫"""
+    def add_paper_vector_store(self, owner_id: int, paper_id: str,
+                                vector_store_path: str) -> bool:
+        """新增論文向量庫（Phase 0：鍵以 owner_id+paper_id 對組）"""
         if self.retriever:
-            return self.retriever.add_paper(paper_id, vector_store_path)
+            return self.retriever.add_paper(owner_id, paper_id, vector_store_path)
         return False
 
     def set_paper_context(self, paper_id: str, paper_data: Dict[str, Any]) -> bool:
-        """設定當前論文上下文"""
+        """設定當前論文上下文（目前未被 active code 呼叫；保留簽名不動）"""
         return self.ai_chat.set_paper_context(paper_id, paper_data)
 
-    def query_stream(self, query: str, paper_id: Optional[str] = None,
+    def query_stream(self, query: str, owner_id: int,
+                     paper_id: Optional[str] = None,
                      visible_content: Optional[str] = None,
                      use_web_search: bool = False):
         """
         同步 generator，逐句回傳 AI 回答。
         Web API 用 SSE 推送每個 chunk。
+        Phase 0：owner_id 為必要參數，用於 paper_cache 隔離鍵。
 
         Yields:
             dict: {'sentence': str, 'done': bool}
@@ -60,12 +64,16 @@ class AICore:
             self.is_generating = True
 
             # 取得論文上下文（一律注入；cache-miss 以無論文模式回答）
-            paper_data = self._paper_cache.get(paper_id) if paper_id else None
+            paper_data = (self._paper_cache.get((owner_id, paper_id))
+                          if paper_id else None)
             if paper_id and paper_data is None:
-                self.logger.warning(f"paper_id {paper_id} 不在快取中，以無論文模式回答")
+                self.logger.warning(
+                    f"paper owner={owner_id} {paper_id} 不在快取中，以無論文模式回答"
+                )
 
             for sentence in self.ai_chat.process_query_stream(
-                query, visible_content, paper_id=paper_id, paper_data=paper_data,
+                query, visible_content,
+                owner_id=owner_id, paper_id=paper_id, paper_data=paper_data,
                 use_web_search=use_web_search
             ):
                 if not self.is_generating:
@@ -90,27 +98,29 @@ class AICore:
         """取消當前生成"""
         self.is_generating = False
 
-    def load_paper_cache(self, paper_id: str, rag_tree_path: str) -> bool:
-        """載入論文的 RAG tree 到快取"""
+    def load_paper_cache(self, owner_id: int, paper_id: str,
+                          rag_tree_path: str) -> bool:
+        """載入論文的 RAG tree 到快取（Phase 0：鍵以 owner_id+paper_id）"""
         try:
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
-            self._paper_cache[paper_id] = paper_data
+            self._paper_cache[(owner_id, paper_id)] = paper_data
             # 同步註冊到 retriever（取代其讀 papers_index.json）
             if self.retriever:
-                self.retriever.set_rag_tree(paper_id, paper_data)
+                self.retriever.set_rag_tree(owner_id, paper_id, paper_data)
             return True
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")
             return False
 
-    def remove_paper(self, paper_id: str) -> None:
+    def remove_paper(self, owner_id: int, paper_id: str) -> None:
         """移除該論文的所有記憶體快取（_paper_cache、retriever、當前對話上下文）"""
-        if paper_id in self._paper_cache:
-            del self._paper_cache[paper_id]
+        key = (owner_id, paper_id)
+        if key in self._paper_cache:
+            del self._paper_cache[key]
         if self.retriever:
-            self.retriever.remove_paper(paper_id)
+            self.retriever.remove_paper(owner_id, paper_id)
         if self.ai_chat.current_paper_id == paper_id:
             self.ai_chat.current_paper_id = None
             self.ai_chat.current_paper_data = None
-        self.logger.info(f"已移除論文快取: {paper_id}")
+        self.logger.info(f"已移除論文快取: owner={owner_id} {paper_id}")
