@@ -429,6 +429,13 @@ async def paper_image(paper_id: str, filename: str,
 async def chat(paper_id: str, request: ChatRequest,
                 current_user: CurrentUser = Depends(get_current_user)):
     """AI 問答，SSE 串流回傳"""
+    # Stage A：caller 從 DB 讀對話歷史傳給 stateless ai_chat
+    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
+    conversation_history = (
+        paper_manager.load_chat_history(db_id, current_user.id)
+        if db_id is not None else []
+    )
+
     async def event_stream():
         try:
             loop = asyncio.get_event_loop()
@@ -436,6 +443,7 @@ async def chat(paper_id: str, request: ChatRequest,
                 query=request.query,
                 owner_id=current_user.id,
                 paper_id=paper_id,
+                conversation_history=conversation_history,
                 visible_content=request.visible_content,
                 use_web_search=request.use_web_search
             )

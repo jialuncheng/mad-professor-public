@@ -1,7 +1,6 @@
 import logging
 import json
-import threading
-from typing import AsyncGenerator, Optional, Dict, Any, Tuple
+from typing import AsyncGenerator, List, Optional, Dict, Any, Tuple
 from AI_professor_chat import AIProfessorChat
 from rag_retriever import RagRetriever
 
@@ -15,8 +14,6 @@ class AICore:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.ai_chat = AIProfessorChat()
         self.retriever: Optional[RagRetriever] = None
-        self.is_generating = False
-        self._generating_lock = threading.Lock()
         # Phase 0: 鍵改 (owner_id, paper_uuid) tuple，避免跨 owner 撞名
         self._paper_cache: Dict[Tuple[int, str], Any] = {}
 
@@ -41,24 +38,20 @@ class AICore:
 
     def query_stream(self, query: str, owner_id: int,
                      paper_id: Optional[str] = None,
+                     conversation_history: Optional[List[Dict]] = None,
                      visible_content: Optional[str] = None,
                      use_web_search: bool = False):
         """
         同步 generator，逐句回傳 AI 回答。
         Web API 用 SSE 推送每個 chunk。
-        Phase 0：owner_id 為必要參數，用於 paper_cache 隔離鍵。
+        Stage A：stateless ai_chat；conversation_history 由 caller 傳入。
+        Phase 0：owner_id 用於 paper_cache 隔離鍵。
 
         Yields:
             dict: {'sentence': str, 'done': bool}
             done=True 時另帶 'grounding_sources': list[{'title','uri'}]
         """
-        if not self._generating_lock.acquire(blocking=False):
-            yield {'sentence': '目前有其他對話正在生成中，請稍候再試。',
-                   'done': True}
-            return
         try:
-            self.is_generating = True
-
             # 取得論文上下文（一律注入；cache-miss 以無論文模式回答）
             paper_data = (self._paper_cache.get((owner_id, paper_id))
                           if paper_id else None)
@@ -71,10 +64,9 @@ class AICore:
             for chunk in self.ai_chat.process_query_stream(
                 query, visible_content,
                 owner_id=owner_id, paper_id=paper_id, paper_data=paper_data,
+                conversation_history=conversation_history,
                 use_web_search=use_web_search
             ):
-                if not self.is_generating:
-                    break
                 if chunk.get('type') == 'sentence':
                     yield {'sentence': chunk.get('text', ''), 'done': False}
                 elif chunk.get('type') == 'done':
@@ -87,13 +79,6 @@ class AICore:
             self.logger.error(f"query_stream 失敗: {str(e)}")
             yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}',
                    'done': True, 'grounding_sources': []}
-        finally:
-            self.is_generating = False
-            self._generating_lock.release()
-
-    def cancel(self):
-        """取消當前生成"""
-        self.is_generating = False
 
     def load_paper_cache(self, owner_id: int, paper_id: str,
                           rag_tree_path: str) -> bool:
