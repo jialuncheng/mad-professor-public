@@ -1,538 +1,940 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mad Professor</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-  <style>
-    :root {
-      /* 色彩 - 蜜思凡德羅黑白灰 */
-      --color-bg: #ffffff;
-      --color-surface: #fafafa;
-      --color-border: #e5e5e5;
-      --color-border-strong: #d4d4d4;
-      --color-divider: #d4d4d4;
-      --color-text: #171717;
-      --color-text-muted: #737373;
-      --color-text-subtle: #a3a3a3;
-      --color-accent: #171717;
-      --color-accent-hover: #404040;
-      --color-danger: #dc2626;
+<meta charset="UTF-8">
+<title>MadPro · AI 論文閱讀器</title>
+<!-- 簡單 SVG favicon：三條橫線（漢堡圖示，呼應介面 icon 系統） -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+  :root {
+    /* ──────────────────────────────────────────────
+       主檔（結構層）token
+       ────────────────────────────────────────────
+       色票、字體、圓角、分隔線粗細 → 由 themes/<name>.css 提供
+       此處只放與主題無關的版面結構數值：
+         · 間距模矩  --space-*
+         · 字級階梯  --font-*
+         · 按鈕／工具列／rail 尺寸
+         · 按鈕群組三階間距
+         · 過渡時間
+       ────────────────────────────────────────────── */
 
-      /* 間距 scale (4px 基準) */
-      --space-1: 4px;
-      --space-2: 8px;
-      --space-3: 12px;
-      --space-4: 16px;
-      --space-5: 24px;
-      --space-6: 32px;
-      --space-8: 48px;
+    /* ── 間距（4px 模矩）── */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px;
+    --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-8: 48px;
 
-      /* 圓角 (極小) */
-      --radius-sm: 2px;
-      --radius-md: 4px;
+    /* ── 字級 ── */
+    --font-xs: 12px; --font-sm: 13px; --font-base: 14px;
+    --font-lg: 16px; --font-xl: 20px; --font-2xl: 28px;
 
-      /* 字級 scale */
-      --font-xs: 12px;
-      --font-sm: 13px;
-      --font-base: 14px;
-      --font-lg: 16px;
-      --font-xl: 20px;
-      --font-2xl: 28px;
+    /* ── 按鈕／版面 ── */
+    --btn-h: 32px;
+    --btn-pad-x: var(--space-4);
+    --btn-min-w: 64px;
+    --btn-icon: 32px;                       /* icon-only 容器邊長 */
+    --btn-icon-svg: 18px;                   /* SVG 內框 */
+    --btn-icon-stroke: 1.5;                 /* 統一筆畫：1.5 視覺與漢堡平衡 */
+    --toolbar-h: 48px;
+    --pad-panel: var(--space-4);
+    --rail-w: 48px;                         /* collapsed 邊欄寬度 */
+    --chat-pad-x: var(--space-4);           /* 右欄左右共用 padding：訊息與輸入框邊界對齊；16px 配合右欄 380 寬度 */
 
-      /* 按鈕系統（Phase 3.3 規範） */
-      --btn-h: 32px;
-      --btn-pad-x: var(--space-4);
-      --btn-min-w: 64px;
-      --btn-icon: 32px;
-      --toolbar-h: 48px;
-      --pad-panel: var(--space-4);
-      --gap-btn-tight: var(--space-1);   /* 4px：密集排列（左欄底部三鈕） */
-      --gap-btn: var(--space-2);         /* 8px：一般族群 */
-      --gap-btn-loose: var(--space-3);   /* 12px：不同功能群（標題列） */
+    /* ── 三階按鈕群組間距 ──
+       tight  = icon-only 緊密群（左欄底部）
+       normal = 同族群一般間距（標題列 icon 群）
+       loose  = 不同族群（標題列「標題 ↔ 動作群」）         */
+    --gap-btn-tight: var(--space-1);
+    --gap-btn-normal: var(--space-2);
+    --gap-btn-loose: var(--space-4);
 
-      /* 過渡 */
-      --transition: 150ms ease;
-    }
+    --transition: 150ms ease;
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--color-bg);
-      color: var(--color-text);
-      height: 100vh;
-      display: flex;
-    }
+    /* ── fallback：若未掛主題，仍可渲染 ── */
+    --color-bg: #ffffff;
+    --color-bg-served: #ffffff;
+    --color-surface: #f5f5f5;
+    --color-surface-2: #ececec;
+    --color-border: #e5e5e5;
+    --color-border-strong: #c8c8c8;
+    --color-divider: #111111;
+    --color-text: #111111;
+    --color-text-muted: #6b6b6b;
+    --color-text-subtle: #a3a3a3;
+    --color-accent: #111111;
+    --color-accent-hover: #2a2a2a;
+    --color-danger: #a8242c;
+    --divider-w: 1px;
+    --radius-sm: 0;
+    --radius-md: 0;
+    --font-display: system-ui, sans-serif;
+    --font-body: system-ui, sans-serif;
+  }
 
-    /* 共用按鈕系統 */
-    .btn-primary, #upload-btn, #send-btn, #confirm-ok-btn, #help-close-btn {
-      background: var(--color-accent);
-      color: #ffffff;
-      border: 1px solid var(--color-accent);
-      border-radius: var(--radius-md);
-      height: var(--btn-h);
-      min-width: var(--btn-min-w);
-      padding: 0 var(--btn-pad-x);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      font-size: var(--font-base);
-      cursor: pointer;
-      transition: background var(--transition);
-    }
-    .btn-primary:hover, #upload-btn:hover, #send-btn:hover,
-    #confirm-ok-btn:hover, #help-close-btn:hover { background: var(--color-accent-hover); }
-    .btn-ghost, #help-btn, #cleanup-btn, #lang-toggle, #print-btn, #export-btn {
-      background: transparent;
-      color: var(--color-text);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      height: var(--btn-h);
-      min-width: var(--btn-min-w);
-      padding: 0 var(--btn-pad-x);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      font-size: var(--font-sm);
-      cursor: pointer;
-      transition: background var(--transition);
-    }
-    .btn-ghost:hover, #help-btn:hover, #cleanup-btn:hover, #lang-toggle:hover,
-    #print-btn:hover, #export-btn:hover { background: var(--color-surface); }
-    /* 統一 disabled 視覺 */
-    .btn-ghost:disabled, .icon-only:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    /* icon-only：正方、無最小寬與水平內距 */
-    .icon-only {
-      width: var(--btn-icon);
-      height: var(--btn-icon);
-      min-width: 0;
-      padding: 0;
-      flex-shrink: 0;
-    }
-    .btn-ghost.active {
-      background: var(--color-text);
-      color: #ffffff;
-      border-color: var(--color-text);
-    }
+  *,*::before,*::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ol, ul { margin: 0; padding: 0; }
+  body {
+    /* font-family / font-size → 由 themes/<name>.css 提供 */
+    background: var(--color-bg);
+    color: var(--color-text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  button { font-family: inherit; }
+  a { color: inherit; }
 
-    /* 左側論文列表 */
-    #sidebar {
-      width: 260px;
-      background: var(--color-bg);
-      color: var(--color-text);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      border-right: 2px solid var(--color-divider);
-    }
-    #sidebar h1 {
-      height: var(--toolbar-h);
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--gap-btn-loose);
-      padding: 0 44px 0 var(--pad-panel);   /* 右側 44px 讓位給浮動漢堡 */
-      font-size: var(--font-base);
-      font-weight: 600;
-      border-bottom: 1px solid var(--color-border);
-      color: var(--color-text);
-    }
-    #sidebar h1 .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #paper-list { flex: 1; overflow-y: auto; padding: var(--space-2); }
-    .paper-item {
-      padding: var(--space-3);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      margin-bottom: var(--space-1);
-      transition: background var(--transition);
-    }
-    .paper-item:hover { background: var(--color-border); }
-    .paper-item.active { background: var(--color-text); color: #ffffff; }
-    .paper-title-zh {
-      font-size: var(--font-sm);
-      font-weight: 500;
-      line-height: 1.4;
-      margin-bottom: var(--space-1);
-    }
-    .paper-title-en {
-      font-size: var(--font-xs);
-      color: var(--color-text-muted);
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .paper-item.active .paper-title-en { color: var(--color-border); }
-    .paper-item-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-2);
-    }
-    .paper-item-titles { flex: 1; min-width: 0; }
+  /* ─────────────────────────────────────────
+     原型展示控制條（非產品 UI，僅 review 用）
+  /* ─────────────────────────────────────────
+     原型展示控制條（非產品 UI，僅 review 用）
+     字體 / 高度 / 字距 → 由主題覆寫
+     ───────────────────────────────────────── */
+  #demo-bar {
+    flex-shrink: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    border-bottom: var(--divider-w) solid var(--color-divider);
+  }
+  #demo-bar .label { color: var(--color-text-subtle); }
+  #demo-bar .name {
+    color: var(--color-text);
+    font-weight: 600;
+    margin-right: var(--space-2);
+  }
+  #demo-bar .seg {
+    display: inline-flex;
+    border: 1px solid var(--color-divider);
+  }
+  #demo-bar .seg button {
+    background: transparent;
+    color: var(--color-text);
+    border: 0;
+    border-right: 1px solid var(--color-divider);
+    padding: 0 var(--space-3);
+    cursor: pointer;
+  }
+  #demo-bar .seg button:last-child { border-right: 0; }
+  #demo-bar .seg button.active {
+    background: var(--color-divider);
+    color: var(--color-bg-served);
+  }
+  #demo-bar .spacer { flex: 1; }
 
-    /* ── 資料夾樹（Phase 3.2） ── */
-    #folder-tree {
-      max-height: 38%;
-      overflow-y: auto;
-      padding: var(--space-2) 0;
-      border-bottom: 1px solid var(--color-border);
-      flex-shrink: 0;
-    }
-    .folder-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-1);
-      padding: var(--space-2) var(--space-3);
-      font-size: var(--font-sm);
-      cursor: pointer;
-      border-radius: var(--radius-sm);
-      margin: 0 var(--space-2);
-      transition: background var(--transition);
-    }
-    .folder-item:hover { background: var(--color-border); }
-    .folder-item.active { background: var(--color-text); color: #ffffff; }
-    .folder-item .chevron {
-      width: 12px; flex-shrink: 0; text-align: center;
-      color: var(--color-text-muted); font-size: 10px;
-    }
-    .folder-item.active .chevron { color: #ffffff; }
-    .folder-item .fname {
-      flex: 1; min-width: 0;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .folder-item .menu-btn {
-      margin-left: auto; flex-shrink: 0;
-      border: none; background: transparent; cursor: pointer;
-      color: inherit; opacity: 0; padding: 0 var(--space-1);
-      transition: opacity var(--transition);
-    }
-    .folder-item:hover .menu-btn { opacity: 1; }
-    .paper-menu-btn {
-      border: none; background: transparent; cursor: pointer;
-      color: var(--color-text-muted); flex-shrink: 0;
-      opacity: 0; width: 24px; height: 24px; min-width: 0; padding: 0;
-      font-size: var(--font-base); line-height: 1;
-      transition: opacity var(--transition), color var(--transition);
-    }
-    .paper-item:hover .paper-menu-btn { opacity: 1; }
-    .paper-menu-btn:hover { color: var(--color-text); background: transparent; }
-    .ctx-popup {
-      position: fixed; z-index: 100;
-      background: var(--color-bg);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-md);
-      padding: var(--space-1);
-      min-width: 160px; max-height: 260px; overflow-y: auto;
-    }
-    .ctx-popup button {
-      display: block; width: 100%; text-align: left;
-      border: none; background: transparent; cursor: pointer;
-      padding: var(--space-2) var(--space-3);
-      font-size: var(--font-sm); color: var(--color-text);
-      border-radius: var(--radius-sm);
-    }
-    .ctx-popup button:hover { background: var(--color-border); }
+  /* ─────────────────────────────────────────
+     Tooltip 系統：data-tip 屬性觸發
+     · mouseenter 1s 後出現於 icon 左側
+     · Mies 美學：純白底、1px 黑線、直角、無箭頭
+     ───────────────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    z-index: 2000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+  #tooltip.visible { opacity: 1; }
 
-    #sidebar-bottom {
-      display: flex;
-      flex-direction: column;
-      gap: var(--gap-btn);
-      padding: var(--pad-panel);
-      border-top: 1px solid var(--color-border);
-      box-sizing: border-box;
-    }
-    #sidebar-bottom .sb-row {
-      display: flex;
-      gap: var(--gap-btn-tight);
-    }
-    #sidebar-bottom .sb-row > button {
-      flex: 1;
-      min-width: 0;
-      width: auto;          /* 覆寫 .icon-only 的固定寬，改等寬平分 */
-    }
-    #upload-btn { width: 100%; font-weight: 500; }
+  /* ─────────────────────────────────────────
+     Modal 統一美學
+     · 半透明黑遮罩；內框純白、1px 黑線、直角
+     ───────────────────────────────────────── */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;                      /* 暗示「可點外面關」 */
+  }
+  .modal-mask > .modal-box { cursor: auto; }   /* 內框恢復一般游標 */
+  .modal-mask.show { display: flex; }
+  .modal-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-divider);
+    padding: var(--space-6);
+    min-width: 380px;
+    max-width: 480px;
+  }
+  .modal-box h3 {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    color: var(--color-text);
+  }
+  .modal-box ol, .modal-box ul {
+    padding-left: var(--space-5);
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+    line-height: 1.9;
+  }
+  .modal-box li { margin-bottom: var(--space-1); }
+  .modal-box .step-note {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-1);
+  }
+  .modal-box p {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+    line-height: 1.6;
+  }
+  .modal-box .modal-actions {
+    display: flex;
+    gap: var(--gap-btn-normal);
+    justify-content: flex-end;
+    margin-top: var(--space-5);
+  }
+  .modal-box select {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+  }
+  .modal-box select:focus { border-color: var(--color-accent); }
 
-    /* 彈窗（無陰影，改用粗邊框） */
-    #help-modal, #confirm-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    #help-modal.show, #confirm-modal.show { display: flex; }
-    #help-box, #confirm-box {
-      background: var(--color-bg);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-md);
-      padding: var(--space-6);
-    }
-    #help-box { width: 420px; }
-    #confirm-box { width: 380px; }
-    #help-box h3, #confirm-box h3 { font-size: var(--font-lg); color: var(--color-text); margin-bottom: var(--space-4); }
-    #help-box ol { padding-left: var(--space-5); color: var(--color-text); font-size: var(--font-base); line-height: 2; }
-    #help-box li { margin-bottom: var(--space-1); }
-    #help-box .step-note { font-size: var(--font-xs); color: var(--color-text-subtle); margin-top: var(--space-1); }
-    #help-close-btn { margin-top: var(--space-5); width: 100%; }
-    #confirm-box h3 { margin-bottom: var(--space-2); }
-    #confirm-box p { font-size: var(--font-sm); color: var(--color-text-muted); margin-bottom: var(--space-2); }
-    #doc-type-select {
-      width: 100%;
-      padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: var(--font-base);
-      margin-bottom: var(--space-2);
-      outline: none;
-      background: var(--color-bg);
-      color: var(--color-text);
-    }
-    #doc-type-select:focus { border-color: var(--color-accent); }
-    #confirm-reason {
-      font-size: var(--font-xs);
-      color: var(--color-text-subtle);
-      margin-bottom: var(--space-5);
-      font-style: italic;
-    }
-    #confirm-box-btns { display: flex; gap: var(--space-2); justify-content: flex-end; }
+  /* ── 自訂 dropdown（取代 native <select>）── */
+  .dropdown {
+    margin-bottom: var(--space-2);
+  }
+  .dropdown-trigger {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    transition: background var(--transition);
+  }
+  .dropdown-trigger:hover { background: var(--color-surface); }
+  .dropdown-trigger[aria-expanded="true"] { background: var(--color-surface); }
+  .dropdown-chevron {
+    width: 14px; height: 14px;
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+    flex-shrink: 0;
+    transition: transform var(--transition);
+  }
+  .dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+    transform: rotate(180deg);
+  }
+  /* dropdown 開啟時的 popup：在 modal 內也要顯現，z-index 須高於 modal-mask(1500) */
+  .ctx-popup.dropdown-popup { z-index: 1600; }
+  .modal-box button.modal-btn {
+    height: var(--btn-h);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .modal-box button.modal-btn:hover { background: var(--color-surface); }
+  .modal-box button.modal-btn.primary {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+  }
+  .modal-box button.modal-btn.primary:hover { background: var(--color-accent-hover); }
 
-    /* 中間論文內容 */
-    #content-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #content-toolbar {
-      height: var(--toolbar-h);
-      box-sizing: border-box;
-      padding: 0 var(--pad-panel);
-      background: var(--color-bg);
-      border-bottom: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      gap: var(--gap-btn-loose);
-    }
-    #content-toolbar h2 { font-size: var(--font-base); color: var(--color-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-    @media print {
-      * { overflow: visible !important; height: auto !important; }
-      body { display: block !important; height: auto !important; }
-      #sidebar, #chat-panel, #content-toolbar, #print-btn, #lang-toggle { display: none !important; }
-      #content-area { display: block !important; width: 100% !important; overflow: visible !important; }
-      #paper-content {
-        display: block !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 20px !important;
-        margin: 0 !important;
-        overflow: visible !important;
-        height: auto !important;
-        position: static !important;
-      }
-      #empty-state { display: none !important; }
-    }
-    #paper-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--space-6) var(--space-8);
-      background: var(--color-bg);
-      max-width: 860px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    #paper-content h1 { font-size: var(--font-2xl); font-weight: 700; color: var(--color-text); margin-bottom: var(--space-5); line-height: 1.3; }
-    #paper-content h2 { font-size: var(--font-xl); font-weight: 600; color: var(--color-text); margin: var(--space-6) 0 var(--space-3); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2); }
-    #paper-content h3 { font-size: var(--font-lg); font-weight: 600; color: var(--color-text); margin: var(--space-5) 0 var(--space-2); }
-    #paper-content p { font-size: var(--font-base); line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-4); }
-    #paper-content img { max-width: 100%; border-radius: var(--radius-sm); margin: var(--space-4) 0; }
-    #paper-content em { color: var(--color-text-muted); font-size: var(--font-sm); }
-    #paper-content table { border-collapse: collapse; width: 100%; margin: var(--space-4) 0; }
-    #paper-content td, #paper-content th { border: 1px solid var(--color-border); padding: var(--space-2) var(--space-3); font-size: var(--font-base); }
-    #empty-state {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-text-subtle);
-      font-size: var(--font-base);
-    }
+  /* ─────────────────────────────────────────
+     主版面：三欄
+     ───────────────────────────────────────── */
+  #app {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
 
-    /* 右側 AI 問答 */
-    #chat-panel {
-      width: 420px;
-      background: var(--color-bg);
-      border-left: 2px solid var(--color-divider);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-    #chat-header {
-      height: var(--toolbar-h);
-      box-sizing: border-box;
-      padding: 0 44px 0 var(--pad-panel);
-      border-bottom: 1px solid var(--color-border);
-      font-size: var(--font-base);
-      font-weight: 600;
-      color: var(--color-text);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--gap-btn-loose);
-    }
-    #chat-header-actions { display: flex; align-items: center; gap: var(--gap-btn-loose); }
-    #export-btn { font-size: var(--font-xs); padding: var(--space-1) var(--space-3); min-width: 0; }
-    #chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--space-5);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-    }
-    .msg-user {
-      background: var(--color-accent);
-      color: #ffffff;
-      padding: var(--space-3) var(--space-4);
-      border-radius: var(--radius-md);
-      font-size: var(--font-base);
-      line-height: 1.6;
-      align-self: flex-end;
-      max-width: 80%;
-      white-space: pre-wrap;
-    }
-    .msg-ai {
-      background: var(--color-bg);
-      color: var(--color-text);
-      padding: var(--space-3) var(--space-4);
-      border-radius: var(--radius-md);
-      font-size: var(--font-base);
-      line-height: 1.8;
-      align-self: flex-start;
-      max-width: 95%;
-      border: 1px solid var(--color-border);
-    }
-    .msg-ai p { margin-bottom: var(--space-2); }
-    .msg-ai p:last-child { margin-bottom: 0; }
-    .msg-ai ul, .msg-ai ol { margin: var(--space-2) 0 var(--space-2) var(--space-5); }
-    .msg-ai li { margin-bottom: var(--space-1); }
-    .msg-sources {
-      font-size: var(--font-sm);
-      color: var(--color-text-subtle);
-      margin-top: var(--space-2);
-      padding-top: var(--space-2);
-      border-top: 1px dashed var(--color-border);
-    }
-    .msg-sources a {
-      color: var(--color-text-muted);
-      text-decoration: underline;
-    }
-    .msg-sources a:hover { color: var(--color-text); }
-    .msg-system {
-      font-size: var(--font-sm);
-      color: var(--color-text-subtle);
-      text-align: center;
-      margin-top: var(--space-6);
-      padding: var(--space-3);
-    }
-    #chat-input-area {
-      padding: var(--pad-panel);
-      border-top: 1px solid var(--color-border);
-      display: flex;
-      gap: var(--gap-btn);
-      box-sizing: border-box;
-      align-items: flex-end;
-    }
-    #chat-input {
-      flex: 1;
-      padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: var(--font-base);
-      line-height: 1.4;
-      resize: none;
-      min-height: var(--btn-h);
-      max-height: 132px;          /* 約 5 行後 scroll */
-      overflow-y: auto;
-      outline: none;
-      color: var(--color-text);
-      background: var(--color-bg);
-      font-family: inherit;
-      box-sizing: border-box;
-    }
-    #chat-input:focus { border-color: var(--color-accent); }
-    #send-btn { font-weight: 500; white-space: nowrap; }
-    #send-btn:disabled {
-      background: var(--color-text-subtle);
-      border-color: var(--color-text-subtle);
-      cursor: not-allowed;
-    }
-    .chat-empty {
-      text-align: center;
-      color: var(--color-text-subtle);
-      font-size: var(--font-sm);
-      margin-top: var(--space-8);
-    }
+  /* === 共用按鈕系統 === */
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .btn-primary:hover { background: var(--color-accent-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* 階段一：側欄收合 */
-    #sidebar.collapsed { width: 0; overflow: hidden; }
-    #chat-panel.collapsed { width: 0; overflow: hidden; }
-    .panel-toggle {
-      position: fixed;
-      z-index: 50;
-      top: 8px;
-      width: var(--btn-icon);
-      height: var(--btn-icon);
-      padding: 0;
-      background: var(--color-surface);
-      color: var(--color-text);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-size: var(--font-base);
-      line-height: 1;
-    }
-    .panel-toggle:hover { background: var(--color-surface); }
-    /* 漢堡視覺對齊側欄標題列右端（260 寬 − 12 − 32 ≈ 216）；
-       保持 fixed 以確保 sidebar collapsed(width:0) 時仍可點擊再展開 */
-    #sidebar-toggle { left: 216px; }
-    #chat-toggle { right: var(--space-3); }
-  </style>
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .btn-ghost:hover { background: var(--color-surface); }
+  .btn-ghost.active {
+    background: var(--color-text);
+    color: #fff;
+    border-color: var(--color-text);
+  }
+  .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* === icon-only：統一 28×28、無 min-width === */
+  .icon-only {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;        /* 預設無邊（toolbar 內），可被覆蓋 */
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .icon-only:hover {
+    background: var(--color-surface);
+  }
+  .icon-only:active {
+    background: var(--color-surface-2);   /* 按下瞬間：再深一階表面色 */
+  }
+  .icon-only:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 1px;
+  }
+  .icon-only svg {
+    width: var(--btn-icon-svg);
+    height: var(--btn-icon-svg);
+    stroke: currentColor;
+    stroke-width: var(--btn-icon-stroke);
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* .bordered 保留 class 名作向下相容，但不再加常駐邊框 */
+  .icon-only.bordered { border-color: transparent; }
+
+  /* === 左欄 sidebar ===
+     Kahn：servant space，靠「厚牆」分隔；2px umber 視為結構體 */
+  #sidebar {
+    width: 240px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: var(--divider-w) solid var(--color-divider);
+    overflow: hidden;
+    transition: width 180ms ease;
+  }
+  #sidebar h1 {
+    height: var(--toolbar-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-btn-normal);
+    padding: 0 var(--space-2) 0 var(--pad-panel);
+    font-size: var(--font-base);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+  #sidebar h1 .title {
+    /* 字體 / 字距 → 由主題覆寫 */
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 標題列右側 icon 群：normal 間距 */
+  #sidebar h1 .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+  }
+
+  #folder-tree {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .folder-item {
+    position: relative;                    /* 痛點 4：popup 以 item 右端為錨 */
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin: 0 var(--space-2);
+    font-size: var(--font-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition);
+  }
+  .folder-item:hover { background: var(--color-border); }
+  .folder-item.active {
+    background: var(--color-text);
+    color: #fff;
+  }
+  .folder-item .chevron {
+    width: 14px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted);
+  }
+  .folder-item.active .chevron { color: #fff; }
+  .folder-item .chevron svg {
+    width: 10px; height: 10px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    transition: transform var(--transition);
+  }
+  .folder-item.open > .chevron svg { transform: rotate(90deg); }
+  .folder-item .chevron.empty { visibility: hidden; }
+  .folder-item .fname {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .folder-item .menu-btn {
+    /* 痛點 5：⋯ 改用 SVG icon-only，統一尺寸 */
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent; color: inherit;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition), background var(--transition);
+  }
+  .folder-item .menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .folder-item:hover .menu-btn { opacity: 1; }
+  .folder-item.active .menu-btn { opacity: 1; }
+  .folder-item .menu-btn:hover { background: rgba(255,255,255,0.12); }
+  .folder-item:not(.active) .menu-btn:hover { background: var(--color-surface); }
+
+  #paper-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2);
+  }
+  .paper-item {
+    position: relative;                   /* 痛點 4 */
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: var(--space-1);
+    transition: background var(--transition), color var(--transition);
+  }
+  .paper-item:hover { background: var(--color-border); }
+  .paper-item.active { background: var(--color-text); color: #fff; }
+
+  /* ── 上傳中占位列 ──
+     不顯示 ⋯ 選單；以微脈動暗示「處理中」；
+     底部 1px 細線跑進度，文字顯示階段+百分比；
+     整列禁止點擊（pointer-events: none），避免誤觸 */
+  .paper-item.uploading {
+    cursor: default;
+    pointer-events: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    animation: paperUploadingPulse 1.6s ease-in-out infinite;
+  }
+  .paper-item.uploading:hover { background: var(--color-surface); }
+  .paper-item.uploading .paper-title-zh {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+  .paper-progress {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    margin-top: 2px;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+  }
+  .paper-progress-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    flex-shrink: 0;
+    animation: paperUploadingBlink 1s ease-in-out infinite;
+  }
+  .paper-progress-bar {
+    margin-top: var(--space-2);
+    height: 2px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+  .paper-progress-fill {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 200ms ease;
+  }
+  @keyframes paperUploadingPulse {
+    0%, 100% { background: var(--color-surface); }
+    50%      { background: var(--color-border); }
+  }
+  @keyframes paperUploadingBlink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+  }
+  .paper-item-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .paper-item-titles { flex: 1; min-width: 0; }
+  .paper-title-zh {
+    font-size: var(--font-sm); font-weight: 500;
+    line-height: 1.4; margin-bottom: var(--space-1);
+  }
+  .paper-title-en {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .paper-item.active .paper-title-en { color: rgba(255,255,255,0.55); }
+
+  /* 痛點 5：paper-menu-btn 改 SVG，盒尺寸與 folder 一致 24×24 */
+  .paper-menu-btn {
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    opacity: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: opacity var(--transition), background var(--transition), color var(--transition);
+  }
+  .paper-menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .paper-item:hover .paper-menu-btn { opacity: 1; }
+  .paper-item.active .paper-menu-btn { color: #fff; opacity: 1; }
+  .paper-menu-btn:hover { background: var(--color-surface); color: var(--color-text); }
+  .paper-item.active .paper-menu-btn:hover {
+    background: rgba(255,255,255,0.12); color: #fff;
+  }
+  /* 觸控裝置無 hover：⋯ 永遠顯示，避免無法操作 */
+  @media (hover: none) {
+    .paper-menu-btn,
+    .folder-item .menu-btn { opacity: 1; }
+  }
+
+  /* ── popup：fixed 浮層、append 到 body；統一美學（純白、1px 黑線、直角）── */
+  .ctx-popup {
+    position: fixed;
+    z-index: 1000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: var(--space-1);
+    min-width: 140px;
+    max-height: 260px; overflow-y: auto;
+  }
+  .ctx-popup button {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    width: 100%; text-align: left;
+    border: 0; background: transparent; cursor: pointer;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .ctx-popup button:hover { background: var(--color-border); }
+  .ctx-popup button.danger { color: var(--color-danger); }
+  .ctx-popup button:disabled {
+    color: var(--color-text-subtle); cursor: not-allowed;
+  }
+  .ctx-popup button:disabled:hover { background: transparent; }
+  .ctx-popup .has-sub::after {
+    content: '›';
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: var(--font-base);
+  }
+
+  /* ── 左欄底部：四個 icon 等寬一排 ── */
+  #sidebar-bottom {
+    flex-shrink: 0;
+    padding: var(--pad-panel);
+    border-top: 1px solid var(--color-border);
+  }
+  #sidebar-bottom .sb-row {
+    display: flex;
+    gap: var(--gap-btn-tight);
+  }
+  /* 左欄底部四 icon：32×32 固定、不再 flex:1 平分；
+     用 space-between 撐到欄兩端，視覺重心穩定且容器尺寸與其他 icon 一致 */
+  #sidebar-bottom .sb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #sidebar-bottom .sb-row > button {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  #sidebar-bottom .sb-row > button:hover { background: var(--color-surface); }
+  #sidebar-bottom .sb-row > button:active { background: var(--color-surface-2); }
+  #sidebar-bottom .sb-row > button svg {
+    width: var(--btn-icon-svg); height: var(--btn-icon-svg);
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* ── 中欄 ── served space：背景色由主題覆寫（可同或略亮） */
+  #content-area {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg-served);
+  }
+  /* 中欄標題列：允許標題多行展開；icon 群永遠貼齊頂部 */
+  #content-toolbar {
+    min-height: var(--toolbar-h);
+    flex-shrink: 0;
+    padding: 10px var(--pad-panel);                  /* (48 - 28) / 2 = 10，讓 icon 居中於最小高度 */
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: flex-start;          /* 改 flex-start：標題加高時不會把 icon 往下推 */
+    gap: var(--gap-btn-loose);
+  }
+  #content-toolbar h2 {
+    /* 字體 / 字級 → 由主題覆寫；不再單行裁切 */
+    color: var(--color-text);
+    flex: 1; min-width: 0;
+    font-weight: 600;
+    line-height: 1.25;                                /* 多行時行距 */
+  }
+  /* 痛點 6：中欄 icon 群 normal 間距、同一個 flex 容器 */
+  #content-toolbar .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+    flex-shrink: 0;
+    padding-top: 4px;                                 /* 與大標題第一行視覺對齊 */
+  }
+
+  #empty-state {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-subtle);
+    font-size: var(--font-base);
+    gap: var(--space-2);
+  }
+  #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  #paper-content {
+    flex: 1;
+    overflow-y: auto;
+    margin: 0 auto;
+    width: 100%;
+    /* max-width / padding / 字體與字級 → 由主題覆寫 */
+  }
+  #paper-content h1 { text-wrap: pretty; }
+  #paper-content h2 {
+    /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
+  }
+  #paper-content .figure { /* margin 由主題覆寫 */ }
+  #paper-content .figure .ph {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex; align-items: center; justify-content: center;
+    /* 背景紋路 / 邊框 / 字體 → 由主題覆寫 */
+  }
+  #paper-content .figure figcaption { /* 字體、置中等 → 由主題覆寫 */ }
+
+  /* ── 右欄 chat ── */
+  #chat-panel {
+    width: 380px;
+    flex-shrink: 0;
+    background: var(--color-bg);
+    border-left: var(--divider-w) solid var(--color-divider);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: width 180ms ease;
+  }
+  #chat-header {
+    height: var(--toolbar-h);
+    flex-shrink: 0;
+    padding: 0 var(--pad-panel);
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: center;
+    gap: var(--gap-btn-loose);
+    font-size: var(--font-base);
+    font-weight: 600;
+  }
+  #chat-header > .h-title {
+    /* 字體 / 字距 → 由主題覆寫 */
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 痛點 7：右欄三按鈕進入同一個 flex 容器，normal 間距 */
+  #chat-header-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+  }
+  /* 開啟搜尋 / 匯出 MD：皆為 icon-only.bordered；只額外定義 active 反白狀態 */
+  #web-search-toggle.active {
+    background: var(--color-text);
+    color: #fff;
+    border-color: var(--color-text);
+  }
+  #web-search-toggle.active:hover {
+    background: var(--color-accent-hover);
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;                                     /* 永遠保留捲軸位、左右視覺對稱 */
+    padding: var(--space-5) var(--chat-pad-x, var(--space-5));    /* 與 input-area 共用水平 padding，邊界對齊 */
+    display: flex; flex-direction: column;
+    gap: var(--space-4);
+  }
+  .msg-user {
+    background: var(--color-accent);
+    color: #fff;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.6;
+    align-self: flex-end;
+    max-width: 75%;
+    white-space: pre-wrap;
+  }
+  .msg-ai {
+    position: relative;
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.8;
+    align-self: flex-start;
+    max-width: 90%;
+    border: 1px solid var(--color-border);
+  }
+  /* AI 訊息動作鈕：右下角 hover 顯示 copy / regenerate */
+  .msg-ai-actions {
+    position: absolute;
+    right: 6px;
+    bottom: -14px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 1px;
+  }
+  .msg-ai:hover .msg-ai-actions { opacity: 1; }
+  .msg-ai-actions button {
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--transition), color var(--transition);
+  }
+  .msg-ai-actions button:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .msg-ai-actions svg {
+    width: 13px; height: 13px;
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .msg-ai-actions button.copied {
+    color: var(--color-accent);
+  }
+  @media (hover: none) {
+    .msg-ai-actions { opacity: 1; }
+  }
+  .msg-ai p { margin-bottom: var(--space-2); }
+  .msg-ai p:last-child { margin-bottom: 0; }
+  .msg-sources {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--color-border);
+  }
+  .msg-sources a { color: var(--color-text-muted); text-decoration: underline; }
+  .msg-sources a:hover { color: var(--color-text); }
+  .msg-system {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    text-align: center;
+    padding: var(--space-3);
+  }
+
+  /* 右欄輸入區：與 chat-messages 共用水平 padding（--chat-pad-x），
+     textarea 撐滿剩餘寬度，左右邊緣 = 訊息泡泡容器邊緣 */
+  #chat-input-area {
+    flex-shrink: 0;
+    padding: var(--pad-panel) var(--chat-pad-x, var(--space-5));
+    border-top: 1px solid var(--color-border);
+  }
+  #chat-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.5;
+    resize: none;
+    min-height: var(--btn-h);
+    max-height: 240px;                    /* 從 132 拉到 240 = 約 10 行；自然隨內容增長 */
+    overflow-y: auto;
+    outline: none;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    display: block;
+  }
+  #chat-input:focus { border-color: var(--color-accent); }
+
+  .chat-empty {
+    text-align: center;
+    color: var(--color-text-subtle);
+    font-size: var(--font-sm);
+    margin-top: var(--space-8);
+  }
+
+  /* ─────────────────────────────────────────
+     收合態：核心改良 — width:0 → 48px rail
+     hamburger 內嵌 DOM、永遠貼分隔邊
+     ───────────────────────────────────────── */
+  #sidebar.collapsed { width: var(--rail-w); }
+  #sidebar.collapsed > h1 > .title,
+  #sidebar.collapsed > h1 > .toolbar-actions > :not(#sidebar-toggle),
+  #sidebar.collapsed > #folder-tree,
+  #sidebar.collapsed > #paper-list,
+  #sidebar.collapsed > #sidebar-bottom { display: none; }
+  #sidebar.collapsed > h1 {
+    padding: 0;
+    justify-content: center;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  #sidebar.collapsed > h1 > .toolbar-actions { gap: 0; }
+  /* 收合後新增 rail content（vertical 圖示快捷） */
+  #sidebar.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  #chat-panel.collapsed { width: var(--rail-w); }
+  #chat-panel.collapsed > #chat-header > .h-title,
+  #chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle),
+  #chat-panel.collapsed > #chat-messages,
+  #chat-panel.collapsed > #chat-input-area { display: none; }
+  #chat-panel.collapsed > #chat-header {
+    padding: 0;
+    justify-content: center;
+    background: var(--color-surface);
+  }
+  #chat-panel.collapsed > #chat-header > #chat-header-actions { gap: 0; }
+  #chat-panel.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* 痛點 1/2：sidebar-toggle 不再 fixed，sit 在標題列 toolbar-actions 內 */
+  #sidebar-toggle, #chat-toggle { /* 已套用 .icon-only */ }
+
+  /* 細節：捲軸樣式統一 */
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 4px;
+  }
+  *::-webkit-scrollbar-track { background: transparent; }
+
+</style>
+<!-- 主題版型：切換 href 即可換主題。可選：themes/mies.css、themes/kahn.css。
+     置於 </style> 之後是刻意安排：CSS 後出者勝，讓主題 :root 覆寫主檔 fallback。-->
+<link rel="stylesheet" id="theme-link" href="/static/themes/kahn.css">
 </head>
 <body>
 
-<!-- 左側論文列表 -->
-<div id="sidebar">
-  <button id="sidebar-toggle" class="panel-toggle" title="收合/展開左側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <h1>
-    <span class="title">文件列表</span>
-    <button id="new-folder-btn" class="icon-only" title="新增資料夾"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M12 11v4M10 13h4"/></svg></button>
-  </h1>
-  <div id="folder-tree"></div>
-  <div id="paper-list"></div>
-  <div id="sidebar-bottom">
-    <div class="sb-row">
-      <button id="help-btn" class="icon-only" title="上傳說明"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.4 2.3c-.8.4-1.1.9-1.1 1.7v.4"/><path d="M12 17h.01"/></svg></button>
-      <button id="cleanup-btn" class="icon-only" title="清理殘餘檔案"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>
-      <button id="logout-btn" class="btn-ghost icon-only" title="登出"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M15 12H4M9 7l-5 5 5 5M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/></svg></button>
-    </div>
-    <button id="upload-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 5v14M5 12h14"/></svg>上傳文件</button>
-  </div>
-</div>
+<!-- ────────── Tooltip 與 Modal 容器 ────────── -->
+<div id="tooltip" role="tooltip"></div>
 
-<!-- 說明框 -->
-<div id="help-modal">
-  <div id="help-box">
-    <h3><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>文件上傳流程</h3>
+<!-- 系統介紹（Help）Modal — 點 #help-btn 開啟，點遮罩或「了解了」關閉 -->
+<div id="help-modal" class="modal-mask">
+  <div id="help-box" class="modal-box" role="dialog" aria-labelledby="help-title">
+    <h3 id="help-title">文件上傳流程</h3>
     <ol>
-      <li>點擊「＋ 上傳文件」，選擇 PDF 檔案</li>
+      <li>點擊「上傳」icon，選擇 PDF 檔案</li>
       <li>選擇文件類型（學術論文、簡報、書籍等）</li>
       <li>點擊「確認，開始處理」</li>
       <li>等待處理完成（含翻譯、建立向量索引）</li>
@@ -542,60 +944,671 @@
     <p class="step-note">檔案大小上限：100 MB</p>
     <p class="step-note">支援類型：學術論文、書籍、技術文件、簡報、新聞、網頁存檔</p>
     <p class="step-note">問答使用 Ctrl+Enter 送出</p>
-    <button id="help-close-btn">了解了</button>
+    <div class="modal-actions">
+      <button id="help-close-btn" class="modal-btn primary">了解了</button>
+    </div>
   </div>
 </div>
 
-<!-- 中間論文內容 -->
-<div id="content-area">
-  <div id="content-toolbar" style="display:none">
-    <h2 id="current-title">論文標題</h2>
-    <button id="lang-toggle" class="icon-only" title="切換中英文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 8h13M9 4v4M11 16l4-9 4 9M12.5 13h5"/><path d="M3 8c0 4 3 7 7 8"/></svg></button>
-    <button id="print-btn" class="icon-only" title="列印論文"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 9V4h10v5"/><path d="M7 19h10v-6H7z"/><path d="M7 15H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2"/></svg></button>
+<!-- 切換風格 Modal — 點 #theme-btn 開啟 -->
+<div id="theme-modal" class="modal-mask">
+  <div id="theme-box" class="modal-box" role="dialog" aria-labelledby="theme-title">
+    <h3 id="theme-title">切換風格</h3>
+    <p>選擇介面美學風格，切換後立即生效</p>
+    <div class="dropdown" id="theme-dropdown" data-value="kandinsky">
+      <button type="button" class="dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+        <span class="dropdown-value">Kandinsky · Bauhaus</span>
+        <svg viewBox="0 0 24 24" class="dropdown-chevron"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+    <p class="step-note">⚠ 此功能後端尚未實作，切換結果僅在當前頁面生效，重新整理後恢復預設</p>
+    <div class="modal-actions">
+      <button id="theme-ok-btn" class="modal-btn primary">確認切換</button>
+    </div>
   </div>
-  <div id="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>從左側選擇文件</div>
-  <div id="paper-content" style="display:none"></div>
 </div>
 
-<!-- 文件類型確認框 -->
-<div id="confirm-modal">
-  <div id="confirm-box">
-    <h3>選擇文件類型</h3>
+<!-- 文件類型確認 Modal
+     ⚠ data-no-esc / data-no-mask-close：強制使用者選擇類型才能推進，
+        故不可 ESC 關、不可點遮罩關 — 配合後端處理判斷規則 -->
+<div id="confirm-modal" class="modal-mask" data-no-esc="true" data-no-mask-close="true">
+  <div id="confirm-box" class="modal-box" role="dialog" aria-labelledby="confirm-title">
+    <h3 id="confirm-title">選擇文件類型</h3>
     <p id="confirm-desc">請選擇文件類型，系統將根據類型選擇最佳解析方式。</p>
-    <select id="doc-type-select">
-      <option value="academic">學術論文</option>
-      <option value="book">書籍</option>
-      <option value="technical">技術文件</option>
-      <option value="slides">簡報</option>
-      <option value="web">網頁存檔</option>
-      <option value="news">新聞文章</option>
-    </select>
-    <div id="confirm-box-btns">
-      <button id="confirm-ok-btn">確認，開始處理</button>
+    <div class="dropdown" id="doc-type-dropdown" data-value="academic">
+      <button type="button" class="dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+        <span class="dropdown-value">學術論文</span>
+        <svg viewBox="0 0 24 24" class="dropdown-chevron"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button id="confirm-ok-btn" class="modal-btn primary">確認，開始處理</button>
     </div>
   </div>
 </div>
 
-<!-- 右側 AI 問答 -->
-<div id="chat-panel">
-  <div id="chat-header">
-    <button id="chat-toggle" class="panel-toggle" title="收合/展開右側欄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-    <span>AI 問答</span>
-    <div id="chat-header-actions">
-      <button id="web-search-toggle" class="btn-ghost" type="button">開啟搜尋</button>
-      <button id="export-btn" style="display:none" title="匯出對話紀錄"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:var(--space-2)"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>MD</button>
+<!-- 通用確認 Modal — 取代瀏覽器原生 confirm()；由 customConfirm() 動態填內容 -->
+<div id="action-modal" class="modal-mask">
+  <div id="action-box" class="modal-box" role="dialog" aria-labelledby="action-title">
+    <h3 id="action-title">確認</h3>
+    <p id="action-body"></p>
+    <div class="modal-actions">
+      <button id="action-cancel" class="modal-btn">取消</button>
+      <button id="action-ok" class="modal-btn primary">確定</button>
     </div>
   </div>
-  <div id="chat-messages">
-    <div class="chat-empty">選擇文件後開始提問</div>
+</div>
+
+<!-- 通用提示 Modal — 取代瀏覽器原生 alert()；由 customAlert() 動態填內容 -->
+<div id="notice-modal" class="modal-mask">
+  <div id="notice-box" class="modal-box" role="dialog" aria-labelledby="notice-title">
+    <h3 id="notice-title">提示</h3>
+    <p id="notice-body"></p>
+    <div class="modal-actions">
+      <button id="notice-ok" class="modal-btn primary">知道了</button>
+    </div>
   </div>
-  <div id="chat-input-area">
-    <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..." disabled></textarea>
-    <button id="send-btn" disabled>送出</button>
-  </div>
+</div>
+
+<!-- ──────────────  三欄主版面  ────────────── -->
+<div id="app">
+
+  <!-- ──── 左欄 ──── -->
+  <aside id="sidebar">
+    <h1>
+      <span class="title">文件列表</span>
+      <div class="toolbar-actions">
+        <button id="new-folder-btn" class="icon-only" data-tip="新資料夾">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button id="sidebar-toggle" class="icon-only" data-tip="收合本欄">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </h1>
+
+    <div id="folder-tree"></div>
+
+    <div id="paper-list"></div>
+
+    <div id="sidebar-bottom">
+      <div class="sb-row">
+        <button id="logout-btn" class="icon-only" data-tip="退出系統">
+          <svg viewBox="0 0 24 24"><path d="M15 12H4M9 7l-4 4a1.5 1.5 0 0 0 0 2l4 4M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg>
+        </button>
+        <button id="cleanup-btn" class="icon-only" data-tip="清除殘檔">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+        <button id="help-btn" class="icon-only" data-tip="系統介紹">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 0 1 5.4.5c0 2-2.6 2-2.6 4"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button id="theme-btn" class="icon-only" data-tip="切換風格">
+          <!-- 三個並排矩形：palette swatch；元素數 = 3，與漢堡密度相當 -->
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="5" height="12"/><rect x="9.5" y="6" width="5" height="12"/><rect x="16" y="6" width="5" height="12"/></svg>
+        </button>
+        <button id="upload-btn" class="icon-only" data-tip="上傳文件">
+          <svg viewBox="0 0 24 24"><path d="M5 20h14M12 16V5M7 9l4-4a1.5 1.5 0 0 1 2 0l4 4"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ──── 中欄 ──── -->
+  <main id="content-area">
+    <div id="content-toolbar">
+      <h2 id="current-title">2026 年環義自由車賽第九站前瞻、路線分析、奪冠熱門與預測：10% 陡坡考驗，Jonas Vingegaard 有望縮小與粉紅衫的差距</h2>
+      <div class="toolbar-actions">
+        <button id="lang-toggle" class="icon-only" data-tip="語言切換">
+          <!-- 切換符號：水平 ⇄；兩條短橫線錯位、不重疊 -->
+          <svg viewBox="0 0 24 24"><path d="M17 4l3 3-3 3M20 7H10"/><path d="M7 14l-3 3 3 3M4 17h10"/></svg>
+        </button>
+        <button id="print-btn" class="icon-only" data-tip="列印文件">
+          <svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><path d="M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="empty-state" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-6-6a1.5 1.5 0 0 1 0-2l6-6"/></svg>
+      從左側選擇文件
+    </div>
+    <div id="paper-content">
+      <h1>2026 年環義自由車賽第九站前瞻、路線分析、奪冠熱門與預測：10% 陡坡考驗，Jonas Vingegaard 有望縮小與粉紅衫的差距</h1>
+      <p class="byline">by Rúben Silva ·&nbsp;Saturday, 17 May 2026</p>
+
+      <figure class="figure">
+        <div class="ph">FIGURE 1 — 頒獎台合影（Picture: Sirotti）</div>
+        <figcaption>這張照片呈現了職業自行車手在賽事頒獎典禮上的場景，左側可見具代表性的冠軍獎盃，中間的運動員身著印有贊助商標誌的黃色領騎衫。</figcaption>
+      </figure>
+
+      <p>2026 年環義自由車賽（Giro d'Italia）將於 5 月 8 日至 31 日舉行。這是本賽季的第一場大環賽（Grand Tour），共設有 21 個賽段，車手們將穿越義大利眾多標誌性城市、傳奇的阿爾卑斯山脈（Alps），以及許多險峻的賽段——每一個賽段都可能改寫總成績榜的位置。</p>
+
+      <h2>第九站路線概覽</h2>
+      <p>本日賽段全長 215 公里，最後 18 公里連續爬坡，最大坡度達到 10%。冠軍極可能在最後 5 公里的單飛中產生，而陡坡也將是粉紅衫競爭者拉開差距的關鍵舞台。</p>
+
+      <h3>賽段重點</h3>
+      <p>過去三年於同樣賽段勝出的選手中，有兩位都是後段加速能力突出的爬坡型車手；今年 <em>Jonas Vingegaard 已展現出在中海拔的回升狀態</em>，他將是頭號奪冠熱門。</p>
+    </div>
+  </main>
+
+  <!-- ──── 右欄 ──── -->
+  <aside id="chat-panel">
+    <div id="chat-header">
+      <span class="h-title">AI 問答</span>
+      <div id="chat-header-actions">
+        <button id="web-search-toggle" class="icon-only active" type="button" data-tip="Search 開關">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg>
+        </button>
+        <button id="export-btn" class="icon-only" data-tip="下載 MD">
+          <svg viewBox="0 0 24 24"><path d="M12 4v12M7 11l4 4a1.5 1.5 0 0 0 2 0l4-4M5 20h14"/></svg>
+        </button>
+        <button id="chat-toggle" class="icon-only" data-tip="收合本欄">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+      <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..."></textarea>
+    </div>
+  </aside>
 </div>
 
 <script>
+  // ── 三欄收合 toggle ─────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const chatPanel = document.getElementById('chat-panel');
+  const stateBtns = document.querySelectorAll('#demo-bar .seg button');
+
+  function syncStateBar() {
+    const s = sidebar.classList.contains('collapsed');
+    const c = chatPanel.classList.contains('collapsed');
+    let state = 'default';
+    if (s && !c) state = 'sidebar-collapsed';
+    else if (!s && c) state = 'chat-collapsed';
+    stateBtns.forEach(b => b.classList.toggle('active', b.dataset.state === state));
+  }
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    syncStateBar();
+    syncCollapseTips();
+  });
+  document.getElementById('chat-toggle').addEventListener('click', () => {
+    chatPanel.classList.toggle('collapsed');
+    syncStateBar();
+    syncCollapseTips();
+  });
+
+  // 漢堡 tooltip 隨展開／收合狀態切換文字
+  function syncCollapseTips() {
+    document.getElementById('sidebar-toggle').setAttribute(
+      'data-tip', sidebar.classList.contains('collapsed') ? '展開本欄' : '收合本欄');
+    document.getElementById('chat-toggle').setAttribute(
+      'data-tip', chatPanel.classList.contains('collapsed') ? '展開本欄' : '收合本欄');
+  }
+  syncCollapseTips();
+  stateBtns.forEach(b => {
+    b.addEventListener('click', () => {
+      sidebar.classList.remove('collapsed');
+      chatPanel.classList.remove('collapsed');
+      if (b.dataset.state === 'sidebar-collapsed') sidebar.classList.add('collapsed');
+      else if (b.dataset.state === 'chat-collapsed') chatPanel.classList.add('collapsed');
+      syncStateBar();
+      syncCollapseTips();
+    });
+  });
+
+  // ── popup（per-item / folder）— 以 item 為錨點 ────
+  function closePopups() {
+    document.querySelectorAll('.ctx-popup').forEach(p => p.remove());
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.ctx-popup') &&
+        !e.target.closest('.paper-menu-btn') &&
+        !e.target.closest('.folder-item .menu-btn')) {
+      closePopups();
+    }
+  });
+
+  // 開 popup：以按鈕為錨點，浮到 body，靠右對齊 item 右緣、垂直貼齊按鈕下方
+  // 若視窗下方空間不足則往上翻
+  function openPopupAt(anchorBtn, anchorItem, html) {
+    closePopups();
+    const pop = document.createElement('div');
+    pop.className = 'ctx-popup';
+    pop.innerHTML = html;
+    document.body.appendChild(pop);
+
+    const margin = 8;
+    const itemRect = anchorItem.getBoundingClientRect();
+    const btnRect = anchorBtn.getBoundingClientRect();
+    const popRect = pop.getBoundingClientRect();
+
+    // 水平：靠右對齊 item 右緣（再內縮 4px 視覺呼吸）
+    let left = itemRect.right - popRect.width - 4;
+    left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
+
+    // 垂直：預設貼齊按鈕下緣 +4px；若下方放不下，改放按鈕上緣 -4px
+    let top = btnRect.bottom + 4;
+    if (top + popRect.height + margin > window.innerHeight) {
+      top = btnRect.top - popRect.height - 4;
+      if (top < margin) top = Math.max(margin, window.innerHeight - popRect.height - margin);
+    }
+
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    return pop;
+  }
+
+  const PAPER_POPUP_HTML = `
+    <button class="danger">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      刪除文件
+    </button>
+    <button class="has-sub">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h4l2 2h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      移動到資料夾
+    </button>
+    <button disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.3-6.9M21 4v3a2 2 0 0 1-2 2h-3"/></svg>
+      刪除對話
+    </button>
+  `;
+  const FOLDER_POPUP_HTML = `
+    <button>改名</button>
+    <button>新增子資料夾</button>
+    <button class="danger">刪除</button>
+  `;
+
+  document.querySelectorAll('.paper-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const item = btn.closest('.paper-item');
+      // 若已有 popup（任何位置）就關掉，視為 toggle
+      if (document.querySelector('.ctx-popup')) { closePopups(); return; }
+      openPopupAt(btn, item, PAPER_POPUP_HTML);
+    });
+  });
+
+  document.querySelectorAll('.folder-item .menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const item = btn.closest('.folder-item');
+      if (document.querySelector('.ctx-popup')) { closePopups(); return; }
+      openPopupAt(btn, item, FOLDER_POPUP_HTML);
+    });
+  });
+
+  // popup 開啟期間捲動 / 縮放視窗就關閉，避免錨點失準
+  window.addEventListener('scroll', closePopups, true);
+  window.addEventListener('resize', closePopups);
+
+  // ── 點論文 item 切 active ─────────────────────
+  document.querySelectorAll('.paper-item').forEach(it => {
+    it.addEventListener('click', (e) => {
+      if (e.target.closest('.paper-menu-btn')) return;
+      document.querySelectorAll('.paper-item').forEach(x => x.classList.remove('active'));
+      it.classList.add('active');
+    });
+  });
+
+  // ── 點資料夾 item 切 active ───────────────────
+  document.querySelectorAll('.folder-item').forEach(it => {
+    it.addEventListener('click', (e) => {
+      if (e.target.closest('.menu-btn') || e.target.closest('.chevron')) return;
+      document.querySelectorAll('.folder-item').forEach(x => x.classList.remove('active'));
+      it.classList.add('active');
+    });
+  });
+
+  // ── chevron 展開摺疊（純視覺）───────────────
+  document.querySelectorAll('.folder-item .chevron:not(.empty)').forEach(c => {
+    c.addEventListener('click', (e) => {
+      e.stopPropagation();
+      c.closest('.folder-item').classList.toggle('open');
+    });
+  });
+
+  // ── 搜尋 toggle ──────────────────────────────
+  // 切換 .active；同步 placeholder 提示「搜尋模式」
+  document.getElementById('web-search-toggle').addEventListener('click', function() {
+    this.classList.toggle('active');
+    const on = this.classList.contains('active');
+    document.getElementById('chat-input').setAttribute(
+      'placeholder', on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）...'
+                        : '輸入問題（Ctrl+Enter 送出）...');
+  });
+  // 初始同步（HTML 上預設 .active）
+  (function syncSearchPlaceholder() {
+    const on = document.getElementById('web-search-toggle').classList.contains('active');
+    document.getElementById('chat-input').setAttribute(
+      'placeholder', on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）...'
+                        : '輸入問題（Ctrl+Enter 送出）...');
+  })();
+
+  // ── Tooltip：data-tip 觸發 ─────────────────────────
+  // · 顯示延遲 200ms（hover 滿 200ms 才出現）
+  // · 顯示後 400ms 自動消失（即使仍 hover 在 icon 上）
+  // · 自動消失後，停留同一 icon **不**重新顯示，須先離開再回來
+  // · mouseout 後 100ms 才隱藏；100ms 內移到其他 [data-tip] → 立即接力顯示
+  (function setupTooltip() {
+    const tip = document.getElementById('tooltip');
+    const SHOW_DELAY = 200;        // hover 多久才顯示
+    const VISIBLE_DURATION = 800;  // 顯示後多久自動消失
+    const HIDE_DELAY = 100;        // mouseout 後多久隱藏
+
+    let showTimer = null;
+    let autoHideTimer = null;
+    let hideTimer = null;
+    let visibleEl = null;          // 當前顯示中的目標
+    let dismissedEl = null;        // 已自動消失的目標（停留期間不再顯示）
+
+    function position(el) {
+      const r = el.getBoundingClientRect();
+      const tr = tip.getBoundingClientRect();
+      const gap = 8;
+      let left = r.left - tr.width - gap;
+      let top = r.top + r.height / 2 - tr.height / 2;
+      if (left < 4) left = r.right + gap;
+      top = Math.max(4, Math.min(top, window.innerHeight - tr.height - 4));
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+    function show(el) {
+      if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      if (autoHideTimer) { clearTimeout(autoHideTimer); autoHideTimer = null; }
+      tip.textContent = el.getAttribute('data-tip') || '';
+      tip.classList.add('visible');
+      position(el);
+      visibleEl = el;
+      autoHideTimer = setTimeout(() => {
+        tip.classList.remove('visible');
+        dismissedEl = visibleEl;   // 記住已自動消失，停同一處不重觸發
+        visibleEl = null;
+        autoHideTimer = null;
+      }, VISIBLE_DURATION);
+    }
+    function hideNow() {
+      if (autoHideTimer) { clearTimeout(autoHideTimer); autoHideTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      tip.classList.remove('visible');
+      visibleEl = null;
+    }
+    document.addEventListener('mouseover', (e) => {
+      const el = e.target.closest('[data-tip]');
+      if (!el) return;
+      // 同一目標、已自動消失中 → 不重觸發
+      if (el === dismissedEl) return;
+      // 取消尚未觸發的 hide（從另一 icon 100ms 緩衝期內接力）
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      if (visibleEl === el) return;
+      if (visibleEl) {
+        // 已有 tooltip 顯示中 → 立即切到新目標
+        show(el);
+      } else {
+        // 當前無顯示 → 排程 SHOW_DELAY 後顯示
+        if (showTimer) clearTimeout(showTimer);
+        showTimer = setTimeout(() => {
+          showTimer = null;
+          if (document.contains(el)) show(el);
+        }, SHOW_DELAY);
+      }
+    });
+    document.addEventListener('mouseout', (e) => {
+      const el = e.target.closest('[data-tip]');
+      if (!el) return;
+      // 仍在自己內部（移到子元素）→ 不處理
+      if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+      // 真的離開該 icon
+      dismissedEl = null;
+      if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+      if (visibleEl === el) {
+        // 排程 100ms 後隱藏；期間移到其他 [data-tip] 會被 mouseover 取消
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          hideTimer = null;
+          hideNow();
+        }, HIDE_DELAY);
+      }
+    });
+    window.addEventListener('scroll', hideNow, true);
+    window.addEventListener('blur', hideNow);
+  })();
+
+  // ── Modal 系統：ESC 關閉、Tab 焦點循環、遮罩點擊關閉 ────────────
+  // · data-no-esc 屬性 → ESC 不關閉（如 confirm-modal 強制流程）
+  // · data-no-mask-close 屬性 → 點遮罩不關閉
+  // · 開啟時記住觸發元素，關閉時還原焦點
+  const modalReturnFocus = new WeakMap();    // modal → 觸發按鈕
+
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    modalReturnFocus.set(m, document.activeElement);
+    m.classList.add('show');
+    // 自動聚焦到第一個 primary 按鈕（或第一個 focusable）
+    const first = m.querySelector('.modal-btn.primary, button, [tabindex]:not([tabindex="-1"])');
+    if (first) setTimeout(() => first.focus(), 0);
+  }
+  function closeModal(id) {
+    const m = (typeof id === 'string') ? document.getElementById(id) : id;
+    if (!m) return;
+    m.classList.remove('show');
+    const prev = modalReturnFocus.get(m);
+    if (prev && typeof prev.focus === 'function') prev.focus();
+  }
+
+  // 點遮罩關閉（除非 data-no-mask-close）
+  document.querySelectorAll('.modal-mask').forEach(mask => {
+    mask.addEventListener('click', (e) => {
+      if (e.target !== mask) return;
+      if (mask.dataset.noMaskClose === 'true') return;
+      closeModal(mask);
+    });
+  });
+
+  // ESC + Tab 焦點循環
+  document.addEventListener('keydown', (e) => {
+    const open = [...document.querySelectorAll('.modal-mask.show')].pop();
+    if (!open) return;
+    if (e.key === 'Escape' && open.dataset.noEsc !== 'true') {
+      e.preventDefault();
+      closeModal(open);
+      return;
+    }
+    if (e.key === 'Tab') {
+      const focusables = open.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  });
+
+  document.getElementById('help-btn').addEventListener('click', () => openModal('help-modal'));
+  document.getElementById('help-close-btn').addEventListener('click', () => closeModal('help-modal'));
+  document.getElementById('confirm-ok-btn').addEventListener('click', () => closeModal('confirm-modal'));
+  // demo：點 upload-btn 預覽確認 modal
+  document.getElementById('upload-btn').addEventListener('click', () => openModal('confirm-modal'));
+
+  // ── customConfirm / customAlert：取代瀏覽器原生 confirm() / alert() ──
+  // 用 Promise，介面與原生 confirm() / alert() 等價
+  function customConfirm({ title = '確認', body = '', okLabel = '確定', cancelLabel = '取消', danger = false } = {}) {
+    return new Promise(resolve => {
+      document.getElementById('action-title').textContent = title;
+      document.getElementById('action-body').textContent = body;
+      const okBtn = document.getElementById('action-ok');
+      const cancelBtn = document.getElementById('action-cancel');
+      okBtn.textContent = okLabel;
+      cancelBtn.textContent = cancelLabel;
+      okBtn.classList.toggle('danger', !!danger);
+      const cleanup = () => {
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        closeModal('action-modal');
+      };
+      okBtn.onclick = () => { cleanup(); resolve(true); };
+      cancelBtn.onclick = () => { cleanup(); resolve(false); };
+      openModal('action-modal');
+    });
+  }
+  function customAlert({ title = '提示', body = '', okLabel = '知道了' } = {}) {
+    return new Promise(resolve => {
+      document.getElementById('notice-title').textContent = title;
+      document.getElementById('notice-body').textContent = body;
+      const okBtn = document.getElementById('notice-ok');
+      okBtn.textContent = okLabel;
+      okBtn.onclick = () => { closeModal('notice-modal'); resolve(); };
+      openModal('notice-modal');
+    });
+  }
+  // 暴露成全域，供其他模組（如 sb-row 按鈕）呼叫
+  window.customConfirm = customConfirm;
+  window.customAlert = customAlert;
+
+  // 接上 cleanup / logout 按鈕（demo 行為）
+  document.getElementById('cleanup-btn').addEventListener('click', async () => {
+    const ok = await customConfirm({
+      title: '清除殘檔',
+      body: '確定要清理殘餘檔案？此操作會刪除所有不在論文列表中的目錄',
+      okLabel: '確定清除',
+      danger: true,
+    });
+    if (ok) customAlert({ title: '已清除', body: '示範用：實際接 API 後會顯示清除數量' });
+  });
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    const ok = await customConfirm({
+      title: '退出系統',
+      body: '確定要登出？',
+      okLabel: '確定登出',
+    });
+    if (ok) customAlert({ title: '示範用', body: '實際接 API 後會導回登入頁' });
+  });
+
+  // ── 切換風格 modal + 套用 ────────────────────
+  // localStorage 持久化（key: 'madpro-theme'），重整後自動還原
+  const THEME_KEY = 'madpro-theme';
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme) {
+    document.getElementById('theme-link').href = `themes/${savedTheme}.css`;
+    const dd = document.getElementById('theme-dropdown');
+    const labels = { mies: 'Mies van der Rohe', kahn: 'Kahn · Kimbell 美術館',
+                     kandinsky: 'Kandinsky · Bauhaus', nara: '奈良美智 · Yoshitomo Nara' };
+    if (labels[savedTheme]) {
+      dd.dataset.value = savedTheme;
+      dd.querySelector('.dropdown-value').textContent = labels[savedTheme];
+    }
+  }
+  document.getElementById('theme-btn').addEventListener('click', () => openModal('theme-modal'));
+  document.getElementById('theme-ok-btn').addEventListener('click', () => {
+    const dd = document.getElementById('theme-dropdown');
+    const theme = dd.dataset.value;   // 'mies' | 'kahn' | 'kandinsky' | 'nara'
+    document.getElementById('theme-link').href = `/static/themes/${theme}.css`;
+    localStorage.setItem(THEME_KEY, theme);
+    closeModal('theme-modal');
+  });
+
+  // ── 自訂 dropdown：用 .ctx-popup 風格清單 ────────────
+  (function setupDropdown() {
+    const DOC_TYPES = [
+      ['academic', '學術論文'],
+      ['book', '書籍'],
+      ['technical', '技術文件'],
+      ['slides', '簡報'],
+      ['web', '網頁存檔'],
+      ['news', '新聞文章'],
+    ];
+    const THEMES = [
+      ['mies', 'Mies van der Rohe'],
+      ['kahn', 'Kahn · Kimbell 美術館'],
+      ['kandinsky', 'Kandinsky · Bauhaus'],
+      ['nara', '奈良美智 · Yoshitomo Nara'],
+    ];
+    setupOne(document.getElementById('doc-type-dropdown'), DOC_TYPES);
+    setupOne(document.getElementById('theme-dropdown'), THEMES);
+
+    function setupOne(dd, items) {
+      if (!dd) return;
+      const trigger = dd.querySelector('.dropdown-trigger');
+      const valueEl = dd.querySelector('.dropdown-value');
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (document.querySelector('.ctx-popup.dropdown-popup')) { closePopups(); return; }
+        closePopups();
+        const pop = document.createElement('div');
+        pop.className = 'ctx-popup dropdown-popup';
+        const currentVal = dd.dataset.value;
+        items.forEach(([val, label]) => {
+          const b = document.createElement('button');
+          b.textContent = label;
+          if (val === currentVal) b.style.fontWeight = '600';
+          b.onclick = (ev) => {
+            ev.stopPropagation();
+            dd.dataset.value = val;
+            valueEl.textContent = label;
+            closePopups();
+            trigger.setAttribute('aria-expanded', 'false');
+          };
+          pop.appendChild(b);
+        });
+        document.body.appendChild(pop);
+        const r = trigger.getBoundingClientRect();
+        pop.style.minWidth = r.width + 'px';
+        pop.style.left = r.left + 'px';
+        pop.style.top = (r.bottom - 1) + 'px';
+        trigger.setAttribute('aria-expanded', 'true');
+      });
+
+      const obs = new MutationObserver(() => {
+        if (!document.querySelector('.ctx-popup.dropdown-popup')) {
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+      obs.observe(document.body, { childList: true });
+    }
+  })();
+
+  // ── AI 訊息動作：copy / regenerate（事件委派、未來動態插入也適用）──
+  document.getElementById('chat-messages').addEventListener('click', async (e) => {
+    const copy = e.target.closest('.msg-copy');
+    const regen = e.target.closest('.msg-regen');
+    if (copy) {
+      const aiMsg = copy.closest('.msg-ai');
+      // 抓泡泡內容文字（排除動作按鈕、來源列）
+      const clone = aiMsg.cloneNode(true);
+      clone.querySelectorAll('.msg-ai-actions, .msg-sources').forEach(n => n.remove());
+      const text = clone.innerText.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+        copy.classList.add('copied');
+        setTimeout(() => copy.classList.remove('copied'), 1500);
+      } catch {
+        customAlert({ title: '複製失敗', body: '瀏覽器拒絕了剪貼簿存取，請手動選取訊息複製' });
+      }
+    } else if (regen) {
+      // 示範用：實作後會重發最後一句 user query
+      customAlert({ title: '重新生成', body: '示範用：實際接 API 後會丟回最後一個提問重產 AI 回應' });
+    }
+  });
+
+  // ── chat 自動長高 ────────────────────────────
+  const ta = document.getElementById('chat-input');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
+  });
+
+  /* ════════════════════════════════════════════════════════════
+     業務 JS（自 design/old/index.html 行 599–1356 原樣搬入）
+     唯一改動：closePopups → closeBizPopups（避開 prototype 同名）
+     ════════════════════════════════════════════════════════════ */
 const API = '';
 let currentPaperId = null;
 let currentLang = 'zh';
@@ -696,15 +1709,15 @@ function folderDescendants(id) {
 }
 
 // ── popup（改名/刪除/新增子；移動論文 picker）──
-function closePopups() {
+function closeBizPopups() {
   document.querySelectorAll('.ctx-popup').forEach(el => el.remove());
 }
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.ctx-popup') && !e.target.closest('.menu-btn')
-      && !e.target.closest('.paper-menu-btn')) closePopups();
+      && !e.target.closest('.paper-menu-btn')) closeBizPopups();
 });
 function openPopup(x, y, items) {
-  closePopups();
+  closeBizPopups();
   const pop = document.createElement('div');
   pop.className = 'ctx-popup';
   items.forEach(it => {
@@ -717,7 +1730,7 @@ function openPopup(x, y, items) {
       b.style.cursor = 'not-allowed';
       if (it.title) b.title = it.title;
     } else {
-      b.onclick = (ev) => { ev.stopPropagation(); closePopups(); it.action(); };
+      b.onclick = (ev) => { ev.stopPropagation(); closeBizPopups(); it.action(); };
     }
     pop.appendChild(b);
   });
@@ -948,14 +1961,12 @@ let isStreaming = false;
 
 function enableChat() {
   document.getElementById('chat-input').disabled = false;
-  document.getElementById('send-btn').disabled = false;
   document.getElementById('web-search-toggle').disabled = false;
   document.getElementById('export-btn').style.display = 'block';
 }
 
 function disableChat() {
   document.getElementById('chat-input').disabled = true;
-  document.getElementById('send-btn').disabled = true;
   document.getElementById('web-search-toggle').disabled = true;
 }
 
@@ -993,7 +2004,6 @@ async function deletePaper(paperId, title) {
       document.getElementById('paper-content').style.display = 'none';
       document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇文件後開始提問</div>';
       document.getElementById('chat-input').disabled = true;
-      document.getElementById('send-btn').disabled = true;
     }
     await loadPapers();
   } catch(e) {
@@ -1075,9 +2085,7 @@ async function sendMessage() {
   if (!query || isStreaming || !currentPaperId) return;
 
   input.value = '';
-  autosizeChatInput();
   isStreaming = true;
-  document.getElementById('send-btn').disabled = true;
 
   // 顯示用戶訊息
   const messages = document.getElementById('chat-messages');
@@ -1095,60 +2103,59 @@ async function sendMessage() {
   messages.scrollTop = messages.scrollHeight;
 
   // SSE 串流
-  const res = await fetch(`/api/papers/${currentPaperId}/chat`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({query, paper_id: currentPaperId, use_web_search: useWebSearch})
-  });
+  try {
+    const res = await fetch(`/api/papers/${currentPaperId}/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query, paper_id: currentPaperId, use_web_search: useWebSearch})
+    });
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let accumulated = '';
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = '';
 
-  while (true) {
-    const {done, value} = await reader.read();
-    if (done) break;
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
 
-    const text = decoder.decode(value);
-    const lines = text.split('\n');
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      try {
-        const chunk = JSON.parse(line.slice(6));
-        if (chunk.sentence) {
-          accumulated += chunk.sentence;
-          // 把單換行轉成 Markdown 段落（兩個換行）
-          const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-          aiMsg.innerHTML = marked.parse(formatted);
-          messages.scrollTop = messages.scrollHeight;
-        }
-        if (chunk.done) {
-          isStreaming = false;
-          document.getElementById('send-btn').disabled = false;
-          if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
-            aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
-            renderSources(aiMsg, chunk.grounding_sources);
+      const text = decoder.decode(value);
+      const lines = text.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const chunk = JSON.parse(line.slice(6));
+          if (chunk.sentence) {
+            accumulated += chunk.sentence;
+            // 把單換行轉成 Markdown 段落（兩個換行）
+            const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
+            aiMsg.innerHTML = marked.parse(formatted);
+            messages.scrollTop = messages.scrollHeight;
           }
-          await saveChatHistory(currentPaperId);
-        }
-      } catch {}
+          if (chunk.done) {
+            isStreaming = false;
+            if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
+              aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
+              renderSources(aiMsg, chunk.grounding_sources);
+            }
+            await saveChatHistory(currentPaperId);
+          }
+        } catch {}
+      }
     }
+  } catch (e) {
+    isStreaming = false;
   }
 }
 
-document.getElementById('send-btn').onclick = sendMessage;
-document.getElementById('web-search-toggle').onclick = () => {
-  useWebSearch = !useWebSearch;
-  document.getElementById('web-search-toggle').classList.toggle('active', useWebSearch);
-};
-// I5：textarea 依內容自動長高（1 行起，最多 ~5 行後 scroll）
-function autosizeChatInput() {
-  const ta = document.getElementById('chat-input');
-  ta.style.height = 'auto';
-  const max = parseInt(getComputedStyle(ta).maxHeight, 10) || 132;
-  ta.style.height = Math.min(ta.scrollHeight, max) + 'px';
-}
-document.getElementById('chat-input').addEventListener('input', autosizeChatInput);
+// 衝突 3.1：web-search 開關以 prototype 已 toggle 的 .active 為單一真源，
+// 業務僅在 prototype 之後讀取（同元素 addEventListener 依註冊序，業務晚註冊故後執行）
+(() => {
+  const wsBtn = document.getElementById('web-search-toggle');
+  wsBtn.addEventListener('click', () => {
+    useWebSearch = wsBtn.classList.contains('active');
+  });
+  useWebSearch = wsBtn.classList.contains('active');
+})();
 document.getElementById('chat-input').onkeydown = (e) => {
   if (e.key === 'Enter' && e.ctrlKey) {
     e.preventDefault();
@@ -1156,8 +2163,9 @@ document.getElementById('chat-input').onkeydown = (e) => {
   }
 };
 
-// 上傳論文
-document.getElementById('upload-btn').onclick = () => {
+// 上傳論文（衝突 3.2：addEventListener + stopImmediatePropagation 自衛）
+document.getElementById('upload-btn').addEventListener('click', (e) => {
+  e.stopImmediatePropagation();
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.pdf';
@@ -1193,7 +2201,7 @@ document.getElementById('upload-btn').onclick = () => {
     }
   };
   input.click();
-};
+});
 
 // 追蹤處理進度
 function trackProgress(paperId, btn) {
@@ -1264,10 +2272,13 @@ const DOC_TYPE_LABELS = {
 
 function showConfirmModal(paperId, detection, btn) {
   const modal = document.getElementById('confirm-modal');
-  const select = document.getElementById('doc-type-select');
-
-  // 預設選偵測值，無則 academic
-  select.value = detection || 'academic';
+  // 衝突 B：prototype 改用自訂 #doc-type-dropdown（無 native select）。
+  // 預設選偵測值（無則 academic）：寫 dataset.value + .dropdown-value 文字
+  const dropdown = document.getElementById('doc-type-dropdown');
+  const defType = detection || 'academic';
+  dropdown.dataset.value = defType;
+  const valueEl = dropdown.querySelector('.dropdown-value');
+  if (valueEl) valueEl.textContent = DOC_TYPE_LABELS[defType] || DOC_TYPE_LABELS.academic;
 
   const desc = document.getElementById('confirm-desc');
   if (detection === 'slides') {
@@ -1279,7 +2290,7 @@ function showConfirmModal(paperId, detection, btn) {
   modal.classList.add('show');
 
   document.getElementById('confirm-ok-btn').onclick = async () => {
-    const selectedType = select.value;
+    const selectedType = document.getElementById('doc-type-dropdown').dataset.value;
     modal.classList.remove('show');
     btn.textContent = '處理中...';
     btn.disabled = true;
@@ -1302,7 +2313,8 @@ function showConfirmModal(paperId, detection, btn) {
 }
 
 // 清理殘餘檔案
-document.getElementById('cleanup-btn').onclick = async () => {
+document.getElementById('cleanup-btn').addEventListener('click', async (e) => {
+  e.stopImmediatePropagation();
   if (isProcessing) return;
   if (!confirm('確定要清理殘餘檔案嗎？\n此操作會刪除所有不在論文列表中的目錄。')) return;
   try {
@@ -1316,7 +2328,7 @@ document.getElementById('cleanup-btn').onclick = async () => {
   } catch(e) {
     alert('清理失敗：' + e.message);
   }
-};
+});
 
 // 說明框
 document.getElementById('help-btn').onclick = () => {
@@ -1348,12 +2360,13 @@ document.getElementById('chat-toggle').onclick = () => {
 };
 
 // 登出
-document.getElementById('logout-btn').onclick = async () => {
+document.getElementById('logout-btn').addEventListener('click', async (e) => {
+  e.stopImmediatePropagation();
   try {
     await fetch('/logout', { method: 'POST' });
   } catch (e) { /* 忽略，仍導向登入頁 */ }
   location.href = '/login';
-};
+});
 </script>
 </body>
 </html>

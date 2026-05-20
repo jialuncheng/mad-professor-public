@@ -1,0 +1,194 @@
+/* ============================================================
+   THEME · Yoshitomo Nara · 奈良美智
+   ============================================================
+   "I don't draw a child but the child within me."
+
+   核心語彙：
+     · 童稚而反叛的角色（小孩 / 小狗）總在純色背景前
+     · 粉紅 / 鈍紅 / 暖奶白 / 灰褐 — 不飽和、有手作感
+     · 圓潤、不對稱、線條粗細不一致
+     · 大眼小嘴的安靜憤怒
+
+   設計轉譯：
+     · 主色：奶米暖白
+     · accent：磚玫紅（嘴唇色 / 不安紅）
+     · divider：暖深褐（非純黑，留呼吸）
+     · 字體：Quicksand — 圓潤幾何無襯線，貼近奈良筆觸
+     · figure 佔位：純色 + 右下一個小圓暗示「角色頭」
+     · 圓角守住 0（避免太可愛而失去當代藝術的張力）
+
+   依賴主檔提供：
+     · 結構性間距 token、按鈕／工具列尺寸
+     · --divider-w / --radius-* ← 此檔覆寫
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：暖奶白 + 磚玫紅 + 暖褐結構 ── */
+  --color-bg: #f4ecdf;                   /* 奶米暖白：奈良畫紙底 */
+  --color-bg-served: #fbf6ed;            /* 中欄：更亮一階 */
+  --color-surface: #e7dcc8;              /* hover / 次級表面 */
+  --color-surface-2: #d4c4a8;            /* rail / 強調表面 */
+  --color-border: #c5b599;
+  --color-border-strong: #8a7558;
+  --color-divider: #3a2f23;              /* 暖深褐：奈良輪廓線色 */
+  --color-text: #2a2218;
+  --color-text-muted: #6a5f4c;
+  --color-text-subtle: #7a6e55;          /* 4.5:1 on #f4ecdf — 過 AA，保留暖調 */
+  --color-accent: #b04c4c;               /* 磚玫紅：嘴唇色、不安紅 */
+  --color-accent-hover: #8a3a3a;
+  --color-danger: #c43b3b;
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 2px;                      /* 與 Kahn 同；手繪輪廓的厚 */
+  --radius-sm: 0;
+  --radius-md: 0;
+
+  /* ── 字體 token ── */
+  --font-display: "Quicksand", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Quicksand", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：奈良畫紙最亮 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：圓潤輕量 ── */
+#demo-bar {
+  height: 42px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "the child within me";
+}
+
+/* ── 三欄標題：圓潤幾何 + 中字距 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;                      /* 與 h1 600 區隔；靠字重分層 */
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 800px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0;
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 15px;
+  line-height: 1.75;
+  margin-bottom: var(--space-4);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：奈良作品「角色 + 純色背景」的暗示
+   純色奶米底 + 右下一個小圓（角色頭的暗示），加一個微微靠左的鈍紅嘴點。
+   不寫實只是「畫面有人在」── */
+#paper-content .figure .ph {
+  background:
+    /* 嘴點（小紅圓，偏中下） */
+    radial-gradient(circle 4px at 73% 70%,
+      var(--color-accent) 0%, var(--color-accent) 70%,
+      transparent 71%),
+    /* 角色頭輪廓（淡褐圓，右下） */
+    radial-gradient(circle 70px at 75% 72%,
+      transparent 0%, transparent 92%,
+      var(--color-divider) 92%, var(--color-divider) 95%,
+      transparent 95.5%),
+    var(--color-surface);
+  border: 2px solid var(--color-divider);
+  font-family: var(--font-display);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+#paper-content .figure figcaption {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.6;
+}

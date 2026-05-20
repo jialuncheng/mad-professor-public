@@ -1,0 +1,203 @@
+/* ============================================================
+   THEME · Wassily Kandinsky / Bauhaus
+   ============================================================
+   "Color is the keyboard, the eyes are the harmonies,
+    the soul is the piano with many strings."
+
+   核心語彙：
+     · 三原色：黃（三角）、紅（方）、藍（圓）— 色形對應論
+     · 黑白為底，純黑粗線承擔結構（Bauhaus mullion）
+     · 白／米奶底 — 畫布的紙、Composition 系列的底
+     · 幾何構成：圓、三角、直線；無曲線裝飾
+     · Futura / Jost — Bauhaus 工坊的幾何無襯線
+
+   設計轉譯：
+     · accent = cobalt blue（畫面的「圓」——selected、user 訊息泡）
+     · divider = 純黑 2px（Bauhaus 粗線）
+     · danger = vermilion 紅
+     · 黃用作 hover 高光（節制，僅在必要視覺反饋）
+     · 字距：大字微鬆（Futura 大字需呼吸）
+
+   依賴主檔提供：
+     · 結構性間距 token、按鈕／工具列尺寸
+     · --divider-w / --radius-* ← 此檔覆寫
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：白底 + 純黑 + 三原色點綴 ── */
+  --color-bg: #fbf9f1;                   /* 畫布米白：Composition 紙底 */
+  --color-bg-served: #ffffff;            /* 中欄：純白「畫面」 */
+  --color-surface: #f1ede0;              /* hover / 次級表面：奶米 */
+  --color-surface-2: #e6dfc8;            /* rail / 強調表面 */
+  --color-border: #d8d0b5;
+  --color-border-strong: #2a2a2a;
+  --color-divider: #0a0a0a;              /* Bauhaus 純黑粗線 */
+  --color-text: #0a0a0a;                 /* 純黑文字 */
+  --color-text-muted: #5a5a5a;
+  --color-text-subtle: #757575;          /* 4.5:1 on #fbf9f1 — 過 AA */
+  --color-accent: #0052a5;               /* Kandinsky cobalt：藍＝圓＝精神 */
+  --color-accent-hover: #003d7a;
+  --color-danger: #d62828;               /* vermilion 紅 */
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 2px;                      /* Bauhaus 粗線 — 結構性主分隔 */
+  --radius-sm: 0;
+  --radius-md: 0;
+
+  /* ── 字體 token ── */
+  --font-display: "Jost", "Futura", "Trebuchet MS",
+                  "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Jost", "Futura", "Trebuchet MS",
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：純白畫面 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：Bauhaus label 質感 ── */
+#demo-bar {
+  height: 42px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "color is the keyboard · the soul is the piano";
+}
+
+/* ── 三欄標題：Bauhaus 大寫寬字距 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;                      /* 與 h1 600 區隔；靠字重分層 */
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 820px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 15px;
+  line-height: 1.75;
+  margin-bottom: var(--space-4);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-divider);
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：抽象幾何構成 ──
+   Kandinsky Composition VIII 的暗示：
+   左下一個黃色圓、右上一條對角線 + 紅點。
+   不寫實、只是「畫面有東西」的視覺重量。 */
+#paper-content .figure .ph {
+  background-color: var(--color-bg-served);
+  background-image:
+    /* 黃色圓（左下） */
+    radial-gradient(circle 60px at 18% 78%,
+      #fcd12a 0%, #fcd12a 38%,
+      transparent 39%),
+    /* 紅點（右上） */
+    radial-gradient(circle 14px at 78% 22%,
+      var(--color-danger) 0%, var(--color-danger) 75%,
+      transparent 76%),
+    /* 對角藍線：用線性 gradient 模擬 */
+    linear-gradient(115deg,
+      transparent 49.7%,
+      var(--color-accent) 49.7%,
+      var(--color-accent) 50.3%,
+      transparent 50.3%);
+  border: 2px solid var(--color-divider);
+  font-family: var(--font-display);
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.6;
+}

@@ -1,0 +1,184 @@
+/* ============================================================
+   THEME · Mies van der Rohe
+   ============================================================
+   "Less is more"            — 拒絕一切裝飾噪音
+   "God is in the details"   — 1px 結構線、模矩化間距、精確對齊
+   International Style       — Helvetica、純白、結構誠實
+
+   體現於介面：
+     · 嚴格直角、無圓角、無陰影、無漸層
+     · 三欄分隔線 = 1px 近黑（mullion / 結構柱）
+     · 中、左、右欄使用同樣的純白底；用線而非色階分隔
+     · Helvetica Neue 中性無襯線；大字微緊縮
+     · 收斂的磚紅 danger
+
+   依賴主檔（Mad Professor Redesign.html）提供：
+     · 結構性間距 token  (--space-*)
+     · 按鈕／工具列尺寸 token  (--btn-*, --toolbar-h, --pad-panel, --rail-w)
+     · 分隔線粗細 token  (--divider-w  ← 此檔覆寫)
+     · 圓角 token  (--radius-*  ← 此檔覆寫)
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：純白 + 鋼鐵中性灰 ── */
+  --color-bg: #ffffff;
+  --color-bg-served: #ffffff;            /* Mies：不用色階分主從，留給線條負責 */
+  --color-surface: #f7f7f5;              /* 微帶暖灰：travertine 暗示 */
+  --color-surface-2: #efefec;            /* rail / 強調表面 */
+  --color-border: #e5e5e2;
+  --color-border-strong: #c8c8c4;
+  --color-divider: #1a1a1a;              /* 結構性主分隔線：近黑 mullion */
+  --color-text: #111111;
+  --color-text-muted: #555555;
+  --color-text-subtle: #757575;          /* 4.65:1 on #fff — 過 AA */
+  --color-accent: #111111;
+  --color-accent-hover: #2a2a2a;
+  --color-danger: #a8242c;               /* 收斂磚紅 */
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 1px;                      /* Mies：細到近乎消失的鋼柱 */
+  --radius-sm: 0;
+  --radius-md: 0;
+
+  /* ── 字體 token（雲端 Inter；雲端載入失敗 fallback 到系統 Helvetica / 中文黑體）── */
+  --font-display: "Inter", "Helvetica Neue", "Helvetica", "Arial",
+                  "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Inter", "Helvetica Neue", "Helvetica", "Arial",
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：Mies 不靠色階區分，留同色 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：結構誠實，1px 黑線、小寫字距 ── */
+#demo-bar {
+  height: 40px;
+  padding: 0 var(--space-4);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+#demo-bar .seg button {
+  height: 24px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-subtle);
+}
+#demo-bar .credo::before { content: "less is more · god is in the details"; }
+
+/* ── 三欄標題：簡潔 sans，無大寫變化 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;                      /* h1 700 / h2 500：靠字重而非字級分層級 */
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 860px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;               /* 大字微緊縮：提升結構感 */
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: var(--space-4);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+#paper-content .figure { margin: var(--space-5) 0; }
+#paper-content .figure .ph {
+  background-color: var(--color-surface-2);
+  /* 誠實表現「這是佔位」：嚴格水平線，非裝飾性斜紋 */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 23px,
+    rgba(0, 0, 0, 0.05) 23px,
+    rgba(0, 0, 0, 0.05) 24px);
+  border: 1px solid var(--color-divider);
+  font-family: var(--font-display);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-2);
+  max-width: none;
+  text-align: center;
+  line-height: 1.6;
+}
