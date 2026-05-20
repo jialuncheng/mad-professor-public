@@ -1481,7 +1481,7 @@
   const THEME_KEY = 'madpro-theme';
   const savedTheme = localStorage.getItem(THEME_KEY);
   if (savedTheme) {
-    document.getElementById('theme-link').href = `themes/${savedTheme}.css`;
+    document.getElementById('theme-link').href = `/static/themes/${savedTheme}.css`;
     const dd = document.getElementById('theme-dropdown');
     const labels = { mies: 'Mies van der Rohe', kahn: 'Kahn · Kimbell 美術館',
                      kandinsky: 'Kandinsky · Bauhaus', nara: '奈良美智 · Yoshitomo Nara' };
