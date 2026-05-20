@@ -952,7 +952,8 @@
     #content-toolbar,
     #empty-state,
     #tooltip,
-    .modal-mask {
+    .modal-mask,
+    .ctx-popup {
       display: none !important;
     }
 
@@ -1489,9 +1490,6 @@
   document.getElementById('help-btn').addEventListener('click', () => openModal('help-modal'));
   document.getElementById('help-close-btn').addEventListener('click', () => closeModal('help-modal'));
   document.getElementById('confirm-ok-btn').addEventListener('click', () => closeModal('confirm-modal'));
-  // demo：點 upload-btn 預覽確認 modal
-  document.getElementById('upload-btn').addEventListener('click', () => openModal('confirm-modal'));
-
   // ── customConfirm / customAlert：取代瀏覽器原生 confirm() / alert() ──
   // 用 Promise，介面與原生 confirm() / alert() 等價
   function customConfirm({ title = '確認', body = '', okLabel = '確定', cancelLabel = '取消', danger = false } = {}) {
@@ -1527,24 +1525,6 @@
   window.customConfirm = customConfirm;
   window.customAlert = customAlert;
 
-  // 接上 cleanup / logout 按鈕（demo 行為）
-  document.getElementById('cleanup-btn').addEventListener('click', async () => {
-    const ok = await customConfirm({
-      title: '清除殘檔',
-      body: '確定要清理殘餘檔案？此操作會刪除所有不在論文列表中的目錄',
-      okLabel: '確定清除',
-      danger: true,
-    });
-    if (ok) customAlert({ title: '已清除', body: '示範用：實際接 API 後會顯示清除數量' });
-  });
-  document.getElementById('logout-btn').addEventListener('click', async () => {
-    const ok = await customConfirm({
-      title: '退出系統',
-      body: '確定要登出？',
-      okLabel: '確定登出',
-    });
-    if (ok) customAlert({ title: '示範用', body: '實際接 API 後會導回登入頁' });
-  });
 
   // ── 切換風格 modal + 套用 ────────────────────
   // localStorage 持久化（key: 'madpro-theme'），重整後自動還原
@@ -2142,6 +2122,7 @@ async function sendMessage() {
   if (!query || isStreaming || !currentPaperId) return;
 
   input.value = '';
+  input.dispatchEvent(new Event('input'));  // 觸發 prototype ta listener 重算高度
   isStreaming = true;
 
   // 顯示用戶訊息
