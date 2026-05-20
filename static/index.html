@@ -687,7 +687,6 @@
     flex: 1; min-width: 0;
     color: var(--color-text);
   }
-  #current-title[hidden] { display: none; }
   #current-title .title-zh {
     font-size: var(--font-h1, 22px);
     font-weight: 600;
@@ -1183,8 +1182,10 @@
   <!-- ──── 中欄 ──── -->
   <main id="content-area">
     <div id="content-toolbar">
-      <!-- Phase 4.7c 修正 3：title 區搬回 toolbar 內，取原 h2 的 flex:1 槽 -->
-      <header id="current-title" hidden></header>
+      <!-- Phase 4.7c 修正 3：title 區搬回 toolbar 內，取原 h2 的 flex:1 槽。
+           修正 4：不用 hidden 屬性（會 display:none 退出 flex、actions 滑左），
+           沒 paper 時走 innerHTML='' 即可、元素永遠佔 flex:1 槽位 -->
+      <header id="current-title"></header>
       <div class="toolbar-actions">
         <button id="lang-toggle" class="icon-only" data-tip="語言切換">
           <!-- 切換符號：水平 ⇄；兩條短橫線錯位、不重疊 -->
@@ -1999,7 +2000,9 @@ function _esc(s) {
 function renderTitleHeader(p) {
   const el = document.getElementById('current-title');
   if (!el) return;
-  if (!p) { el.hidden = true; el.innerHTML = ''; return; }
+  // Phase 4.7c 修正 4：沒 paper 時清空但保留元素（占 toolbar flex:1 槽位、
+  // 避免 actions 滑到左邊）。不再用 hidden 屬性。
+  if (!p) { el.innerHTML = ''; return; }
   const m = p.metadata || {};
   const v = (k) => (m[k] && m[k].value) || null;
   const isResume = p.doc_type === 'resume';
@@ -2037,7 +2040,6 @@ function renderTitleHeader(p) {
     }
   }
   el.innerHTML = parts.join('');
-  el.hidden = false;
 }
 function renderPapers() {
   const list = document.getElementById('paper-list');
