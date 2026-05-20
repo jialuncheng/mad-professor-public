@@ -1901,6 +1901,23 @@ function papersInCurrentFolder() {
   const ids = folderDescendants(currentFolderId);
   return allPapers.filter(p => p.folder_id != null && ids.has(p.folder_id));
 }
+// Phase 4.7c：title fallback 鏈（meta.candidate_name → meta.title → meta.translated_title
+// → DB translated_title → DB title → original_filename(去 .pdf) → 「未命名文件」）
+function resolveDisplayTitle(p) {
+  const m = p.metadata || {};
+  if (p.doc_type === 'resume' && m.candidate_name && m.candidate_name.value)
+    return m.candidate_name.value;
+  const mtVal = m.title && m.title.value;
+  const mttVal = m.translated_title && m.translated_title.value;
+  let ofn = p.original_filename || '';
+  if (ofn && ofn.toLowerCase().endsWith('.pdf')) ofn = ofn.slice(0, -4);
+  return mtVal || mttVal || p.translated_title || p.title || ofn || '未命名文件';
+}
+function resolveDisplaySubtitle(p) {
+  if (p.doc_type === 'resume') return '';
+  const m = p.metadata || {};
+  return (m.title && m.title.value) || p.title || '';
+}
 function renderPapers() {
   const list = document.getElementById('paper-list');
   // 保留 .paper-item.uploading 占位列（不受 folder filter 影響、永遠頂端）
@@ -1911,11 +1928,13 @@ function renderPapers() {
     const item = document.createElement('div');
     item.className = 'paper-item';
     item.dataset.id = p.id;
+    const displayTitle = resolveDisplayTitle(p);
+    const displaySubtitle = resolveDisplaySubtitle(p);
     item.innerHTML = `
       <div class="paper-item-header">
         <div class="paper-item-titles">
-          <div class="paper-title-zh">${p.translated_title || p.title}</div>
-          <div class="paper-title-en">${p.title}</div>
+          <div class="paper-title-zh">${displayTitle}</div>
+          <div class="paper-title-en">${displaySubtitle}</div>
         </div>
         <button class="paper-menu-btn icon-only" title="更多">⋯</button>
       </div>
@@ -1939,14 +1958,14 @@ function renderPapers() {
       const rb = e.target.getBoundingClientRect();
       openPopup(rb.left, rb.bottom, [
         { label: '刪除文件', danger: true,
-          action: () => deletePaper(p.id, p.translated_title || p.title) },
+          action: () => deletePaper(p.id, displayTitle) },
         { label: '移動到資料夾 ▸',
           action: () => openMovePicker(rb) },
         { label: '刪除對話', disabled: true,
           title: '即將上線（Phase 3.4）' },
       ]);
     };
-    item.onclick = () => loadPaper(p.id, p.translated_title || p.title);
+    item.onclick = () => loadPaper(p.id, displayTitle);
     if (p.id === currentPaperId) item.classList.add('active');
     list.appendChild(item);
   });

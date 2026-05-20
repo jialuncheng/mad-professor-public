@@ -165,6 +165,7 @@ def _to_dict(output_dir, p: Paper) -> dict:
         'title': p.title or '',
         'translated_title': p.translated_title or '',
         'folder_id': p.folder_id,
+        'doc_type': p.doc_type,      # Phase 4.7c：前端 resolveDisplayTitle 判斷 resume 用
         'metadata': meta,            # Phase 4.5；舊資料/解析失敗為 None（前端 optional）
         'original_filename': p.original_filename,  # Phase 4.7a；舊資料為 None
         'paths': _paths_dict(output_dir, p.owner_id, p.paper_uuid),
