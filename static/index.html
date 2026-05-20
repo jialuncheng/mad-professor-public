@@ -678,13 +678,14 @@
   #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
     fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* Phase 4.7c 修正 2：#current-title 擴充標題區（取代 hero）。原 toolbar
-     內 h2 + 獨立 hero block 兩處重複；合併為單一 multi-row header，置於
-     toolbar 與 paper-content 之間。 */
+  /* Phase 4.7c 修正 3：#current-title 搬回 toolbar 內、取原 h2 的 flex 槽
+     （flex:1 min-width:0、可多行）。原 toolbar 本來就是 multi-row + 可變
+     高度 row + title-left/actions-right 設計，commit 7 誤把 title 移出
+     toolbar 是過度保守，此處還原。padding / border-bottom 由 toolbar 提供，
+     此處不重複設定。 */
   #current-title {
-    flex-shrink: 0;
-    padding: var(--space-3) var(--pad-panel) var(--space-3);
-    border-bottom: 1px solid var(--color-border);
+    flex: 1; min-width: 0;
+    color: var(--color-text);
   }
   #current-title[hidden] { display: none; }
   #current-title .title-zh {
@@ -1000,11 +1001,11 @@
       flex: none !important;          /* 解除 flex: 1 */
     }
 
-    /* 隱藏所有非文章區塊 */
+    /* 隱藏所有非文章區塊。#current-title 已是 #content-toolbar 子元素，
+       不需另列 */
     #sidebar,
     #chat-panel,
     #content-toolbar,
-    #current-title,
     #empty-state,
     #tooltip,
     .modal-mask,
@@ -1182,6 +1183,8 @@
   <!-- ──── 中欄 ──── -->
   <main id="content-area">
     <div id="content-toolbar">
+      <!-- Phase 4.7c 修正 3：title 區搬回 toolbar 內，取原 h2 的 flex:1 槽 -->
+      <header id="current-title" hidden></header>
       <div class="toolbar-actions">
         <button id="lang-toggle" class="icon-only" data-tip="語言切換">
           <!-- 切換符號：水平 ⇄；兩條短橫線錯位、不重疊 -->
@@ -1192,8 +1195,6 @@
         </button>
       </div>
     </div>
-    <!-- Phase 4.7c 修正 2：擴充標題區，取代原 toolbar h2 + 獨立 hero block -->
-    <header id="current-title" hidden></header>
     <div id="empty-state" style="display:none">
       <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-6-6a1.5 1.5 0 0 1 0-2l6-6"/></svg>
       從左側選擇文件

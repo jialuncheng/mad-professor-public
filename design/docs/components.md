@@ -221,13 +221,13 @@ if (ok) { /* ... */ }
 - 點圓 6px 閃爍（1s）
 - **`pointer-events: none`**：整列禁止點擊，避免誤觸
 
-### 7.4 #current-title 擴充標題區（中欄）
-Phase 4.7c 修正 2（取代原獨立 hero block）。位於 `#content-toolbar` 下方、
-`#paper-content` 上方，把 metadata 細節（authors / date / journal / abstract /
-candidate_name 等）整合進「擴充的標題區」——單一 multi-row header，視覺上
-不再有兩處 title。
+### 7.4 #content-toolbar 內 #current-title 擴充標題區（中欄）
+Phase 4.7c 修正 3（修正 2 把 title 搬出 toolbar 是誤判，本輪搬回）。
+`#current-title` 為 `#content-toolbar` 子元素，取原 `h2` 的 `flex:1 min-width:0`
+槽位，與右側 `.toolbar-actions` 並列；toolbar 原本就是 multi-row 可變高度
+設計（`align-items: flex-start` 允許 title 加高時 icon 仍貼齊頂部）。
 
-結構：
+`#current-title` 結構：
 - `.title-zh`：22px / 600，always-show（fallback 同 `resolveDisplayTitle`，
   中文優先）
 - `.title-en`：14px muted；當 title-zh 與 metadata.title (原文) 不同時才顯示
@@ -236,6 +236,7 @@ candidate_name 等）整合進「擴充的標題區」——單一 multi-row hea
 - `details.title-abstract`：摘要可摺疊（預設摺起），summary 文字「顯示摘要」；
   展開後 `.abstract-body` 為左側 3px border 卡片
 - 整個 `#current-title[hidden]`：未選文件時隱藏
+- 不重複設 padding / border-bottom（由 toolbar 提供）
 
 doc_type 分支：
 - academic / technical / book / news / web：完整顯示

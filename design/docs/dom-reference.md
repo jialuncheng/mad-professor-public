@@ -51,23 +51,26 @@
 
 ### 2.2 中欄 `#content-toolbar`
 
-Phase 4.7c 修正 2 後僅保留 icon 按鈕；論文標題已搬至獨立 `#current-title`
-擴充標題區（見 §4.2）。
+Phase 4.7c 修正 3：`#current-title` 為 toolbar 子元素，取原 h2 的 `flex:1`
+槽位；toolbar 為 flex row + `align-items: flex-start`，允許 title 多行展開
+時 icon 仍貼齊頂部。
 
 ```
 ┌────────────────────────────────────────────────────┐
-│                                     [⇄]  [🖨]      │  min-height 48px
+│ <title-zh / title-en / meta / abstract>  [⇄] [🖨] │  min-height 48px，可多行
 └────────────────────────────────────────────────────┘
 ```
 
 | 元素 | id | 用途 |
 |---|---|---|
+| 擴充標題區 | 🔒 `current-title` (`<header>`) | multi-row：title-zh / title-en / title-meta / details.title-abstract（詳見 §4.2 / `components.md §7.4`） |
 | 切換中/英 | 🔒 `lang-toggle` | toggle `currentLang` 並重抓內容 |
 | 列印 | 🔒 `print-btn` | `window.print()`；瀏覽器標題取 `#current-title .title-zh` |
 
 **契約**
 - 未選文件時 `#content-toolbar { display: none }`（loadPaper 內設 `display:flex`）
-- icon 群與 `#current-title` 視覺分屬不同 row，互不重疊
+- `align-items: flex-start` + `.toolbar-actions { padding-top:4px }` 使 icon 與 title 第一行對齊
+- title 區與 actions 區於 toolbar 內為 flex row 並列
 
 ### 2.3 右欄 `#chat-header`
 
@@ -199,30 +202,31 @@ Phase 4.7c 修正 2 後僅保留 icon 按鈕；論文標題已搬至獨立 `#cur
 
 未選文件時顯示「← 從左側選擇文件」；選後 `display: none`。
 
-### 4.2 擴充標題區 🔒 `#current-title`
+### 4.2 擴充標題區 🔒 `#current-title`（toolbar 子元素）
 
-Phase 4.7c 修正 2。原 toolbar 內 `<h2 id="current-title">` 改為獨立
-`<header id="current-title">` multi-row 結構，位於 `#content-toolbar` 下方、
-`#paper-content` 上方。未選文件時 `hidden`；選後由 `renderTitleHeader(p)` 渲染。
+Phase 4.7c 修正 3。`#current-title` 為 `#content-toolbar` 子元素（取原 h2
+的 `flex:1 min-width:0` 槽位），不是獨立區塊。未選文件時 `hidden`；
+選後由 `renderTitleHeader(p)` 渲染。
 
 **結構契約**（依 doc_type 分支，缺項靜默省略）
 ```html
-<header id="current-title">
-  <h1 class="title-zh">{titleZh|candidate_name}</h1>
-  <p class="title-en">{title 原文}</p>
-  <p class="title-meta">{authors}·{date}·{venue}</p>
-  <details class="title-abstract">
-    <summary>顯示摘要</summary>
-    <div class="abstract-body">{abstract}</div>
-  </details>
-</header>
+<div id="content-toolbar">
+  <header id="current-title">
+    <h1 class="title-zh">{titleZh|candidate_name}</h1>
+    <p class="title-en">{title 原文}</p>
+    <p class="title-meta">{authors}·{date}·{venue}</p>
+    <details class="title-abstract">
+      <summary>顯示摘要</summary>
+      <div class="abstract-body">{abstract}</div>
+    </details>
+  </header>
+  <div class="toolbar-actions">…icon 按鈕…</div>
+</div>
 ```
 
 詳見 `components.md §7.4`。
 
-注意：`#current-title` **不再**位於 `#content-toolbar` 內；toolbar 僅保留
-語言切換 / 列印等 icon 按鈕。列印時 `#current-title` 與 toolbar 一同隱藏，
-瀏覽器列印標題取 `.title-zh` 文字。
+列印時 `#content-toolbar` 一同隱藏；瀏覽器列印標題取 `.title-zh` 文字。
 
 ### 4.3 文章 🔒 `#paper-content`
 
