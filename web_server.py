@@ -160,6 +160,10 @@ app.add_middleware(
     max_age=None,
 )
 
+# /static/* 靜態檔（須登入後才能載；login.html 由 /login 路由直接讀檔回傳，
+# 不受此 mount 影響。auth_guard 已透過 _PUBLIC_PREFIXES 放行 /static/login*）
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
 
 @app.get("/login")
 async def login_page():
