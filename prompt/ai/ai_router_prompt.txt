@@ -7,22 +7,34 @@
 {query}
 
 系統狀態: {paper_status}
-當前論文：{paper_title}
+當前文件：{paper_title}
 
 請輸出 JSON，包含以下欄位：
 
 1. "function": 回答策略，從以下選項選一個
-   - "direct_answer": 直接回答，或問題與學術無關
-   - "page_content_analysis": 用戶提到「當前頁面」「這一段」等指代當前可見內容
-   - "macro_retrieval": 與論文整體相關、涉及論文結構、較寬泛的提問
-   - "rag_retrieval": 涉及論文細節或關鍵概念
+   - "direct_answer": 純閒聊、打招呼、與當前文件完全無關的一般問題
+   - "page_content_analysis": 用戶提到「當前頁面」「這一段」「這張圖」等指代當前可見內容
+   - "macro_retrieval": 對文件整體架構、章節組成、核心主旨的提問
+   - "rag_retrieval": 對文件內容的任何具體提問（包含人物、事件、細節、概念、論述、數據、推論等）
 
 2. "query": 用於檢索的完整中文問題
    - 若用戶問題省略主語或語境，根據對話歷史補充完整
    - 若有拼寫錯誤，根據上下文糾正
 
-選擇策略指南：
-- 若系統狀態是「無論文加載」，一律選 "direct_answer"
+判斷原則：
+- 若系統狀態是「無文件加載」，一律選 "direct_answer"
+- 若有文件加載，**預設選 "rag_retrieval"**——除非問題明顯是閒聊、打招呼、
+  或與當前文件完全無關，否則都應從文件中尋找答案。
+- 文件類型多元（論文、履歷、簡報、新聞、報告等），任何針對文件內容
+  的具體提問（包括分析、總結、評論、比較）都應透過檢索文件內容來回答。
+- 範例：
+  - 「請分析這位候選人的職涯變化」→ rag_retrieval
+  - 「這篇文章的重點是什麼」→ macro_retrieval（整體主旨）
+  - 「第三頁說了什麼」→ page_content_analysis
+  - 「作者主張什麼」→ rag_retrieval
+  - 「請比較 A 和 B」→ rag_retrieval
+  - 「請列出所有提到的公司」→ rag_retrieval
+  - 「你好」「謝謝」→ direct_answer
 
 只返回 JSON，不要有任何額外說明：
 {{"function": "選擇的功能", "query": "優化後的查詢"}}
