@@ -478,7 +478,9 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
                        background_tasks: BackgroundTasks,
                        current_user: CurrentUser = Depends(get_current_user)):
     """使用者選擇文件類型後，開始處理"""
-    valid_types = ['academic', 'book', 'technical', 'slides', 'web', 'news']
+    # === doc_type-registry ===
+    # 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+    valid_types = ['academic', 'book', 'technical', 'slides', 'web', 'news', 'resume']
     if request.doc_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
 

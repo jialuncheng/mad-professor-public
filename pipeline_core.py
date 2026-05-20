@@ -595,7 +595,9 @@ class PipelineCore:
         output_path = self._get_stage_output_path('extra_info', paper_dir, paper_name)
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
         domain = output_paths.get('_domain', '')
-        if doc_type in ('news', 'web', 'slides'):
+        # === doc_type-registry ===
+        # 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+        if doc_type in ('news', 'web', 'slides', 'resume'):
             return self.extra_info_processor.generate_document_summary(
                 str(input_path), str(output_path), domain=domain
             )

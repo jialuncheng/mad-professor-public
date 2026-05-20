@@ -219,6 +219,8 @@ class TranslateProcessor:
 
         # 根據文件類型附加翻譯風格提示
         doc_type = getattr(self, 'doc_type', 'academic')
+        # === doc_type-registry ===
+        # 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
         style_hints = {
             'academic': '文件為學術論文，請使用正式學術用語，保留英文專有名詞與縮寫。',
             'book': '文件為書籍，請使用流暢自然的書面語，保留專有名詞。',
@@ -226,6 +228,7 @@ class TranslateProcessor:
             'slides': '文件為簡報投影片，請保持簡潔的條列式風格，勿過度詮釋。',
             'news': '文件為新聞文章，請使用流暢自然的新聞文體，不要過於學術化。',
             'web': '文件為網頁文章，請使用自然口語化的繁體中文。',
+            'resume': '文件為個人履歷（CV），請使用正式商務中文，職稱、公司名、技術名詞保留原文',
         }
         hint = style_hints.get(doc_type, '')
         if hint:

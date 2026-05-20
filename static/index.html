@@ -1571,6 +1571,8 @@
 
   // ── 自訂 dropdown：用 .ctx-popup 風格清單 ────────────
   (function setupDropdown() {
+    // === doc_type-registry ===
+    // 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
     const DOC_TYPES = [
       ['academic', '學術論文'],
       ['book', '書籍'],
@@ -1578,6 +1580,7 @@
       ['slides', '簡報'],
       ['web', '網頁存檔'],
       ['news', '新聞文章'],
+      ['resume', '履歷'],
     ];
     const THEMES = [
       ['mies', 'Mies van der Rohe'],
@@ -2316,13 +2319,16 @@ function trackProgress(paperId, btn) {
 }
 
 // 文件類型確認
+// === doc_type-registry ===
+// 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
 const DOC_TYPE_LABELS = {
   academic: '學術論文',
   book: '書籍',
   technical: '技術文件',
   slides: '簡報',
   web: '網頁存檔',
-  news: '新聞文章'
+  news: '新聞文章',
+  resume: '履歷'
 };
 
 function showConfirmModal(paperId, detection, btn) {

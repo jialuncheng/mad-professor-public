@@ -10,6 +10,8 @@ from utils.text_utils import strip_json_fence
 
 logger = logging.getLogger(__name__)
 
+# === doc_type-registry ===
+# 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
 HEADING_FIX_PROMPTS = {
     'academic':  'prompt/doc/heading_fix_academic.txt',
     'book':      'prompt/doc/heading_fix_book.txt',
@@ -17,8 +19,11 @@ HEADING_FIX_PROMPTS = {
     'slides':    'prompt/doc/heading_fix_slides.txt',
     'web':       'prompt/doc/heading_fix_web.txt',
     'news':      'prompt/doc/heading_fix_news.txt',
+    'resume':    'prompt/doc/heading_fix_academic.txt',  # Phase 1 reuse academic
 }
 
+# === doc_type-registry ===
+# 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
 STRUCTURE_PROMPTS = {
     'academic':  'prompt/doc/structure_academic.txt',
     'book':      'prompt/doc/structure_book.txt',
@@ -26,6 +31,7 @@ STRUCTURE_PROMPTS = {
     'slides':    'prompt/doc/structure_slides.txt',
     'web':       'prompt/doc/structure_web.txt',
     'news':      'prompt/doc/structure_news.txt',
+    'resume':    'prompt/doc/structure_academic.txt',  # Phase 1 reuse academic
 }
 
 class DocAnalyzer:
