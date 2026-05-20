@@ -27,6 +27,11 @@
 - publisher: null
 - version: null
 
+額外欄位：
+6. domain（履歷主題領域）：10–30 字短句，要具體不要泛泛。
+   範例：「半導體 SoC - 顯示驅動 IC 技術主管履歷」「金融科技 - 後端工程師履歷」。
+   不可填 null；若資訊不足回 ""。
+
 注意事項：
 - 找不到的欄位填 null（陣列填空陣列）
 - 不要編造，找不到就 null
@@ -45,5 +50,6 @@
   "keywords": [],
   "publisher": null,
   "organization": null,
-  "version": null
+  "version": null,
+  "domain": ""
 }

@@ -133,6 +133,41 @@ def test_candidate_name_scalar_and_json_serializable():
     assert "candidate_name" in s
 
 
+def test_empty_metadata_includes_domain():
+    """Phase 4.7d Commit 0：合併 LLM call 後 schema 新增 domain 欄位。"""
+    m = create_empty_metadata()
+    assert "domain" in m, "schema 缺 domain 欄"
+    assert set(m["domain"]) == {"value", "source", "confidence", "alternates"}
+    assert m["domain"]["value"] is None
+    assert m["domain"]["source"] is None
+    assert m["domain"]["alternates"] == {}
+
+
+def test_llm_meta_domain_field():
+    """Phase 4.7d Commit 0：fill_from_llm_page1 寫入 domain 欄位。"""
+    from processor.metadata_extractor import fill_from_llm_page1
+    m = create_empty_metadata()
+    llm_meta = {
+        "title": "Some Title",
+        "translated_title": "某標題",
+        "authors": [],
+        "publication_date": None,
+        "abstract": None,
+        "journal_or_conference": None,
+        "doi": None,
+        "keywords": [],
+        "publisher": None,
+        "organization": None,
+        "version": None,
+        "candidate_name": None,
+        "domain": "電力電子技術 - 高壓直流系統架構",
+    }
+    fill_from_llm_page1(m, llm_meta)
+    assert m["domain"]["value"] == "電力電子技術 - 高壓直流系統架構"
+    assert m["domain"]["source"] == "llm_page1"
+    assert m["domain"]["confidence"] == "high"
+
+
 # ── 合成 PDF 抽取 ──
 
 def test_extract_from_synthetic(synthetic_pdf):

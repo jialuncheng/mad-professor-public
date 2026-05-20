@@ -540,8 +540,23 @@ class PipelineCore:
         return self.doc_analyzer.analyze(markdown_path, doc_type)
 
     def _stage_detect_domain(self, pdf_path, paper_dir, paper_name, output_paths):
-        """讀 PDF 第一頁判斷主題領域；永不 raise，失敗回 ''（soft fallback）。"""
+        """讀 PDF 第一頁判斷主題領域；永不 raise，失敗回 ''（soft fallback）。
+
+        Phase 4.7d Commit 0：優先從 self._metadata['domain'].value 取（已在
+        Stage A LLM page1 call 一次抽到）；空才 fallback DomainDetector
+        補跑（極端情境 / 既有 paper 無此鍵的相容性）。保留 stage 結構與
+        output_paths['_domain'] 介面以避免破壞既有調用。
+        """
         try:
+            d = (getattr(self, '_metadata', None) or {}).get('domain', {}).get('value') or ''
+            if d:
+                self.logger.info(
+                    f"[domain] 從 metadata.domain 取得：{d!r}（合併 LLM call）"
+                )
+                return d
+            self.logger.info(
+                "[domain] metadata 無 domain，fallback 跑 DomainDetector"
+            )
             return self.domain_detector.detect(str(pdf_path)) or ''
         except Exception as e:
             self.logger.warning(f"detect_domain 階段失敗（soft，忽略）: {str(e)}")

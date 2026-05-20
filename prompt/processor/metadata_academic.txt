@@ -19,6 +19,10 @@
 9. publisher（出版社）：若有
 10. organization（機構）：若有（如 NVIDIA, arXiv, IEEE 等）
 11. version（版本）：若有
+12. domain（文件具體主題領域）：10–30 字短句，要具體不要泛泛分類。
+    範例：「電力電子技術 - 高壓直流系統架構」「植物分子生物學 - 多重營養逆境調控」
+    「體育新聞 - 環義自由車賽報導」。
+    不可填 null；若資訊不足回 ""。
 
 注意事項：
 - 排除「Contents / 目錄 / Introduction / 前言 / Abstract / 摘要」這類章節名作為 title
@@ -41,5 +45,6 @@
   "publisher": null,
   "organization": null,
   "version": null,
-  "candidate_name": null
+  "candidate_name": null,
+  "domain": ""
 }

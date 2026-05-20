@@ -28,6 +28,9 @@
 8. keywords：若有
 9. abstract / journal_or_conference / doi：白皮書通常無此概念，填 null
 10. candidate_name：白皮書無此概念，填 null
+11. domain（文件具體主題領域）：10–30 字短句，要具體不要泛泛分類。
+    範例：「電力電子技術 - 高壓直流系統架構」「雲端基礎建設 - AI 訓練資料中心架構」。
+    不可填 null；若資訊不足回 ""。
 
 注意事項：
 - 排除頁碼、頁首頁尾
@@ -47,5 +50,6 @@
   "publisher": null,
   "organization": null,
   "version": null,
-  "candidate_name": null
+  "candidate_name": null,
+  "domain": ""
 }

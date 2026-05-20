@@ -57,7 +57,7 @@ _LIST_FIELDS = {"authors", "keywords"}
 _ALL_FIELDS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
-    "organization", "version", "candidate_name",
+    "organization", "version", "candidate_name", "domain",
 ]
 
 # fitz title 雜訊樣式（Word/匯出器留下的非語意 title）
@@ -289,7 +289,7 @@ def fill_from_pdf_metadata(metadata: dict, pdf_meta: dict) -> dict:
 _LLM_FLAT_KEYS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
-    "organization", "version", "candidate_name",
+    "organization", "version", "candidate_name", "domain",
 ]
 
 
@@ -441,6 +441,7 @@ def fill_from_llm_page1(metadata: dict, llm_meta: Optional[dict]) -> dict:
             "organization": "organization",
             "version": "version",
             "candidate_name": "candidate_name",
+            "domain": "domain",
         }
         for fld in mapping:
             _set_field(metadata, fld, llm_meta.get(fld), "llm_page1", "high")

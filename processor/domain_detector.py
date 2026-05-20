@@ -1,3 +1,13 @@
+"""DomainDetector — 看 PDF 第一頁文字 + 圖判斷主題領域。
+
+Phase 4.7d Commit 0 後降為 fallback：
+- 主路徑：metadata_extractor.extract_metadata_from_first_page_llm 已把 domain
+  欄位加入單一 page1 LLM call（與 title/authors/... 一起抽）；caller
+  （pipeline_core._stage_detect_domain）優先讀 self._metadata['domain'].value。
+- fallback：本 class 用於 metadata.domain 為空時補跑（極端情境 / 舊 paper
+  metadata_json 無此鍵的相容性）。
+- 不刪：保留 class 與 detect() API 介面、設定值、log 行為皆不變。
+"""
 import logging
 import time
 
