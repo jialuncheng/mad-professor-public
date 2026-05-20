@@ -10,12 +10,20 @@ AI_EXPLAIN_PROMPT_PATH = "prompt/ai/ai_explain_prompt.txt"
 AI_ROUTER_PROMPT_PATH = "prompt/ai/ai_router_prompt.txt"
 
 class AIProfessorChat:
-    """AI對話助手 - 文件智能問答系統"""
+    """文件閱讀 AI 對話模組（stateless 改造中）。
+
+    Stage A：將狀態（conversation_history / grounding_sources）外部化，
+    self 只保留服務（LLMClient / Retriever / prompt 路徑）。
+
+    Stage B（規劃）：抽離為獨立 package。屆時：
+      - prompt 改 caller 注入字串（不再讀檔）
+      - LLMClient / Retriever 走 Protocol 介面
+      - 介面不出現任何 mad-professor 特定型別
+    """
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.conversation_history = []
         self.current_paper_id = None
         self.current_paper_data = None
         self.retriever = None
@@ -48,8 +56,9 @@ class AIProfessorChat:
     def process_query_stream(self, query: str, visible_content: str = None,
                              owner_id: int = None,
                              paper_id: str = None, paper_data: Dict[str, Any] = None,
+                             conversation_history: List[Dict] = None,
                              use_web_search: bool = False) -> Generator[str, None, None]:
-        """流式處理用戶查詢，逐句 yield 回答"""
+        """流式處理用戶查詢，逐句 yield 回答（Stage A：history 為參數，無 self state）"""
         try:
             effective_paper_id = paper_id
             effective_paper_data = paper_data
@@ -59,17 +68,18 @@ class AIProfessorChat:
                 yield "AI服務尚未初始化，請稍後再試。"
                 return
 
-            # 加入對話歷史
-            if not (self.conversation_history and
-                    self.conversation_history[-1]["role"] == "user" and
-                    self.conversation_history[-1]["content"] == query):
-                self.conversation_history.append({"role": "user", "content": query})
-
-            if len(self.conversation_history) > 10:
-                self.conversation_history = self.conversation_history[-10:]
+            # 本地對話歷史（不動 caller 的 list）；append 當前 query + 滑動窗 max 10
+            working_history = list(conversation_history or [])
+            if not (working_history and
+                    working_history[-1]["role"] == "user" and
+                    working_history[-1]["content"] == query):
+                working_history.append({"role": "user", "content": query})
+            if len(working_history) > 10:
+                working_history = working_history[-10:]
 
             # 決策
-            decision = self._make_decision(query, effective_paper_id, effective_paper_data)
+            decision = self._make_decision(query, working_history,
+                                           effective_paper_id, effective_paper_data)
             self.logger.info(f"決策結果: {decision}")
 
             function_name = decision.get('function', 'direct_answer')
@@ -89,6 +99,7 @@ class AIProfessorChat:
                 query=query,
                 context_info=context_info,
                 function_name=function_name,
+                conversation_history=working_history,
                 paper_id=effective_paper_id,
                 paper_data=effective_paper_data
             )
@@ -107,7 +118,9 @@ class AIProfessorChat:
                 self.llm_client, '_last_grounding_sources', None
             )
 
-            self.conversation_history.append({"role": "assistant", "content": full_response})
+            # Stage A Step 1：assistant reply 累積至 local（不寫 self）；
+            # Step 2 將改 yield 結構，把完整 reply 從 generator 吐給 caller
+            working_history.append({"role": "assistant", "content": full_response})
 
         except Exception as e:
             self.logger.error(f"處理查詢失敗: {str(e)}")
@@ -120,7 +133,8 @@ class AIProfessorChat:
         valid_functions = ["direct_answer", "page_content_analysis", "macro_retrieval", "rag_retrieval"]
         return decision_data["function"] in valid_functions
 
-    def _make_decision(self, query: str, paper_id: str = None, paper_data: Dict[str, Any] = None) -> Dict[str, str]:
+    def _make_decision(self, query: str, conversation_history: List[Dict] = None,
+                       paper_id: str = None, paper_data: Dict[str, Any] = None) -> Dict[str, str]:
         default = {"function": "direct_answer", "query": query}
         try:
             router_prompt = self._read_file(AI_ROUTER_PROMPT_PATH)
@@ -130,9 +144,10 @@ class AIProfessorChat:
             if has_paper:
                 paper_title = paper_data.get('translated_title', '') or paper_data.get('title', '')
 
+            history = conversation_history or []
             formatted_history = ""
-            if len(self.conversation_history) > 1:
-                recent = self.conversation_history[:-1][-4:]
+            if len(history) > 1:
+                recent = history[:-1][-4:]
                 formatted_history = "\n".join(
                     f"{'用戶' if m['role']=='user' else '導師'}: {m['content']}"
                     for m in recent
@@ -212,6 +227,7 @@ class AIProfessorChat:
             return ""
 
     def _prepare_final_messages(self, query: str, context_info: str, function_name: str = None,
+                                conversation_history: List[Dict] = None,
                                 paper_id: str = None, paper_data: Dict[str, Any] = None) -> List[Dict]:
         character_prompt = self._read_file(AI_CHARACTER_PROMPT_PATH)
         explain_prompt = self._read_file(AI_EXPLAIN_PROMPT_PATH)
@@ -235,8 +251,9 @@ class AIProfessorChat:
 
         messages = [{"role": "system", "content": system_message}]
 
-        if len(self.conversation_history) > 1:
-            messages.extend(self.conversation_history[:-1])
+        history = conversation_history or []
+        if len(history) > 1:
+            messages.extend(history[:-1])
 
         final_query = f"用戶問題：{query}"
 
