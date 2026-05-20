@@ -95,7 +95,7 @@ _TITLE_NOISE = re.compile(
 def _empty_field(is_list: bool = False) -> dict:
     return {
         "value": [] if is_list else None,
-        "source": None,        # pdf_metadata / llm_page1 / mineru / both_agree / manual
+        "source": None,        # pdf_metadata / llm_page1 / markdown_extracted / both_agree / manual
         "confidence": None,    # high / medium / low
         "alternates": {},      # 被淘汰候選，debug 用
     }
@@ -551,8 +551,8 @@ def fill_abstract_stage_b(metadata: dict, markdown_text, llm=None) -> dict:
         ab = extract_abstract_from_markdown(markdown_text, llm=llm)
         if ab:
             metadata["abstract"] = {
-                "value": ab, "source": "mineru", "confidence": "high",
-                "alternates": {**f.get("alternates", {}), "mineru": ab},
+                "value": ab, "source": "markdown_extracted", "confidence": "high",
+                "alternates": {**f.get("alternates", {}), "markdown_extracted": ab},
             }
     except Exception as e:
         logger.warning(f"fill_abstract_stage_b 失敗（soft）: {e}")
