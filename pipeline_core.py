@@ -515,11 +515,14 @@ class PipelineCore:
         if doc_type == 'slides':
             # 簡報：用 Vision 每頁解析，不走 MinerU
             self.logger.info("簡報類型，使用 Vision 解析")
-            slides_proc = SlidesProcessor()
-            markdown_path = slides_proc.process(str(pdf_path), str(paper_dir))
+            parser = SlidesProcessor()
         else:
             # 其他：MinerU 解析
-            markdown_path = self.pdf_processor.process(str(pdf_path), str(paper_dir))
+            parser = self.pdf_processor
+
+        markdown_path = parser.parse(str(pdf_path), str(paper_dir))
+
+        if doc_type != 'slides':
             self.md_cleaner.clean(markdown_path)
 
         return markdown_path
