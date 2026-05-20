@@ -75,12 +75,14 @@ _STAGE_A_PROMPT = """你是一個文件 metadata 抽取助手。
 # Schema 版本；未來改結構需 bump（JSON 欄位免 migration 的配套）
 SCHEMA_VERSION = 2
 
-# 11 個 metadata 欄位（title/translated_title 之外另有 9 個）
+# metadata 欄位列舉。Phase 4.7c step 2 新增 candidate_name：對 resume 是主資料
+# （履歷沒「title」概念，要的是候選人姓名）；對其他 doc_type 永遠為 None，
+# 與其他欄位對稱結構 {value, source, confidence, alternates}，scalar 非 list。
 _LIST_FIELDS = {"authors", "keywords"}
 _ALL_FIELDS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
-    "organization", "version",
+    "organization", "version", "candidate_name",
 ]
 
 # fitz title 雜訊樣式（Word/匯出器留下的非語意 title）
@@ -312,7 +314,7 @@ def fill_from_pdf_metadata(metadata: dict, pdf_meta: dict) -> dict:
 _LLM_FLAT_KEYS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
-    "organization", "version",
+    "organization", "version", "candidate_name",
 ]
 
 
@@ -410,6 +412,7 @@ def fill_from_llm_page1(metadata: dict, llm_meta: Optional[dict]) -> dict:
             "publisher": "publisher",
             "organization": "organization",
             "version": "version",
+            "candidate_name": "candidate_name",
         }
         for fld in mapping:
             _set_field(metadata, fld, llm_meta.get(fld), "llm_page1", "high")

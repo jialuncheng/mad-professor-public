@@ -109,7 +109,7 @@ def test_empty_metadata_structure():
     assert m["_stage_b_ran"] is False
     for f in ["title", "translated_title", "authors", "publication_date",
               "abstract", "journal_or_conference", "doi", "keywords",
-              "publisher", "organization", "version"]:
+              "publisher", "organization", "version", "candidate_name"]:
         assert f in m, f"缺欄位 {f}"
         assert set(m[f]) == {"value", "source", "confidence", "alternates"}
         assert m[f]["source"] is None
@@ -118,6 +118,19 @@ def test_empty_metadata_structure():
     assert m["authors"]["value"] == []
     assert m["keywords"]["value"] == []
     assert m["title"]["value"] is None
+    # Phase 4.7c step 2：candidate_name 是 scalar，初值 None
+    assert m["candidate_name"]["value"] is None
+
+
+def test_candidate_name_scalar_and_json_serializable():
+    """Phase 4.7c step 2：candidate_name 為 scalar 欄位，整包可 JSON 序列化。"""
+    import json
+    m = create_empty_metadata()
+    # 不在 _LIST_FIELDS 內，value 應為 None 而非 []
+    assert m["candidate_name"]["value"] is None
+    # 整包可序列化（schema 加欄位不破壞 metadata_json 寫入）
+    s = json.dumps(m, ensure_ascii=False)
+    assert "candidate_name" in s
 
 
 # ── 合成 PDF 抽取 ──
