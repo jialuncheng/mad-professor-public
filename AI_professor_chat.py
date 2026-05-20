@@ -24,8 +24,6 @@ class AIProfessorChat:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.current_paper_id = None
-        self.current_paper_data = None
         self.retriever = None
         self.llm_client = None
         try:
@@ -41,16 +39,6 @@ class AIProfessorChat:
         except Exception as e:
             self.logger.warning(f"讀取文件 {filepath} 失敗: {str(e)}")
             return ""
-
-    def set_paper_context(self, paper_id: str, paper_data: Dict[str, Any]) -> bool:
-        try:
-            self.current_paper_id = paper_id
-            self.current_paper_data = paper_data
-            self.logger.info(f"已設置文件上下文: {paper_id}")
-            return True
-        except Exception as e:
-            self.logger.error(f"設置文件上下文失敗: {str(e)}")
-            return False
 
     def process_query_stream(self, query: str, visible_content: str = None,
                              owner_id: int = None,

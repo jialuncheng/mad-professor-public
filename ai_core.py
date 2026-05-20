@@ -39,10 +39,6 @@ class AICore:
             return self.retriever.add_paper(owner_id, paper_id, vector_store_path)
         return False
 
-    def set_paper_context(self, paper_id: str, paper_data: Dict[str, Any]) -> bool:
-        """設定當前論文上下文（目前未被 active code 呼叫；保留簽名不動）"""
-        return self.ai_chat.set_paper_context(paper_id, paper_data)
-
     def query_stream(self, query: str, owner_id: int,
                      paper_id: Optional[str] = None,
                      visible_content: Optional[str] = None,
@@ -121,7 +117,4 @@ class AICore:
             del self._paper_cache[key]
         if self.retriever:
             self.retriever.remove_paper(owner_id, paper_id)
-        if self.ai_chat.current_paper_id == paper_id:
-            self.ai_chat.current_paper_id = None
-            self.ai_chat.current_paper_data = None
         self.logger.info(f"已移除論文快取: owner={owner_id} {paper_id}")
