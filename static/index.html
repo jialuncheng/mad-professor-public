@@ -1065,6 +1065,7 @@
       <li>點擊「確認，開始處理」</li>
       <li>等待處理完成（含翻譯、建立向量索引）</li>
       <li>完成後論文出現在左側列表</li>
+      <li>可同時上傳多份文件</li>
     </ol>
     <p class="step-note">僅支援 PDF 格式</p>
     <p class="step-note">檔案大小上限：100 MB</p>
@@ -2381,40 +2382,44 @@ document.getElementById('chat-input').onkeydown = (e) => {
 };
 
 // 上傳論文（衝突 3.2：addEventListener + stopImmediatePropagation 自衛）
+// Phase 4.7d Commit 5：開放多檔同時上傳；逐檔走 confirm modal、依序送後端
 document.getElementById('upload-btn').addEventListener('click', (e) => {
   e.stopImmediatePropagation();
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.pdf';
+  input.multiple = true;
   input.onchange = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;  // 使用者取消選檔
-    const file = files[0];
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;  // 使用者取消選檔
 
     const btn = document.getElementById('upload-btn');
     btn.disabled = true;
     setBusy(true);
 
-    const formData = new FormData();
-    formData.append('file', file);
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/papers/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        const paperId = data.paper_id;
 
-    try {
-      const res = await fetch('/api/papers/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      const paperId = data.paper_id;
-
-      // 上傳完成，立即顯示文件類型選擇框
-      // 進度顯示在左欄 .paper-item.uploading 占位列（不在按鈕文字上）
-      showConfirmModal(paperId, data.suggested_doc_type, btn, file.name);
-
-    } catch (err) {
-      btn.disabled = false;
-      setBusy(false);
-      alert('上傳失敗：' + err.message);
+        // 等待 modal 確認後再處理下一份；confirm modal 完成時 resolve
+        await new Promise((resolve) => {
+          showConfirmModal(
+            paperId, data.suggested_doc_type, btn, file.name, resolve
+          );
+        });
+      } catch (err) {
+        alert(`上傳「${file.name}」失敗：${err.message}`);
+      }
     }
+    // 不主動 unlock btn / setBusy(false)——交由各檔 trackProgress 完成時
+    // 自行 unlock（與單檔行為等效；首個完成的 paper 解鎖 btn 即可繼續上傳）
   };
   input.click();
 });
@@ -2497,7 +2502,7 @@ const DOC_TYPE_LABELS = {
   resume: '履歷'
 };
 
-function showConfirmModal(paperId, detection, btn, filename) {
+function showConfirmModal(paperId, detection, btn, filename, onConfirmed) {
   const modal = document.getElementById('confirm-modal');
   // 衝突 B：prototype 改用自訂 #doc-type-dropdown（無 native select）。
   // 預設選偵測值（無則 academic）：寫 dataset.value + .dropdown-value 文字
@@ -2534,6 +2539,9 @@ function showConfirmModal(paperId, detection, btn, filename) {
       btn.disabled = false;
       setBusy(false);
       alert('確認失敗：' + e.message);
+    } finally {
+      // Phase 4.7d Commit 5：通知 caller（多檔上傳 for-loop）此份已完成 modal 流程
+      if (typeof onConfirmed === 'function') onConfirmed();
     }
   };
 }
