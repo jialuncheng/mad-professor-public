@@ -1,0 +1,252 @@
+"""ResumeProcessor — Phase 4.7e v2：履歷專用獨立 pipeline parser。
+
+新方向（vs 舊 7e-1 ffb3000、已 revert）：
+- ✅ 忠實轉錄 PDF（不重組主標題 / 不彙整 Summary / 不跨履歷彙整 Skills）
+- ✅ 唯一加工：補抽 plain text 公司 / 學位為 ### heading
+- ✅ 主標題用 PDF 原 # 人名（不用「{職稱} Resume - {人名}」重組）
+- ✅ 保留原語言（中文 / 英文 / 雙語並列原樣）
+- ✅ 保留 table / list / image 結構
+- ❌ 不翻譯（後續 translate stage 處理）
+- ❌ 不摘要（後續 extra_info stage 處理）
+
+對齊既有設計手冊 v2：
+- §3.1 TITLE_BLACKLIST_EXACT：主標題不可為 'Resume' / 'CV' / 'curriculum vitae' / '履歷' / '個人簡歷' / '履歷表'
+- §4.5 candidate_name 黑名單：同上
+- §1 raw first-# = 人名 🟢（最可信來源）→ md_restore 短路機制能正確接手
+
+模板：processor/slides_processor.py（同 PDFParser ABC、同 Vision-first 哲學）。
+"""
+import logging
+from pathlib import Path
+from typing import List, Optional
+
+import fitz  # PyMuPDF
+
+import settings
+from llm.client import LLMClient
+from processor.pdf_parser import PDFParser, PDFParseError
+
+logger = logging.getLogger(__name__)
+
+# Phase 4.7e v2：履歷 Vision prompt 路徑
+RESUME_VISION_PROMPT_PATH = Path("prompt/doc/resume_vision.txt")
+
+# 渲染 dpi：履歷字密、比 slides 2.0 高一階
+RENDER_MATRIX = fitz.Matrix(2.5, 2.5)
+# Fallback：> 10MB 降到 1.5 重 render
+RENDER_MATRIX_LOW = fitz.Matrix(1.5, 1.5)
+MAX_PAGE_JPEG_BYTES = 10 * 1024 * 1024  # 10 MB
+
+# Vision 回傳常見 preamble（即使 prompt 禁止仍可能出現、自動移除）
+COMMON_PREAMBLES = (
+    "以下是",
+    "這是您的",
+    "這是該",
+    "Here is",
+    "Here's",
+    "Here are",
+    "Below is",
+    "Below are",
+    "I have parsed",
+    "I'll provide",
+    "I will provide",
+    "Sure",
+    "Of course",
+)
+
+# 主標題黑名單（v2 新增、對齊既有設計手冊 §3.1 + §4.5）
+# 完全等於這些 casefold 詞 → raise（履歷主標題必須是人名）
+RESUME_TITLE_BLACKLIST = frozenset({
+    'resume',
+    'cv',
+    'curriculum vitae',
+    '履歷',
+    '個人簡歷',
+    '履歷表',
+})
+
+# 重組 pattern（如 "CTO Resume - Tzung-Yuan Lee"）→ warn（不 raise）
+# 注意：用明確 ' resume -' / 'cv -' 等 pattern、避免誤判 "Resumed" 等正常詞
+RESUME_TITLE_SUSPICIOUS_PATTERNS = (
+    ' resume -',
+    ' resume:',
+    ' cv -',
+    ' cv:',
+    '履歷 -',
+    '履歷:',
+    'curriculum vitae',
+)
+
+
+class ResumeProcessor(PDFParser):
+    """履歷 PDF 處理器：PyMuPDF 渲染 + Vision LLM 忠實轉錄。"""
+
+    def __init__(self, llm=None):
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.llm = llm if llm is not None else LLMClient.get_instance()
+
+    def parse(self, pdf_path: str, output_dir: str) -> Path:
+        """Implements PDFParser.parse()."""
+        return self.process(pdf_path, output_dir)
+
+    def process(self, pdf_path: str, output_dir: str) -> Path:
+        """渲染 PDF 每頁為 JPEG、整份送 Vision LLM、寫忠實轉錄 markdown。
+
+        Raises:
+            FileNotFoundError: pdf_path 不存在
+            PDFParseError:     Vision 失敗 / 輸出格式不合法 / 主標題違反黑名單
+        """
+        pdf_path = Path(pdf_path)
+        output_dir = Path(output_dir)
+
+        if not pdf_path.exists():
+            raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        images_dir = output_dir / "images"
+        images_dir.mkdir(exist_ok=True)
+
+        paper_name = pdf_path.stem
+        markdown_path = output_dir / f"{paper_name}.md"
+
+        self.logger.info(f"開始 Vision 解析履歷: {pdf_path}")
+
+        page_images = self._render_pages(pdf_path, images_dir)
+        self.logger.info(f"共渲染 {len(page_images)} 頁、送 Vision 整份解析")
+
+        raw_markdown = self._analyze_resume(page_images, paper_name)
+        cleaned = self._post_process_vision_output(raw_markdown, paper_name)
+        self._validate_vision_output(cleaned, paper_name)
+
+        markdown_path.write_text(cleaned, encoding="utf-8")
+        self.logger.info(f"Vision 解析履歷完成: {markdown_path} ({len(cleaned)} chars)")
+        return markdown_path
+
+    def _render_pages(self, pdf_path: Path, images_dir: Path) -> List[bytes]:
+        """PyMuPDF render 每頁 JPEG，同時側產 images/page_NN.jpg。
+
+        每頁 render 後檢查大小，若 > MAX_PAGE_JPEG_BYTES（10 MB）降到
+        RENDER_MATRIX_LOW（1.5）重 render，避免 Vision API payload 超時。
+        """
+        page_images: List[bytes] = []
+        try:
+            doc = fitz.open(str(pdf_path))
+            total = len(doc)
+            for i in range(total):
+                pix = doc[i].get_pixmap(matrix=RENDER_MATRIX)
+                jpg = pix.tobytes("jpeg")
+                if len(jpg) > MAX_PAGE_JPEG_BYTES:
+                    self.logger.warning(
+                        f"[resume] page {i + 1} render 後 "
+                        f"{len(jpg) // 1024 // 1024} MB、超過 "
+                        f"{MAX_PAGE_JPEG_BYTES // 1024 // 1024} MB、降低 dpi 重 render"
+                    )
+                    pix = doc[i].get_pixmap(matrix=RENDER_MATRIX_LOW)
+                    jpg = pix.tobytes("jpeg")
+                page_images.append(jpg)
+                (images_dir / f"page_{i + 1:02d}.jpg").write_bytes(jpg)
+            doc.close()
+        except Exception as e:
+            raise PDFParseError(f"PyMuPDF 渲染失敗 {pdf_path}: {e}") from e
+        return page_images
+
+    def _analyze_resume(self, page_images: List[bytes], paper_name: str) -> str:
+        """單次 Vision call 把所有頁面 + prompt 一起送。"""
+        prompt = self._read_prompt()
+        try:
+            text = self.llm.chat_with_images(
+                messages=[{"role": "user", "content": prompt}],
+                images=[(img, "image/jpeg") for img in page_images],
+                model=settings.LLM_VISION_MODEL,
+            )
+        except Exception as e:
+            self.logger.error(f"Vision 履歷解析失敗 {paper_name}: {e}")
+            raise PDFParseError(f"Vision resume parse failed: {e}") from e
+
+        if not text or not text.strip():
+            raise PDFParseError(f"Vision 回傳空字串 {paper_name}")
+        return text
+
+    def _read_prompt(self) -> str:
+        try:
+            return RESUME_VISION_PROMPT_PATH.read_text(encoding="utf-8").strip()
+        except Exception as e:
+            raise PDFParseError(
+                f"讀取 resume vision prompt 失敗 {RESUME_VISION_PROMPT_PATH}: {e}"
+            ) from e
+
+    def _post_process_vision_output(self, raw: str, paper_name: str = "") -> str:
+        """清理 Vision LLM 輸出常見問題。
+
+        順序：
+        1. strip 兩端空白
+        2. 拔 code fence（```markdown ... ``` 或 ``` ... ```）
+        3. 移除 LLM preamble（即使 prompt 禁止仍可能出現）
+        """
+        text = raw.strip()
+
+        # 1. Strip code fence
+        if text.startswith("```"):
+            lines = text.splitlines()
+            lines = lines[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+
+        # 2. 移除 LLM preamble — 找第一個 # 開頭的行作為真正起點
+        first_nonblank_line = next(
+            (ln for ln in text.splitlines() if ln.strip()), ""
+        )
+        if not first_nonblank_line.startswith("#"):
+            for prefix in COMMON_PREAMBLES:
+                if first_nonblank_line.lstrip().startswith(prefix):
+                    all_lines = text.splitlines()
+                    for idx, line in enumerate(all_lines):
+                        if line.lstrip().startswith("#"):
+                            removed = "\n".join(all_lines[:idx]).strip()
+                            self.logger.warning(
+                                f"[resume] {paper_name} Vision 回傳含 preamble、"
+                                f"自動移除 {len(removed)} chars: {removed[:80]!r}"
+                            )
+                            text = "\n".join(all_lines[idx:]).strip()
+                            break
+                    break
+
+        return text
+
+    def _validate_vision_output(self, text: str, paper_name: str = "") -> None:
+        """v2：驗證 Vision 輸出結構完整性 + 主標題黑名單檢查。
+
+        v2 鬆綁：移除「強制 ## Working Experience」要求——因為履歷可能用
+        中文 section 名（工作經驗）、freelance 結構（SERVICES OFFERED）、
+        或學生履歷無工作經歷。
+
+        v2 新增：主標題黑名單檢查（對齊既有設計手冊 §3.1 / §4.5）。
+        - 完全等於黑名單詞 → raise PDFParseError（履歷主標題必須是人名）
+        - 含 suspicious pattern（如 'CTO Resume - X'）→ log warning（不 raise）
+        """
+        first_nonblank = next(
+            (ln for ln in text.splitlines() if ln.strip()), ""
+        )
+        if not first_nonblank.startswith("#"):
+            raise PDFParseError(
+                f"Vision 輸出第一行不是 # 開頭 {paper_name}: "
+                f"first_line={first_nonblank[:80]!r}"
+            )
+
+        # v2 主標題黑名單檢查
+        title_text = first_nonblank.lstrip("#").strip().casefold()
+
+        if title_text in RESUME_TITLE_BLACKLIST:
+            raise PDFParseError(
+                f"Vision 輸出主標題是黑名單通用詞 {title_text!r}、應為人名 "
+                f"{paper_name}: {first_nonblank}"
+            )
+
+        for pattern in RESUME_TITLE_SUSPICIOUS_PATTERNS:
+            if pattern in title_text:
+                self.logger.warning(
+                    f"[resume] {paper_name} 主標題可能是重組格式（含 "
+                    f"{pattern!r}）、請人工檢查: {first_nonblank}"
+                )
+                break
