@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import settings
-from config import LLMClient
+from llm.client import LLMClient
 
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 MIME_TYPES = {

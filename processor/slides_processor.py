@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import fitz  # PyMuPDF
 import settings
-from config import LLMClient
+from llm.client import LLMClient
 from utils.text_utils import strip_json_fence
 from processor.pdf_parser import PDFParser, PDFParseError  # noqa: F401
 

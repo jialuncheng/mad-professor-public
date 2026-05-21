@@ -4,7 +4,7 @@ import time
 import logging
 from pathlib import Path
 import settings
-from config import LLMClient
+from llm.client import LLMClient
 from utils.heading_utils import fix_heading_levels
 from utils.text_utils import strip_json_fence
 

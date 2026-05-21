@@ -3,7 +3,7 @@ import json
 import os
 import re
 from typing import List, Dict, Any, Generator, Tuple
-from config import LLMClient
+from llm.client import LLMClient
 
 AI_CHARACTER_PROMPT_PATH = "prompt/ai/ai_character_prompt.txt"
 AI_EXPLAIN_PROMPT_PATH = "prompt/ai/ai_explain_prompt.txt"

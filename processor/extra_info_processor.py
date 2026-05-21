@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import settings
-from config import LLMClient
+from llm.client import LLMClient
 
 SUMMARY_PROMPT_PATH = "prompt/translate/summary_generation_prompt.txt"
 QUESTION_PROMPT_PATH = "prompt/translate/question_generation_prompt.txt"

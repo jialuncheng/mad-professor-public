@@ -1,7 +1,8 @@
 import json
 import logging
 from pathlib import Path
-from config import LLMClient, TRANSLATE_MODEL
+from llm.client import LLMClient
+from config import TRANSLATE_MODEL
 
 # 翻译提示词文件路径
 TITLE_TRANSLATE_PROMPT_PATH = "prompt/translate/title_translate_prompt.txt"

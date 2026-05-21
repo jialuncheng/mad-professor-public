@@ -392,7 +392,7 @@ def extract_metadata_from_first_page_llm(pdf_path, llm=None,
         prompt = _load_stage_a_prompt(dt).replace("{page1_text}", text)
 
         if llm is None:
-            from config import LLMClient  # 延遲 import
+            from llm.client import LLMClient  # 延遲 import
             import settings
             llm = LLMClient.get_instance()
             model = getattr(settings, "LLM_DOC_MODEL", None)
@@ -554,7 +554,7 @@ def extract_abstract_from_markdown(markdown_text, llm=None) -> Optional[str]:
         head = markdown_text[:3000]
         if llm is None:
             try:
-                from config import LLMClient
+                from llm.client import LLMClient  # 延遲 import
                 import settings
                 llm = LLMClient.get_instance()
                 model = getattr(settings, "LLM_DOC_MODEL", None)

@@ -14,7 +14,7 @@ import time
 import fitz  # PyMuPDF
 
 import settings
-from config import LLMClient
+from llm.client import LLMClient
 
 DOMAIN_PROMPT = """這是一份文件的第一頁（內含頁面文字與頁面截圖）。
 請判斷此文件的「具體主題領域」，回傳一個 10–30 字的短句，要具體、不要泛泛分類。
