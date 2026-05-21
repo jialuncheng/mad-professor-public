@@ -149,18 +149,20 @@
 ```
 
 ### 6.1.1 文件上傳流程說明（Help modal）
-Phase 4.7d Commit 5 後支援多檔同時上傳。Help modal 列出 6 步驟：
+Phase 4.7d Commit 10：一次只能上傳一份文件。Help modal 列出 5 步驟 +
+單檔限制提示：
 ```
 1. 點擊「上傳」icon，選擇 PDF 檔案
 2. 選擇文件類型（學術論文、簡報、書籍等）
 3. 點擊「確認，開始處理」
 4. 等待處理完成（含翻譯、建立向量索引）
 5. 完成後論文出現在左側列表
-6. 可同時上傳多份文件
+（每次只能上傳一份文件；如選多份會出現提示）
 ```
 
-互動契約：多檔同時上傳時，confirm modal **逐檔跳出**（不批次選 doc_type），
-每份 modal 確認後才彈下一份；占位列依序加入左欄頂端。
+互動契約：file input 不設 `multiple`；若 OS 檔選擇器仍允許多選（部分平台
+無視 multiple=false 選擇行為），handler 偵測 `files.length > 1` 時 alert
+「一次只能上傳一份文件」並 return、不開 confirm modal、不發 upload。
 
 ### 6.2 空狀態
 ```
