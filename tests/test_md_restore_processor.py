@@ -16,7 +16,21 @@ from processor.md_restore_processor import (
     _title_sim,
     _dom_match,
     _tokenize_for_domain,
+    # Commit 2
+    _resolve_authors,
+    _resolve_date,
+    _resolve_venue,
+    _resolve_doi,
+    _resolve_keywords,
+    _resolve_candidate_extras,
+    _render_header_en,
+    _render_header_zh,
 )
+
+
+def _field(value, source='llm_page1'):
+    return {'value': value, 'source': source,
+            'confidence': 'high', 'alternates': {}}
 
 
 def _meta(title=None, source=None, translated=None, candidate=None):
@@ -195,3 +209,195 @@ def test_raw_only_no_metadata():
     assert en == 'A Paper'
     assert zh == '一篇論文'
     assert 'raw only' in log
+
+
+# ── Commit 2：authors 決策樹 ──
+
+def test_resolve_authors_blacklist_all_dropped():
+    """整陣列全黑名單 → drop M、保留 raw_authors_info"""
+    m = {'authors': _field(['Microsoft Office User'], 'pdf_metadata')}
+    data = {'authors_info': 'Alice & Bob\nMIT'}
+    authors, keep_raw, log = _resolve_authors(data, m, 'academic')
+    assert authors == []
+    assert keep_raw is True
+    assert 'all-blacklisted' in log
+
+
+def test_resolve_authors_single_item_cleaned():
+    """部分條目黑名單 → 剔除黑名單條目、保留乾淨條目"""
+    m = {'authors': _field(['Microsoft Office User', 'Alice Chen'], 'llm_page1')}
+    authors, keep_raw, log = _resolve_authors({}, m, 'academic')
+    assert authors == ['Alice Chen']
+    assert keep_raw is False
+
+
+def test_resolve_authors_resume_skip():
+    """resume 不顯示 authors"""
+    m = {'authors': _field(['Anyone'], 'llm_page1')}
+    authors, keep_raw, log = _resolve_authors({}, m, 'resume')
+    assert authors == []
+    assert keep_raw is False
+    assert 'resume skip' in log
+
+
+def test_resolve_authors_metadata_empty_keep_raw():
+    """metadata 無 authors 但 raw 有 → 保留 raw"""
+    authors, keep_raw, log = _resolve_authors(
+        {'authors_info': 'Alice; Bob'}, {}, 'academic'
+    )
+    assert authors == []
+    assert keep_raw is True
+
+
+# ── Commit 2：date 決策樹 ──
+
+def test_resolve_date_pdf_metadata_dropped():
+    """v2 §4.3 #4：pdf_metadata 來源永遠丟"""
+    m = {'publication_date': _field('2024-01-15', 'pdf_metadata')}
+    date, log = _resolve_date(m)
+    assert date == ''
+    assert 'creation_date' in log
+
+
+def test_resolve_date_future_blacklisted():
+    """未來日期視為錯誤"""
+    m = {'publication_date': _field('2099-12-31', 'llm_page1')}
+    date, log = _resolve_date(m)
+    assert date == ''
+    assert 'blacklisted' in log
+
+
+def test_resolve_date_llm_page1_kept():
+    """llm_page1 抽到正常日期 → 保留"""
+    m = {'publication_date': _field('2024-05-20', 'llm_page1')}
+    date, log = _resolve_date(m)
+    assert date == '2024-05-20'
+
+
+# ── Commit 2：venue 決策樹 ──
+
+def test_resolve_venue_priority_journal_first():
+    """journal_or_conference > publisher > organization"""
+    m = {
+        'journal_or_conference': _field('Nature', 'llm_page1'),
+        'publisher': _field('Springer', 'llm_page1'),
+        'organization': _field('MIT', 'llm_page1'),
+    }
+    v, field, src = _resolve_venue(m)
+    assert v == 'Nature'
+    assert field == 'journal_or_conference'
+
+
+def test_resolve_venue_pdf_metadata_skipped():
+    """pdf_metadata 來源不採"""
+    m = {
+        'journal_or_conference': _field('Some Junk Subject', 'pdf_metadata'),
+        'publisher': _field('NVIDIA', 'llm_page1'),
+    }
+    v, field, src = _resolve_venue(m)
+    assert v == 'NVIDIA'
+    assert field == 'publisher'
+
+
+def test_resolve_venue_label_blacklist():
+    """N/A / Unknown / TBD 視為空"""
+    m = {'journal_or_conference': _field('N/A', 'llm_page1')}
+    v, field, src = _resolve_venue(m)
+    assert v == ''
+
+
+# ── Commit 2：DOI 驗證 ──
+
+def test_resolve_doi_valid():
+    m = {'doi': _field('10.1038/nature12373', 'llm_page1')}
+    assert _resolve_doi(m) == '10.1038/nature12373'
+
+
+def test_resolve_doi_invalid_format_dropped():
+    m = {'doi': _field('not-a-real-doi', 'llm_page1')}
+    assert _resolve_doi(m) == ''
+
+
+def test_resolve_doi_empty():
+    assert _resolve_doi({}) == ''
+
+
+# ── Commit 2：keywords ──
+
+def test_resolve_keywords_label_stripped():
+    m = {'keywords': _field(['Keywords', 'AI', 'ML', 'deep learning'], 'llm_page1')}
+    kws = _resolve_keywords(m)
+    assert 'Keywords' not in kws
+    assert kws == ['AI', 'ML', 'deep learning']
+
+
+def test_resolve_keywords_empty():
+    assert _resolve_keywords({}) == []
+
+
+# ── Commit 2：candidate_extras ──
+
+def test_resolve_candidate_extras_resume():
+    m = {'organization': _field('Tesla', 'llm_page1')}
+    extras = _resolve_candidate_extras(m, 'resume')
+    assert extras == {'organization': 'Tesla'}
+
+
+def test_resolve_candidate_extras_non_resume_empty():
+    m = {'organization': _field('Tesla', 'llm_page1')}
+    assert _resolve_candidate_extras(m, 'academic') == {}
+
+
+# ── Commit 2：header rendering ──
+
+def test_render_header_en_academic_full():
+    h = _render_header_en(
+        title='AlphaFold-2', doc_type='academic',
+        authors_list=['Alice', 'Bob'], date='2024-05-20',
+        venue='Nature', doi='10.1038/x', keywords=['AI'],
+        candidate_extras={}, domain='Protein folding',
+    )
+    assert h.startswith('# AlphaFold-2')
+    assert 'Authors' in h and 'Alice, Bob' in h
+    assert 'Date' in h and '2024-05-20' in h
+    assert 'Venue' in h and 'Nature' in h
+
+
+def test_render_header_zh_academic_full():
+    h = _render_header_zh(
+        title_zh='阿爾法摺疊-2', doc_type='academic',
+        authors_list=['Alice', 'Bob'], date='2024-05-20',
+        venue='Nature', doi='', keywords=['人工智慧'],
+        candidate_extras={}, domain='',
+    )
+    assert h.startswith('# 阿爾法摺疊-2')
+    assert '作者' in h and 'Alice、Bob' in h
+    assert '日期' in h and '2024-05-20' in h
+    assert '出處' in h and 'Nature' in h
+    assert 'DOI' not in h  # 缺項省略
+    assert '關鍵字' in h and '人工智慧' in h
+
+
+def test_render_header_resume_simplified():
+    h_en = _render_header_en(
+        title='DeHunt', doc_type='resume',
+        authors_list=[], date='', venue='', doi='', keywords=[],
+        candidate_extras={'organization': 'Tesla'},
+        domain='半導體 SoC',
+    )
+    assert '# DeHunt' in h_en
+    assert 'Organization' in h_en and 'Tesla' in h_en
+    assert 'Domain' in h_en
+    # resume 不渲染 Authors / Date / Venue
+    assert 'Authors' not in h_en
+    assert 'Date' not in h_en
+
+
+def test_render_header_missing_fields_silently_omitted():
+    h = _render_header_zh(
+        title_zh='Some Title', doc_type='news',
+        authors_list=[], date='', venue='', doi='', keywords=[],
+        candidate_extras={}, domain='',
+    )
+    # 只有 title + 空行
+    assert h.strip() == '# Some Title'

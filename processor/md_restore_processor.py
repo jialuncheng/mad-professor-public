@@ -211,6 +211,244 @@ def _resolve_title(
     return (raw_en, raw_zh, 'low (unknown source)')
 
 
+# ───────────────── Phase 4.7d Commit 2：全欄位融合（v2 §3.2-§3.4 + §4.2-§4.5） ─────────────────
+
+# Authors 黑名單（v2 §3.2）：PDF 預設值 + label 文字 + PDF 工具名
+AUTHORS_BLACKLIST_NORM = {
+    "microsoft office user", "office user", "office",
+    "administrator", "admin", "user", "guest",
+    "windows user", "mac user", "default user",
+    "author", "authors", "作者", "by",
+    "anonymous", "unknown",
+    "adobe acrobat", "microsoft word", "powerpoint",
+}
+
+# Date 黑名單（v2 §3.3）
+DATE_BLACKLIST = {"1970-01-01", "0000-00-00", "1900-01-01"}
+DATE_FUTURE_THRESHOLD = "2050-12-31"
+
+# venue / journal / publisher / organization 共用 label 黑名單（v2 §3.4）
+META_LABEL_BLACKLIST = {"n/a", "unknown", "tbd", "none", "null", "-"}
+
+# DOI 格式（v2 §4.5）
+DOI_REGEX = re.compile(r"^10\.\d{4,9}/[-._;()/:a-z0-9]+$", re.IGNORECASE)
+
+# Keywords 自身 label（v2 §4.5）
+KEYWORDS_STOPWORDS = {"keywords", "關鍵字", "keyword", "key words"}
+
+# Candidate name label（v2 §3.4 / 4.5）
+CANDIDATE_LABEL_BLACKLIST = {"resume", "履歷", "cv", "curriculum vitae", "個人簡歷"}
+
+
+def _author_in_blacklist(name: str) -> bool:
+    if not name:
+        return False
+    return name.strip().casefold() in AUTHORS_BLACKLIST_NORM
+
+
+def _resolve_authors(
+    data: dict,
+    metadata: Optional[dict],
+    doc_type: Optional[str],
+) -> tuple:
+    """v2 §4.2 authors 決策樹。
+
+    Returns:
+        (authors_list, keep_raw_info, conf_log)
+        - authors_list: 給 header 用的結構化作者陣列（可空）
+        - keep_raw_info: 是否保留原 raw authors_info 段（True=保留、False=已由
+          header 取代不再寫）
+        - conf_log: 日誌字串
+    """
+    # resume 不顯示 authors（candidate_name 已是 title）
+    if doc_type == 'resume':
+        return ([], False, 'resume skip')
+
+    raw_authors_info = (data.get('authors_info') or '').strip()
+    m = metadata or {}
+    m_authors = (m.get('authors') or {}).get('value') or []
+    m_source = (m.get('authors') or {}).get('source') or ''
+
+    if m_authors:
+        all_blacklisted = all(_author_in_blacklist(str(a)) for a in m_authors)
+        if all_blacklisted:
+            # 整組丟、用 raw_authors_info（如有）
+            return ([], bool(raw_authors_info),
+                    'all-blacklisted, drop M, keep raw_info')
+        cleaned = [a for a in m_authors if not _author_in_blacklist(str(a))]
+        if cleaned:
+            return (cleaned, False,
+                    f'{m_source or "metadata"} cleaned ({len(m_authors)}->{len(cleaned)})')
+
+    # M 空、raw_authors_info 有 → 保留 raw section
+    if raw_authors_info:
+        return ([], True, 'no M, keep raw_authors_info')
+
+    return ([], False, 'no authors')
+
+
+def _date_in_blacklist(date_str: str) -> bool:
+    if not date_str:
+        return True
+    d = date_str.strip()
+    if d in DATE_BLACKLIST:
+        return True
+    if d > DATE_FUTURE_THRESHOLD:
+        return True
+    return False
+
+
+def _resolve_date(metadata: Optional[dict]) -> tuple:
+    """v2 §4.3：pdf_metadata 來源永遠丟（creation_date ≠ 發表日）。"""
+    m = metadata or {}
+    m_date = (m.get('publication_date') or {}).get('value') or ''
+    m_source = (m.get('publication_date') or {}).get('source') or ''
+
+    if not m_date:
+        return ('', 'no date')
+    if m_source == 'pdf_metadata':
+        return ('', 'pdf_metadata is creation_date, drop')
+    if _date_in_blacklist(m_date):
+        return ('', f'blacklisted: {m_date}')
+    return (m_date, m_source or 'unknown')
+
+
+def _resolve_venue(metadata: Optional[dict]) -> tuple:
+    """v2 §4.5：journal_or_conference > publisher > organization 取第一個非空。
+    pdf_metadata 來源此 3 欄一律不採。"""
+    m = metadata or {}
+    for field in ('journal_or_conference', 'publisher', 'organization'):
+        v = (m.get(field) or {}).get('value') or ''
+        s = (m.get(field) or {}).get('source') or ''
+        if not v:
+            continue
+        if s == 'pdf_metadata':
+            continue
+        if v.strip().casefold() in META_LABEL_BLACKLIST:
+            continue
+        return (v.strip(), field, s)
+    return ('', '', '')
+
+
+def _resolve_doi(metadata: Optional[dict]) -> str:
+    m = metadata or {}
+    v = (m.get('doi') or {}).get('value') or ''
+    if not v:
+        return ''
+    v = v.strip()
+    return v if DOI_REGEX.match(v) else ''
+
+
+def _resolve_keywords(metadata: Optional[dict]) -> list:
+    m = metadata or {}
+    kws = (m.get('keywords') or {}).get('value') or []
+    if not kws:
+        return []
+    return [k for k in kws
+            if str(k).strip()
+            and str(k).strip().casefold() not in KEYWORDS_STOPWORDS]
+
+
+def _resolve_candidate_extras(metadata: Optional[dict],
+                              doc_type: Optional[str]) -> dict:
+    """resume 專用：取 organization 暫代 current_role / latest_employer。"""
+    if doc_type != 'resume':
+        return {}
+    m = metadata or {}
+    org = ((m.get('organization') or {}).get('value') or '').strip()
+    if org and org.casefold() not in CANDIDATE_LABEL_BLACKLIST:
+        return {'organization': org}
+    return {}
+
+
+# ───────────────── doc_type-specific header templates（v2 §B-5） ─────────────────
+# === doc_type-registry ===
+# 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+
+def _render_header_en(
+    title: str,
+    doc_type: str,
+    authors_list: list,
+    date: str,
+    venue: str,
+    doi: str,
+    keywords: list,
+    candidate_extras: dict,
+    domain: str,
+) -> str:
+    """產出 final_*_en.md 的 header（# title + meta block）。缺項靜默省略。"""
+    lines = [f"# {title}", ""]
+
+    if doc_type == 'resume':
+        org = candidate_extras.get('organization', '')
+        if org:
+            lines.append(f"> **Organization**: {org}")
+        if domain:
+            lines.append(f"> **Domain**: {domain}")
+        if lines and lines[-1] != "":
+            lines.append("")
+        return "\n".join(lines)
+
+    meta_bits = []
+    if authors_list:
+        meta_bits.append(f"> **Authors**: {', '.join(str(a) for a in authors_list)}")
+    if date:
+        meta_bits.append(f"> **Date**: {date}")
+    if venue:
+        meta_bits.append(f"> **Venue**: {venue}")
+    if doi:
+        meta_bits.append(f"> **DOI**: {doi}")
+    if keywords:
+        meta_bits.append(f"> **Keywords**: {', '.join(keywords)}")
+
+    if meta_bits:
+        lines.extend(meta_bits)
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _render_header_zh(
+    title_zh: str,
+    doc_type: str,
+    authors_list: list,
+    date: str,
+    venue: str,
+    doi: str,
+    keywords: list,
+    candidate_extras: dict,
+    domain: str,
+) -> str:
+    """產出 final_*_zh.md 的 header（中文 label）。缺項靜默省略。"""
+    lines = [f"# {title_zh}", ""]
+
+    if doc_type == 'resume':
+        org = candidate_extras.get('organization', '')
+        if org:
+            lines.append(f"> **機構**：{org}")
+        if domain:
+            lines.append(f"> **領域**：{domain}")
+        if lines and lines[-1] != "":
+            lines.append("")
+        return "\n".join(lines)
+
+    meta_bits = []
+    if authors_list:
+        meta_bits.append(f"> **作者**：{'、'.join(str(a) for a in authors_list)}")
+    if date:
+        meta_bits.append(f"> **日期**：{date}")
+    if venue:
+        meta_bits.append(f"> **出處**：{venue}")
+    if doi:
+        meta_bits.append(f"> **DOI**：{doi}")
+    if keywords:
+        meta_bits.append(f"> **關鍵字**：{'、'.join(keywords)}")
+
+    if meta_bits:
+        lines.extend(meta_bits)
+        lines.append("")
+    return "\n".join(lines)
+
+
 class RestoreProcessor:
     """恢复处理器, 将提供的json文件还原成中英两篇md文档"""
 
@@ -456,26 +694,56 @@ class RestoreProcessor:
             with input_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # Phase 4.7d Commit 1：title 三軸融合（v2 §4.1）。舊 caller
-            # 不傳 metadata/doc_type/domain 時 _resolve_title 退回「raw only」分支、
-            # 行為與舊版等效。
+            # Phase 4.7d Commit 1：title 三軸融合（v2 §4.1）
             title_en, title_zh, conf_log = _resolve_title(
                 data, metadata, doc_type, domain, original_filename, paper_uuid
             )
-            self.logger.info(
-                f"[md_restore] 三軸融合 title: {conf_log}"
-            )
+            self.logger.info(f"[md_restore] 三軸融合 title: {conf_log}")
             self.logger.info(
                 f"  raw_en={data.get('title')!r} -> final_en={title_en!r}"
             )
             self.logger.info(
                 f"  raw_zh={data.get('translated_title')!r} -> final_zh={title_zh!r}"
             )
-            self._write_to_md(output_path_en, f"# {title_en}")
-            self._write_to_md(output_path_zh, f"# {title_zh}")
-            
-            # 处理作者信息
-            if 'authors_info' in data:
+
+            # Phase 4.7d Commit 2：全欄位融合 + doc_type-specific header（v2 §4.2-§4.5）
+            dt = doc_type or 'academic'
+            authors_list, keep_raw_info, auth_log = _resolve_authors(
+                data, metadata, doc_type
+            )
+            date_val, date_log = _resolve_date(metadata)
+            venue_val, venue_field, venue_src = _resolve_venue(metadata)
+            doi_val = _resolve_doi(metadata)
+            keywords_val = _resolve_keywords(metadata)
+            candidate_extras = _resolve_candidate_extras(metadata, doc_type)
+
+            self.logger.info(
+                f"[md_restore] authors: {auth_log} (n={len(authors_list)})"
+            )
+            self.logger.info(f"[md_restore] date: {date_log}")
+            if venue_val:
+                self.logger.info(
+                    f"[md_restore] venue: {venue_val!r} ({venue_field}, {venue_src})"
+                )
+            if doi_val:
+                self.logger.info(f"[md_restore] doi: {doi_val!r}")
+            if keywords_val:
+                self.logger.info(f"[md_restore] keywords: n={len(keywords_val)}")
+
+            header_en = _render_header_en(
+                title_en, dt, authors_list, date_val, venue_val, doi_val,
+                keywords_val, candidate_extras, domain or '',
+            )
+            header_zh = _render_header_zh(
+                title_zh, dt, authors_list, date_val, venue_val, doi_val,
+                keywords_val, candidate_extras, domain or '',
+            )
+            self._write_to_md(output_path_en, header_en)
+            self._write_to_md(output_path_zh, header_zh)
+
+            # 處理 raw authors_info：若 metadata 已給結構化 authors 則丟、
+            # 否則保留（既有 _clean_authors_info 處理上標數字 / table 等）
+            if keep_raw_info and 'authors_info' in data:
                 authors = self._clean_authors_info(data['authors_info'])
                 if authors:
                     self._write_to_md(output_path_en, authors)
