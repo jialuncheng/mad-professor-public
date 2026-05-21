@@ -1,12 +1,19 @@
 import json
 import logging
 from pathlib import Path
-from typing import Tuple, Dict, List, Any
+from typing import Tuple, Dict, List, Any, Optional
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
 from utils.text_utils import load_caption_map
+
+# Phase 4.7d Commit 15-1：短文 doc_type 合併同 section 內 text items
+# === doc_type-registry ===
+# 新增 doc_type 須評估是否屬於「短文型」（短條列、每 item 文字少、合併
+# 後 chunk 不致於過大稀釋 embedding signal）。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+_SHORT_DOC_TYPES = frozenset({'resume', 'slides', 'news', 'web'})
+
 
 class RagProcessor:
     """RAG 处理器：将 JSON 转换为 Markdown 和符合检索需求的JSON树结构，并生成向量库"""
@@ -17,7 +24,8 @@ class RagProcessor:
         self.embedder = embedder if embedder is not None else EmbeddingModel.get_instance()
 
     def process(self, input_path: str, output_md_path: str, output_tree_json_path: str,
-                vector_store_path: str, images_info_path: str = None) -> Tuple[str, str, str]:
+                vector_store_path: str, images_info_path: str = None,
+                doc_type: str = '') -> Tuple[str, str, str]:
         """处理 JSON 文件，生成 Markdown、JSON以及向量库
 
         Args:
@@ -26,6 +34,8 @@ class RagProcessor:
             output_tree_json_path: 输出的树结构JSON文件路径
             vector_store_path: 向量库存储路径
             images_info_path: Vision 生成的圖片說明檔案路徑（可選）
+            doc_type: 文件類型（Phase 4.7d Commit 15-1）；用於 chunk 內容
+                Context 前綴與短文 doc_type 合併。預設 '' 行為等效既有。
 
         Returns:
             Tuple[str, str, str]: Markdown文件路径, JSON文件路径, 向量库路径
@@ -55,7 +65,7 @@ class RagProcessor:
                 json.dump(paper_data, f, ensure_ascii=False, indent=2)
 
             # 生成 Markdown 文件
-            self._generate_markdown(paper_data, output_md_path)
+            self._generate_markdown(paper_data, output_md_path, doc_type=doc_type)
 
             # 为 Markdown 文件创建向量库
             self._create_vector_store(output_md_path, vector_store_path)
@@ -289,50 +299,192 @@ class RagProcessor:
             
         return node
 
-    def _generate_markdown(self, tree_structure: Dict, output_path: str):
-        """生成 Markdown 文件，按节点 key 组织内容，并增强错误处理"""
-        self.logger.info(f"生成 Markdown 文件: {output_path}")
-        
+    def _extract_section_title(self, key: str) -> str:
+        """從 key 路徑萃取 section title（去掉 paper_title 前綴 + /section/... 尾段）。
+
+        Phase 4.7d Commit 15-1：給 _generate_md_content Context 前綴用。
+
+        範例：
+          'DeHunt Resume/Working Experience/section'
+            → 'Working Experience'
+          'DeHunt Resume/Working Experience/section/0/text'
+            → 'Working Experience'
+          'DeHunt Resume/Working Experience/VIEWTRIX/section'
+            → 'Working Experience > VIEWTRIX'
+        """
+        if not key:
+            return ''
+        parts = key.split('/')
+        if len(parts) < 2:
+            return ''
+        # 去 paper_title (parts[0])
+        middle = parts[1:]
+        cleaned = []
+        _LEAF_MARKERS = ('section', 'text', 'figure', 'table', 'formula')
+        for p in middle:
+            if p in _LEAF_MARKERS or p.isdigit():
+                break
+            cleaned.append(p)
+        return ' > '.join(cleaned)
+
+    def _try_merge_text_items(self, section: Dict, tree: Dict,
+                              doc_type: str, sec_idx: int,
+                              ch_idx: Optional[int] = None
+                              ) -> Optional[Tuple[str, str]]:
+        """嘗試合併 section 內所有 text items 為單一 chunk。
+        Phase 4.7d Commit 15-1 D：對短文 doc_type 套用、解 plan §2 問題 #4。
+
+        Returns:
+            (merged_key, full_markdown) 或 None（< 2 個 text items / 全空）
+        """
+        text_items = [i for i in section.get('content', []) if i.get('type') == 'text']
+        if len(text_items) <= 1:
+            return None  # 只 1 個或更少、不必合併
+
+        pieces = []
+        for item in text_items:
+            c = (item.get('translated_content') or item.get('content') or '').strip()
+            if c:
+                pieces.append(c)
+        if not pieces:
+            return None
+        combined = "\n\n".join(pieces)
+
+        section_title = section.get('translated_title') or section.get('title', '')
+        paper_title = tree.get('translated_title') or tree.get('title', '')
+
+        # merged_key 走 _merged 後綴避免跟 per-item chunk key 衝突
+        if ch_idx is None:
+            merged_key = f"{paper_title}/{section_title}/section/_merged"
+        else:
+            parent = (tree.get('sections') or [{}])[sec_idx]
+            parent_title = parent.get('translated_title') or parent.get('title', '')
+            merged_key = f"{paper_title}/{parent_title}/{section_title}/section/_merged"
+
+        ctx_section = self._extract_section_title(merged_key)
+        md = f"# {merged_key}\n"
+        if doc_type or ctx_section:
+            md += f"Context: {' > '.join(b for b in (doc_type, ctx_section) if b)}\n\n"
+        md += combined
+        return (merged_key, md)
+
+    def _item_key(self, paper_title: str, section_title: str,
+                  child_title: Optional[str], idx: int, item_type: str) -> str:
+        """重建 per-item chunk 的 key（與 _generate_key_map 一致）、用於 merge 後標記跳過。"""
+        if child_title is None:
+            return f"{paper_title}/{section_title}/section/{idx}/{item_type}"
+        return f"{paper_title}/{section_title}/{child_title}/section/{idx}/{item_type}"
+
+    def _generate_markdown(self, tree_structure: Dict, output_path: str,
+                           doc_type: str = ''):
+        """生成 Markdown 文件，按节点 key 组织内容，并增强错误处理。
+
+        Phase 4.7d Commit 15-1：
+        - 加 doc_type 參數、進入 _generate_md_content 傳遞、用於 Context 前綴
+        - 短文 doc_type ∈ _SHORT_DOC_TYPES 時、合併同 section 多 text items
+          為單一 chunk（plan §2 問題 #4）；merged keys 標記跳過原 per-item 處理
+        """
+        self.logger.info(f"生成 Markdown 文件: {output_path} (doc_type={doc_type!r})")
+
+        is_short_doc = doc_type in _SHORT_DOC_TYPES
+        merged_skip_keys: set = set()
+
         with open(output_path, "w", encoding="utf-8") as f:
-            title = tree_structure.get("title", "")
-            
+            paper_title = tree_structure.get("title", "")
+
             # 先检查并记录所有未找到的节点
             missing_nodes = []
             for key, json_path in tree_structure.get("key_map", {}).items():
                 node = self._get_node_by_json_path(json_path, tree_structure)
                 if not node:
                     missing_nodes.append((key, json_path))
-                    
+
             if missing_nodes:
                 self.logger.warning(f"找不到以下节点: {missing_nodes[:10]} {'...' if len(missing_nodes) > 10 else ''}")
-            
+
+            # Phase 4.7d Commit 15-1 D：短文 doc_type 先寫合併 chunk、記錄跳過 keys
+            if is_short_doc:
+                sections = tree_structure.get('sections') or []
+                for sec_idx, section in enumerate(sections):
+                    section_title = (section.get('translated_title') or
+                                     section.get('title', ''))
+                    merged = self._try_merge_text_items(
+                        section, tree_structure, doc_type, sec_idx
+                    )
+                    if merged:
+                        _, merged_md = merged
+                        f.write(merged_md + "\n\n")
+                        for j, item in enumerate(section.get('content', []) or []):
+                            if item.get('type') == 'text':
+                                merged_skip_keys.add(
+                                    self._item_key(paper_title, section_title,
+                                                   None, j, 'text')
+                                )
+                    # 一級 children 也試合併
+                    for ch_idx, child in enumerate(section.get('children', []) or []):
+                        ch_title = (child.get('translated_title') or
+                                    child.get('title', ''))
+                        ch_merged = self._try_merge_text_items(
+                            child, tree_structure, doc_type, sec_idx, ch_idx
+                        )
+                        if ch_merged:
+                            _, ch_md = ch_merged
+                            f.write(ch_md + "\n\n")
+                            for j, item in enumerate(child.get('content', []) or []):
+                                if item.get('type') == 'text':
+                                    merged_skip_keys.add(
+                                        self._item_key(paper_title, section_title,
+                                                       ch_title, j, 'text')
+                                    )
+
             # 遍历 key_map 生成 Markdown 内容
             for key, json_path in tree_structure.get("key_map", {}).items():
+                if key in merged_skip_keys:
+                    continue  # Commit 15-1 D：已合併、跳過原 per-item
                 node = self._get_node_by_json_path(json_path, tree_structure)
-                
+
                 if not node:
                     # 已在上面记录了，这里不再重复记录
                     continue
-                
-                md_content = self._generate_md_content(node, key)
+
+                section_title = self._extract_section_title(key)
+                md_content = self._generate_md_content(
+                    node, key, doc_type=doc_type, section_title=section_title
+                )
                 if md_content:
                     f.write(md_content + "\n\n")
                 else:
                     self.logger.warning(f"无法为节点生成Markdown内容: {key}, 路径: {json_path}")
-            
+
             self.logger.info(f"Markdown文件生成完成: {output_path}")
 
-    def _generate_md_content(self, node: Dict, key: str) -> str:
+    def _generate_md_content(self, node: Dict, key: str,
+                             doc_type: str = '',
+                             section_title: str = '') -> str:
         """
-        生成 Markdown 内容，宽松化条件以处理更多类型的内容
+        生成 Markdown 内容，宽松化条件以处理更多类型的内容。
+
+        Phase 4.7d Commit 15-1：
+        - 新增 doc_type / section_title 參數；皆有提供時、chunk 內容開頭加
+          一行「Context: {doc_type} > {section_title}」，讓 embedding 拿到
+          語意脈絡（解 plan §2 問題 #3）。預設 '' 行為等效既有。
+        - 空 summary section 改返回 None 跳過（解 plan §2 問題 #1）。
         """
         md_content = f"# {key}\n"
-        
+        # Phase 4.7d Commit 15-1：Context 前綴
+        ctx_bits = [b for b in (doc_type, section_title) if b]
+        if ctx_bits:
+            md_content += f"Context: {' > '.join(ctx_bits)}\n\n"
+
         # 不同类型的节点生成不同的内容
         if "summary" in node and "/section" in key:
-            md_content += f"{node.get('summary', '')}"
+            # Commit 15-1 A：空 summary 跳過（plan §2 問題 #1）
+            summary = (node.get('summary') or '').strip()
+            if not summary:
+                return None
+            md_content += summary
             return md_content
-        
+
         if node.get("type") == "text":
             questions = node.get("questions", "")
             # 首先尝试使用translated_content，如果没有则使用content

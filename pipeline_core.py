@@ -649,8 +649,12 @@ class PipelineCore:
             raise ValueError("未找到 JSON 文件")
         paths = self._get_stage_output_path('rag', paper_dir, paper_name)
         images_info_path = self._get_stage_output_path('image_caption', paper_dir, paper_name)
+        # Phase 4.7d Commit 15-1：傳 doc_type 給 rag_processor，啟用 Context 前綴
+        # 與短文 doc_type 合併（resume / slides / news / web 套用）
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
         md_path, tree_path, vector_path = self.rag_processor.process(
             str(input_path), str(paths['md']), str(paths['tree_json']), str(paths['vector_store']),
-            images_info_path=str(images_info_path) if images_info_path.exists() else None
+            images_info_path=str(images_info_path) if images_info_path.exists() else None,
+            doc_type=doc_type,
         )
         return {'md': Path(md_path), 'tree_json': Path(tree_path), 'vector_store': Path(vector_path)}
