@@ -84,6 +84,152 @@ processing_tasks: dict = {}  # (owner_id, paper_id) -> {'status': str, 'progress
 tasks_lock = threading.Lock()
 
 
+# ── Phase 4.7d Commit 17-2：chat stream broker ──
+# stream 跑在後端、不依賴前端；任何 client 都可 attach（按 paper_id 找
+# active stream）；buffer 已產生的 partial、新 attach 一次回放 + 繼續 SSE。
+from dataclasses import dataclass, field  # noqa: E402
+from typing import List as _List, Optional as _Optional, Dict as _Dict, Tuple as _Tuple  # noqa: E402
+
+
+@dataclass
+class StreamSession:
+    """進行中對話 session（in-memory）。跨 client 共享 stream。"""
+    owner_id: int
+    paper_db_id: int
+    paper_uuid: str
+    query: str
+    chunks_buffer: _List[str] = field(default_factory=list)
+    grounding_sources: _List[dict] = field(default_factory=list)
+    subscribers: _List[asyncio.Queue] = field(default_factory=list)
+    done: bool = False
+    error: _Optional[str] = None
+    started_at: float = field(default_factory=time.time)
+
+
+# key = (owner_id, paper_db_id)
+active_streams: _Dict[_Tuple[int, int], StreamSession] = {}
+streams_lock = asyncio.Lock()
+
+
+async def _broadcast(session: StreamSession, chunk: dict) -> None:
+    """廣播 chunk 給所有 subscribers、queue full 時 drop（partial 在
+    chunks_buffer 仍完整、後續 attach 可拿）。"""
+    for q in list(session.subscribers):
+        try:
+            q.put_nowait(chunk)
+        except asyncio.QueueFull:
+            logger.warning(
+                f"[broker] subscriber queue full、drop chunk "
+                f"paper={session.paper_uuid}"
+            )
+
+
+async def _run_stream_background(session: StreamSession, history: list,
+                                  visible_content: _Optional[str],
+                                  use_web_search: bool) -> None:
+    """背景跑 ai_core.query_stream、廣播 chunks、最後寫 DB + 清 session。
+
+    跑在 asyncio.create_task() 內、不阻塞 chat endpoint return；sync
+    generator 透過 asyncio.to_thread 包、不卡 event loop（同 Commit 17-1b 手法）。
+    """
+    accumulated: list = []
+    grounding_sources: list = []
+    error_msg: _Optional[str] = None
+    _SENTINEL = object()
+    try:
+        gen = ai_core.query_stream(
+            query=session.query,
+            paper_id=session.paper_uuid,
+            owner_id=session.owner_id,
+            conversation_history=history,
+            visible_content=visible_content,
+            use_web_search=use_web_search,
+        )
+        while True:
+            chunk = await asyncio.to_thread(next, gen, _SENTINEL)
+            if chunk is _SENTINEL:
+                break
+            if chunk.get('sentence'):
+                accumulated.append(chunk['sentence'])
+                session.chunks_buffer.append(chunk['sentence'])
+            if chunk.get('done') and chunk.get('grounding_sources'):
+                grounding_sources = chunk['grounding_sources']
+                session.grounding_sources = grounding_sources
+            await _broadcast(session, chunk)
+        session.done = True
+    except Exception as e:
+        error_msg = f"(生成失敗) {str(e)[:200]}"
+        session.error = str(e)
+        logger.error(
+            f"[broker] stream error paper={session.paper_uuid}: {e}",
+            exc_info=True,
+        )
+        # 廣播失敗訊息給訂閱者
+        await _broadcast(session, {
+            'sentence': error_msg, 'done': True, 'error': True,
+        })
+        session.done = True
+    finally:
+        # 寫 DB（17-1 邏輯保留）
+        full = ''.join(accumulated) if accumulated else (error_msg or '')
+        if full.strip():
+            try:
+                paper_manager.append_chat_message(
+                    session.paper_db_id, session.owner_id,
+                    'assistant', full,
+                    grounding_sources=grounding_sources or None,
+                )
+            except Exception as e:
+                logger.error(
+                    f"[broker] DB append assistant failed "
+                    f"paper={session.paper_uuid}: {e}"
+                )
+        # 從 active_streams 移除
+        async with streams_lock:
+            active_streams.pop((session.owner_id, session.paper_db_id), None)
+        logger.info(
+            f"[broker] stream session 結束 paper={session.paper_uuid} "
+            f"sentences={len(accumulated)} error={bool(error_msg)}"
+        )
+
+
+async def _pump_to_client(session: StreamSession, sub_q: asyncio.Queue):
+    """async generator：先回放 chunks_buffer（給 late attach）、再從 queue
+    read 新 chunks 直到 done。
+    """
+    try:
+        # 回放已產生的 partial（late attach 用；sender 第一次 attach 時 buffer 還空、不回放）
+        if session.chunks_buffer:
+            replay_buffer = list(session.chunks_buffer)
+            for sentence in replay_buffer:
+                yield (
+                    "data: "
+                    + json.dumps(
+                        {'sentence': sentence, 'done': False, 'replay': True},
+                        ensure_ascii=False,
+                    )
+                    + "\n\n"
+                )
+        # 從 queue 持續 read 新 chunks
+        while True:
+            try:
+                chunk = await asyncio.wait_for(sub_q.get(), timeout=120.0)
+            except asyncio.TimeoutError:
+                if session.done:
+                    break
+                continue
+            yield (
+                "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
+            )
+            if chunk.get('done'):
+                break
+    finally:
+        try:
+            session.subscribers.remove(sub_q)
+        except ValueError:
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """啟動時初始化"""
@@ -430,82 +576,84 @@ async def chat(paper_id: str, request: ChatRequest,
                 current_user: CurrentUser = Depends(get_current_user)):
     """AI 問答，SSE 串流回傳。
 
-    Phase 4.7d Commit 17-1：DB 寫入時機改後端、不再靠前端
-    saveChatHistory 整包覆寫（解切走切回 bug）。
-    - endpoint 進入時 append 一筆 user query
-    - stream 結束時 append 一筆 assistant 完整回答
-    - stream 失敗時 append `(生成失敗) ...` 訊息（baron Q4 決：寫 DB）
+    Phase 4.7d Commit 17-2：改走 stream broker（plan §3）。
+    - 進入時寫 user query（Q1 + 17-1 邏輯）
+    - 拒絕同 paper 並發 query（baron Q1：409）
+    - 創 StreamSession + 註冊 active_streams
+    - 啟動 background task 跑 ai_core.query_stream（不阻塞 endpoint）
+    - sender 也是 subscriber（與 attach 對稱）
+    - return SSE、_pump_to_client 從 sub_q read
     """
     db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
     if db_id is None:
         raise HTTPException(status_code=404, detail="論文不存在")
 
-    # 進入即寫 user query（不靠前端 POST /chat/history）
-    paper_manager.append_chat_message(
-        db_id, current_user.id, 'user', request.query
-    )
-    # load 含剛寫的 user query（給 LLM 看完整歷史；ai_chat 內部會做
-    # idempotency 檢查、不重複 append 末筆相同 user query）
-    conversation_history = paper_manager.load_chat_history(
-        db_id, current_user.id
-    )
+    key = (current_user.id, db_id)
 
-    async def event_stream():
-        accumulated = []  # 收集 sentence 拼完整 AI 回答
-        grounding_sources = []
-        error_msg = None
-        try:
-            gen = ai_core.query_stream(
-                query=request.query,
-                owner_id=current_user.id,
-                paper_id=paper_id,
-                conversation_history=conversation_history,
-                visible_content=request.visible_content,
-                use_web_search=request.use_web_search
+    async with streams_lock:
+        # Q1：拒絕同 paper 並發
+        existing = active_streams.get(key)
+        if existing is not None and not existing.done:
+            raise HTTPException(
+                status_code=409,
+                detail="已有進行中的對話、請等待目前對話完成",
             )
 
-            # Phase 4.7d Commit 17-1b：ai_core.query_stream 是 sync generator、
-            # `for chunk in gen` 內每次 next(gen) 是 blocking LLM call，
-            # 即使後面 await asyncio.sleep(0) 也讓不出 event loop（中間根本
-            # 沒 await point）。改 asyncio.to_thread 把 next(gen) 丟給
-            # threadpool、讓 event loop 自由處理其他 endpoint（GET /content
-            # 不再卡載入中）。
-            _SENTINEL = object()
-            while True:
-                chunk = await asyncio.to_thread(next, gen, _SENTINEL)
-                if chunk is _SENTINEL:
-                    break
-                if chunk.get('sentence'):
-                    accumulated.append(chunk['sentence'])
-                if chunk.get('done') and chunk.get('grounding_sources'):
-                    grounding_sources = chunk['grounding_sources']
-                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+        # 17-1 邏輯：進入即寫 user query
+        paper_manager.append_chat_message(
+            db_id, current_user.id, 'user', request.query
+        )
+        # load 含剛寫的 user query
+        history = paper_manager.load_chat_history(db_id, current_user.id)
 
-        except Exception as e:
-            # Q4：失敗訊息寫 DB 與前端（避免「消失」感）
-            error_msg = f"(生成失敗) {str(e)[:200]}"
-            logger.error(f"[chat] stream error paper={paper_id}: {e}", exc_info=True)
-            yield (
-                "data: "
-                + json.dumps({'sentence': error_msg, 'done': True}, ensure_ascii=False)
-                + "\n\n"
-            )
-        finally:
-            # 寫 assistant 完整回答（或錯誤訊息）；兩者皆空則略過避免 empty row
-            full = ''.join(accumulated) if accumulated else (error_msg or '')
-            if full.strip():
-                try:
-                    paper_manager.append_chat_message(
-                        db_id, current_user.id, 'assistant', full,
-                        grounding_sources=grounding_sources or None,
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"[chat] DB append assistant failed paper={paper_id}: {e}",
-                        exc_info=True,
-                    )
+        # 創 session + 註冊 active_streams
+        session = StreamSession(
+            owner_id=current_user.id,
+            paper_db_id=db_id,
+            paper_uuid=paper_id,
+            query=request.query,
+        )
+        active_streams[key] = session
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+        # sender 為第一個 subscriber（與後續 attach 對稱）
+        sub_q: asyncio.Queue = asyncio.Queue(maxsize=200)
+        session.subscribers.append(sub_q)
+
+    # 啟動背景 task 跑 stream；endpoint 立即 return SSE
+    asyncio.create_task(_run_stream_background(
+        session, history, request.visible_content, request.use_web_search,
+    ))
+
+    return StreamingResponse(
+        _pump_to_client(session, sub_q),
+        media_type="text/event-stream",
+    )
+
+
+@app.get("/api/papers/{paper_id}/chat/attach")
+async def attach_stream(paper_id: str,
+                        current_user: CurrentUser = Depends(get_current_user)):
+    """Attach 到進行中的對話 stream（Phase 4.7d Commit 17-2）。
+
+    late client / 切回 paper 時用；先回放 chunks_buffer、再接 SSE。
+    無 active stream → 404。
+    """
+    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
+    if db_id is None:
+        raise HTTPException(status_code=404, detail="論文不存在")
+
+    key = (current_user.id, db_id)
+    async with streams_lock:
+        session = active_streams.get(key)
+        if session is None or session.done:
+            raise HTTPException(status_code=404, detail="無進行中的對話")
+        sub_q: asyncio.Queue = asyncio.Queue(maxsize=200)
+        session.subscribers.append(sub_q)
+
+    return StreamingResponse(
+        _pump_to_client(session, sub_q),
+        media_type="text/event-stream",
+    )
 
 
 # ── 對話紀錄 ──
@@ -516,11 +664,32 @@ class ChatHistory(BaseModel):
 @app.get("/api/papers/{paper_id}/chat/history")
 async def get_chat_history(paper_id: str,
                            current_user: CurrentUser = Depends(get_current_user)):
-    """取得對話紀錄（DB conversations）"""
+    """取得對話紀錄 + in_progress flag。
+
+    Phase 4.7d Commit 17-2：新格式 {messages, in_progress}；向下相容：
+    無 in_progress 時回舊純 list 格式（避免前端 17-3 之前 .length 邏輯壞）。
+    in_progress=None 走 list、有 → 走 dict；前端 17-3 同步更新後完整生效。
+    """
     db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
     if db_id is None:
         return []
-    return paper_manager.load_chat_history(db_id, current_user.id)
+    messages = paper_manager.load_chat_history(db_id, current_user.id)
+
+    # 檢查是否有 active stream
+    key = (current_user.id, db_id)
+    in_progress = None
+    async with streams_lock:
+        session = active_streams.get(key)
+        if session is not None and not session.done:
+            in_progress = {
+                'query': session.query,
+                'partial': ''.join(session.chunks_buffer),
+            }
+
+    # 向下相容：無 in_progress 時回舊 list；有則回 dict
+    if in_progress is None:
+        return messages
+    return {'messages': messages, 'in_progress': in_progress}
 
 @app.post("/api/papers/{paper_id}/chat/history")
 async def save_chat_history(paper_id: str, history: ChatHistory,
