@@ -308,6 +308,43 @@ def test_resolve_venue_label_blacklist():
     assert v == ''
 
 
+def test_resolve_venue_organization_as_list():
+    """Phase 4.7d Commit 8：LLM 偶爾把 organization 回 list（多個機構名）
+    → _coerce_to_str 取第一個非空字串元素，不再炸 AttributeError"""
+    m = {'organization': _field(['NVIDIA', 'Mellanox'], 'llm_page1')}
+    v, field, src = _resolve_venue(m)
+    assert v == 'NVIDIA'
+    assert field == 'organization'
+
+
+def test_resolve_venue_organization_empty_list():
+    """list 全空 → coerce 回 '' → 跳過該欄"""
+    m = {'organization': _field(['', '  ', None], 'llm_page1')}
+    v, field, src = _resolve_venue(m)
+    assert v == ''
+
+
+def test_resolve_doi_value_as_list():
+    """DOI 偶爾被回 list → 取第一個非空、再走格式驗證"""
+    m = {'doi': _field(['10.1038/nature12373', 'fallback'], 'llm_page1')}
+    assert _resolve_doi(m) == '10.1038/nature12373'
+
+
+def test_resolve_date_value_as_list():
+    """publication_date 偶爾被回 list → 取第一個非空"""
+    m = {'publication_date': _field(['2024-05-20', 'unknown'], 'llm_page1')}
+    date, log = _resolve_date(m)
+    assert date == '2024-05-20'
+
+
+def test_resolve_title_metadata_as_list():
+    """title.value 偶爾 list → 取第一個非空 → 走決策樹 #5（raw 空 + meta 有）"""
+    m = {'title': {'value': ['真標題', '副名'], 'source': 'llm_page1',
+                   'confidence': 'high', 'alternates': {}}}
+    en, zh, log = _resolve_title({'title': ''}, m, 'academic', '')
+    assert en == '真標題'
+
+
 # ── Commit 2：DOI 驗證 ──
 
 def test_resolve_doi_valid():

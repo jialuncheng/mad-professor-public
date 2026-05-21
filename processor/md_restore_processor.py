@@ -110,10 +110,11 @@ def _resolve_title(
     raw_zh = (data.get('translated_title') or raw_en).strip()
 
     m = metadata or {}
-    m_title = ((m.get('title') or {}).get('value') or '').strip()
-    m_trans = ((m.get('translated_title') or {}).get('value') or '').strip()
+    # 型別容錯：LLM 偶爾把 title / candidate_name 回成 list（多個候選名）
+    m_title = _coerce_to_str((m.get('title') or {}).get('value'))
+    m_trans = _coerce_to_str((m.get('translated_title') or {}).get('value'))
     m_source = ((m.get('title') or {}).get('source') or '')
-    m_cand = ((m.get('candidate_name') or {}).get('value') or '').strip()
+    m_cand = _coerce_to_str((m.get('candidate_name') or {}).get('value'))
 
     def _fallback():
         fb = (original_filename or '').strip()
@@ -240,6 +241,28 @@ KEYWORDS_STOPWORDS = {"keywords", "關鍵字", "keyword", "key words"}
 CANDIDATE_LABEL_BLACKLIST = {"resume", "履歷", "cv", "curriculum vitae", "個人簡歷"}
 
 
+def _coerce_to_str(v) -> str:
+    """metadata value 型別容錯：str/list/None/其他 → str。
+
+    LLM 偶爾對某些欄位（如 organization）回 list（多機構名）即使 prompt
+    要求 string；schema `_LIST_FIELDS` 未列入該欄、後段 `.strip()` 會炸
+    AttributeError。本 helper 在 md_restore 層消化型別 drift（不動 prompt
+    避免引入新型別不確定）。
+
+    - str: strip 後回傳
+    - list: 取第一個非空 str 元素 strip 後回傳；無 → 空字串
+    - 其他（None / int / dict / ...）: 空字串
+    """
+    if isinstance(v, str):
+        return v.strip()
+    if isinstance(v, list):
+        for item in v:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+        return ''
+    return ''
+
+
 def _author_in_blacklist(name: str) -> bool:
     if not name:
         return False
@@ -299,9 +322,10 @@ def _date_in_blacklist(date_str: str) -> bool:
 
 
 def _resolve_date(metadata: Optional[dict]) -> tuple:
-    """v2 §4.3：pdf_metadata 來源永遠丟（creation_date ≠ 發表日）。"""
+    """v2 §4.3：pdf_metadata 來源永遠丟（creation_date ≠ 發表日）。
+    型別容錯：LLM 偶爾回 list → 取第一個非空字串。"""
     m = metadata or {}
-    m_date = (m.get('publication_date') or {}).get('value') or ''
+    m_date = _coerce_to_str((m.get('publication_date') or {}).get('value'))
     m_source = (m.get('publication_date') or {}).get('source') or ''
 
     if not m_date:
@@ -315,27 +339,29 @@ def _resolve_date(metadata: Optional[dict]) -> tuple:
 
 def _resolve_venue(metadata: Optional[dict]) -> tuple:
     """v2 §4.5：journal_or_conference > publisher > organization 取第一個非空。
-    pdf_metadata 來源此 3 欄一律不採。"""
+    pdf_metadata 來源此 3 欄一律不採。
+    型別容錯：LLM 偶爾回 list（如 organization）→ 取第一個非空字串元素。"""
     m = metadata or {}
     for field in ('journal_or_conference', 'publisher', 'organization'):
-        v = (m.get(field) or {}).get('value') or ''
+        raw_v = (m.get(field) or {}).get('value')
+        v = _coerce_to_str(raw_v)
         s = (m.get(field) or {}).get('source') or ''
         if not v:
             continue
         if s == 'pdf_metadata':
             continue
-        if v.strip().casefold() in META_LABEL_BLACKLIST:
+        if v.casefold() in META_LABEL_BLACKLIST:
             continue
-        return (v.strip(), field, s)
+        return (v, field, s)
     return ('', '', '')
 
 
 def _resolve_doi(metadata: Optional[dict]) -> str:
     m = metadata or {}
-    v = (m.get('doi') or {}).get('value') or ''
+    # 型別容錯：偶有 LLM 把 DOI 回成 list
+    v = _coerce_to_str((m.get('doi') or {}).get('value'))
     if not v:
         return ''
-    v = v.strip()
     return v if DOI_REGEX.match(v) else ''
 
 
@@ -351,11 +377,12 @@ def _resolve_keywords(metadata: Optional[dict]) -> list:
 
 def _resolve_candidate_extras(metadata: Optional[dict],
                               doc_type: Optional[str]) -> dict:
-    """resume 專用：取 organization 暫代 current_role / latest_employer。"""
+    """resume 專用：取 organization 暫代 current_role / latest_employer。
+    型別容錯：LLM 偶爾回 list → 取第一個非空字串。"""
     if doc_type != 'resume':
         return {}
     m = metadata or {}
-    org = ((m.get('organization') or {}).get('value') or '').strip()
+    org = _coerce_to_str((m.get('organization') or {}).get('value'))
     if org and org.casefold() not in CANDIDATE_LABEL_BLACKLIST:
         return {'organization': org}
     return {}
