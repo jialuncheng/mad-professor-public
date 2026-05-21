@@ -107,6 +107,16 @@ class RagRetriever:
             # MAX_INNER_PRODUCT 對齊。實測 Gemini embedding 768 dim 下：
             # 相關 query top score 約 0.23-0.27，無關 query 約 0.17-0.20。
             # 門檻 0.22 可有效區分。
+            # Phase 4.7d Commit 15-2：score 分布 logging（觀察門檻 0.22
+            # 是否需調整；15-1 chunk 結構改後分布可能變、依此 log 校準）
+            if docs_with_scores:
+                _scores = [s for _, s in docs_with_scores]
+                logger.info(
+                    f"[retrieve] owner={owner_id} paper={paper_id} "
+                    f"query={query[:40]!r} top_k={top_k} "
+                    f"scores={[round(s, 3) for s in _scores]} "
+                    f"above_0.22={sum(1 for s in _scores if s > 0.22)}"
+                )
             filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > 0.22]
 
             if not filtered_docs:
@@ -129,7 +139,12 @@ class RagRetriever:
                     retrieved_sections[path] = node
                     self._add_adjacent_formulas(rag_tree, path, retrieved_sections)
 
-            result_parts = ["以下是論文中與您問題最相關的內容:"]
+            # Phase 4.7d Commit 15-2：result 標頭含 paper_title、引用源頭明確
+            _paper_title = rag_tree.get('translated_title') or rag_tree.get('title') or ''
+            if _paper_title:
+                result_parts = [f"以下是論文《{_paper_title}》中與您問題最相關的內容:"]
+            else:
+                result_parts = ["以下是論文中與您問題最相關的內容:"]
             for path in sorted(retrieved_sections.keys()):
                 node = retrieved_sections[path]
                 section_title = self._build_section_title(rag_tree, path)
@@ -194,6 +209,13 @@ class RagRetriever:
             pass
 
     def _build_section_title(self, tree: Dict, path: str) -> str:
+        """從 rag_tree JSON path 算 section title。
+        Phase 4.7d Commit 15-2：加 paper_title 前綴、引用源頭更明確；
+        AI 答覆引用此標題時可顯示「{paper_title} > {section} > {child}」。
+        """
+        paper_title = tree.get('translated_title') or tree.get('title') or ''
+        def _with_paper(inner: str) -> str:
+            return f"{paper_title} > {inner}" if paper_title else inner
         try:
             if path.startswith('/'):
                 path = path[1:]
@@ -209,8 +231,8 @@ class RagRetriever:
                             child = section['children'][child_index]
                             child_title = child.get('translated_title', '') or child.get('title', '')
                             if child_title:
-                                return f"{title} > {child_title}"
-                    return title
-            return f"章節 {path}"
+                                return _with_paper(f"{title} > {child_title}")
+                    return _with_paper(title)
+            return _with_paper(f"章節 {path}")
         except Exception:
-            return f"章節 {path}"
+            return _with_paper(f"章節 {path}")
