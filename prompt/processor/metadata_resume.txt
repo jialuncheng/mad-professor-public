@@ -31,11 +31,34 @@
 6. domain（履歷主題領域）：10–30 字短句，要具體不要泛泛。
    範例：「半導體 SoC - 顯示驅動 IC 技術主管履歷」「金融科技 - 後端工程師履歷」。
    不可填 null；若資訊不足回 ""。
+7. source_platform（履歷來源平台）：判斷此份履歷的來源管道
+   - 候選人自投 / 自寫原版：填 "self"
+   - 招募平台代發：填平台名（小寫底線格式）
+     範例："104"、"linkedin"、"cakeresume"、"yourator"、
+          "1111"、"indeed"、"glassdoor"
+   - 獵頭 / 顧問公司改造：填顧問公司名（小寫底線格式）
+     範例："robert_walters"、"michael_page"、"adecco"、"hays"、
+          "manpower"、"randstad"
+   - 找不到明確線索：填 "unknown"
+
+   判斷線索：
+   - 頁首 / 頁尾 logo 或圖標
+   - 平台特有版型框（如 104 的藍色框、LinkedIn 的版型）
+   - 顧問署名 / 顧問聯絡資訊
+   - URL 浮水印（如 linkedin.com/in/...）
+   - Footer 文字（如「本履歷由 XXX 提供」「Powered by ...」）
+8. is_third_party（是否為第三方版本）：boolean
+   - source_platform == "self" → false
+   - 其他（平台 / 獵頭 / unknown 但有明顯第三方跡象）→ true
 
 注意事項：
 - 找不到的欄位填 null（陣列填空陣列）
 - 不要編造，找不到就 null
 - candidate_name 是履歷最重要的欄位，務必盡力抽出
+- 若 is_third_party = true，candidate_name 可能被遮蔽（如 "XXX"、"J. Doe"、
+  "候選人 A"、姓氏 + 名首字母）→ 此情況 candidate_name 填 null、不要編造
+- source_platform 不能填 null；沒線索就填 "unknown"
+- is_third_party 不能填 null
 
 回傳純 JSON（不要 markdown 包裹、不要任何說明）：
 {
@@ -51,5 +74,7 @@
   "publisher": null,
   "organization": null,
   "version": null,
-  "domain": ""
+  "domain": "",
+  "source_platform": "unknown",
+  "is_third_party": false
 }

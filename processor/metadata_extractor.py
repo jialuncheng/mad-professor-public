@@ -58,6 +58,8 @@ _ALL_FIELDS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
     "organization", "version", "candidate_name", "domain",
+    # Phase 4.7d Commit 4-2：resume 專用（其他 doc_type 永遠 None / False）
+    "source_platform", "is_third_party",
 ]
 
 # fitz title 雜訊樣式（Word/匯出器留下的非語意 title）
@@ -290,6 +292,7 @@ _LLM_FLAT_KEYS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
     "organization", "version", "candidate_name", "domain",
+    "source_platform", "is_third_party",
 ]
 
 
@@ -442,6 +445,8 @@ def fill_from_llm_page1(metadata: dict, llm_meta: Optional[dict]) -> dict:
             "version": "version",
             "candidate_name": "candidate_name",
             "domain": "domain",
+            "source_platform": "source_platform",
+            "is_third_party": "is_third_party",
         }
         for fld in mapping:
             _set_field(metadata, fld, llm_meta.get(fld), "llm_page1", "high")

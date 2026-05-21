@@ -168,6 +168,35 @@ def test_llm_meta_domain_field():
     assert m["domain"]["confidence"] == "high"
 
 
+def test_resume_metadata_includes_source_platform():
+    """Phase 4.7d Commit 4-2：schema 含 source_platform + is_third_party。"""
+    m = create_empty_metadata()
+    for f in ("source_platform", "is_third_party"):
+        assert f in m, f"缺欄位 {f}"
+        assert set(m[f]) == {"value", "source", "confidence", "alternates"}
+        assert m[f]["value"] is None
+        assert m[f]["source"] is None
+        assert m[f]["alternates"] == {}
+
+
+def test_llm_meta_source_platform_field():
+    """Phase 4.7d Commit 4-2：fill_from_llm_page1 寫入 source_platform / is_third_party。"""
+    from processor.metadata_extractor import fill_from_llm_page1
+    m = create_empty_metadata()
+    llm_meta = {
+        # 其他欄位略
+        "candidate_name": "DeHunt",
+        "domain": "半導體 SoC",
+        "source_platform": "linkedin",
+        "is_third_party": True,
+    }
+    fill_from_llm_page1(m, llm_meta)
+    assert m["source_platform"]["value"] == "linkedin"
+    assert m["source_platform"]["source"] == "llm_page1"
+    assert m["is_third_party"]["value"] is True
+    assert m["is_third_party"]["source"] == "llm_page1"
+
+
 # ── 合成 PDF 抽取 ──
 
 def test_extract_from_synthetic(synthetic_pdf):
