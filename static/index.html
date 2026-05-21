@@ -1209,7 +1209,7 @@
     <div id="chat-header">
       <span class="h-title">AI 問答</span>
       <div id="chat-header-actions">
-        <button id="web-search-toggle" class="icon-only active" type="button" data-tip="Search 開關">
+        <button id="web-search-toggle" class="icon-only active" type="button" disabled data-tip="Search 開關">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg>
         </button>
         <button id="export-btn" class="icon-only" data-tip="下載 MD">
@@ -1222,7 +1222,7 @@
     </div>
     <div id="chat-messages"></div>
     <div id="chat-input-area">
-      <textarea id="chat-input" placeholder="輸入問題（Ctrl+Enter 送出）..."></textarea>
+      <textarea id="chat-input" disabled placeholder="輸入問題（Ctrl+Enter 送出）..."></textarea>
     </div>
   </aside>
 </div>
@@ -2205,8 +2205,25 @@ function removeReadingReadyMessage() {
 
 document.getElementById('export-btn').onclick = () => {
   if (!currentPaperId) return;
+  // Phase 4.7d Commit 6：對話為空時擋下載（避免後端回空檔 / 錯誤）
+  const realMessages = document.querySelectorAll(
+    '#chat-messages .msg-user, #chat-messages .msg-ai'
+  );
+  if (realMessages.length === 0) {
+    alert('目前沒有對話內容可下載');
+    return;
+  }
   window.location.href = `/api/papers/${currentPaperId}/chat/export`;
 };
+
+// Phase 4.7d Commit 6：chat-input 預設 disabled 後的雙保險——若未來某 bug
+// 讓 disabled 屬性沒套上、使用者仍能點 textarea，這層 focus 攔截補一條訊息
+document.getElementById('chat-input').addEventListener('focus', () => {
+  if (!currentPaperId) {
+    alert('請先選擇文件');
+    document.getElementById('chat-input').blur();
+  }
+});
 
 // 載入對話紀錄
 async function deletePaper(paperId, title) {
