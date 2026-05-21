@@ -10,21 +10,39 @@ from processor.pdf_parser import PDFParser, PDFParseError  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
-SLIDE_PROMPT = """這是一張投影片的截圖。請分析並提取以下內容：
+SLIDE_PROMPT = """這是一張投影片的截圖。請依以下規則輸出純 markdown 格式內容。
 
-1. 標題：投影片的主要標題（如果有）
-2. 內容：投影片上的所有文字內容，保持原有的條列結構
-3. 圖表描述：如果有圖表、圖片或示意圖，用一到兩句話描述其內容和學術意義
+階層規則：
+- 投影片內副標題 / 區塊標題用 ###（三級，因為 ## 留給投影片主標題、# 留給整份簡報）
+- 更小層級用 ####
+- 不要使用 # 或 ##（這些由 caller 控制）
 
-請以 JSON 格式回傳，格式如下：
+表格規則：
+- 若投影片有表格，**必須**用 markdown 表格語法輸出
+  | 欄位 1 | 欄位 2 | 欄位 3 |
+  | --- | --- | --- |
+  | 資料 | 資料 | 資料 |
+- 保留表頭、資料對齊
+- 不要把表格平鋪成「a | b」這種字串行
+
+條列規則：
+- 點列項目用 - 開頭
+- 編號項目用 1. 2. 3.
+- 嵌套用 4 個空白縮排
+
+圖表規則：
+- 圖表 / 圖片 / 示意圖：另外放到 figure_description 欄位（用一兩句話描述）
+- 不要把圖表描述混進 markdown_content
+
+請以 JSON 格式回傳：
 {
   "title": "投影片標題（沒有則為空字串）",
-  "content": "投影片的文字內容（保持原格式）",
+  "markdown_content": "投影片內容的 markdown（含階層、表格、條列；不含投影片主標題）",
   "figure_description": "圖表描述（沒有圖表則為空字串）"
 }
 
-如果該頁完全空白、只有頁碼、或只有純裝飾元素，請回傳三個欄位都是空字串：
-{"title": "", "content": "", "figure_description": ""}
+如果該頁完全空白、只有頁碼、或只有純裝飾元素：
+{"title": "", "markdown_content": "", "figure_description": ""}
 
 只輸出 JSON，不要任何解釋。"""
 
@@ -105,10 +123,12 @@ class SlidesProcessor(PDFParser):
                     continue
 
                 slide_title = result.get("title", "").strip()
-                content = result.get("content", "").strip()
+                # Phase 4.7d Commit 4-1：JSON key 從 content 改為 markdown_content；
+                # LLM 改回傳 markdown 階層 / 表格 / 條列、不再平鋪為純文字
+                markdown_content = result.get("markdown_content", "").strip()
                 figure_desc = result.get("figure_description", "").strip()
 
-                if not slide_title and not content and not figure_desc:
+                if not slide_title and not markdown_content and not figure_desc:
                     self.logger.info(f"slide {slide_counter + 1}: 內容皆空，跳過")
                     continue
 
@@ -118,7 +138,7 @@ class SlidesProcessor(PDFParser):
                 img_path.write_bytes(img_data)
 
                 self.logger.info(
-                    f"slide {slide_counter}: 標題={slide_title[:20]}, 內容字數={len(content)}"
+                    f"slide {slide_counter}: 標題={slide_title[:20]}, 內容字數={len(markdown_content)}"
                 )
 
                 if slide_title:
@@ -128,8 +148,8 @@ class SlidesProcessor(PDFParser):
 
                 lines.append(f"![slide_{slide_counter:02d}](images/{img_filename})")
 
-                if content:
-                    lines.append(content)
+                if markdown_content:
+                    lines.append(markdown_content)
 
                 if figure_desc:
                     lines.append(f"\n*圖表：{figure_desc}*")
