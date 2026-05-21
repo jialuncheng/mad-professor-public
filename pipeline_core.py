@@ -207,6 +207,11 @@ class PipelineCore:
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {pdf_path}")
 
+        # Phase 4.7d Commit 14：早一步決定 paper_id 作為所有 stage log 的前綴
+        # （並發跑多份 paper 時、無前綴的 log 無法歸屬。self.paper_info['paper_id']
+        # 原本在 metadata Stage A 之後才設、此處同步前置）
+        pid = paper_id if paper_id is not None else pdf_path.stem
+
         root_output_dir = Path(output_dir) if output_dir else pdf_path.parent
         # 路徑統一 output/{owner_id}/{paper_uuid}/
         base_output_dir = (
@@ -218,11 +223,14 @@ class PipelineCore:
         self._owner_id = owner_id
         # Phase 4.7d Commit 1：_stage_md_restore 需用此值做最終 fallback
         self._original_filename = original_filename
+        # Commit 14：helpers（_check_stage_exists / _stage_detect_domain）可從
+        # self.paper_info 取 pid（仍保留 self.paper_info['paper_id'] 後續賦值點為相容性）
+        self.paper_info['paper_id'] = pid
 
         _pipe_t0 = time.time()
         _doc_type = (existing_paths or {}).get('_confirmed_doc_type', 'academic')
         self.logger.info(
-            f"[pipeline] 開始 pdf={pdf_path} owner={owner_id} doc_type={_doc_type}"
+            f"[pipeline] {pid} 開始 pdf={pdf_path} owner={owner_id} doc_type={_doc_type}"
         )
 
         # ── Metadata Stage A（fitz + LLM 第一頁 + 雙來源比對）──
@@ -231,13 +239,13 @@ class PipelineCore:
         # 「pdf2md 前序列執行」——Stage A（fitz + 1 次 LLM）相對 MinerU（數分鐘）
         # 極短，序列化對總牆鐘影響可忽略；全程 soft fail，絕不中止 pipeline。
         self._metadata = create_empty_metadata()
-        self.logger.info("[metadata] Stage A 開始")
+        self.logger.info(f"[metadata] {pid} Stage A 開始")
         _sa_t0 = time.time()
         try:
             _t = time.time()
             _pdf_meta = extract_pdf_metadata(pdf_path)
             self.logger.info(
-                f"[metadata] fitz 完成 耗時={time.time() - _t:.2f}s "
+                f"[metadata] {pid} fitz 完成 耗時={time.time() - _t:.2f}s "
                 f"title={_pdf_meta.get('title')!r} "
                 f"authors={_pdf_meta.get('authors')}"
             )
@@ -247,7 +255,7 @@ class PipelineCore:
                 pdf_path, doc_type=_doc_type
             )
             self.logger.info(
-                f"[metadata] LLM 第一頁完成 耗時={time.time() - _t:.2f}s "
+                f"[metadata] {pid} LLM 第一頁完成 耗時={time.time() - _t:.2f}s "
                 f"doc_type={_doc_type} "
                 f"title={(_llm_meta or {}).get('title')!r} "
                 f"candidate_name={(_llm_meta or {}).get('candidate_name')!r}"
@@ -256,26 +264,25 @@ class PipelineCore:
             _b = fill_from_llm_page1(create_empty_metadata(), _llm_meta)
             self._metadata = merge_stage_a(_a, _b)
             self.logger.info(
-                f"[metadata] Stage A 完成（title="
+                f"[metadata] {pid} Stage A 完成（title="
                 f"{self._metadata.get('title', {}).get('value')!r}）"
             )
             self.logger.info(
-                f"[metadata] Stage A 合併完成 總耗時={time.time() - _sa_t0:.2f}s "
+                f"[metadata] {pid} Stage A 合併完成 總耗時={time.time() - _sa_t0:.2f}s "
                 f"confidence="
                 f"{ {k: v.get('confidence') for k, v in self._metadata.items() if isinstance(v, dict)} }"
             )
         except Exception as e:
-            self.logger.warning(f"[metadata] Stage A 失敗（soft，忽略）: {e}")
+            self.logger.warning(f"[metadata] {pid} Stage A 失敗（soft，忽略）: {e}")
 
-        self.paper_info['paper_id'] = paper_id if paper_id is not None else pdf_path.stem
-        paper_output_dir = base_output_dir / self.paper_info['paper_id']
+        paper_output_dir = base_output_dir / pid
         paper_output_dir.mkdir(exist_ok=True)
         self.paper_info['output_dir'] = paper_output_dir
 
         # 支援傳入已有的 output_paths（第二階段繼續處理）
         output_paths = dict(existing_paths) if existing_paths else {}
 
-        self.logger.info(f"[pipeline] 進入 stage loop（stages={self.stages}）")
+        self.logger.info(f"[pipeline] {pid} 進入 stage loop（stages={self.stages}）")
         i = 0
         while i < len(self.stages):
             stage = self.stages[i]
@@ -286,7 +293,7 @@ class PipelineCore:
                 domain_done = '_domain' in output_paths
 
                 if not analyze_done or not domain_done:
-                    self.logger.info("並行執行: analyze + detect_domain")
+                    self.logger.info(f"並行執行: {pid} analyze + detect_domain")
                     self._emit_progress('analyze', i + 1)
 
                     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -314,11 +321,11 @@ class PipelineCore:
                                     output_paths['_domain'] = result or ''
                                 else:
                                     output_paths[s] = result
-                                self.logger.info(f"階段 {s} 完成")
-                                self.logger.info(f"[並行] {s} 完成（耗時 {duration:.1f}s）")
+                                self.logger.info(f"階段 {pid} {s} 完成")
+                                self.logger.info(f"[並行] {pid} {s} 完成（耗時 {duration:.1f}s）")
                             except Exception as e:
-                                self.logger.error(f"階段 {s} 失敗: {str(e)}")
-                                self.logger.error(f"[並行] {s} 失敗（耗時 {duration:.1f}s）: {e}")
+                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}")
+                                self.logger.error(f"[並行] {pid} {s} 失敗（耗時 {duration:.1f}s）: {e}")
                                 if s == 'analyze':
                                     raise
                                 # detect_domain 失敗：soft fallback，不中止
@@ -341,8 +348,8 @@ class PipelineCore:
                 caption_done = self._check_stage_exists('image_caption', paper_output_dir, self.paper_info['paper_id'], output_paths)
 
                 if not translate_done or not caption_done:
-                    self.logger.info("並行執行: translate + image_caption")
-                    self.logger.info("[stage] translate + image_caption 開始（並行）")
+                    self.logger.info(f"並行執行: {pid} translate + image_caption")
+                    self.logger.info(f"[stage] {pid} translate + image_caption 開始（並行）")
                     self._emit_progress('translate', i + 1)
                     _par_t0 = time.time()
 
@@ -363,15 +370,15 @@ class PipelineCore:
                             s = futures[future]
                             try:
                                 output_paths[s] = future.result()
-                                self.logger.info(f"階段 {s} 完成")
+                                self.logger.info(f"階段 {pid} {s} 完成")
                                 self.logger.info(
-                                    f"[stage] {s} 完成 耗時="
+                                    f"[stage] {pid} {s} 完成 耗時="
                                     f"{time.time() - _par_t0:.2f}s（並行）"
                                 )
                             except Exception as e:
-                                self.logger.error(f"階段 {s} 失敗: {str(e)}")
+                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}")
                                 self.logger.error(
-                                    f"[stage] {s} 失敗 耗時="
+                                    f"[stage] {pid} {s} 失敗 耗時="
                                     f"{time.time() - _par_t0:.2f}s（並行）: {e}"
                                 )
                                 if s == 'translate':
@@ -389,14 +396,14 @@ class PipelineCore:
                 continue
 
             if stage not in self.available_stages:
-                self.logger.warning(f"未知的處理階段: {stage}")
+                self.logger.warning(f"未知的處理階段: {pid} {stage}")
                 i += 1
                 continue
 
             self._current_stage = stage
             self._emit_progress(stage, i + 1)
-            self.logger.info(f"開始運行階段: {stage}")
-            self.logger.info(f"[stage] {stage} 開始")
+            self.logger.info(f"開始運行階段: {pid} {stage}")
+            self.logger.info(f"[stage] {pid} {stage} 開始")
             _stage_t0 = time.time()
 
             if not self._check_stage_exists(stage, paper_output_dir, self.paper_info['paper_id'], output_paths):
@@ -404,10 +411,10 @@ class PipelineCore:
                     pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
                 )
                 output_paths[stage] = stage_output
-                self.logger.info(f"階段 {stage} 完成")
+                self.logger.info(f"階段 {pid} {stage} 完成")
 
             self.logger.info(
-                f"[stage] {stage} 完成 耗時={time.time() - _stage_t0:.2f}s"
+                f"[stage] {pid} {stage} 完成 耗時={time.time() - _stage_t0:.2f}s"
             )
 
             i += 1
@@ -432,7 +439,7 @@ class PipelineCore:
         # ── Metadata 最小 Stage B：只補 abstract（看 MinerU markdown）──
         # abstract 在 Stage A 永遠為空（設計：純文字首頁排版不可靠），此處用
         # MinerU 轉出的 markdown 補；規則找不到才 LLM。全程 soft fail。
-        self.logger.info("[metadata] Stage B 開始")
+        self.logger.info(f"[metadata] {pid} Stage B 開始")
         _sb_t0 = time.time()
         try:
             md_path = output_paths.get('pdf2md')
@@ -442,20 +449,20 @@ class PipelineCore:
             if md_text:
                 fill_abstract_stage_b(self._metadata, md_text)
                 self.logger.info(
-                    f"[metadata] Stage B 完成（abstract="
+                    f"[metadata] {pid} Stage B 完成（abstract="
                     f"{'有' if self._metadata.get('abstract', {}).get('value') else '無'}）"
                 )
         except Exception as e:
-            self.logger.warning(f"[metadata] Stage B 失敗（soft，忽略）: {e}")
+            self.logger.warning(f"[metadata] {pid} Stage B 失敗（soft，忽略）: {e}")
         self.logger.info(
-            f"[metadata] Stage B 完成 abstract="
+            f"[metadata] {pid} Stage B 完成 abstract="
             f"{'有' if self._metadata.get('abstract', {}).get('value') else '無'} "
             f"耗時={time.time() - _sb_t0:.2f}s"
         )
 
         if final_paths and self._owner_id is not None:
             self.logger.info(
-                f"[pipeline] 準備寫 DB domain={output_paths.get('_domain')!r} "
+                f"[pipeline] {pid} 準備寫 DB domain={output_paths.get('_domain')!r} "
                 f"doc_type={output_paths.get('_confirmed_doc_type', 'academic')!r} "
                 f"title={self._metadata.get('title', {}).get('value')!r}"
             )
@@ -470,10 +477,10 @@ class PipelineCore:
                 original_filename=original_filename,
             )
             output_paths['final'] = final_paths
-            self.logger.info("[pipeline] DB 寫入完成")
+            self.logger.info(f"[pipeline] {pid} DB 寫入完成")
 
         self.logger.info(
-            f"[pipeline] 全部完成 總耗時={time.time() - _pipe_t0:.2f}s"
+            f"[pipeline] {pid} 全部完成 總耗時={time.time() - _pipe_t0:.2f}s"
         )
         return output_paths
 
@@ -484,14 +491,14 @@ class PipelineCore:
         if stage in ['md_restore', 'rag']:
             if all(p.exists() for p in expected_output.values()):
                 output_paths[stage] = expected_output
-                self.logger.info(f"階段 {stage} 已存在，跳過")
+                self.logger.info(f"階段 {self.paper_info.get('paper_id')} {stage} 已存在，跳過")
                 return True
 
         elif isinstance(expected_output, Path) and expected_output.exists():
             if stage == 'pdf2md':
                 md_path = paper_dir / f'{paper_name}.md'
                 output_paths['pdf2md'] = md_path
-                self.logger.info(f"階段 {stage} 已存在，跳過")
+                self.logger.info(f"階段 {self.paper_info.get('paper_id')} {stage} 已存在，跳過")
                 return True
             elif stage == 'md2json':
                 md_path = output_paths.get('pdf2md')
@@ -499,16 +506,16 @@ class PipelineCore:
                     sidecar = Path(md_path).parent / f'{Path(md_path).stem}_doc_structure.json'
                     if sidecar.exists():
                         output_paths[stage] = expected_output
-                        self.logger.info(f"階段 {stage} 已存在，跳過")
+                        self.logger.info(f"階段 {self.paper_info.get('paper_id')} {stage} 已存在，跳過")
                         return True
                     return False
             elif stage == 'image_caption':
                 output_paths[stage] = expected_output
-                self.logger.info(f"階段 {stage} 已存在，跳過")
+                self.logger.info(f"階段 {self.paper_info.get('paper_id')} {stage} 已存在，跳過")
                 return True
             else:
                 output_paths[stage] = expected_output
-                self.logger.info(f"階段 {stage} 已存在，跳過")
+                self.logger.info(f"階段 {self.paper_info.get('paper_id')} {stage} 已存在，跳過")
                 return True
 
         return False
@@ -521,7 +528,7 @@ class PipelineCore:
 
         if doc_type == 'slides':
             # 簡報：用 Vision 每頁解析，不走 MinerU
-            self.logger.info("簡報類型，使用 Vision 解析")
+            self.logger.info(f"{self.paper_info.get('paper_id')} 簡報類型，使用 Vision 解析")
             parser = SlidesProcessor()
         else:
             # 其他：MinerU 解析
@@ -549,19 +556,20 @@ class PipelineCore:
         補跑（極端情境 / 既有 paper 無此鍵的相容性）。保留 stage 結構與
         output_paths['_domain'] 介面以避免破壞既有調用。
         """
+        _pid = self.paper_info.get('paper_id')
         try:
             d = (getattr(self, '_metadata', None) or {}).get('domain', {}).get('value') or ''
             if d:
                 self.logger.info(
-                    f"[domain] 從 metadata.domain 取得：{d!r}（合併 LLM call）"
+                    f"[domain] {_pid} 從 metadata.domain 取得：{d!r}（合併 LLM call）"
                 )
                 return d
             self.logger.info(
-                "[domain] metadata 無 domain，fallback 跑 DomainDetector"
+                f"[domain] {_pid} metadata 無 domain，fallback 跑 DomainDetector"
             )
             return self.domain_detector.detect(str(pdf_path)) or ''
         except Exception as e:
-            self.logger.warning(f"detect_domain 階段失敗（soft，忽略）: {str(e)}")
+            self.logger.warning(f"detect_domain 階段失敗（soft，忽略） {_pid}: {str(e)}")
             return ''
 
     def _stage_md_to_json(self, pdf_path, paper_dir, paper_name, output_paths):
