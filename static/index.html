@@ -2290,30 +2290,11 @@ async function loadChatHistory(paperId) {
   }
 }
 
-// 儲存對話紀錄（content 排除來源區塊；grounding_sources 由 dataset 帶上）
-async function saveChatHistory(paperId) {
-  const msgs = document.querySelectorAll('#chat-messages .msg-user, #chat-messages .msg-ai');
-  const history = Array.from(msgs).map(el => {
-    if (el.classList.contains('msg-user')) {
-      return { role: 'user', content: el.textContent };
-    }
-    const clone = el.cloneNode(true);
-    clone.querySelectorAll('.msg-sources').forEach(n => n.remove());
-    const entry = { role: 'assistant', content: clone.innerText };
-    if (el.dataset.groundingSources) {
-      try { entry.grounding_sources = JSON.parse(el.dataset.groundingSources); }
-      catch (e) {}
-    }
-    return entry;
-  });
-  try {
-    await fetch(`/api/papers/${paperId}/chat/history`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({messages: history})
-    });
-  } catch(e) {}
-}
+// Phase 4.7d Commit 17-1：原 saveChatHistory 函式刪除。DB 寫入改由
+// 後端 chat endpoint 自身負責（進入時寫 user query、stream finally
+// 寫 assistant 完整回答）；前端不再整包 POST、避免切走切回時 currentPaperId
+// 變化導致誤覆寫到別的 paper。POST /chat/history endpoint 暫保留供舊
+// 瀏覽器快取兼容、17-4 才移除。
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
@@ -2374,7 +2355,8 @@ async function sendMessage() {
               aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
               renderSources(aiMsg, chunk.grounding_sources);
             }
-            await saveChatHistory(currentPaperId);
+            // Phase 4.7d Commit 17-1：移除 saveChatHistory(currentPaperId)
+            // 呼叫。DB 寫入由後端 chat endpoint finally 區自行 append。
           }
         } catch {}
       }

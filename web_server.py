@@ -428,17 +428,33 @@ async def paper_image(paper_id: str, filename: str,
 @app.post("/api/papers/{paper_id}/chat")
 async def chat(paper_id: str, request: ChatRequest,
                 current_user: CurrentUser = Depends(get_current_user)):
-    """AI 問答，SSE 串流回傳"""
-    # Stage A：caller 從 DB 讀對話歷史傳給 stateless ai_chat
+    """AI 問答，SSE 串流回傳。
+
+    Phase 4.7d Commit 17-1：DB 寫入時機改後端、不再靠前端
+    saveChatHistory 整包覆寫（解切走切回 bug）。
+    - endpoint 進入時 append 一筆 user query
+    - stream 結束時 append 一筆 assistant 完整回答
+    - stream 失敗時 append `(生成失敗) ...` 訊息（baron Q4 決：寫 DB）
+    """
     db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
-    conversation_history = (
-        paper_manager.load_chat_history(db_id, current_user.id)
-        if db_id is not None else []
+    if db_id is None:
+        raise HTTPException(status_code=404, detail="論文不存在")
+
+    # 進入即寫 user query（不靠前端 POST /chat/history）
+    paper_manager.append_chat_message(
+        db_id, current_user.id, 'user', request.query
+    )
+    # load 含剛寫的 user query（給 LLM 看完整歷史；ai_chat 內部會做
+    # idempotency 檢查、不重複 append 末筆相同 user query）
+    conversation_history = paper_manager.load_chat_history(
+        db_id, current_user.id
     )
 
     async def event_stream():
+        accumulated = []  # 收集 sentence 拼完整 AI 回答
+        grounding_sources = []
+        error_msg = None
         try:
-            loop = asyncio.get_event_loop()
             gen = ai_core.query_stream(
                 query=request.query,
                 owner_id=current_user.id,
@@ -449,11 +465,36 @@ async def chat(paper_id: str, request: ChatRequest,
             )
 
             for chunk in gen:
+                if chunk.get('sentence'):
+                    accumulated.append(chunk['sentence'])
+                if chunk.get('done') and chunk.get('grounding_sources'):
+                    grounding_sources = chunk['grounding_sources']
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0)  # 讓出控制權，避免阻塞
 
         except Exception as e:
-            yield f"data: {json.dumps({'sentence': str(e), 'done': True})}\n\n"
+            # Q4：失敗訊息寫 DB 與前端（避免「消失」感）
+            error_msg = f"(生成失敗) {str(e)[:200]}"
+            logger.error(f"[chat] stream error paper={paper_id}: {e}", exc_info=True)
+            yield (
+                "data: "
+                + json.dumps({'sentence': error_msg, 'done': True}, ensure_ascii=False)
+                + "\n\n"
+            )
+        finally:
+            # 寫 assistant 完整回答（或錯誤訊息）；兩者皆空則略過避免 empty row
+            full = ''.join(accumulated) if accumulated else (error_msg or '')
+            if full.strip():
+                try:
+                    paper_manager.append_chat_message(
+                        db_id, current_user.id, 'assistant', full,
+                        grounding_sources=grounding_sources or None,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[chat] DB append assistant failed paper={paper_id}: {e}",
+                        exc_info=True,
+                    )
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -475,7 +516,12 @@ async def get_chat_history(paper_id: str,
 @app.post("/api/papers/{paper_id}/chat/history")
 async def save_chat_history(paper_id: str, history: ChatHistory,
                             current_user: CurrentUser = Depends(get_current_user)):
-    """儲存對話紀錄（整包覆寫 conversations）"""
+    """儲存對話紀錄（整包覆寫 conversations）。
+
+    Phase 4.7d Commit 17-1：前端已停用此 endpoint、DB 寫入改由 chat
+    endpoint 自身於 stream 結束時 append。本 endpoint 暫保留供舊版瀏覽器
+    快取 / 第三方 client 兼容；Commit 17-4 將移除。
+    """
     db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
     if db_id is None:
         raise HTTPException(status_code=404, detail="論文不存在")

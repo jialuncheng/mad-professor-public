@@ -368,6 +368,31 @@ def load_chat_history(paper_db_id: int, user_id: int) -> list:
         return out
 
 
+def append_chat_message(paper_db_id: int, user_id: int, role: str,
+                         content: str, grounding_sources=None) -> int:
+    """新增單筆對話、回傳 conversation.id。
+
+    Phase 4.7d Commit 17-1：取代 save_chat_history 整包覆寫的依賴。
+    順序 = 插入序 = id 序（既有 load_chat_history 依 id 排序）。
+    後端 chat endpoint 進入時寫 user query、stream 結束時寫 assistant
+    完整回答，不再靠前端 saveChatHistory 整包 POST（解切走切回 bug）。
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        c = Conversation(
+            paper_id=paper_db_id, user_id=user_id, role=role,
+            content=content, grounding_sources=grounding_sources or None,
+        )
+        s.add(c)
+        s.commit()
+        cid = c.id
+    logger.info(
+        f"對話訊息已 append: paper_id={paper_db_id} role={role} "
+        f"len={len(content)} id={cid}"
+    )
+    return cid
+
+
 def save_chat_history(paper_db_id: int, user_id: int, history: list) -> None:
     """整包覆寫：刪該 paper 既有 conversations，再批次 insert。
 
