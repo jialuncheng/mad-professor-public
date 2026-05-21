@@ -822,6 +822,17 @@
     max-width: 75%;
     white-space: pre-wrap;
   }
+  /* Phase 4.7d Commit 17-3：attach 到 broker 的 stream 時、ai msg 末尾
+     閃爍游標；既有 sendMessage 用純字「▋」、本 commit 統一為帶 blink 動畫 */
+  .cursor-blink {
+    animation: blink-cursor 1s step-end infinite;
+    margin-left: 2px;
+    opacity: 0.7;
+  }
+  @keyframes blink-cursor {
+    0%, 50% { opacity: 0.7; }
+    51%, 100% { opacity: 0; }
+  }
   .msg-ai {
     position: relative;
     background: var(--color-bg);
@@ -2114,6 +2125,12 @@ async function loadPapers() {
 async function loadPaper(paperId, title) {
   currentPaperId = paperId;
 
+  // Phase 4.7d Commit 17-3：切 paper 時關閉舊 EventSource attach（如有）
+  if (currentEventSource) {
+    try { currentEventSource.close(); } catch (e) {}
+    currentEventSource = null;
+  }
+
   document.querySelectorAll('.paper-item').forEach(el => {
     el.classList.toggle('active', el.dataset.id === paperId);
   });
@@ -2262,16 +2279,26 @@ function renderSources(aiMsg, sources) {
   aiMsg.appendChild(div);
 }
 
+// Phase 4.7d Commit 17-3：當前 paper 的 EventSource attach（切 paper 時關閉）
+let currentEventSource = null;
+
 async function loadChatHistory(paperId) {
   const messages = document.getElementById('chat-messages');
   messages.innerHTML = '';
   try {
     const res = await fetch(`/api/papers/${paperId}/chat/history`);
-    const history = await res.json();
-    if (!history.length) {
+    const data = await res.json();
+
+    // Phase 4.7d Commit 17-2 後端設計 (c)：無 in_progress 回 list、有則回 dict
+    const history = Array.isArray(data) ? data : (data.messages || []);
+    const in_progress = (!Array.isArray(data) && data.in_progress)
+      ? data.in_progress : null;
+
+    if (!history.length && !in_progress) {
       messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
       return;
     }
+
     history.forEach(msg => {
       const div = document.createElement('div');
       if (msg.role === 'user') {
@@ -2288,10 +2315,108 @@ async function loadChatHistory(paperId) {
       }
       messages.appendChild(div);
     });
+
+    // Phase 4.7d Commit 17-3：in_progress 處理（解最後邊角 bug）
+    // 17-1 後端進入時已寫 user query 進 DB、history 內已含 in_progress.query；
+    // 不重複 render user msg、只 render ai msg + partial、再 EventSource attach
+    // 接續 broker 的 SSE。
+    if (in_progress) {
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'msg-ai';
+      const partial = in_progress.partial || '';
+      const formatted = partial.replace(/\n(?!\n)/g, '\n\n');
+      aiMsg.innerHTML = marked.parse(formatted || '');
+      const cursor = document.createElement('span');
+      cursor.textContent = '▋';
+      cursor.className = 'cursor-blink';
+      aiMsg.appendChild(cursor);
+      messages.appendChild(aiMsg);
+
+      attachToStream(paperId, aiMsg, partial);
+    }
+
     messages.scrollTop = messages.scrollHeight;
   } catch(e) {
+    console.error('[loadChatHistory] error:', e);
     messages.innerHTML = '<div class="chat-empty">針對文件提問</div>';
   }
+}
+
+// Phase 4.7d Commit 17-3：attach EventSource 到後端 broker 的進行中 stream。
+// alreadyRenderedPartial：loadChatHistory 已渲染的 partial 字串；replay
+// chunk 的累積字數若仍在此範圍內則 skip（避免雙重 render）。
+function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
+  if (currentEventSource) {
+    try { currentEventSource.close(); } catch (e) {}
+    currentEventSource = null;
+  }
+  const es = new EventSource(`/api/papers/${paperId}/chat/attach`);
+  currentEventSource = es;
+
+  let accumulated = alreadyRenderedPartial || '';
+  let replayCharsSeen = 0;
+  const baselineLen = (alreadyRenderedPartial || '').length;
+
+  const removeCursor = () => {
+    const c = aiMsg.querySelector('.cursor-blink');
+    if (c) c.remove();
+  };
+  const appendCursor = () => {
+    const c = document.createElement('span');
+    c.textContent = '▋';
+    c.className = 'cursor-blink';
+    aiMsg.appendChild(c);
+  };
+
+  es.onmessage = (ev) => {
+    try {
+      const chunk = JSON.parse(ev.data);
+
+      if (chunk.replay) {
+        // replay chunk：累計到 baselineLen 為止都 skip（已在初始 partial 內）
+        const before = replayCharsSeen;
+        replayCharsSeen += (chunk.sentence || '').length;
+        if (replayCharsSeen <= baselineLen) return;
+        // 部分溢出（理論上 broker 回放與 baseline 應對齊；保險處理）
+        const overflow = (chunk.sentence || '').slice(baselineLen - before);
+        if (!overflow) return;
+        accumulated += overflow;
+      } else if (chunk.sentence) {
+        accumulated += chunk.sentence;
+      }
+
+      if (chunk.sentence) {
+        removeCursor();
+        const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
+        aiMsg.innerHTML = marked.parse(formatted);
+        appendCursor();
+        const msgsEl = document.getElementById('chat-messages');
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+      }
+
+      if (chunk.done) {
+        removeCursor();
+        const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
+        aiMsg.innerHTML = marked.parse(formatted);
+        if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
+          aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
+          renderSources(aiMsg, chunk.grounding_sources);
+        }
+        es.close();
+        if (currentEventSource === es) currentEventSource = null;
+      }
+    } catch (e) {
+      console.error('[attachToStream] parse error:', e);
+    }
+  };
+
+  es.onerror = (e) => {
+    // EventSource 預設會自動重連、但這裡 close 後阻止；保留已收的 partial
+    console.warn('[attachToStream] EventSource error:', e);
+    es.close();
+    if (currentEventSource === es) currentEventSource = null;
+    removeCursor();
+  };
 }
 
 // Phase 4.7d Commit 17-1：原 saveChatHistory 函式刪除。DB 寫入改由
