@@ -19,7 +19,7 @@ HEADING_FIX_PROMPTS = {
     'slides':    'prompt/doc/heading_fix_slides.txt',
     'web':       'prompt/doc/heading_fix_web.txt',
     'news':      'prompt/doc/heading_fix_news.txt',
-    'resume':    'prompt/doc/heading_fix_academic.txt',  # Phase 1 reuse academic
+    'resume':    'prompt/doc/heading_fix_resume.txt',  # Phase 4.7d RAG-7b：履歷專用 prompt
 }
 
 # === doc_type-registry ===
