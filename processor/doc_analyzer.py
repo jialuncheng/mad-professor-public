@@ -66,11 +66,6 @@ class DocAnalyzer:
 
     def _fix_heading_levels(self, markdown_path: Path, doc_type: str):
         """用 LLM 修正 Markdown 標題層級"""
-        # Phase 4.7e Commit 7e-2：resume 走 ResumeProcessor、已輸出正確
-        # # 結構（公司 ### 平行、Summary ## 等），跳過 LLM heading fix。
-        if doc_type == 'resume':
-            self.logger.info(f"[analyze] {doc_type} 走 ResumeProcessor、跳過 heading fix")
-            return
         try:
             content = markdown_path.read_text(encoding='utf-8')
             lines = content.split('\n')
@@ -92,26 +87,6 @@ class DocAnalyzer:
 
     def _analyze_document_structure(self, markdown_path: Path, doc_type: str) -> dict:
         """用 LLM 分析文件前段結構"""
-        # Phase 4.7e Commit 7e-2：resume 走 ResumeProcessor、不需 LLM structure；
-        # 仍寫最小 sidecar 給下游 md_processor 讀（md_processor.py:359 讀
-        # _doc_structure.json、若缺 fallback empty dict 行為仍 OK，但顯式寫
-        # 出 document_type='resume' + flat_structure=True 讓 md_processor 走
-        # 扁平處理路徑）。
-        if doc_type == 'resume':
-            sidecar_path = markdown_path.parent / f'{markdown_path.stem}_doc_structure.json'
-            minimal = {
-                "structure": [],
-                "document_type": "resume",
-                "flat_structure": True,
-            }
-            sidecar_path.write_text(
-                json.dumps(minimal, ensure_ascii=False, indent=2),
-                encoding='utf-8'
-            )
-            self.logger.info(
-                f"[analyze] {doc_type} 走 ResumeProcessor、寫最小 sidecar: {sidecar_path}"
-            )
-            return minimal
         try:
             content = markdown_path.read_text(encoding='utf-8')
             lines = content.split('\n')
