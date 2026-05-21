@@ -2122,6 +2122,10 @@ async function loadPaper(paperId, title) {
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('paper-content').style.display = 'block';
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
+  // Phase 4.7d Commit 17-1b：立即清空 chat-messages（不等 loadChatHistory）
+  // 切走的舊 paper user query + 閃爍泡泡會殘留到 loadChatHistory 跑完才清；
+  // 切 paper 是用戶意圖、UI 應該瞬間反映、不該卡在前一個 paper 的訊息
+  document.getElementById('chat-messages').innerHTML = '';
   // Phase 4.7c 修正 2：渲染 #current-title 擴充標題區（取代 hero + 原 h2.textContent）
   renderTitleHeader(allPapers.find(p => p.id === paperId));
 

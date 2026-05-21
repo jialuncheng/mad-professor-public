@@ -464,13 +464,22 @@ async def chat(paper_id: str, request: ChatRequest,
                 use_web_search=request.use_web_search
             )
 
-            for chunk in gen:
+            # Phase 4.7d Commit 17-1b：ai_core.query_stream 是 sync generator、
+            # `for chunk in gen` 內每次 next(gen) 是 blocking LLM call，
+            # 即使後面 await asyncio.sleep(0) 也讓不出 event loop（中間根本
+            # 沒 await point）。改 asyncio.to_thread 把 next(gen) 丟給
+            # threadpool、讓 event loop 自由處理其他 endpoint（GET /content
+            # 不再卡載入中）。
+            _SENTINEL = object()
+            while True:
+                chunk = await asyncio.to_thread(next, gen, _SENTINEL)
+                if chunk is _SENTINEL:
+                    break
                 if chunk.get('sentence'):
                     accumulated.append(chunk['sentence'])
                 if chunk.get('done') and chunk.get('grounding_sources'):
                     grounding_sources = chunk['grounding_sources']
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(0)  # 讓出控制權，避免阻塞
 
         except Exception as e:
             # Q4：失敗訊息寫 DB 與前端（避免「消失」感）
