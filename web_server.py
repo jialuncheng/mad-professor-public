@@ -581,8 +581,17 @@ async def export_chat_history(paper_id: str,
 
 @app.post("/api/cleanup")
 async def cleanup_orphaned(current_user: CurrentUser = Depends(get_current_user)):
-    """清理當前使用者目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。"""
-    removed = paper_manager.cleanup_orphaned(OUTPUT_DIR, current_user.id)
+    """清理當前使用者目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。
+    Phase 4.7d Commit 9：同步清記憶體 cache（ai_core._paper_cache、
+    retriever 三 dict）+ processing_tasks，避免鬼魂 paper。"""
+    removed = paper_manager.cleanup_orphaned(
+        OUTPUT_DIR, current_user.id, ai_core=ai_core
+    )
+    # 順帶清 processing_tasks 對應 task_key（若有殘留）
+    if removed:
+        with tasks_lock:
+            for paper_uuid in removed:
+                processing_tasks.pop((current_user.id, paper_uuid), None)
     return {"status": "ok", "removed": removed, "count": len(removed)}
 
 # ── 資料夾（Phase 3.1） ──

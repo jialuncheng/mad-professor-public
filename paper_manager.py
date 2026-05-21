@@ -292,8 +292,14 @@ def delete_paper(output_dir, owner_id: int, paper_uuid: str) -> bool:
     return True
 
 
-def cleanup_orphaned(output_dir, owner_id: int) -> list:
-    """只清該 owner 目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。"""
+def cleanup_orphaned(output_dir, owner_id: int, ai_core=None) -> list:
+    """只清該 owner 目錄 output/{owner_id}/ 內、不在 DB 的殘餘論文目錄。
+
+    Phase 4.7d Commit 9：同步清記憶體 cache（避免「鬼魂 paper」）。
+    若 ai_core 傳入，呼叫 ai_core.remove_paper(owner_id, paper_uuid)
+    清 _paper_cache + retriever 三個 dict（vector_stores /
+    paper_vector_paths / rag_trees）。processing_tasks 由 caller 負責清。
+    """
     _ensure_db()
     output_dir = Path(output_dir)
     owner_root = output_dir / str(owner_id)
@@ -309,6 +315,19 @@ def cleanup_orphaned(output_dir, owner_id: int) -> list:
             shutil.rmtree(item, ignore_errors=True)
             removed.append(item.name)
             logger.info(f"清理殘餘目錄: {owner_id}/{item.name}")
+            # 同步清記憶體 cache（避免鬼魂 paper：檔案刪了但 ai_core /
+            # retriever 仍記得、後續查詢炸或給亂結果）
+            if ai_core is not None:
+                try:
+                    ai_core.remove_paper(owner_id, item.name)
+                    logger.info(
+                        f"清理殘檔 cache 完成: owner={owner_id} {item.name}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"清理殘檔 cache 失敗（soft，忽略）: "
+                        f"owner={owner_id} {item.name} - {e}"
+                    )
     return removed
 
 
