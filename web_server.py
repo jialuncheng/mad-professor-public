@@ -657,9 +657,11 @@ async def attach_stream(paper_id: str,
 
 
 # ── 對話紀錄 ──
-
-class ChatHistory(BaseModel):
-    messages: list
+# Phase 4.7d Commit 17-4：移除 POST /api/papers/{id}/chat/history endpoint
+# 與 ChatHistory pydantic model。DB 寫入完全由 chat endpoint（17-1 進入寫
+# user query + stream finally 寫 assistant）負責；前端不再 POST 整包覆寫
+# （17-1 同 commit 已停用）。本 endpoint 在 17-1 後保留作為舊瀏覽器快取
+# 緩衝、本 commit 確認無 caller 後安全移除。
 
 @app.get("/api/papers/{paper_id}/chat/history")
 async def get_chat_history(paper_id: str,
@@ -690,21 +692,6 @@ async def get_chat_history(paper_id: str,
     if in_progress is None:
         return messages
     return {'messages': messages, 'in_progress': in_progress}
-
-@app.post("/api/papers/{paper_id}/chat/history")
-async def save_chat_history(paper_id: str, history: ChatHistory,
-                            current_user: CurrentUser = Depends(get_current_user)):
-    """儲存對話紀錄（整包覆寫 conversations）。
-
-    Phase 4.7d Commit 17-1：前端已停用此 endpoint、DB 寫入改由 chat
-    endpoint 自身於 stream 結束時 append。本 endpoint 暫保留供舊版瀏覽器
-    快取 / 第三方 client 兼容；Commit 17-4 將移除。
-    """
-    db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
-    if db_id is None:
-        raise HTTPException(status_code=404, detail="論文不存在")
-    paper_manager.save_chat_history(db_id, current_user.id, history.messages)
-    return {"status": "ok"}
 
 # ── 文件類型確認 ──
 
