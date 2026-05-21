@@ -361,6 +361,46 @@ def _resolve_candidate_extras(metadata: Optional[dict],
     return {}
 
 
+# ───────────────── Phase 4.7d Commit 3：abstract 雙語注入（v2 §4.4） ─────────────────
+
+# 哪些 doc_type 無 abstract（與 translate_processor.doc_type_no_abstract +
+# resume 對齊；翻譯階段已 skip、md_restore 也跳過）
+# === doc_type-registry ===
+# 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
+ABSTRACT_NO_DOC_TYPES = {'news', 'web', 'slides', 'resume'}
+
+
+def _resolve_abstract(data: dict, doc_type: Optional[str]) -> tuple:
+    """v2 §4.4：從 JSON tree 找 sections[type=='abstract'].content[0]。
+
+    Returns:
+        (abstract_en, abstract_zh, conf_log)
+        - 英文取 content；中文取 translated_content；中文空則 fallback 英文
+        - doc_type ∈ ABSTRACT_NO_DOC_TYPES 一律 ('', '', ...)
+    """
+    if doc_type in ABSTRACT_NO_DOC_TYPES:
+        return ('', '', f'{doc_type} no abstract')
+
+    sections = data.get('sections') or []
+    for sec in sections:
+        if sec.get('type') != 'abstract':
+            continue
+        contents = sec.get('content') or []
+        if not contents:
+            continue
+        # 取第一個 dict 型 content item
+        item = next((c for c in contents if isinstance(c, dict)
+                     and c.get('type') == 'text'), None)
+        if item is None:
+            # 沒 text item 也試取第一個 dict
+            item = contents[0] if isinstance(contents[0], dict) else {}
+        ab_en = (item.get('content') or '').strip()
+        ab_zh = (item.get('translated_content') or '').strip()
+        if ab_en or ab_zh:
+            return (ab_en, ab_zh or ab_en, 'found in sections')
+    return ('', '', 'no abstract section')
+
+
 # ───────────────── doc_type-specific header templates（v2 §B-5） ─────────────────
 # === doc_type-registry ===
 # 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
@@ -375,8 +415,9 @@ def _render_header_en(
     keywords: list,
     candidate_extras: dict,
     domain: str,
+    abstract: str = '',
 ) -> str:
-    """產出 final_*_en.md 的 header（# title + meta block）。缺項靜默省略。"""
+    """產出 final_*_en.md 的 header（# title + meta block + abstract）。缺項靜默省略。"""
     lines = [f"# {title}", ""]
 
     if doc_type == 'resume':
@@ -404,6 +445,12 @@ def _render_header_en(
     if meta_bits:
         lines.extend(meta_bits)
         lines.append("")
+
+    if abstract:
+        lines.append("## Abstract")
+        lines.append("")
+        lines.append(abstract)
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -417,6 +464,7 @@ def _render_header_zh(
     keywords: list,
     candidate_extras: dict,
     domain: str,
+    abstract: str = '',
 ) -> str:
     """產出 final_*_zh.md 的 header（中文 label）。缺項靜默省略。"""
     lines = [f"# {title_zh}", ""]
@@ -445,6 +493,12 @@ def _render_header_zh(
 
     if meta_bits:
         lines.extend(meta_bits)
+        lines.append("")
+
+    if abstract:
+        lines.append("## 摘要")
+        lines.append("")
+        lines.append(abstract)
         lines.append("")
     return "\n".join(lines)
 
@@ -716,6 +770,8 @@ class RestoreProcessor:
             doi_val = _resolve_doi(metadata)
             keywords_val = _resolve_keywords(metadata)
             candidate_extras = _resolve_candidate_extras(metadata, doc_type)
+            # Phase 4.7d Commit 3：abstract 雙語注入（v2 §4.4）
+            abstract_en, abstract_zh, ab_log = _resolve_abstract(data, doc_type)
 
             self.logger.info(
                 f"[md_restore] authors: {auth_log} (n={len(authors_list)})"
@@ -729,17 +785,22 @@ class RestoreProcessor:
                 self.logger.info(f"[md_restore] doi: {doi_val!r}")
             if keywords_val:
                 self.logger.info(f"[md_restore] keywords: n={len(keywords_val)}")
+            self.logger.info(f"[md_restore] abstract: {ab_log}")
 
             header_en = _render_header_en(
                 title_en, dt, authors_list, date_val, venue_val, doi_val,
                 keywords_val, candidate_extras, domain or '',
+                abstract=abstract_en,
             )
             header_zh = _render_header_zh(
                 title_zh, dt, authors_list, date_val, venue_val, doi_val,
                 keywords_val, candidate_extras, domain or '',
+                abstract=abstract_zh,
             )
             self._write_to_md(output_path_en, header_en)
             self._write_to_md(output_path_zh, header_zh)
+            # Commit 3：abstract 已寫進 header → 跳過原 sections 內 abstract section 避免重複
+            self._abstract_consumed = bool(abstract_en or abstract_zh)
 
             # 處理 raw authors_info：若 metadata 已給結構化 authors 則丟、
             # 否則保留（既有 _clean_authors_info 處理上標數字 / table 等）
@@ -749,8 +810,14 @@ class RestoreProcessor:
                     self._write_to_md(output_path_en, authors)
                     self._write_to_md(output_path_zh, authors)
             
-            # 处理各个章节
+            # 处理各个章节（Commit 3：abstract section 已寫進 header → 跳過）
             for section in data['sections']:
+                if (getattr(self, '_abstract_consumed', False)
+                        and section.get('type') == 'abstract'):
+                    self.logger.info(
+                        "[md_restore] 跳過原 sections abstract（已注入 header）"
+                    )
+                    continue
                 self._process_section(section, output_path_en, output_path_zh, level=2, vision_captions=vision_captions)
             
             self.logger.info(f"恢复完成，结果已保存到: {output_path_en} 和 {output_path_zh}")

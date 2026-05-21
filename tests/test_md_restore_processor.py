@@ -25,6 +25,8 @@ from processor.md_restore_processor import (
     _resolve_candidate_extras,
     _render_header_en,
     _render_header_zh,
+    # Commit 3
+    _resolve_abstract,
 )
 
 
@@ -401,3 +403,84 @@ def test_render_header_missing_fields_silently_omitted():
     )
     # 只有 title + 空行
     assert h.strip() == '# Some Title'
+
+
+# ── Commit 3：abstract 雙語注入 ──
+
+def _abstract_section(en, zh=None):
+    """構造 sections[type=='abstract'] 結構（同 translate_processor 寫法）。"""
+    item = {'type': 'text', 'content': en}
+    if zh is not None:
+        item['translated_content'] = zh
+    return {'type': 'abstract', 'content': [item]}
+
+
+def test_resolve_abstract_found_in_sections():
+    """en + zh 都有 → 各取各的"""
+    data = {'sections': [_abstract_section('English abstract.', '中文摘要。')]}
+    en, zh, log = _resolve_abstract(data, 'academic')
+    assert en == 'English abstract.'
+    assert zh == '中文摘要。'
+    assert 'found' in log
+
+
+def test_resolve_abstract_translated_fallback_to_original():
+    """有 en 但無 zh → zh fallback 為 en（避免中文版完全沒 abstract）"""
+    data = {'sections': [_abstract_section('English only.')]}
+    en, zh, log = _resolve_abstract(data, 'academic')
+    assert en == 'English only.'
+    assert zh == 'English only.'
+
+
+def test_resolve_abstract_news_skipped():
+    """news doc_type → translate 階段已 skip、md_restore 也跳過"""
+    data = {'sections': [_abstract_section('Should not be used.', '不應使用')]}
+    en, zh, log = _resolve_abstract(data, 'news')
+    assert en == '' and zh == ''
+    assert 'no abstract' in log
+
+
+def test_resolve_abstract_resume_skipped():
+    data = {'sections': [_abstract_section('x', 'x')]}
+    en, zh, log = _resolve_abstract(data, 'resume')
+    assert en == '' and zh == ''
+
+
+def test_resolve_abstract_no_section_in_sections():
+    """sections 內無 abstract type → 回空"""
+    data = {'sections': [{'type': 'introduction', 'content': []}]}
+    en, zh, log = _resolve_abstract(data, 'academic')
+    assert en == '' and zh == ''
+    assert 'no abstract section' in log
+
+
+def test_render_header_en_with_abstract():
+    h = _render_header_en(
+        title='Paper', doc_type='academic',
+        authors_list=['A'], date='2024', venue='', doi='', keywords=[],
+        candidate_extras={}, domain='', abstract='Lorem ipsum abstract.',
+    )
+    assert '## Abstract' in h
+    assert 'Lorem ipsum abstract.' in h
+
+
+def test_render_header_zh_with_abstract():
+    h = _render_header_zh(
+        title_zh='論文', doc_type='academic',
+        authors_list=[], date='', venue='', doi='', keywords=[],
+        candidate_extras={}, domain='', abstract='中文摘要內容。',
+    )
+    assert '## 摘要' in h
+    assert '中文摘要內容。' in h
+
+
+def test_render_header_resume_no_abstract_block():
+    """resume header 即使傳 abstract 也不渲染 ## 摘要"""
+    h = _render_header_zh(
+        title_zh='姓名', doc_type='resume',
+        authors_list=[], date='', venue='', doi='', keywords=[],
+        candidate_extras={'organization': 'Tesla'}, domain='',
+        abstract='不該出現',
+    )
+    assert '## 摘要' not in h
+    assert '不該出現' not in h
