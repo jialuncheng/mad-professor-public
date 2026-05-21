@@ -1066,7 +1066,7 @@
       <li>等待處理完成（含翻譯、建立向量索引）</li>
       <li>完成後論文出現在左側列表</li>
     </ol>
-    <p class="step-note">每次只能上傳一份文件；如選多份會出現提示</p>
+    <p class="step-note">每次只能上傳一份文件；如選多份會出現提示；上傳期間可繼續上傳下一份</p>
     <p class="step-note">僅支援 PDF 格式</p>
     <p class="step-note">檔案大小上限：100 MB</p>
     <p class="step-note">支援類型：學術論文、書籍、技術文件、簡報、新聞、網頁存檔</p>
@@ -1755,8 +1755,10 @@ function removeUploadingRow(paperId) {
 }
 
 function setBusy(busy) {
+  // Phase 4.7d Commit 11：upload-btn 不再受 setBusy 控制；上傳期間使用者
+  // 可繼續上傳下一份（後端 thread pool 並行 OK）。upload-btn 的 disabled
+  // 由各 handler 短期 lock（選檔 → upload API 回應期間）。
   isProcessing = busy;
-  document.getElementById('upload-btn').disabled = busy;
   document.getElementById('cleanup-btn').disabled = busy;
 }
 
@@ -2429,6 +2431,14 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
       const data = await res.json();
       const paperId = data.paper_id;
 
+      // Phase 4.7d Commit 11：upload API 回應後立刻 unlock upload-btn，
+      // 允許使用者上傳下一份（後端 thread pool 並行 OK）。
+      // setBusy(false) 只 unlock cleanup-btn——按目前邏輯交由 trackProgress
+      // 觸發；此處保留 setBusy(false) 是維持「上傳階段已結束」語意（pipeline
+      // 由 confirm + trackProgress 接手）。
+      btn.disabled = false;
+      setBusy(false);
+
       // 上傳完成，立即顯示文件類型選擇框
       // 進度顯示在左欄 .paper-item.uploading 占位列（不在按鈕文字上）
       showConfirmModal(paperId, data.suggested_doc_type, btn, file.name);
@@ -2542,7 +2552,8 @@ function showConfirmModal(paperId, detection, btn, filename) {
   document.getElementById('confirm-ok-btn').onclick = async () => {
     const selectedType = document.getElementById('doc-type-dropdown').dataset.value;
     modal.classList.remove('show');
-    btn.disabled = true;
+    // Phase 4.7d Commit 11：不再 btn.disabled = true；上傳階段已在 upload
+    // handler 結束、使用者可獨立操作下一份
 
     try {
       await fetch(`/api/papers/${paperId}/confirm_type`, {

@@ -164,6 +164,11 @@ Phase 4.7d Commit 10：一次只能上傳一份文件。Help modal 列出 5 步�
 無視 multiple=false 選擇行為），handler 偵測 `files.length > 1` 時 alert
 「一次只能上傳一份文件」並 return、不開 confirm modal、不發 upload。
 
+Phase 4.7d Commit 11：上傳完成（API 回應 + confirm modal 開啟）後 upload-btn
+立刻解鎖、使用者可上傳下一份；pipeline 平行跑、無需等待。`setBusy` 只
+lock cleanup-btn（破壞性按鈕、所有 paper 跑完才解鎖）；upload-btn 的
+disabled 只在「選檔 → upload API 回應」極短期間 lock。
+
 ### 6.2 空狀態
 ```
 ✅ 從左側選擇文件
