@@ -23,6 +23,11 @@ EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 # 連線會把 Gemini endpoint 打斷）；太低會慢。預設 6 為經驗值；env override。
 LLM_MAX_CONCURRENT = int(os.getenv("LLM_MAX_CONCURRENT", "6"))
 
+# Phase 4.7d RAG-7a：浮水印偵測閾值
+# 整篇 markdown 內出現 ≥ N 次的 heading line 視為浮水印、整行移除
+# 預設 3（DeHunt 履歷實測 XDeHunt 出現 5 處、HDeHunt 出現 5 處）
+WATERMARK_HEADING_THRESHOLD = int(os.getenv("WATERMARK_HEADING_THRESHOLD", "3"))
+
 # ── 環境 ──
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
