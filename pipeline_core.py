@@ -17,6 +17,7 @@ from processor.extra_info_processor import ExtraInfoProcessor
 from processor.rag_processor import RagProcessor
 from processor.image_caption_processor import ImageCaptionProcessor
 from processor.slides_processor import SlidesProcessor
+from processor.resume_processor import ResumeProcessor
 from processor.domain_detector import DomainDetector
 from processor.metadata_extractor import (
     extract_pdf_metadata, extract_metadata_from_first_page_llm,
@@ -25,6 +26,15 @@ from processor.metadata_extractor import (
 )
 
 logger = logging.getLogger(__name__)
+
+# === doc_type-registry ===
+# Phase 4.7e Commit 7e-2：pipeline 已知 doc_type 全集（對齊
+# web_server.valid_types）。新增 doc_type 漏改本處時、_stage_pdf_to_md
+# 會 log warning（fallback 走 MinerU），便於偵錯。
+# 詳見 docs/HOW_TO_ADD_DOC_TYPE.md。
+KNOWN_DOC_TYPES = frozenset({
+    'academic', 'book', 'technical', 'slides', 'news', 'web', 'resume'
+})
 
 # 階段清單的唯一權威來源（順序即執行順序）
 STAGE_NAMES = [
@@ -526,17 +536,33 @@ class PipelineCore:
     def _stage_pdf_to_md(self, pdf_path, paper_dir, paper_name, output_paths):
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
 
+        # === doc_type-registry ===
+        # 新增 doc_type 須同步更新此處（或於 KNOWN_DOC_TYPES 內擴）。
+        # 詳見 docs/HOW_TO_ADD_DOC_TYPE.md
         if doc_type == 'slides':
             # 簡報：用 Vision 每頁解析，不走 MinerU
             self.logger.info(f"{self.paper_info.get('paper_id')} 簡報類型，使用 Vision 解析")
             parser = SlidesProcessor()
+        elif doc_type == 'resume':
+            # Phase 4.7e：履歷用 Vision 整份解析，不走 MinerU + heading_fix
+            self.logger.info(f"{self.paper_info.get('paper_id')} 履歷類型，使用 Vision 解析")
+            parser = ResumeProcessor()
+        elif doc_type in KNOWN_DOC_TYPES:
+            # 預期走 MinerU 的 doc_type（academic / book / technical / news / web）
+            parser = self.pdf_processor
         else:
-            # 其他：MinerU 解析
+            # 未知 doc_type fallback：log warning 留軌跡（避免未來新增 doc_type 漏改本處時靜默走 MinerU）
+            self.logger.warning(
+                f"未知 doc_type='{doc_type}'、fallback 至預設 MinerU 路徑、"
+                f"請確認 pipeline_core 是否需更新（known: {sorted(KNOWN_DOC_TYPES)}）"
+            )
             parser = self.pdf_processor
 
         markdown_path = parser.parse(str(pdf_path), str(paper_dir))
 
-        if doc_type != 'slides':
+        # Phase 4.7e：resume 與 slides 同樣跳過 md_cleaner
+        # （Vision 輸出已是乾淨 markdown、不需浮水印 / 純數字行清理）
+        if doc_type not in ('slides', 'resume'):
             self.md_cleaner.clean(markdown_path)
 
         return markdown_path
