@@ -47,6 +47,26 @@ def test_is_retryable_non_retryable():
     assert not _is_retryable(ValueError('foo'))
 
 
+# ── Phase 4.7d Commit 13：連線中斷 token 補洞 ──
+
+def test_is_retryable_disconnect():
+    """baron 觀察的「Server disconnected without sending a response.」應 retryable"""
+    assert _is_retryable(Exception(
+        'Server disconnected without sending a response.'))
+
+
+def test_is_retryable_protocol_error():
+    """httpx.RemoteProtocolError 及變體應 retryable"""
+    assert _is_retryable(Exception('httpx.RemoteProtocolError: Server disconnected'))
+    assert _is_retryable(Exception('Protocol Error: unexpected EOF'))
+
+
+def test_is_retryable_reset():
+    """connection reset / closed 應 retryable"""
+    assert _is_retryable(Exception('connection reset by peer'))
+    assert _is_retryable(Exception('Connection closed by remote host'))
+
+
 # ── retry_call ──
 
 def test_retry_call_5xx_then_success(monkeypatch):

@@ -18,6 +18,11 @@ LLM_EXTRA_INFO_MODEL = os.getenv("LLM_EXTRA_INFO_MODEL", CHAT_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 
+# Phase 4.7d Commit 13：LLM 全域並發上限（Semaphore in llm/client.py）。
+# 太高會撞「Server disconnected」（4 paper × image_caption 4 worker ~16 條
+# 連線會把 Gemini endpoint 打斷）；太低會慢。預設 6 為經驗值；env override。
+LLM_MAX_CONCURRENT = int(os.getenv("LLM_MAX_CONCURRENT", "6"))
+
 # ── 環境 ──
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 

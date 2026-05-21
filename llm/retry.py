@@ -30,6 +30,16 @@ _RETRYABLE_TOKENS = (
     'unavailable',
     'connection',
     'deadline',
+    # Phase 4.7d Commit 13：補連線中斷相關 token——baron 連續上傳多份 paper
+    # 觸發「Server disconnected without sending a response.」、retry 沒救
+    # （'disconnect' 等不在原表內、被歸 non-retryable）。httpx / httpcore
+    # 對連線中斷報的訊息變化多、多個關鍵字覆蓋。
+    'disconnect',         # httpx「Server disconnected without sending a response.」
+    'remote protocol',    # httpx.RemoteProtocolError
+    'protocol error',     # 部分變體
+    'incomplete read',    # 串流中斷
+    'closed',             # connection closed
+    'reset',              # connection reset by peer
 )
 
 
