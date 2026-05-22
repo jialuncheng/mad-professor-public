@@ -620,7 +620,9 @@ class PipelineCore:
         if not input_path:
             raise ValueError("未找到 JSON 文件")
         output_path = self._get_stage_output_path('tiling', paper_dir, paper_name)
-        return self.tiling_processor.process(str(input_path), str(output_path))
+        # Phase 4.7? MODEL-3 B1：傳 doc_type 給 tiling（bypass log + 未來特例）
+        doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+        return self.tiling_processor.process(str(input_path), str(output_path), doc_type=doc_type)
 
     def _stage_translate(self, pdf_path, paper_dir, paper_name, output_paths):
         input_path = output_paths.get('tiling')

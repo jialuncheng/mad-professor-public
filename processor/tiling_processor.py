@@ -5,6 +5,25 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Any
 from config import EmbeddingModel
+from settings import TILING_BYPASS_CHAR_LIMIT, TILING_MAX_LENGTH
+
+
+def _join_content(prev_type: str, prev_text: str,
+                  next_type: str, next_text: str) -> str:
+    """根據兩個節點的 type 決定拼接字元、防禦 inline formula 排版災難。
+
+    依 plan §3.5 修正 1：
+    - text + text → "\\n\\n"（段落分隔）
+    - text + formula 或 formula + text → " "（保留 inline、單空格）
+    - formula + formula → " "（兩公式相鄰）
+
+    避免「The value of $x$ is positive」被強制斷行成 3 個獨立段落。
+    """
+    if prev_type == 'text' and next_type == 'text':
+        return prev_text + "\n\n" + next_text
+    # 含 formula 至少一方、用空格
+    return prev_text + " " + next_text
+
 
 class TilingProcessor:
     """
@@ -14,53 +33,169 @@ class TilingProcessor:
     使用向量相似度计算最佳切分点
     """
     
-    def __init__(self, min_length: int = 500, max_length: int = 2500, window_size: int = 3, step_size: int = 1, embedder=None):
+    def __init__(self, min_length: int = 500, max_length: int = None, window_size: int = 3, step_size: int = 1, embedder=None):
         """
         初始化平铺处理器
-        
+
         Args:
             min_length: 文本块最小长度
-            max_length: 文本块最大长度
+            max_length: 文本块最大长度（修正 5：None → 從 env TILING_MAX_LENGTH 讀預設）
             window_size: 相似度计算窗口大小
             step_size: 滑动窗口步长
         """
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.min_length = min_length
-        self.max_length = max_length
+        # Phase 4.7? MODEL-3 修正 5: max_length=None → 從 env 讀預設；顯式傳值仍生效
+        self.max_length = max_length if max_length is not None else TILING_MAX_LENGTH
         self.window_size = window_size
         self.step_size = step_size
         self.embedder = embedder if embedder is not None else EmbeddingModel.get_instance()
     
-    def process(self, input_path: str, output_path: str) -> Path:
+    def process(self, input_path: str, output_path: str, doc_type: str = '') -> Path:
         """
         处理JSON文件，将文本块进行合并分割处理
-        
+
+        Phase 4.7? MODEL-3 B1（依 plan §4.1）:
+        - 若總字數 < TILING_BYPASS_CHAR_LIMIT（5000）→ bypass TextTiling
+        - 否則 → 既有 _process_sections 流程
+
         Args:
             input_path: 输入JSON文件路径
             output_path: 输出JSON文件路径
-            
+            doc_type: 文件類型（B1 加：未來可做 doc_type 特例、本 commit 僅用於 log）
+
         Returns:
             Path: 输出文件路径
         """
-        self.logger.info(f"开始处理JSON文件: 从 {input_path} 到 {output_path}")
-        
-        # 读取输入JSON文件
+        self.logger.info(
+            f"开始处理JSON文件: 从 {input_path} 到 {output_path} "
+            f"(doc_type={doc_type!r})"
+        )
+
         with open(input_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
-        # 处理sections中的content
-        if 'sections' in data:
-            self.logger.info(f"开始处理文档sections，共 {len(data['sections'])} 个section")
-            self._process_sections(data['sections'])
-            self.logger.info("sections处理完成")
-        
+
+        # B1: 估算總字數、決定是否 bypass
+        total_chars = self._estimate_total_chars(data)
+        if total_chars < TILING_BYPASS_CHAR_LIMIT:
+            self.logger.info(
+                f"[tiling bypass] doc_type={doc_type!r} 總字數 {total_chars} < "
+                f"{TILING_BYPASS_CHAR_LIMIT}、跳過 TextTiling 切割"
+            )
+            if 'sections' in data:
+                self._bypass_sections(data['sections'])
+        else:
+            if 'sections' in data:
+                self.logger.info(
+                    f"开始处理文档sections，共 {len(data['sections'])} 个section "
+                    f"(總字數 {total_chars})"
+                )
+                self._process_sections(data['sections'])
+                self.logger.info("sections处理完成")
+
         # 保存处理后的JSON文件
         output_file = Path(output_path)
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        
+
         self.logger.info(f"处理完成，输出已保存到 {output_file}")
         return output_file
+
+    def _estimate_total_chars(self, data) -> int:
+        """估算 sections 內所有 text item 總字數（依 plan §4.1）。
+
+        遞迴處理 children、跳過 abstract / references（同 _process_sections 既有邏輯）。
+        """
+        total = 0
+
+        def walk(sections):
+            nonlocal total
+            for s in sections:
+                if s.get('type') in ('abstract', 'references'):
+                    continue
+                for item in s.get('content', []):
+                    if isinstance(item, dict) and item.get('type') == 'text':
+                        total += len(item.get('content', '') or '')
+                if s.get('children'):
+                    walk(s['children'])
+
+        walk(data.get('sections', []))
+        return total
+
+    def _bypass_sections(self, sections):
+        """Bypass 模式：每個 section 內 text/formula 合併、其他原樣 pass-through。
+
+        標記 tiling_method='bypass' 為未來除錯方便。
+        遞迴處理 children、跳過 abstract / references。
+        """
+        for section in sections:
+            if section.get('type') in ('abstract', 'references'):
+                continue
+            if 'content' in section:
+                section['content'] = self._bypass_content(section['content'])
+            if section.get('children'):
+                self._bypass_sections(section['children'])
+
+    def _bypass_content(self, content):
+        """單 section 內：合併相鄰 text+formula、保留其他 type 與原始 index。
+
+        依 plan §4.1（含修正 1 / 修正 2）：
+        - 修正 1：用 _join_content 差異化拼接、防 inline formula 排版災難
+        - 修正 2：保留原始 index、buffer 取被合併的第一個 item 原始 index、
+                  non-text 絕不重寫 index（md_restore 依 (index, part) 排序對齊）
+        """
+        result = []
+        buffer = None
+        buffer_first_index = None
+        buffer_last_appended_type = None  # 修正 1：追蹤最後合進 buffer 的 item 實際 type
+
+        for item in content:
+            if not isinstance(item, dict):
+                if buffer is not None:
+                    buffer['index'] = buffer_first_index
+                    result.append(buffer)
+                    buffer = None
+                    buffer_first_index = None
+                    buffer_last_appended_type = None
+                result.append(item)
+                continue
+
+            item_type = item.get('type')
+
+            if item_type in ('text', 'formula'):
+                if buffer is None:
+                    buffer = item.copy()
+                    buffer_first_index = item.get('index', 0)
+                    buffer_last_appended_type = item_type
+                    buffer['part'] = 0
+                    buffer['tiling_method'] = 'bypass'
+                else:
+                    # 修正 1：用「最後合進的實際 type」決定拼接、不是 buffer 總 type
+                    buffer['content'] = _join_content(
+                        buffer_last_appended_type,
+                        buffer.get('content', '') or '',
+                        item_type,
+                        item.get('content', '') or ''
+                    )
+                    buffer_last_appended_type = item_type
+            else:
+                # non-text/formula：硬截斷 + 保留原始 index（修正 2）
+                if buffer is not None:
+                    buffer['index'] = buffer_first_index
+                    result.append(buffer)
+                    buffer = None
+                    buffer_first_index = None
+                    buffer_last_appended_type = None
+                item_copy = item.copy()
+                item_copy['part'] = 0
+                # 修正 2：絕不重寫 item_copy['index']、保留原始
+                result.append(item_copy)
+
+        if buffer is not None:
+            buffer['index'] = buffer_first_index
+            result.append(buffer)
+
+        return result
     
     def _process_sections(self, sections: List[Dict[str, Any]]) -> None:
         """

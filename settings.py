@@ -26,6 +26,16 @@ EMBEDDING_OUTPUT_DIMENSIONS = int(os.getenv("EMBEDDING_OUTPUT_DIMENSIONS", "768"
 # 推測 L2 normalize 後可能需升到 0.35-0.45、待 RAG-3 收實測數據確認
 RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 
+# Phase 4.7? MODEL-3 B1：短文 Fast-path Bypass 上限
+# Gemini 3.5 Flash 65k 輸出解鎖、總字數 < 此值的短文整篇進 translate 不切 TextTiling
+# 詳見 .claude-logs/2026-05-22_MODEL-3_短文Bypass_公式穿透_段落滑動_plan.md
+TILING_BYPASS_CHAR_LIMIT = int(os.getenv("TILING_BYPASS_CHAR_LIMIT", "5000"))
+
+# Phase 4.7? MODEL-3 修正 5: tiling_processor max_length env 化
+# 對齊 TILING_BYPASS_CHAR_LIMIT / TILING_PARAGRAPH_THRESHOLD（B3 範圍）風格
+# 單一 text item > 此值才走切割（與 TILING_BYPASS_CHAR_LIMIT「整篇 < N 字 bypass」不同語意）
+TILING_MAX_LENGTH = int(os.getenv("TILING_MAX_LENGTH", "2500"))
+
 # Phase 4.7d Commit 13：LLM 全域並發上限（Semaphore in llm/client.py）。
 # 太高會撞「Server disconnected」（4 paper × image_caption 4 worker ~16 條
 # 連線會把 Gemini endpoint 打斷）；太低會慢。預設 6 為經驗值；env override。
