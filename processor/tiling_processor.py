@@ -5,7 +5,13 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Any
 from config import EmbeddingModel
-from settings import TILING_BYPASS_CHAR_LIMIT, TILING_MAX_LENGTH
+from settings import TILING_BYPASS_CHAR_LIMIT, TILING_MAX_LENGTH, TILING_PARAGRAPH_THRESHOLD
+
+
+# Phase 4.7? MODEL-3 B3 修正 4：段落切割容錯
+# 容錯 Windows \r\n / 多餘空白（如 \n \n / \n\t\n）
+# 依 plan §3.8 修正 4
+_PARAGRAPH_SPLIT_RE = re.compile(r'\r?\n\s*\r?\n')
 
 
 # Phase 4.7? MODEL-3 B2: 公式穿透合併支援（依 plan §4.2）
@@ -97,7 +103,8 @@ class TilingProcessor:
                     f"开始处理文档sections，共 {len(data['sections'])} 个section "
                     f"(總字數 {total_chars})"
                 )
-                self._process_sections(data['sections'])
+                # B3: 傳 total_chars_hint 供 _process_content long_doc_mode 切換
+                self._process_sections(data['sections'], total_chars_hint=total_chars)
                 self.logger.info("sections处理完成")
 
         # 保存处理后的JSON文件
@@ -204,27 +211,34 @@ class TilingProcessor:
 
         return result
     
-    def _process_sections(self, sections: List[Dict[str, Any]]) -> None:
+    def _process_sections(self, sections: List[Dict[str, Any]], total_chars_hint: int = 0) -> None:
         """
         处理sections列表，递归处理所有section内容，跳过abstract和references
-        
+
+        Phase 4.7? MODEL-3 B3：加 total_chars_hint 參數供 _process_content
+        long_doc_mode 切換（總字數 > TILING_PARAGRAPH_THRESHOLD 時用段落級滑動）。
+
         Args:
             sections: section列表
+            total_chars_hint: 全文總字數（從 process() 傳入、決定 long_doc_mode）
         """
         for section in sections:
             # 跳过abstract和references类型的section
             if section.get('type') in ['abstract', 'references']:
                 self.logger.info(f"跳过处理section类型: {section.get('type')}")
                 continue
-                
+
             if 'content' in section:
-                section['content'] = self._process_content(section['content'])
-            
+                section['content'] = self._process_content(
+                    section['content'],
+                    total_chars_hint=total_chars_hint
+                )
+
             # 递归处理子section
             if 'children' in section and section['children']:
-                self._process_sections(section['children'])
+                self._process_sections(section['children'], total_chars_hint=total_chars_hint)
     
-    def _process_content(self, content: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _process_content(self, content: List[Dict[str, Any]], total_chars_hint: int = 0) -> List[Dict[str, Any]]:
         """
         处理content列表，合并和分割文本块
         
@@ -243,6 +257,9 @@ class TilingProcessor:
             # 如果是未分割的块，part为0
             item['part'] = 0
         
+        # B3: long_doc_mode 切換（依 plan §4.3）
+        long_doc_mode = total_chars_hint > TILING_PARAGRAPH_THRESHOLD
+
         # 然后检查是否需要分割大文本块
         result = []
         for item in content:
@@ -250,33 +267,43 @@ class TilingProcessor:
             if item.get('type') in SOFT_TYPES_FOR_MERGE and len(item.get('content', '') or '') > self.max_length:
                 # 获取原始索引
                 original_index = item.get('index', 0)
-                
-                # 分割大文本块
-                if '\n\n' in item['content']:
-                    # 使用换行符分割策略
-                    elements = item['content'].split('\n\n')
+                content_text = item.get('content', '') or ''
+
+                # B3 切割模式選擇（依 plan §4.3）
+                if long_doc_mode and _PARAGRAPH_SPLIT_RE.search(content_text):
+                    # 段落級：regex 切分、容錯 Windows \r\n / 多餘空白（修正 4）
+                    elements = _PARAGRAPH_SPLIT_RE.split(content_text)
+                    elements = [e.strip() for e in elements if e.strip()]
+                    split_mode = "paragraph"
+                elif '\n\n' in content_text:
+                    # 既有 delimiter 模式
+                    elements = content_text.split('\n\n')
                     split_mode = "delimiter"
                 else:
-                    # 使用句子分割策略
-                    elements = self._split_into_sentences(item['content'])
+                    # 既有 sentence 模式
+                    elements = self._split_into_sentences(content_text)
                     split_mode = "sentence"
-                
+
                 # 使用统一的TextTiling算法进行分割
                 segments = self._texttiling(elements, split_mode)
-                
-                # 创建分割后的文本块
+
+                # 创建分割后的文本块（B3：標記 tiling_method）
                 split_blocks = []
                 for i, segment_text in enumerate(segments):
                     new_block = item.copy()
                     new_block['content'] = segment_text
                     new_block['index'] = original_index
                     new_block['part'] = i
+                    new_block['tiling_method'] = split_mode  # paragraph / delimiter / sentence
                     split_blocks.append(new_block)
-                
+
                 result.extend(split_blocks)
             else:
-                result.append(item)
-        
+                # 非切割路徑：標記 passthrough（B3 tiling_method 完整化）
+                item_with_method = item.copy()
+                item_with_method.setdefault('tiling_method', 'passthrough')
+                result.append(item_with_method)
+
         return result
     
     def _merge_small_text_blocks(self, content: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

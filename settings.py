@@ -36,6 +36,12 @@ TILING_BYPASS_CHAR_LIMIT = int(os.getenv("TILING_BYPASS_CHAR_LIMIT", "5000"))
 # 單一 text item > 此值才走切割（與 TILING_BYPASS_CHAR_LIMIT「整篇 < N 字 bypass」不同語意）
 TILING_MAX_LENGTH = int(os.getenv("TILING_MAX_LENGTH", "2500"))
 
+# Phase 4.7? MODEL-3 B3：段落級滑動觸發閾值（書籍 / 長論文）
+# 詳見 .claude-logs/2026-05-22_MODEL-3_短文Bypass_公式穿透_段落滑動_plan.md §4.3
+# 總字數 > 此值 → 段落級滑動（80% 滑動窗口減少、避免 RTT 卡死）
+# 否則 → 既有句子 / delimiter 級滑動
+TILING_PARAGRAPH_THRESHOLD = int(os.getenv("TILING_PARAGRAPH_THRESHOLD", "30000"))
+
 # Phase 4.7d Commit 13：LLM 全域並發上限（Semaphore in llm/client.py）。
 # 太高會撞「Server disconnected」（4 paper × image_caption 4 worker ~16 條
 # 連線會把 Gemini endpoint 打斷）；太低會慢。預設 6 為經驗值；env override。
