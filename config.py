@@ -1,6 +1,7 @@
 import logging
 import threading
 from typing import Optional
+import numpy as np
 from google import genai
 from google.genai import types
 from langchain_core.embeddings import Embeddings
@@ -8,7 +9,7 @@ from langchain_core.embeddings import Embeddings
 # 設定常數已抽至 settings.py，此處 re-export 維持向後相容
 # Phase 4.7d Commit 12-2：LLMClient 已搬到 llm/client.py、_convert_messages
 # import 已不需。EmbeddingModel 仍留此檔。
-from settings import TRANSLATE_MODEL, CHAT_MODEL, GEMINI_API_KEY, EMBEDDING_MODEL_NAME  # noqa: F401
+from settings import TRANSLATE_MODEL, CHAT_MODEL, GEMINI_API_KEY, EMBEDDING_MODEL_NAME, EMBEDDING_OUTPUT_DIMENSIONS  # noqa: F401
 
 
 # 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
@@ -27,7 +28,10 @@ class EmbeddingModel(Embeddings):
         )
         self.model = EMBEDDING_MODEL_NAME
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"初始化嵌入模型: {self.model}（Gemini API + 共享 httpx.Client）")
+        self.logger.info(
+            f"初始化嵌入模型: {self.model} "
+            f"(Gemini API + 共享 httpx.Client + MRL {EMBEDDING_OUTPUT_DIMENSIONS}維 + L2 normalize)"
+        )
 
     @classmethod
     def get_instance(cls) -> 'EmbeddingModel':
@@ -36,6 +40,36 @@ class EmbeddingModel(Embeddings):
                 if cls._instance is None:
                     cls._instance = cls()
         return cls._instance
+
+    @staticmethod
+    def _l2_normalize(vec):
+        """L2 正規化向量、安全處理空值 + 零向量 + float32 精度溢出。
+
+        依 plan §3.6.3 修正 3：
+        - 空 list / None 直接回原值（避免 numpy crash）
+        - float32 精度下 1e-12 仍可能溢出、升到 1e-6 安全範圍
+        - 零向量明確回 [0.0] * len（明確 zero vector、避免 caller 誤判 unit vector）
+        - 使用 try-except 以防止 numpy array 的真值判定歧義
+
+        Phase 4.7? MODEL-1+2: gemini-embedding-2 用 MRL 降維到 768 後預設未 normalized
+        所有 embed 呼叫都必須走此 helper 確保 FAISS inner product = cosine。
+        """
+        if vec is None:
+            return vec
+
+        try:
+            if len(vec) == 0:
+                return vec
+        except (TypeError, ValueError):
+            return vec
+
+        arr = np.asarray(vec, dtype=np.float32)
+        norm = np.linalg.norm(arr)
+
+        if norm < 1e-6:
+            return [0.0] * len(vec)
+
+        return (arr / norm).tolist()
 
     def _embed_one(self, text):
         """逐筆 embed（fallback 用），保留原 429 retry 行為"""
@@ -47,10 +81,10 @@ class EmbeddingModel(Embeddings):
                     contents=[text],
                     config=types.EmbedContentConfig(
                         task_type="RETRIEVAL_DOCUMENT",
-                        output_dimensionality=768
+                        output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
                     )
                 )
-                return result.embeddings[0].values
+                return self._l2_normalize(result.embeddings[0].values)
             except Exception as e:
                 if '429' in str(e) and attempt < 2:
                     wait = 15 * (attempt + 1)
@@ -79,14 +113,14 @@ class EmbeddingModel(Embeddings):
                         contents=batch,
                         config=types.EmbedContentConfig(
                             task_type="RETRIEVAL_DOCUMENT",
-                            output_dimensionality=768
+                            output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
                         )
                     )
                     if len(result.embeddings) != len(batch):
                         raise RuntimeError(
                             f"批次回傳數量不符: 期望 {len(batch)} 實得 {len(result.embeddings)}"
                         )
-                    embeddings.extend(e.values for e in result.embeddings)
+                    embeddings.extend(self._l2_normalize(e.values) for e in result.embeddings)
                     self.logger.info(
                         f"批次 {batch_no} 完成（{len(batch)} 筆，"
                         f"{start + len(batch)}/{total}）"
@@ -118,10 +152,10 @@ class EmbeddingModel(Embeddings):
             contents=[text],
             config=types.EmbedContentConfig(
                 task_type="RETRIEVAL_QUERY",
-                output_dimensionality=768
+                output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
             )
         )
-        return result.embeddings[0].values
+        return self._l2_normalize(result.embeddings[0].values)
 
     def embed_image(self, image_data: bytes, mime_type: str = "image/jpeg") -> list:
         """embed 圖片（用於圖片向量檢索）"""
@@ -131,7 +165,7 @@ class EmbeddingModel(Embeddings):
             contents=[image_part],
             config=types.EmbedContentConfig(
                 task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=768
+                output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
             )
         )
-        return result.embeddings[0].values
+        return self._l2_normalize(result.embeddings[0].values)

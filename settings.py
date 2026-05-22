@@ -17,6 +17,10 @@ LLM_VISION_MODEL = os.getenv("LLM_VISION_MODEL", CHAT_MODEL)
 LLM_EXTRA_INFO_MODEL = os.getenv("LLM_EXTRA_INFO_MODEL", CHAT_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
+# Phase 4.7? MODEL-1+2: MRL 降維到 768、與既有 FAISS 768 維 schema 相容
+# 3072 維預設 pre-normalized、768 維降維後需手動 normalize
+# （見 config.py::EmbeddingModel._l2_normalize）
+EMBEDDING_OUTPUT_DIMENSIONS = int(os.getenv("EMBEDDING_OUTPUT_DIMENSIONS", "768"))
 
 # Phase 4.7d Commit 13：LLM 全域並發上限（Semaphore in llm/client.py）。
 # 太高會撞「Server disconnected」（4 paper × image_caption 4 worker ~16 條
