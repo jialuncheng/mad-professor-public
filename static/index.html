@@ -1239,6 +1239,21 @@
 </div>
 
 <script>
+  // === Phase 4.7? RAG-9 fix: 關閉 GFM strikethrough (~~text~~ / 單 ~ 撞線) ===
+  // marked.js 9.1.6 預設啟用 GFM strikethrough、tokenizer 對單 ~ 也匹配
+  // 履歷常見 100~500人 / 2003/8~仍在職 等 tilde 範圍語法會撞為 <del>
+  // 經 grep 整份 worktree 確認無歷史合法 ~~text~~ 用法、零代價移除
+  // 全域 override 所有 marked.parse 呼叫（6 處：L2178/2310/2328/2391/2400/2478）
+  marked.use({
+    extensions: [{
+      name: 'del',
+      level: 'inline',
+      start() { return -1; },        // 從不主動匹配
+      tokenizer() { return false; }, // 永不產生 del token
+      renderer() { return ''; }
+    }]
+  });
+
   // ── 三欄收合 toggle ─────────────────────────
   const sidebar = document.getElementById('sidebar');
   const chatPanel = document.getElementById('chat-panel');
