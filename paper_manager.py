@@ -17,7 +17,7 @@ from typing import Optional
 
 import settings
 import db
-from models import User, Paper, Conversation, Folder
+from models import User, Paper, Conversation, Folder, PaperChunk
 
 logger = logging.getLogger(__name__)
 
@@ -650,3 +650,94 @@ def set_paper_folder(session, owner_id: int, paper_uuid: str,
     session.commit()
     logger.info(f"論文歸檔: owner={owner_id} {paper_uuid} → folder={folder_id}")
     return p
+
+
+# ─────────────────── MODEL-8 C1: paper_chunks DAL helper ───────────────────
+# 依 plan §3.1（含修正 3 移除 tiling_method、修正 5 不重做 get_paper_db_id）
+# 詳見 .claude-logs/2026-05-22_MODEL-8_SQLite物理防線_plan.md §3.1
+
+def replace_paper_chunks(paper_db_id: int, chunks: list) -> int:
+    """覆寫式批次 INSERT：清掉舊 chunks、批量寫入新的。
+
+    依 plan §3.1 + db_analysis §4 效能要求（< 50ms/千筆 chunks）。
+
+    Args:
+        paper_db_id: Paper.id（INT PK）、不是 paper_uuid
+        chunks: list of dict、每筆含
+            chunk_index, chunk_key, raw_text, translated_text, doc_type,
+            metadata_json (JSON 字串),
+            embedding_model, output_dimensions, chunk_filter_version
+            （修正 3：無 tiling_method 欄位）
+
+    Returns:
+        寫入筆數
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        s.query(PaperChunk).filter_by(paper_id=paper_db_id).delete()
+        if chunks:
+            from sqlalchemy import insert
+            s.execute(insert(PaperChunk), [
+                {**c, "paper_id": paper_db_id} for c in chunks
+            ])
+        s.commit()
+    return len(chunks)
+
+
+def iter_paper_chunks(paper_db_id: int):
+    """逐 chunk 讀取（regen 用）、yield dict（含 raw_text + metadata_json）。
+
+    依 plan §3.1：依 chunk_index 升序回。
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        rows = (
+            s.query(PaperChunk)
+            .filter_by(paper_id=paper_db_id)
+            .order_by(PaperChunk.chunk_index)
+            .all()
+        )
+        for c in rows:
+            yield {
+                "chunk_index": c.chunk_index,
+                "chunk_key": c.chunk_key,
+                "raw_text": c.raw_text,
+                "translated_text": c.translated_text,
+                "doc_type": c.doc_type,
+                "metadata_json": c.metadata_json,
+                "embedding_model": c.embedding_model,
+                "output_dimensions": c.output_dimensions,
+                "chunk_filter_version": c.chunk_filter_version,
+            }
+
+
+def list_papers_with_chunks(owner_id: Optional[int] = None) -> list:
+    """掃所有有 paper_chunks 的 paper、供 regen_rag --check 用。
+
+    依 plan §3.1：JOIN papers + paper_chunks、回 distinct paper × embedding model。
+
+    Returns:
+        list of dict: paper_db_id / owner_id / paper_uuid / embedding_model / output_dimensions
+    """
+    _ensure_db()
+    with db.SessionLocal() as s:
+        q = (
+            s.query(
+                Paper.id, Paper.owner_id, Paper.paper_uuid,
+                PaperChunk.embedding_model, PaperChunk.output_dimensions,
+            )
+            .join(PaperChunk, PaperChunk.paper_id == Paper.id)
+            .distinct()
+        )
+        if owner_id is not None:
+            q = q.filter(Paper.owner_id == owner_id)
+        return [
+            {
+                "paper_db_id": r[0],
+                "owner_id": r[1],
+                "paper_uuid": r[2],
+                "embedding_model": r[3],
+                "output_dimensions": r[4],
+            }
+            for r in q.all()
+        ]

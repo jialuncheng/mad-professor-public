@@ -74,8 +74,10 @@ logger = logging.getLogger(__name__)
 
 # 全域設定
 BASE_DIR = Path(__file__).parent
-OUTPUT_DIR = BASE_DIR / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)
+# Phase 4.7? MODEL-8 C1 修正 7：OUTPUT_DIR env 化（依 db_analysis §5.2、plan §3.6）
+# Docker / K8s 部署可用 OUTPUT_DIR env 集中掛載；其他 20+ 處引用全部不動
+from settings import OUTPUT_DIR
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 全域狀態
 ai_core = None

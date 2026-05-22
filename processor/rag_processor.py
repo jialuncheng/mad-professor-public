@@ -15,6 +15,12 @@ from utils.text_utils import load_caption_map
 # 後 chunk 不致於過大稀釋 embedding signal）。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
 _SHORT_DOC_TYPES = frozenset({'resume', 'slides', 'news', 'web'})
 
+# Phase 4.7? MODEL-8 C1: chunk filter 邏輯版本錨點（依 plan §3.1）
+# 對應 MODEL-1+2 B2 _is_chunk_meaningful 過濾邏輯（L35-81）
+# 用於 paper_chunks.chunk_filter_version + 未來 index_meta.json
+# 未來改動 _is_chunk_meaningful 邏輯時、bump 此字串
+CHUNK_FILTER_VERSION = 'B2-2026-05-22'
+
 # Phase 4.7? MODEL-1+2 階段 B2: chunk 過濾規則
 # plan §4.2 + §3.6.2 修正 2 markdown 噪聲 + §3.6.4 修正 4 履歷防誤殺
 MIN_CHUNK_CONTENT_CHARS = 10

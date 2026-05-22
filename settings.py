@@ -65,3 +65,9 @@ _BASE_DIR = Path(__file__).resolve().parent
 DATABASE_URL = os.getenv(
     "DATABASE_URL", f"sqlite:///{_BASE_DIR / 'data' / 'mad-professor.db'}"
 )
+
+# Phase 4.7? MODEL-8 C1 修正 7：OUTPUT_DIR env override（依 db_analysis §5.2）
+# Docker / K8s 部署時、可用 OUTPUT_DIR=/app/storage/output 集中管理（單一 Volume）
+# 預設值 = _BASE_DIR / "output"、現有所有路徑解析 100% backward compat
+# 詳見 .claude-logs/2026-05-22_MODEL-8_SQLite物理防線_plan.md §3.6
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", str(_BASE_DIR / "output")))

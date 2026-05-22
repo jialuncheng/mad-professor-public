@@ -147,6 +147,13 @@ class Paper(Base):
         passive_deletes=True,
         order_by="Conversation.id",
     )
+    # Phase 4.7? MODEL-8 C1: paper_chunks 物理防線（依 plan §3.1）
+    chunks: Mapped[list["PaperChunk"]] = relationship(
+        back_populates="paper",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="PaperChunk.chunk_index",
+    )
 
 
 class Conversation(Base):
@@ -174,3 +181,46 @@ class Conversation(Base):
 
     paper: Mapped["Paper"] = relationship(back_populates="conversations")
     user: Mapped["User"] = relationship()
+
+
+class PaperChunk(Base):
+    """Phase 4.7? MODEL-8 C1: paper raw text 物理防線。
+
+    依 plan §3.1（含修正 3：移除 tiling_method 欄位）+ db_analysis §3.1 schema baseline。
+
+    設計目的:
+    - raw_text 永久保留、不依賴 vectors/ 衍生快取
+    - 升級 embedding model 後、可直接從這裡讀 raw_text 重 embed、不需重 PDF
+    - embedding_model + output_dimensions 用於 CLI --check mismatch 偵測
+    - chunk_filter_version 用於追溯 chunk filter 邏輯版本（對應 MODEL-1+2 B2 _is_chunk_meaningful）
+    """
+    __tablename__ = "paper_chunks"
+    __table_args__ = (
+        Index("ix_paper_chunks_paper_id", "paper_id"),
+        Index("ix_paper_chunks_embedding_model", "embedding_model"),
+        UniqueConstraint("paper_id", "chunk_index", name="uq_paper_chunks_paper_chunk"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    paper_id: Mapped[int] = mapped_column(
+        ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 語意鍵：「sec_0_part_0」等、來自 doc.metadata['Header']
+    chunk_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+    translated_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    doc_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # 完整 chunk metadata（含 Header / 等）；JSON 字串
+    metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # 版本標記（對 db_analysis §3.1 的擴充）
+    embedding_model: Mapped[str] = mapped_column(String(100), nullable=False)
+    output_dimensions: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_filter_version: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
+
+    paper: Mapped["Paper"] = relationship(back_populates="chunks")
