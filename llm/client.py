@@ -23,6 +23,7 @@ from google.genai import types
 from settings import CHAT_MODEL, GEMINI_API_KEY, LLM_MAX_CONCURRENT
 from llm.message_utils import _convert_messages
 from llm.retry import retry_call, retry_stream
+from llm._http_client import build_http_options
 
 
 class LLMClient:
@@ -45,9 +46,20 @@ class LLMClient:
     def __init__(self):
         if self._initialized:
             return
-        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        # Phase 4.7? MODEL-9: 注入共享 httpx.Client（timeout + Keep-Alive pool）
+        # 與 EmbeddingModel 共享同一個底層 httpx.Client、TCP pool 完全共用
+        self.client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options=build_http_options(),
+        )
         self._initialized = True
-        logging.getLogger(__name__).info("LLMClient 初始化完成（google-genai SDK）")
+        from llm._http_client import (
+            CONNECT_TIMEOUT, READ_TIMEOUT, WRITE_TIMEOUT, POOL_TIMEOUT,
+        )
+        logging.getLogger(__name__).info(
+            f"LLMClient 初始化完成（google-genai SDK + 共享 httpx.Client、"
+            f"timeout connect/read/write/pool={CONNECT_TIMEOUT}/{READ_TIMEOUT}/{WRITE_TIMEOUT}/{POOL_TIMEOUT}s）"
+        )
 
     @classmethod
     def get_instance(cls) -> 'LLMClient':

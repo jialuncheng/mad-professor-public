@@ -138,9 +138,11 @@ def test_retry_call_non_retryable_value_error(monkeypatch):
 
 
 def test_retry_call_backoff_timing(monkeypatch):
-    """檢查 delay 序列符合指數 + jitter（jitter 固定 0.5 驗證）。"""
+    """檢查 delay 序列符合 MODEL-9 Full Jitter（uniform 固定 0.5 驗證）。"""
     sleeps = []
     monkeypatch.setattr(time, 'sleep', lambda s: sleeps.append(s))
+    # MODEL-9 後公式：delay = random.uniform(0, min(MAX, base*2^attempt))
+    # 固定 random.uniform 回 0.5、與上界無關
     monkeypatch.setattr(random, 'uniform', lambda a, b: 0.5)
     counter = FakeCounter(fail_times=10, error=Exception('502'))
 
@@ -151,11 +153,9 @@ def test_retry_call_backoff_timing(monkeypatch):
     with pytest.raises(Exception):
         fn()
 
-    # delay = base * 2**attempt + jitter (=0.5)
-    # attempt 0: 2 * 1 + 0.5 = 2.5
-    # attempt 1: 2 * 2 + 0.5 = 4.5
-    # attempt 2: 2 * 4 + 0.5 = 8.5
-    assert sleeps == [2.5, 4.5, 8.5]
+    # Full Jitter: random.uniform(0, exp_window) = 0.5（固定）
+    # attempt 0/1/2 都同樣 0.5（因為 uniform 被 mock 固定回 0.5）
+    assert sleeps == [0.5, 0.5, 0.5]
 
 
 # ── retry_stream ──
@@ -213,3 +213,57 @@ def test_retry_stream_non_retryable_no_retry(monkeypatch):
         list(gen())
 
     assert len(calls) == 1
+
+
+# ─────────────────── MODEL-9 Full Jitter 測試 ───────────────────
+
+
+def test_retry_call_full_random_jitter(monkeypatch):
+    """MODEL-9: delay 應在 [0, exp_window] 區間、不是固定 base*2^attempt + jitter。"""
+    from llm import retry as retry_mod
+    captured = []
+    monkeypatch.setattr(retry_mod.time, 'sleep', lambda d: captured.append(d))
+
+    call_count = [0]
+
+    @retry_call(retries=4, base=2.0)
+    def flaky():
+        call_count[0] += 1
+        if call_count[0] < 5:
+            raise ConnectionError("simulated connection drop")
+        return "ok"
+
+    flaky()
+    # 4 次 retry 都觸發 sleep（attempt 0..3）
+    assert len(captured) == 4
+    # 每次 delay 都應在 [0, exp_window]、exp_window = min(MAX, base*2^attempt)
+    for i, d in enumerate(captured):
+        max_window = min(retry_mod.MAX_BACKOFF_SEC, 2.0 * (2 ** i))
+        assert 0 <= d <= max_window, (
+            f"attempt {i}: delay {d} 超出 [0, {max_window}]"
+        )
+
+
+def test_retry_call_max_backoff_cap(monkeypatch):
+    """MODEL-9: attempt 大時 delay 不超過 MAX_BACKOFF_SEC。"""
+    from llm import retry as retry_mod
+    # 把 cap 改小、容易驗
+    monkeypatch.setattr(retry_mod, 'MAX_BACKOFF_SEC', 10.0)
+    captured = []
+    monkeypatch.setattr(retry_mod.time, 'sleep', lambda d: captured.append(d))
+
+    call_count = [0]
+
+    @retry_call(retries=10, base=2.0)
+    def flaky():
+        call_count[0] += 1
+        if call_count[0] < 11:
+            raise ConnectionError("simulated connection drop")
+        return "ok"
+
+    flaky()
+    # 後面 attempt（>= 3、base*2^3 = 16 > 10）應該都 cap 到 10
+    for i, d in enumerate(captured):
+        assert d <= 10.0, (
+            f"attempt {i}: delay {d} > MAX_BACKOFF_SEC (10)"
+        )

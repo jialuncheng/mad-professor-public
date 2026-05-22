@@ -14,6 +14,7 @@ Backoff strategy: exponential with jitter.
 
 import functools
 import logging
+import os
 import random
 import time
 from typing import Callable, TypeVar
@@ -21,6 +22,11 @@ from typing import Callable, TypeVar
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
+
+# Phase 4.7? MODEL-9: Full Jitter 指數退避上限（避免 attempt 大時 wait 過久）
+# 公式：t_wait = random(0, min(MAX_BACKOFF_SEC, base * 2^attempt))
+# env override: LLM_RETRY_MAX_BACKOFF
+MAX_BACKOFF_SEC = float(os.environ.get("LLM_RETRY_MAX_BACKOFF", 60.0))
 
 # Retryable tokens matched against str(exception).lower()
 _RETRYABLE_TOKENS = (
@@ -70,7 +76,9 @@ def retry_call(retries: int = 3, base: float = 2.0):
                 except Exception as e:
                     if attempt == retries or not _is_retryable(e):
                         raise
-                    delay = base * (2 ** attempt) + random.uniform(0, 1)
+                    # MODEL-9: Full Jitter（取代線性抖動）
+                    exp_window = min(MAX_BACKOFF_SEC, base * (2 ** attempt))
+                    delay = random.uniform(0, exp_window)
                     logger.warning(
                         f"[{fn.__name__}] {type(e).__name__}: {e} — "
                         f"retry {attempt + 1}/{retries} after {delay:.1f}s"
@@ -111,7 +119,9 @@ def retry_stream(retries: int = 3, base: float = 2.0):
                         raise
                     if attempt == retries or not _is_retryable(e):
                         raise
-                    delay = base * (2 ** attempt) + random.uniform(0, 1)
+                    # MODEL-9: Full Jitter（同 retry_call）
+                    exp_window = min(MAX_BACKOFF_SEC, base * (2 ** attempt))
+                    delay = random.uniform(0, exp_window)
                     logger.warning(
                         f"[{fn.__name__}] stream pre-yield {type(e).__name__}: "
                         f"{e} — retry {attempt + 1}/{retries} after {delay:.1f}s"

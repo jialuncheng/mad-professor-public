@@ -19,10 +19,15 @@ class EmbeddingModel(Embeddings):
     _lock = threading.Lock()
 
     def __init__(self):
-        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        # Phase 4.7? MODEL-9: 注入共享 httpx.Client（與 LLMClient 共用底層 client）
+        from llm._http_client import build_http_options
+        self.client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options=build_http_options(),
+        )
         self.model = EMBEDDING_MODEL_NAME
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"初始化嵌入模型: {self.model}（Gemini API）")
+        self.logger.info(f"初始化嵌入模型: {self.model}（Gemini API + 共享 httpx.Client）")
 
     @classmethod
     def get_instance(cls) -> 'EmbeddingModel':
