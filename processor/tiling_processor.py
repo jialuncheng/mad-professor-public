@@ -8,6 +8,13 @@ from config import EmbeddingModel
 from settings import TILING_BYPASS_CHAR_LIMIT, TILING_MAX_LENGTH
 
 
+# Phase 4.7? MODEL-3 B2: 公式穿透合併支援（依 plan §4.2）
+# SOFT_TYPES：可穿透合併（與 text 同 buffer）
+SOFT_TYPES_FOR_MERGE = frozenset({'text', 'formula'})
+# HARD_BOUNDARY：強制截斷（自身獨立 chunk）
+HARD_BOUNDARY_TYPES_FOR_MERGE = frozenset({'table', 'heading', 'image_caption'})
+
+
 def _join_content(prev_type: str, prev_text: str,
                   next_type: str, next_text: str) -> str:
     """根據兩個節點的 type 決定拼接字元、防禦 inline formula 排版災難。
@@ -239,7 +246,8 @@ class TilingProcessor:
         # 然后检查是否需要分割大文本块
         result = []
         for item in content:
-            if item['type'] == 'text' and len(item['content']) > self.max_length:
+            # B2: SOFT_TYPES (text + formula) > max_length 都走切割（公式罕見、但邊界一致）
+            if item.get('type') in SOFT_TYPES_FOR_MERGE and len(item.get('content', '') or '') > self.max_length:
                 # 获取原始索引
                 original_index = item.get('index', 0)
                 
@@ -273,54 +281,91 @@ class TilingProcessor:
     
     def _merge_small_text_blocks(self, content: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        合并相邻的小文本块，直到遇到非文本块或满足最小长度的文本块
-        
+        合并相邻的小文本块（含 formula 穿透合併）。
+
+        依 plan §4.2 + §3.5 修正 1 + §3.7 修正 3：
+        - 修正 1：用 _join_content 差異化拼接（text+formula 用空格、text+text 用 \\n\\n）
+        - 修正 3：type=='formula' 無論長度都合進 buffer、不觸發 size-based flush
+                  （LaTeX 字元數虛高、不應因「大文本」邏輯截斷上下文）
+        - HARD_BOUNDARY_TYPES_FOR_MERGE（table / heading / image_caption）強制截斷
+
+        Phase 4.7? MODEL-3 B2（依 plan §3.7）：
+        LaTeX 源碼如「\\sum_{i=0}^{n} \\alpha_i \\cdot \\beta_i」字元數虛高、
+        若按 size 判定可能誤觸 flush、把公式跟前後上下文截斷。
+        解法：formula 無條件合進 buffer、不走 size 判定。
+
         Args:
             content: content列表
-            
+
         Returns:
             List[Dict[str, Any]]: 处理后的content列表
         """
         if not content:
             return content
-        
+
         result = []
         current_buffer = None
-        
+        buffer_last_appended_type = None  # 修正 1：追蹤最後合進 buffer 的實際 type
+
         for item in content:
-            if item['type'] == 'text':
-                # 处理小文本块的逻辑
-                if len(item['content']) < self.min_length:
-                    # 小文本块，需要合并
-                    if current_buffer is None:
-                        # 没有缓冲区，创建一个
-                        current_buffer = item.copy()
-                    else:
-                        # 已有缓冲区，直接合并
-                        current_buffer['content'] += "\n\n" + item['content']
+            item_type = item.get('type')
+
+            # 修正 3：formula 無條件合併（不走 size 判定）
+            if item_type == 'formula':
+                text = item.get('content', '') or ''
+                if current_buffer is None:
+                    current_buffer = item.copy()
+                    buffer_last_appended_type = 'formula'
                 else:
-                    # 遇到了满足最小长度的文本块
+                    # 修正 1：用最後合進的實際 type 拼接
+                    current_buffer['content'] = _join_content(
+                        buffer_last_appended_type,
+                        current_buffer.get('content', '') or '',
+                        'formula', text
+                    )
+                    buffer_last_appended_type = 'formula'
+                continue
+
+            if item_type == 'text':
+                text = item.get('content', '') or ''
+                if len(text) < self.min_length:
+                    # 小 text、合進 buffer
+                    if current_buffer is None:
+                        current_buffer = item.copy()
+                        buffer_last_appended_type = 'text'
+                    else:
+                        # 修正 1：差異化拼接
+                        current_buffer['content'] = _join_content(
+                            buffer_last_appended_type,
+                            current_buffer.get('content', '') or '',
+                            'text', text
+                        )
+                        buffer_last_appended_type = 'text'
+                else:
+                    # 大 text、合 buffer 後 emit
                     if current_buffer is not None:
-                        # 有缓冲区，将当前文本块合并到缓冲区
-                        current_buffer['content'] += "\n\n" + item['content']
+                        current_buffer['content'] = _join_content(
+                            buffer_last_appended_type,
+                            current_buffer.get('content', '') or '',
+                            'text', text
+                        )
                         result.append(current_buffer)
                         current_buffer = None
+                        buffer_last_appended_type = None
                     else:
-                        # 添加当前文本块
                         result.append(item)
             else:
-                # 遇到非文本块
+                # 硬邊界（table / heading / image_caption / 其他 unknown type）
+                # 為相容、未知 type 也視為 hard boundary
                 if current_buffer is not None:
-                    # 有缓冲区，输出缓冲区内容
                     result.append(current_buffer)
                     current_buffer = None
-                # 添加当前非文本块
+                    buffer_last_appended_type = None
                 result.append(item)
-        
-        # 处理最后的缓冲区
+
         if current_buffer is not None:
             result.append(current_buffer)
-        
+
         return result
     
     def _texttiling(self, elements: List[str], split_mode: str = "sentence") -> List[str]:
