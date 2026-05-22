@@ -568,7 +568,50 @@ class RestoreProcessor:
         """将内容写入md文件"""
         with open(filepath, 'a', encoding='utf-8') as f:
             f.write(content + "\n\n")
-    
+
+    def _preserve_pipe_table(self, text: str) -> str:
+        """Phase 4.7? RAG-8: 單 \n 改 \n\n、但 pipe table 區塊（以 | 開頭連續行）保留原 \n。
+
+        用於 _process_section 內 text item content 後處理：
+        - text item 內含 pipe table 時、rows 之間單 \n 必須保留（否則 markdown
+          解析器把每行當獨立 paragraph、table 渲染破碎）
+        - 一般段落內單 \n 仍需轉 \n\n（保留 paragraph 邊界）
+
+        真因：md_processor 把 MinerU HTML <table> 解析成 pipe table string
+        但 type=text、所以走 text item 分支撞 L683 regex；本 helper 是最後一道閘。
+
+        Args:
+            text: text item 拼接後字串、可能含 pipe table 區塊 + 一般段落
+
+        Returns:
+            處理後字串、pipe table rows 保留原 \n、其他單 \n 轉 \n\n
+        """
+        import re
+        lines = text.split('\n')
+        out_lines = []
+        in_table = False
+        for line in lines:
+            is_table_row = bool(re.match(r'^\s*\|', line))
+            if is_table_row:
+                if not in_table and out_lines and out_lines[-1].strip():
+                    # 進入 table 區塊前若上一行非空、補空行作 paragraph 邊界
+                    out_lines.append('')
+                in_table = True
+                out_lines.append(line)
+            elif in_table:
+                # table 結束（遇空行或非 | 開頭非空行）
+                in_table = False
+                if line.strip():
+                    out_lines.append('')  # 補空行作 table / 後續 paragraph 分隔
+                out_lines.append(line)
+            else:
+                out_lines.append(line)
+        text = '\n'.join(out_lines)
+        # table 區塊外的一般 paragraph 仍要單 \n 轉 \n\n
+        # 用 negative lookbehind/ahead 避開 | 開頭行
+        text = re.sub(r'(?<!\|)(?<!\n)\n(?![\n\|])', '\n\n', text)
+        return text
+
     def _process_section(self, section, output_path_en, output_path_zh, level=1, vision_captions=None):
         """处理文档的一个章节，递归处理子章节"""
         if vision_captions is None:
@@ -676,11 +719,16 @@ class RestoreProcessor:
                     # 合并相同index的文本块
                     en_content = ' '.join([part[1] for part in en_parts])
                     zh_content = ' '.join([part[1] for part in zh_parts])
-                    
-                    # 写入合并后的内容
-                    import re
-                    en_content = re.sub(r'\n(?!\n)', '\n\n', en_content)
-                    zh_content = re.sub(r'\n(?!\n)', '\n\n', zh_content)
+
+                    # Phase 4.7? RAG-8 fix: 保留 pipe table 結構、其他單 \n 仍轉 \n\n
+                    # 原 re.sub(r'\n(?!\n)', '\n\n', ...) 對 pipe table rows 之間
+                    # 強制注入 \n\n、破壞 markdown table 渲染
+                    # 真因鏈：md_processor 把 MinerU HTML <table> 解析成 pipe table
+                    #         string、且 type=text、所以走 text item 分支撞此 regex
+                    # 影響：所有 doc_type 只要 md_processor 把 table 解析成
+                    #       pipe-text（resume / slides / academic 都中招）
+                    en_content = self._preserve_pipe_table(en_content)
+                    zh_content = self._preserve_pipe_table(zh_content)
                     if en_content.strip():
                         self._write_to_md(output_path_en, en_content)
                     if zh_content.strip():
