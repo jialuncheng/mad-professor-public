@@ -87,6 +87,48 @@ def _is_chunk_meaningful(doc, doc_type: str = "") -> bool:
     return len(clean_text) >= MIN_CHUNK_CONTENT_CHARS
 
 
+# Phase 4.7? MODEL-8 C2 修正 4: index_meta.json 寫入（module-level、CLI + RagProcessor 共用）
+# 依 plan §3.2 + 修正 4。
+def write_index_meta_json(vector_store_path, chunks_total: int, logger=None) -> None:
+    """寫 vectors/index_meta.json、為 regen_rag --check mismatch 偵測用。
+
+    依 plan §3.2 + 修正 4（module-level、CLI tools/regen_rag.py + RagProcessor 共用）。
+
+    Args:
+        vector_store_path: vectors/ 物理路徑（Path 或 str）
+        chunks_total: 寫入 FAISS 的 chunks 數量
+        logger: 可選 logger（傳入時印 info、否則靜默）
+    """
+    from settings import (
+        EMBEDDING_MODEL_NAME, EMBEDDING_OUTPUT_DIMENSIONS,
+        TILING_BYPASS_CHAR_LIMIT, TILING_MAX_LENGTH, TILING_PARAGRAPH_THRESHOLD,
+    )
+    from datetime import datetime, timezone
+
+    meta = {
+        "embedding_model": EMBEDDING_MODEL_NAME,
+        "output_dimensions": EMBEDDING_OUTPUT_DIMENSIONS,
+        "chunk_filter_version": CHUNK_FILTER_VERSION,
+        "tiling_config_signature": {
+            "TILING_BYPASS_CHAR_LIMIT": TILING_BYPASS_CHAR_LIMIT,
+            "TILING_MAX_LENGTH": TILING_MAX_LENGTH,
+            "TILING_PARAGRAPH_THRESHOLD": TILING_PARAGRAPH_THRESHOLD,
+        },
+        "chunks_total": chunks_total,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "rag_processor_version": "MODEL-8-C2",
+    }
+    meta_path = Path(vector_store_path) / "index_meta.json"
+    meta_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8'
+    )
+    if logger:
+        logger.info(
+            f"[index_meta] 已寫入 {meta_path}（model={EMBEDDING_MODEL_NAME}、"
+            f"dim={EMBEDDING_OUTPUT_DIMENSIONS}、chunks={chunks_total}）"
+        )
+
+
 class RagProcessor:
     """RAG 处理器：将 JSON 转换为 Markdown 和符合检索需求的JSON树结构，并生成向量库"""
 
@@ -97,7 +139,7 @@ class RagProcessor:
 
     def process(self, input_path: str, output_md_path: str, output_tree_json_path: str,
                 vector_store_path: str, images_info_path: str = None,
-                doc_type: str = '') -> Tuple[str, str, str]:
+                doc_type: str = '', paper_db_id: Optional[int] = None) -> Tuple[str, str, str]:
         """处理 JSON 文件，生成 Markdown、JSON以及向量库
 
         Args:
@@ -108,6 +150,9 @@ class RagProcessor:
             images_info_path: Vision 生成的圖片說明檔案路徑（可選）
             doc_type: 文件類型（Phase 4.7d Commit 15-1）；用於 chunk 內容
                 Context 前綴與短文 doc_type 合併。預設 '' 行為等效既有。
+            paper_db_id: Phase 4.7? MODEL-8 C2（依 plan §3.3）；Paper.id (INT PK)
+                供 _write_paper_chunks_to_db 寫入 paper_chunks 表用。
+                None → 優雅降級（log warning、跳過 SQL 寫入、可後續 --init 修補、Q13）。
 
         Returns:
             Tuple[str, str, str]: Markdown文件路径, JSON文件路径, 向量库路径
@@ -140,7 +185,11 @@ class RagProcessor:
             self._generate_markdown(paper_data, output_md_path, doc_type=doc_type)
 
             # 为 Markdown 文件创建向量库（Phase 4.7? MODEL-1+2 B2：傳 doc_type 供 chunk filter 用）
-            self._create_vector_store(output_md_path, vector_store_path, doc_type=doc_type)
+            # MODEL-8 C2（plan §3.3）：轉發 paper_db_id 供 _write_paper_chunks_to_db 寫入用
+            self._create_vector_store(
+                output_md_path, vector_store_path,
+                doc_type=doc_type, paper_db_id=paper_db_id,
+            )
 
             self.logger.info("RAG 数据处理完成")
             return output_md_path, output_tree_json_path, vector_store_path
@@ -150,7 +199,8 @@ class RagProcessor:
             raise
 
     def _create_vector_store(self, md_path: str, vector_store_path: str,
-                             doc_type: str = '') -> str:
+                             doc_type: str = '',
+                             paper_db_id: Optional[int] = None) -> str:
         """
         为 Markdown 文件创建向量库
 
@@ -159,6 +209,9 @@ class RagProcessor:
             vector_store_path: 向量库存储路径
             doc_type: 文件類型（Phase 4.7? MODEL-1+2 B2、傳給 _is_chunk_meaningful
                       決定字元下限：resume/slides ≥ 3、其他 ≥ 10）
+            paper_db_id: Phase 4.7? MODEL-8 C2（plan §3.3）；Paper.id (INT PK)。
+                FAISS save_local 後寫 paper_chunks 表 + 永遠寫 index_meta.json。
+                None → 優雅降級（log warning、跳過 SQL 寫入、Q13）。
 
         Returns:
             str: 向量库路径
@@ -211,9 +264,82 @@ class RagProcessor:
         
         # 保存向量存储
         vector_store.save_local(str(vector_store_path_obj))
-        
+
+        # === MODEL-8 C2 新增（依 plan §3.3 + §3.2、Q12 / Q13）===
+        # paper_chunks 寫入：raw_text 物理防線、升 embedding 時不需重 PDF
+        if paper_db_id is not None:
+            try:
+                self._write_paper_chunks_to_db(
+                    meaningful_docs, paper_db_id, doc_type
+                )
+            except Exception as e:
+                # Q12: 不 rollback FAISS save_local（不可逆）、log error + 後續 --init 修補
+                self.logger.error(
+                    f"[paper_chunks] 寫入失敗（不阻塞主流程）: {e}",
+                    exc_info=True,
+                )
+        else:
+            # Q13: 優雅降級——測試環境 / 既有 resume pipeline 無 paper_db_id
+            self.logger.warning(
+                "[paper_chunks] paper_db_id 未提供、跳過寫入 SQLite "
+                "(可由 tools/regen_rag.py --init 事後補完)"
+            )
+
+        # index_meta.json 永遠寫（版本標記、供 regen_rag --check 用）
+        try:
+            write_index_meta_json(
+                vector_store_path_obj,
+                len(meaningful_docs),
+                logger=self.logger,
+            )
+        except Exception as e:
+            self.logger.error(
+                f"[index_meta] 寫入失敗（不阻塞主流程）: {e}",
+                exc_info=True,
+            )
+        # === MODEL-8 C2 新增 end ===
+
         self.logger.info(f"向量库创建完成: {vector_store_path_obj}")
         return str(vector_store_path_obj)
+
+    def _write_paper_chunks_to_db(self, docs: List[Any], paper_db_id: int,
+                                   doc_type: str) -> None:
+        """將 meaningful_docs 批次寫入 paper_chunks 表（C2、依 plan §3.3）。
+
+        依 plan §3.3（含修正 3：rows 無 tiling_method 欄位）+ Q14（translated_text=None）。
+
+        Args:
+            docs: list of langchain.Document（FAISS.from_documents 的輸入、meaningful_docs）
+            paper_db_id: Paper.id（INT PK）
+            doc_type: 'academic' / 'resume' / 'slides' / ...
+        """
+        from settings import EMBEDDING_MODEL_NAME, EMBEDDING_OUTPUT_DIMENSIONS
+        import paper_manager
+
+        rows = []
+        for i, d in enumerate(docs):
+            # chunk_key 從 metadata 取（MarkdownHeaderTextSplitter 加注的 Header）
+            chunk_key = (d.metadata or {}).get('Header', '') or f"chunk_{i}"
+            rows.append({
+                "chunk_index": i,
+                "chunk_key": chunk_key[:255],  # 防 Header 超長
+                "raw_text": d.page_content or '',
+                "translated_text": None,  # Q14：本 commit 不填、未來 C4/C5 補 translation cache
+                "doc_type": doc_type or '',
+                "metadata_json": json.dumps(
+                    d.metadata or {}, ensure_ascii=False
+                ),
+                "embedding_model": EMBEDDING_MODEL_NAME,
+                "output_dimensions": EMBEDDING_OUTPUT_DIMENSIONS,
+                "chunk_filter_version": CHUNK_FILTER_VERSION,
+            })
+
+        n = paper_manager.replace_paper_chunks(paper_db_id, rows)
+        self.logger.info(
+            f"[paper_chunks] 寫入 {n} 個 chunks "
+            f"(paper_db_id={paper_db_id}, "
+            f"model={EMBEDDING_MODEL_NAME}, dim={EMBEDDING_OUTPUT_DIMENSIONS})"
+        )
 
     def _extract_abstract_summary(self, sections: List[Dict]) -> Dict[str, str]:
         """提取摘要，同时返回原文和翻译内容"""

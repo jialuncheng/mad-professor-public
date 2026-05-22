@@ -683,9 +683,33 @@ class PipelineCore:
         # Phase 4.7d Commit 15-1：傳 doc_type 給 rag_processor，啟用 Context 前綴
         # 與短文 doc_type 合併（resume / slides / news / web 套用）
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
+
+        # Phase 4.7? MODEL-8 C2（依 plan §3.3.1、修正 2）：
+        # 從 pipeline_core 內部拿 owner_id + paper_uuid、自呼 paper_manager 取 paper_db_id
+        # 不需動 web_server.py；失敗或 None 走 Q13 優雅降級
+        paper_db_id = None
+        if self._owner_id is not None:
+            try:
+                import paper_manager
+                paper_db_id = paper_manager.get_paper_db_id(
+                    self._owner_id, self.paper_info['paper_id']
+                )
+                if paper_db_id is None:
+                    self.logger.warning(
+                        f"[MODEL-8] get_paper_db_id 回 None "
+                        f"(owner={self._owner_id}, uuid={self.paper_info['paper_id']})"
+                        "、paper_chunks 寫入將被跳過、CLI --init 可事後補完"
+                    )
+            except Exception as e:
+                self.logger.warning(
+                    f"[MODEL-8] get_paper_db_id 失敗（不阻塞主流程）: {e}"
+                )
+                paper_db_id = None
+
         md_path, tree_path, vector_path = self.rag_processor.process(
             str(input_path), str(paths['md']), str(paths['tree_json']), str(paths['vector_store']),
             images_info_path=str(images_info_path) if images_info_path.exists() else None,
             doc_type=doc_type,
+            paper_db_id=paper_db_id,  # MODEL-8 C2
         )
         return {'md': Path(md_path), 'tree_json': Path(tree_path), 'vector_store': Path(vector_path)}
