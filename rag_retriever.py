@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
+from settings import RAG_SCORE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -115,9 +116,20 @@ class RagRetriever:
                     f"[retrieve] owner={owner_id} paper={paper_id} "
                     f"query={query[:40]!r} top_k={top_k} "
                     f"scores={[round(s, 3) for s in _scores]} "
-                    f"above_0.22={sum(1 for s in _scores if s > 0.22)}"
+                    f"above_{RAG_SCORE_THRESHOLD}={sum(1 for s in _scores if s > RAG_SCORE_THRESHOLD)}"
                 )
-            filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > 0.22]
+                # Phase 4.7? MODEL-1+2 階段 B2: raw score 詳細 logging（為 RAG-3 鋪路）
+                # plan §4.3 + §3.6.1 修正 1：LangChain FAISS MAX_INNER_PRODUCT 回 raw IP
+                # L2 normalize 後預期 = cosine [-1, 1] 子集；具體相關區間值待實測
+                logger.info(
+                    f"[retrieve raw] owner={owner_id} paper={paper_id} "
+                    f"min={min(_scores):.4f} max={max(_scores):.4f} "
+                    f"mean={sum(_scores)/len(_scores):.4f} "
+                    f"threshold={RAG_SCORE_THRESHOLD} "
+                    f"raw_scores={[f'{s:.4f}' for s in _scores]}"
+                )
+            # Phase 4.7? MODEL-1+2 階段 B2 修正 1：閾值 env 化（plan §4.6）
+            filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > RAG_SCORE_THRESHOLD]
 
             if not filtered_docs:
                 return ""

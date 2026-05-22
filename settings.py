@@ -21,6 +21,10 @@ EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 # 3072 維預設 pre-normalized、768 維降維後需手動 normalize
 # （見 config.py::EmbeddingModel._l2_normalize）
 EMBEDDING_OUTPUT_DIMENSIONS = int(os.getenv("EMBEDDING_OUTPUT_DIMENSIONS", "768"))
+# Phase 4.7? MODEL-1+2 階段 B2：RAG 檢索分數閾值（plan §4.6、修正 1）
+# 預設保留現有 0.22、env override 讓 baron 觀察 raw score 後動態調整
+# 推測 L2 normalize 後可能需升到 0.35-0.45、待 RAG-3 收實測數據確認
+RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 
 # Phase 4.7d Commit 13：LLM 全域並發上限（Semaphore in llm/client.py）。
 # 太高會撞「Server disconnected」（4 paper × image_caption 4 worker ~16 條

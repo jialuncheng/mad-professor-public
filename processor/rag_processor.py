@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Tuple, Dict, List, Any, Optional
 from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -13,6 +14,71 @@ from utils.text_utils import load_caption_map
 # 新增 doc_type 須評估是否屬於「短文型」（短條列、每 item 文字少、合併
 # 後 chunk 不致於過大稀釋 embedding signal）。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
 _SHORT_DOC_TYPES = frozenset({'resume', 'slides', 'news', 'web'})
+
+# Phase 4.7? MODEL-1+2 階段 B2: chunk 過濾規則
+# plan §4.2 + §3.6.2 修正 2 markdown 噪聲 + §3.6.4 修正 4 履歷防誤殺
+MIN_CHUNK_CONTENT_CHARS = 10
+MIN_CHUNK_RESUME_SLIDES = 3  # 修正 4：resume/slides 放寬到 3 字元（保 Python/Docker 等）
+
+# 修正 2：移除非實質字元計算 chunk 字數（純標題 / 分隔線會被過濾）
+_MD_NOISE_RE = re.compile(r"[#*_~`\-+>|\[\]\s]")
+# 修正 4：純數字（年份、頁碼）過濾
+_PURE_DIGIT_RE = re.compile(r"^\d+$")
+# 修正 4：合併 email / phone / url 為單一 regex（含結構化資訊保留、不論長度）
+_CRITICAL_INFO_RE = re.compile(
+    r"([\w.+-]+@[\w-]+\.[\w.-]+"     # email
+    r"|\+?\d[\d\s\-]{6,}\d"           # phone（國際電話格式）
+    r"|https?://\S+)"                 # url
+)
+
+
+def _is_chunk_meaningful(doc, doc_type: str = "") -> bool:
+    """判定 chunk 是否有實質內容值得入向量庫。
+
+    過濾規則（依優先序）：
+    1. 空字串 → 過濾
+    2. 純數字（如年份「2024」）→ 過濾
+    3. 含 email / phone / url 結構化資訊 → 保留（不論長度、修正 4）
+    4. doc_type 'resume' / 'slides' → 放寬到 ≥ 3 實質字元（修正 4）
+    5. 其他 doc_type → ≥ 10 實質字元
+
+    「實質字元」= 移除 markdown 符號（# * _ ~ ` - + > | [ ] 與空白）後字元數（修正 2）。
+
+    範例：
+    - `""` → 過濾（空）
+    - `"2024"` → 過濾（純數字）
+    - `"PhD"` → 過濾（純標籤、3 字元但非 resume/slides）
+    - `"Python"` + doc_type='resume' → 保留（技能詞、≥ 3）
+    - `"## Summary\\n---"` → 過濾（11 字元、實質 7 字元、< 10）
+    - `"john@example.com"` → 保留（含 email）
+    - `"Education content here"` → 保留（≥ 10）
+
+    Args:
+        doc: LangChain Document（含 .page_content + .metadata）
+        doc_type: 'academic' / 'resume' / 'slides' / ...
+
+    Returns:
+        True 保留 / False 過濾
+    """
+    text = (doc.page_content or "").strip()
+
+    if not text:
+        return False
+
+    # 修正 4：含結構化資訊保留（不論長度、優先於純數字判定、避免誤殺長數字電話）
+    if _CRITICAL_INFO_RE.search(text):
+        return True
+
+    # 修正 4：純數字過濾（短數字如年份「2024」、長數字未匹配 phone regex）
+    if _PURE_DIGIT_RE.match(text):
+        return False
+
+    # 修正 2：移除 markdown 噪聲後計算實質字元數
+    clean_text = _MD_NOISE_RE.sub("", text)
+
+    if doc_type in ("resume", "slides"):
+        return len(clean_text) >= MIN_CHUNK_RESUME_SLIDES
+    return len(clean_text) >= MIN_CHUNK_CONTENT_CHARS
 
 
 class RagProcessor:
@@ -67,8 +133,8 @@ class RagProcessor:
             # 生成 Markdown 文件
             self._generate_markdown(paper_data, output_md_path, doc_type=doc_type)
 
-            # 为 Markdown 文件创建向量库
-            self._create_vector_store(output_md_path, vector_store_path)
+            # 为 Markdown 文件创建向量库（Phase 4.7? MODEL-1+2 B2：傳 doc_type 供 chunk filter 用）
+            self._create_vector_store(output_md_path, vector_store_path, doc_type=doc_type)
 
             self.logger.info("RAG 数据处理完成")
             return output_md_path, output_tree_json_path, vector_store_path
@@ -77,13 +143,16 @@ class RagProcessor:
             self.logger.error(f"RAG 处理失败: {str(e)}", exc_info=True)
             raise
 
-    def _create_vector_store(self, md_path: str, vector_store_path: str) -> str:
+    def _create_vector_store(self, md_path: str, vector_store_path: str,
+                             doc_type: str = '') -> str:
         """
         为 Markdown 文件创建向量库
 
         Args:
             md_path: Markdown 文件路径
             vector_store_path: 向量库存储路径
+            doc_type: 文件類型（Phase 4.7? MODEL-1+2 B2、傳給 _is_chunk_meaningful
+                      決定字元下限：resume/slides ≥ 3、其他 ≥ 10）
 
         Returns:
             str: 向量库路径
@@ -105,10 +174,31 @@ class RagProcessor:
         docs = md_splitter.split_text(content)
         
         self.logger.info(f"分割后得到 {len(docs)} 个文档片段")
-        
+
+        # Phase 4.7? MODEL-1+2 階段 B2: chunk filter（plan §4.2 + §3.6 修正 2/4）
+        meaningful_docs = []
+        filtered = []
+        for d in docs:
+            if _is_chunk_meaningful(d, doc_type=doc_type):
+                meaningful_docs.append(d)
+            else:
+                filtered.append(d)
+
+        if filtered:
+            # baron 補充二：印前 15 字元便於調試誤殺
+            preview = ", ".join(
+                f'"{(d.page_content or "")[:15]}..."' for d in filtered[:5]
+            )
+            suffix = f" ... 共 {len(filtered)} 個" if len(filtered) > 5 else ""
+            self.logger.info(
+                f"[chunk filter] 過濾 {len(filtered)}/{len(docs)} 個短 chunk "
+                f"(doc_type={doc_type!r}、resume/slides ≥{MIN_CHUNK_RESUME_SLIDES} / 其他 ≥{MIN_CHUNK_CONTENT_CHARS}、純數字 + markdown 噪聲過濾): "
+                f"{preview}{suffix}"
+            )
+
         # 创建向量存储
         vector_store = FAISS.from_documents(
-            documents=docs,
+            documents=meaningful_docs,
             embedding=self.embedder,
             distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
         )
