@@ -282,7 +282,86 @@ fallback：缺項靜默省略；只有 title 是 always-show。
 
 ---
 
-## 10. 反例
+## 11. Tag Pill（`.tag-pill`、RAG-1 R2）
+
+### 11.1 用途
+
+顯示 paper 的 hashtag（user_tags）、用半透明磨砂玻璃效果區分內容區、視覺輕量不搶眼。
+
+容器：`.paper-tags`（flex container、wrap、gap=8px）。
+
+### 11.2 樣式契約
+
+```css
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: var(--divider-w) solid var(--color-divider);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    transition: background 0.2s ease;
+}
+```
+
+關鍵：
+- `background: rgba(255,255,255,0.6)` 半透明白
+- `backdrop-filter: blur(8px)` 磨砂玻璃效果
+- 不用 box-shadow（依本文件 §10 反例規範）
+- 圓角用既有 `--radius-sm`、不自創
+
+### 11.3 互動契約
+
+- **Hover**：`background` opacity 提升至 0.8、`transition 0.2s ease`
+- **點擊**：當前無互動行為（未來可加 click → 跨文件過濾、屬 Phase 2 Hashtag Backend Plan 範圍）
+
+### 11.4 深色主題
+
+```css
+[data-theme="dark"] .tag-pill {
+    background: rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .tag-pill:hover {
+    background: rgba(0, 0, 0, 0.55);
+}
+```
+
+未來主題若用 `--color-bg-rgb` 等半透明 token、可改 `rgba(var(--color-bg-rgb), 0.6)`。
+
+### 11.5 容器規範
+
+通常放在 `.paper-tags` flex container 內：
+
+```css
+.paper-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+```
+
+### 11.6 內容規範
+
+- 文字：**lowercase**（後端 `paper_manager._normalize_tag()` 強制標準化、RAG-1 R2 v3 強化）
+- 顯示：加 `#` 前綴（如 `#plant`、`#machine_learning`、`#人資`）
+- 中文 tag：原樣保留（`.lower()` 對中文無效）
+- 來源：`paper.metadata_json.user_tags` 陣列
+- 寫入路徑：`PATCH /api/papers/{paper_uuid}` body `{"tags": [...]}` → 後端 `set_paper_tags` 寫入
+
+### 11.7 相關文件
+
+- 後端：`paper_manager.py::set_paper_tags` + `_normalize_tag` helper
+- 前端：`static/index.html#tag-modal`（編輯 Modal）+ `renderTitleHeader` 內 tag-pill 渲染
+- 測試：`tests/test_paper_tags.py`（R1）+ `tests/test_normalize_tag.py`（R2 v3）
+
+---
+
+## 12. 反例
 
 - ❌ 自製按鈕用陰影或漸層
 - ❌ Popup 寫 `position: absolute` → 被捲動容器裁切

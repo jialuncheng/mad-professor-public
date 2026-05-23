@@ -957,6 +957,59 @@ async def update_paper(paper_uuid: str, req: PaperUpdate,
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
+# ── 主題上傳（RAG-1 R2 子項 B）──
+
+@app.post("/api/themes/upload")
+async def upload_theme(file: UploadFile = File(...)):
+    """RAG-1 R2 子項 B：上傳自訂主題 CSS。
+
+    依 .claude-logs/ref/2026-05-23_RAG-1_UI_Fixes_Implementation_Plan.md v3 子項 B
+    + design/docs/theme-guide.md §7 規格
+
+    5 道安全過濾：
+    1. 副檔名限制：僅 `.css`
+    2. 檔名 sanitize：`re.sub(r"[^a-zA-Z0-9_-]", "_", base_name)`
+    3. 大小限制：≤ 100KB
+    4. 路徑強制：寫入 `static/themes/`
+    5. resolve 後檢查未離開目錄（防 traversal）
+
+    Returns:
+        {"filename": "<sanitized>.css", "url": "/static/themes/<name>.css"}
+    """
+    import re as _re
+
+    if not file.filename or not file.filename.lower().endswith(".css"):
+        raise HTTPException(status_code=400, detail="僅接受 .css 檔案")
+
+    # 檔名 sanitize（取 stem、過濾非 [a-zA-Z0-9_-]）
+    base_stem = Path(file.filename).stem
+    sanitized = _re.sub(r"[^a-zA-Z0-9_-]", "_", base_stem)
+    # 移除前後底線、連續底線壓縮
+    sanitized = _re.sub(r"_+", "_", sanitized).strip("_")
+    if not sanitized:
+        raise HTTPException(status_code=400, detail="檔名無效")
+
+    # 大小檢查
+    content = await file.read()
+    if len(content) > 100 * 1024:
+        raise HTTPException(status_code=413, detail="檔案過大（> 100KB）")
+
+    # 寫入 static/themes/、resolve 後檢查
+    themes_dir = (BASE_DIR / "static" / "themes").resolve()
+    themes_dir.mkdir(parents=True, exist_ok=True)
+    target = (themes_dir / f"{sanitized}.css").resolve()
+    if not str(target).startswith(str(themes_dir) + os.sep) \
+            and str(target) != str(themes_dir / f"{sanitized}.css"):
+        raise HTTPException(status_code=400, detail="路徑無效")
+
+    target.write_bytes(content)
+    logger.info(f"主題上傳: {target.name} ({len(content)} bytes)")
+    return {
+        "filename": target.name,
+        "url": f"/static/themes/{target.name}",
+    }
+
+
 # ── 健康檢查 ──
 
 @app.get("/api/health")

@@ -192,3 +192,60 @@ cp themes/mies.css themes/wright.css
 4. 持久化：`localStorage.setItem('theme', 'kahn')` 由你決定
 
 本 prototype **未提供切換 UI**；只示範靜態載入。
+
+---
+
+## 7. 使用者自訂 CSS 上傳與後端連動規格（RAG-1 R2 子項 B/D/H）
+
+> 對應 commit：RAG-1 R2、`web_server.py::upload_theme` + `static/index.html` 風格 Modal 上傳連動
+
+### 7.1 API 規格
+
+**Endpoint**：`POST /api/themes/upload`
+
+**Request**：
+- `Content-Type: multipart/form-data`
+- `file`：`.css` 檔案（≤ 100KB）
+
+**Response 200**：
+
+```json
+{
+  "filename": "<sanitized_name>.css",
+  "url": "/static/themes/<name>.css"
+}
+```
+
+**Error**：
+- `400`：副檔名非 `.css` / 檔名 sanitize 後為空 / 路徑無效
+- `413`：檔案過大（> 100KB）
+
+### 7.2 安全性過濾（5 道防線）
+
+1. **副檔名限制**：僅接受 `.css`（`file.filename.lower().endswith(".css")`）
+2. **檔名 sanitize**：`re.sub(r"[^a-zA-Z0-9_-]", "_", base_stem)` + 連續底線壓縮 + 前後 strip
+3. **MIME 檢查**：依副檔名（FastAPI / Starlette 內部）
+4. **大小限制**：100KB 上限（防 DoS）
+5. **路徑強制**：寫入 `static/themes/`、`resolve()` 後確保未離開目錄
+
+### 7.3 前端整合
+
+- 風格 Modal 內加「上傳 CSS」按鈕（依 components.md §2 Modal §1 Button）
+- 點按鈕 → 觸發隱藏的 `<input type="file" accept=".css">` → 上傳 endpoint
+- 成功後：
+  - 立即套用新主題（`#theme-link.href = response.url`）
+  - 寫 `localStorage.setItem(THEME_KEY, themeName)` 重整後仍生效
+  - 更新 dropdown 顯示
+- 失敗：`alert()` 顯示 error.detail
+
+### 7.4 資源目錄
+
+- 上傳目標：`static/themes/<sanitized>.css`
+- 自動 `mkdir(parents=True, exist_ok=True)`、無需手動預建
+- 既有預設主題：`kahn.css` / `kandinsky.css` / `mies.css` / `nara.css` 不受影響
+
+### 7.5 相關文件
+
+- 後端：`web_server.py::upload_theme`
+- 前端：`static/index.html#theme-modal` 內 `theme-upload-btn` / `theme-upload-input`
+- 測試：`tests/test_themes_upload.py`（5 個 pytest）

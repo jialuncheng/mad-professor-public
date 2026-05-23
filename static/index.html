@@ -730,6 +730,32 @@
     max-height: 12rem;
     overflow-y: auto;
   }
+
+  /* RAG-1 R2 子項 G 剩餘：tag-pill 半透明磨砂玻璃
+     依 design/docs/components.md §X tag-pill 規範
+     + design/docs/color-tokens.md（半透明 + backdrop-filter） */
+  #current-title .paper-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2);
+  }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-sm, 12px);
+    color: var(--color-text);
+    transition: background 0.2s ease;
+  }
+  .tag-pill:hover { background: rgba(255, 255, 255, 0.8); }
+  [data-theme="dark"] .tag-pill { background: rgba(0, 0, 0, 0.4); }
+  [data-theme="dark"] .tag-pill:hover { background: rgba(0, 0, 0, 0.55); }
   #current-title details.title-abstract > summary {
     cursor: pointer;
     font-size: var(--font-small, 12px);
@@ -1112,9 +1138,26 @@
         <svg viewBox="0 0 24 24" class="dropdown-chevron"><path d="M6 9l6 6 6-6"/></svg>
       </button>
     </div>
-    <p class="step-note">⚠ 此功能後端尚未實作，切換結果僅在當前頁面生效，重新整理後恢復預設</p>
+    <!-- RAG-1 R2 子項 D：加上傳 CSS 按鈕（後端 endpoint 已 ship、移除既有「⚠ 後端未實作」警語） -->
+    <input type="file" id="theme-upload-input" accept=".css" style="display:none">
     <div class="modal-actions">
+      <button id="theme-upload-btn" class="modal-btn">上傳 CSS</button>
       <button id="theme-ok-btn" class="modal-btn primary">確認切換</button>
+    </div>
+  </div>
+</div>
+
+<!-- RAG-1 R2 子項 E：tag 編輯 Modal — 點 #edit-tags-btn 開啟 -->
+<div id="tag-modal" class="modal-mask">
+  <div id="tag-box" class="modal-box" role="dialog" aria-labelledby="tag-title">
+    <h3 id="tag-title">編輯標籤</h3>
+    <p>輸入 hashtag、以空格分隔；# 可有可無；輸入後將自動 lowercase 標準化</p>
+    <input type="text" id="tag-input" class="modal-input"
+           placeholder="#plant #complex_system"
+           autocomplete="off">
+    <div class="modal-actions">
+      <button id="tag-cancel-btn" class="modal-btn">取消</button>
+      <button id="tag-save-btn" class="modal-btn primary">儲存</button>
     </div>
   </div>
 </div>
@@ -1218,6 +1261,10 @@
         </button>
         <button id="print-btn" class="icon-only" data-tip="列印文件">
           <svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><path d="M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></svg>
+        </button>
+        <!-- RAG-1 R2 子項 E：# 標籤編輯按鈕（toolbar-actions 末尾、極小 icon-only） -->
+        <button id="edit-tags-btn" class="icon-only" data-tip="編輯標籤">
+          <svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
         </button>
       </div>
     </div>
@@ -1631,8 +1678,9 @@
   if (savedTheme) {
     document.getElementById('theme-link').href = `/static/themes/${savedTheme}.css`;
     const dd = document.getElementById('theme-dropdown');
-    const labels = { mies: 'Mies van der Rohe', kahn: 'Kahn · Kimbell 美術館',
-                     kandinsky: 'Kandinsky · Bauhaus', nara: '奈良美智 · Yoshitomo Nara' };
+    // RAG-1 R2 子項 D：英文化（依 design/docs/copywriting.md）
+    const labels = { mies: 'Mies van der Rohe', kahn: 'Kahn · Kimbell Art Museum',
+                     kandinsky: 'Kandinsky · Bauhaus', nara: 'Yoshitomo Nara' };
     if (labels[savedTheme]) {
       dd.dataset.value = savedTheme;
       dd.querySelector('.dropdown-value').textContent = labels[savedTheme];
@@ -1645,6 +1693,87 @@
     document.getElementById('theme-link').href = `/static/themes/${theme}.css`;
     localStorage.setItem(THEME_KEY, theme);
     closeModal('theme-modal');
+  });
+
+  // RAG-1 R2 子項 D：theme upload 連動（依 POST /api/themes/upload）
+  document.getElementById('theme-upload-btn').addEventListener('click', () => {
+    document.getElementById('theme-upload-input').click();
+  });
+  document.getElementById('theme-upload-input').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.css')) {
+      alert('只接受 .css 檔案');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/themes/upload', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+        throw new Error(err.detail || 'Upload failed');
+      }
+      const data = await res.json();
+      // 立即套用新主題 + 寫 localStorage
+      const themeName = data.filename.replace(/\.css$/, '');
+      document.getElementById('theme-link').href = data.url;
+      localStorage.setItem(THEME_KEY, themeName);
+      // 更新 dropdown 顯示
+      const dd = document.getElementById('theme-dropdown');
+      dd.dataset.value = themeName;
+      dd.querySelector('.dropdown-value').textContent = themeName;
+      closeModal('theme-modal');
+    } catch (err) {
+      alert('上傳失敗：' + err.message);
+    } finally {
+      // reset input 讓相同檔案可重複上傳
+      e.target.value = '';
+    }
+  });
+
+  // RAG-1 R2 子項 E：# 標籤編輯 Modal + PATCH API 串接
+  document.getElementById('edit-tags-btn').addEventListener('click', () => {
+    if (!currentPaperId) return;
+    const p = allPapers.find(x => x.id === currentPaperId);
+    if (!p) return;
+    const existing = (p.metadata_json && p.metadata_json.user_tags) || [];
+    document.getElementById('tag-input').value =
+      existing.map(t => `#${t}`).join(' ');
+    openModal('tag-modal');
+    setTimeout(() => document.getElementById('tag-input').focus(), 30);
+  });
+  document.getElementById('tag-cancel-btn').addEventListener('click',
+    () => closeModal('tag-modal'));
+  document.getElementById('tag-save-btn').addEventListener('click', async () => {
+    if (!currentPaperId) return;
+    const raw = document.getElementById('tag-input').value || '';
+    // parse：以空白分隔、移除 # 前綴；後端 _normalize_tag 會 lowercase + dedup
+    const tags = raw.split(/\s+/)
+      .map(s => s.trim().replace(/^#/, ''))
+      .filter(Boolean);
+    try {
+      const res = await fetch(`/api/papers/${currentPaperId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Save failed' }));
+        throw new Error(err.detail || 'Save failed');
+      }
+      const data = await res.json();
+      // 用後端回傳的 normalized tags 更新 in-memory + 重繪
+      const p = allPapers.find(x => x.id === currentPaperId);
+      if (p) {
+        p.metadata_json = p.metadata_json || {};
+        p.metadata_json.user_tags = data.tags || [];
+        renderTitleHeader(p);
+      }
+      closeModal('tag-modal');
+    } catch (err) {
+      alert('儲存失敗：' + err.message);
+    }
   });
 
   // ── 自訂 dropdown：用 .ctx-popup 風格清單 ────────────
@@ -1660,11 +1789,12 @@
       ['news', '新聞文章'],
       ['resume', '履歷'],
     ];
+    // RAG-1 R2 子項 D：英文化（依 design/docs/copywriting.md）
     const THEMES = [
       ['mies', 'Mies van der Rohe'],
-      ['kahn', 'Kahn · Kimbell 美術館'],
+      ['kahn', 'Kahn · Kimbell Art Museum'],
       ['kandinsky', 'Kandinsky · Bauhaus'],
-      ['nara', '奈良美智 · Yoshitomo Nara'],
+      ['nara', 'Yoshitomo Nara'],
     ];
     setupOne(document.getElementById('doc-type-dropdown'), DOC_TYPES);
     setupOne(document.getElementById('theme-dropdown'), THEMES);
@@ -2084,6 +2214,12 @@ function renderTitleHeader(p) {
         + `</details>`
       );
     }
+  }
+  // RAG-1 R2 子項 G 剩餘：tag-pill 渲染（半透明磨砂玻璃）
+  const userTags = (p.metadata_json && p.metadata_json.user_tags) || [];
+  if (Array.isArray(userTags) && userTags.length) {
+    const pills = userTags.map(t => `<span class="tag-pill">#${_esc(t)}</span>`).join('');
+    parts.push(`<div class="paper-tags">${pills}</div>`);
   }
   el.innerHTML = parts.join('');
 }

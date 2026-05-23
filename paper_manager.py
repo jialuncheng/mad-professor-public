@@ -652,18 +652,50 @@ def set_paper_folder(session, owner_id: int, paper_uuid: str,
     return p
 
 
+def _normalize_tag(tag) -> str:
+    """RAG-1 R2 v3 強化：所有 tag 寫入路徑強制 lowercase 標準化（單一真理源）。
+
+    依 .claude-logs/ref/2026-05-23_RAG-1_UI_Fixes_Implementation_Plan.md v3 強化段
+    + .claude-logs/2026-05-23_RAG-1_前端執行計劃_含資料夾自動標籤.md §4.2.1 Q4。
+
+    處理流程：
+    - strip 前後空白
+    - lower() 標準化（對英文有效；中文無大小寫概念、原樣保留）
+
+    邊界處理：
+    - None / 非字串 → 回空字串（caller 應過濾）
+    - 純空白 → strip 後為空 → 回空字串
+    - 含 emoji / underscore / hyphen / 數字 → 保留
+    - 中文 → `.lower()` 無效、原樣保留
+
+    R3 `_apply_folder_path_tags` 共用此 helper、確保所有 tag 寫入路徑一致。
+
+    Args:
+        tag: 原始 tag 字串（用戶輸入 / 資料夾名 / 任何來源）
+
+    Returns:
+        normalized tag（lowercase + stripped）；無效則回空字串
+    """
+    if not isinstance(tag, str):
+        return ""
+    s = tag.strip()
+    if not s:
+        return ""
+    return s.lower()
+
+
 def set_paper_tags(session, owner_id: int, paper_uuid: str,
                    tags: list) -> Paper:
-    """覆寫式整批寫入 user_tags 到 Paper.metadata_json（RAG-1 R1 子項 A）。
+    """覆寫式整批寫入 user_tags 到 Paper.metadata_json（RAG-1 R1 子項 A、R2 v3 強化）。
 
     依 .claude-logs/2026-05-23_RAG-1_前端執行計劃_含資料夾自動標籤.md §4.1
-    + UI Fixes Plan v3 L23-31。
+    + UI Fixes Plan v3 L23-31 + v3 強化段（全域 lowercase）。
 
+    R2 強化：
+    - 所有 tag 走 `_normalize_tag()` 共用 helper（lowercase + strip）
+    - lowercase 後 dedup（保留首次出現順序）
     - 整批覆寫策略：對應前端 `#` Modal 編輯後 PATCH 整批送上
-    - strip 空白 + 過濾 None / 空字串
     - 跟 R3 `_apply_folder_path_tags` append 路徑互補（§4.2.4）
-    - R1 階段不做 lowercase 標準化（v3 規劃在 R1 落地 `_normalize_tag` helper 後、
-      R2 落地時整合到 set_paper_tags、本 commit 先 ship 基礎寫入路徑）
 
     Args:
         session: SQLAlchemy session
@@ -683,7 +715,7 @@ def set_paper_tags(session, owner_id: int, paper_uuid: str,
     if p is None:
         raise ValueError("論文不存在")
 
-    # 解析既有 metadata_json、寫入 user_tags、序列化回去
+    # 解析既有 metadata_json
     try:
         meta = json.loads(p.metadata_json) if p.metadata_json else {}
         if not isinstance(meta, dict):
@@ -691,13 +723,15 @@ def set_paper_tags(session, owner_id: int, paper_uuid: str,
     except (json.JSONDecodeError, TypeError):
         meta = {}
 
-    # 過濾 None / 非字串 / 空字串（strip 後）、保留有效 tag
+    # R2 v3 強化：所有 tag 走 _normalize_tag + dedup（保留首次順序）
     cleaned = []
+    seen = set()
     for t in (tags or []):
-        if isinstance(t, str):
-            s = t.strip()
-            if s:
-                cleaned.append(s)
+        n = _normalize_tag(t)
+        if n and n not in seen:
+            seen.add(n)
+            cleaned.append(n)
+
     meta["user_tags"] = cleaned
     p.metadata_json = json.dumps(meta, ensure_ascii=False)
     session.commit()
