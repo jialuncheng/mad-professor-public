@@ -635,9 +635,102 @@ def delete_folder(session, owner_id: int, folder_id: int) -> int:
     return removed
 
 
+def _folder_ancestor_path_names(session, owner_id: int,
+                                  folder_id: int) -> list:
+    """遞迴向 root 取 folder 從 root → leaf 的階層 name 清單（RAG-1 R3）。
+
+    依 .claude-logs/2026-05-23_RAG-1_前端執行計劃_含資料夾自動標籤.md §4.2
+
+    範例：folder `CV`（parent=`HR`、parent=None root） → 回 `["HR", "CV"]`
+
+    防環：用 visited set + max depth（依既有 _folder_depth 已限 ≤ 5、實務不會撞）
+    """
+    names = []
+    visited = set()
+    cur_id = folder_id
+    max_depth = 32  # 防禦上限、實務 Folder 限 ≤ 5（grep `_folder_depth` L500）
+    while cur_id is not None and len(names) < max_depth:
+        if cur_id in visited:
+            break  # 環防禦（理論上 schema 不允許、實務不會發生）
+        visited.add(cur_id)
+        f = _get_folder_row(session, owner_id, cur_id)
+        if f is None:
+            break
+        names.append(f.name)
+        cur_id = f.parent_id
+    return list(reversed(names))  # root → leaf
+
+
+def _apply_folder_path_tags(session, owner_id: int, paper_uuid: str,
+                              folder_id) -> None:
+    """RAG-1 R3 新需求：把 folder 路徑名（lowercase）upsert 到 paper.user_tags。
+
+    依 .claude-logs/2026-05-23_RAG-1_前端執行計劃_含資料夾自動標籤.md §4.2.2
+    + UI Plan v3 附錄 C §2
+
+    策略（依 §4.2.1 Q1-Q10）：
+    - Q1 移動完成 commit 後才呼叫
+    - Q2 自動加的是初始建議、用戶可隨時手動刪
+    - Q3 每層 1 個 tag（path 扁平化、不合併）
+    - Q4 lowercase（共用 R2 ship 的 _normalize_tag、單一真理源）
+    - Q6/Q7 舊資料夾的自動 tag 不清掉、用戶手動處理
+    - Q9 創建（首次上傳）也走此路徑（因為走 set_paper_folder）
+    - 中文 folder name 保留（_normalize_tag 對中文無效）
+
+    防禦：metadata_json corrupt 時 graceful 重置為 {}。
+    """
+    if folder_id is None:
+        return  # 移到未分類、不加自動 tag（Q7）
+
+    path_names = _folder_ancestor_path_names(session, owner_id, folder_id)
+    auto_tags = [_normalize_tag(n) for n in path_names]
+    auto_tags = [t for t in auto_tags if t]  # 過濾空字串
+    if not auto_tags:
+        return
+
+    p = session.query(Paper).filter_by(
+        owner_id=owner_id, paper_uuid=paper_uuid
+    ).one_or_none()
+    if p is None:
+        return
+
+    try:
+        meta = json.loads(p.metadata_json) if p.metadata_json else {}
+        if not isinstance(meta, dict):
+            meta = {}
+    except (json.JSONDecodeError, TypeError):
+        meta = {}
+
+    existing = list(meta.get("user_tags", []) or [])
+    # 既有 tag 集合（lowercase 比對、保留原始大小寫）
+    existing_lower = {_normalize_tag(t) for t in existing if isinstance(t, str)}
+
+    # Append + de-dup：自動 tag 若不在既有 set 內、附加
+    appended = []
+    for t in auto_tags:
+        if t and t not in existing_lower:
+            existing.append(t)
+            existing_lower.add(t)
+            appended.append(t)
+
+    if appended:
+        meta["user_tags"] = existing
+        p.metadata_json = json.dumps(meta, ensure_ascii=False)
+        session.commit()
+        logger.info(
+            f"自動標籤: owner={owner_id} {paper_uuid} "
+            f"folder={folder_id} → +{appended}"
+        )
+
+
 def set_paper_folder(session, owner_id: int, paper_uuid: str,
                      folder_id):
-    """把論文移到某資料夾（folder_id=None → 未分類/根）。回傳更新後 Paper。"""
+    """把論文移到某資料夾（folder_id=None → 未分類/根）。回傳更新後 Paper。
+
+    RAG-1 R3：commit 成功後、try/except 包覆呼叫 `_apply_folder_path_tags`、
+    自動加 folder 路徑階層的 lowercase tag（共用 R2 ship 的 `_normalize_tag`）。
+    failures 不阻塞 core move（依 §4.2.1 Q18 + UI Plan 附錄 C §2 防禦性容錯）。
+    """
     p = session.query(Paper).filter_by(
         owner_id=owner_id, paper_uuid=paper_uuid
     ).one_or_none()
@@ -649,6 +742,15 @@ def set_paper_folder(session, owner_id: int, paper_uuid: str,
     p.folder_id = folder_id
     session.commit()
     logger.info(f"論文歸檔: owner={owner_id} {paper_uuid} → folder={folder_id}")
+
+    # RAG-1 R3：移動成功後自動加 folder 路徑 tag（不阻塞 core）
+    try:
+        _apply_folder_path_tags(session, owner_id, paper_uuid, folder_id)
+    except Exception as e:  # pragma: no cover - 純防禦
+        logger.warning(
+            f"[RAG-1 R3] _apply_folder_path_tags 失敗（不阻塞 move）: {e}"
+        )
+
     return p
 
 
