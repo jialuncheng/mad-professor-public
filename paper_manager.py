@@ -652,6 +652,61 @@ def set_paper_folder(session, owner_id: int, paper_uuid: str,
     return p
 
 
+def set_paper_tags(session, owner_id: int, paper_uuid: str,
+                   tags: list) -> Paper:
+    """覆寫式整批寫入 user_tags 到 Paper.metadata_json（RAG-1 R1 子項 A）。
+
+    依 .claude-logs/2026-05-23_RAG-1_前端執行計劃_含資料夾自動標籤.md §4.1
+    + UI Fixes Plan v3 L23-31。
+
+    - 整批覆寫策略：對應前端 `#` Modal 編輯後 PATCH 整批送上
+    - strip 空白 + 過濾 None / 空字串
+    - 跟 R3 `_apply_folder_path_tags` append 路徑互補（§4.2.4）
+    - R1 階段不做 lowercase 標準化（v3 規劃在 R1 落地 `_normalize_tag` helper 後、
+      R2 落地時整合到 set_paper_tags、本 commit 先 ship 基礎寫入路徑）
+
+    Args:
+        session: SQLAlchemy session
+        owner_id: 使用者 ID
+        paper_uuid: paper 對外 uuid
+        tags: 新 tag list（整批覆寫、非 append）
+
+    Returns:
+        更新後的 Paper instance
+
+    Raises:
+        ValueError: paper 不存在
+    """
+    p = session.query(Paper).filter_by(
+        owner_id=owner_id, paper_uuid=paper_uuid
+    ).one_or_none()
+    if p is None:
+        raise ValueError("論文不存在")
+
+    # 解析既有 metadata_json、寫入 user_tags、序列化回去
+    try:
+        meta = json.loads(p.metadata_json) if p.metadata_json else {}
+        if not isinstance(meta, dict):
+            meta = {}
+    except (json.JSONDecodeError, TypeError):
+        meta = {}
+
+    # 過濾 None / 非字串 / 空字串（strip 後）、保留有效 tag
+    cleaned = []
+    for t in (tags or []):
+        if isinstance(t, str):
+            s = t.strip()
+            if s:
+                cleaned.append(s)
+    meta["user_tags"] = cleaned
+    p.metadata_json = json.dumps(meta, ensure_ascii=False)
+    session.commit()
+    logger.info(
+        f"標籤寫入: owner={owner_id} {paper_uuid} → tags={cleaned}"
+    )
+    return p
+
+
 # ─────────────────── MODEL-8 C1: paper_chunks DAL helper ───────────────────
 # 依 plan §3.1（含修正 3 移除 tiling_method、修正 5 不重做 get_paper_db_id）
 # 詳見 .claude-logs/2026-05-22_MODEL-8_SQLite物理防線_plan.md §3.1

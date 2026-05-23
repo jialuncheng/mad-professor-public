@@ -164,13 +164,19 @@
   .modal-mask > .modal-box { cursor: auto; }   /* 內框恢復一般游標 */
   .modal-mask.show { display: flex; }
   .modal-box {
+    /* RAG-1 R1 子項 C（UI Fixes Plan v3 L45-60）：補 radius / font-family
+       讓 Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層 */
     background: var(--color-bg);
-    border: 1px solid var(--color-divider);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-md, 8px);
+    font-family: var(--font-body);
     padding: var(--space-6);
     min-width: 380px;
     max-width: 480px;
   }
   .modal-box h3 {
+    /* RAG-1 R1 子項 C：補 font-family 用 display token */
+    font-family: var(--font-display);
     font-size: var(--font-lg);
     font-weight: 600;
     margin-bottom: var(--space-4);
@@ -684,7 +690,10 @@
      toolbar 是過度保守，此處還原。padding / border-bottom 由 toolbar 提供，
      此處不重複設定。 */
   #current-title {
+    /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：補 padding-right
+       防右側 toolbar-actions 按鈕被長標題遮擋 */
     flex: 1; min-width: 0;
+    padding-right: var(--space-4, 16px);
     color: var(--color-text);
   }
   #current-title .title-zh {
@@ -713,9 +722,13 @@
     color: var(--color-border);
   }
   #current-title details.title-abstract {
+    /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：摘要展開最大高度 + 滾動條
+       防超長摘要把 toolbar 整個撐爆 */
     margin-top: var(--space-2);
     font-size: var(--font-base, 13px);
     color: var(--color-text);
+    max-height: 12rem;
+    overflow-y: auto;
   }
   #current-title details.title-abstract > summary {
     cursor: pointer;
@@ -2058,7 +2071,11 @@ function renderTitleHeader(p) {
     if (venue) bits.push(_esc(venue));
     if (bits.length)
       parts.push(`<p class="title-meta">${bits.join('<span class="title-meta-sep">·</span>')}</p>`);
-    const abstract = v('abstract');
+    // RAG-1 R1 子項 F（UI Fixes Plan v3 L80-87）：雙語摘要 fallback
+    // 繁中優先 → translated_abstract、無中譯則防禦性回退至英文 abstract
+    const abstractEn = v('abstract');
+    const abstractZh = v('translated_abstract') || abstractEn;
+    const abstract = currentLang === 'zh' ? abstractZh : abstractEn;
     if (abstract) {
       parts.push(
         `<details class="title-abstract">`
@@ -2210,7 +2227,11 @@ document.getElementById('lang-toggle').onclick = async () => {
   currentLang = currentLang === 'zh' ? 'en' : 'zh';
   // icon-only：以 title 提示下一步動作（取代原 textContent，避免覆蓋 SVG）
   document.getElementById('lang-toggle').title = currentLang === 'zh' ? '切換英文' : '切換中文';
-  if (currentPaperId) await fetchContent(currentPaperId, currentLang);
+  if (currentPaperId) {
+    await fetchContent(currentPaperId, currentLang);
+    // RAG-1 R1 子項 F：切語言後重繪 toolbar、雙語摘要無縫聯動
+    renderTitleHeader(allPapers.find(p => p.id === currentPaperId));
+  }
 };// 聊天功能
 let isStreaming = false;
 

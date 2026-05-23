@@ -845,6 +845,9 @@ class FolderUpdate(BaseModel):
 
 class PaperUpdate(BaseModel):
     folder_id: Optional[int] = None      # 同上；未提供＝不改，提供 null＝移到未分類
+    # RAG-1 R1 子項 A（UI Fixes Plan v3 L23-31 + 執行計劃 §4.1）：
+    # tags 為覆寫式整批寫入；None 表示不更新此欄位
+    tags: Optional[list] = None
 
 
 @app.get("/api/folders")
@@ -905,18 +908,52 @@ async def delete_folder(folder_id: int,
 @app.patch("/api/papers/{paper_uuid}")
 async def update_paper(paper_uuid: str, req: PaperUpdate,
                        current_user: CurrentUser = Depends(get_current_user)):
-    """目前僅支援設定 folder_id（None＝移到未分類）。"""
-    if "folder_id" not in req.model_fields_set:
-        raise HTTPException(status_code=400, detail="未提供可更新欄位（folder_id）")
+    """支援設定 folder_id（None＝移到未分類）+ tags（覆寫式整批寫入）。
+
+    RAG-1 R1 子項 A：擴充支援 tags 欄位（依 UI Fixes Plan v3 L23-31）。
+    """
+    provided = req.model_fields_set
+    if not (provided & {"folder_id", "tags"}):
+        raise HTTPException(
+            status_code=400,
+            detail="未提供可更新欄位（folder_id / tags）",
+        )
     if not paper_manager.paper_exists(current_user.id, paper_uuid):
         raise HTTPException(status_code=404, detail="論文不存在")
+
     with db.SessionLocal() as s:
         try:
-            p = paper_manager.set_paper_folder(
-                s, current_user.id, paper_uuid, req.folder_id
-            )
-            return {"status": "ok", "paper_id": paper_uuid,
-                    "folder_id": p.folder_id}
+            # 既有：folder_id 變更
+            if "folder_id" in provided:
+                paper_manager.set_paper_folder(
+                    s, current_user.id, paper_uuid, req.folder_id
+                )
+            # R1 新增：tags 變更
+            if "tags" in provided and req.tags is not None:
+                paper_manager.set_paper_tags(
+                    s, current_user.id, paper_uuid, req.tags
+                )
+
+            # 取最新 paper 回傳
+            from models import Paper
+            p = s.query(Paper).filter_by(
+                owner_id=current_user.id, paper_uuid=paper_uuid
+            ).one()
+            # user_tags 從 metadata_json 解析（若有）
+            user_tags = []
+            if p.metadata_json:
+                try:
+                    meta = json.loads(p.metadata_json)
+                    if isinstance(meta, dict):
+                        user_tags = meta.get("user_tags", []) or []
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            return {
+                "status": "ok",
+                "paper_id": paper_uuid,
+                "folder_id": p.folder_id,
+                "tags": user_tags,
+            }
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
