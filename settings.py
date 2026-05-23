@@ -71,3 +71,15 @@ DATABASE_URL = os.getenv(
 # 預設值 = _BASE_DIR / "output"、現有所有路徑解析 100% backward compat
 # 詳見 .claude-logs/2026-05-22_MODEL-8_SQLite物理防線_plan.md §3.6
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", str(_BASE_DIR / "output")))
+
+# Phase 4.X? LOGGING-1：統一日誌配置 env override
+# 依 .claude-logs/2026-05-23_logging_refactor_可行性評估.md v4 §4.8 + Q4 / Q5 / Q11
+# - LOG_LEVEL：預設 INFO（debug 模式 opt-in LOG_LEVEL=DEBUG）
+# - LOG_DIR：預設 _BASE_DIR / "logs"、Docker / K8s 可 override 到 /var/log/app 等
+# - LOG_FORMAT：auto / json / console（auto = ENVIRONMENT=production → json、else console）
+# - LOG_MAX_BYTES / LOG_BACKUP_COUNT：dev 環境 RotatingFileHandler 配置
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_DIR = Path(os.getenv("LOG_DIR", str(_BASE_DIR / "logs")))
+LOG_FORMAT = os.getenv("LOG_FORMAT", "auto").lower()
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(10 * 1024 * 1024)))
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))

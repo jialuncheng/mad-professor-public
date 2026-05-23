@@ -3,7 +3,6 @@ import json
 import logging
 import asyncio
 import threading
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -30,46 +29,15 @@ from processor.slides_processor import SlidesProcessor
 
 load_dotenv()
 
-def _setup_logging():
-    """終端機只顯示 WARNING/ERROR；pipeline 與 chat log 分流寫入檔案。"""
-    log_dir = Path(__file__).parent / "logs"
-    log_dir.mkdir(exist_ok=True)
-
-    fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.WARNING)
-    for h in root_logger.handlers[:]:
-        root_logger.removeHandler(h)
-
-    console = logging.StreamHandler()
-    console.setLevel(logging.WARNING)
-    console.setFormatter(fmt)
-    root_logger.addHandler(console)
-
-    def _rotating(filename):
-        h = RotatingFileHandler(
-            log_dir / filename, maxBytes=10 * 1024 * 1024,
-            backupCount=5, encoding='utf-8'
-        )
-        h.setLevel(logging.DEBUG)
-        h.setFormatter(fmt)
-        return h
-
-    pipeline_handler = _rotating("pipeline.log")
-    for name in ('pipeline_core', 'paper_manager', 'processor'):
-        lg = logging.getLogger(name)
-        lg.setLevel(logging.DEBUG)
-        lg.addHandler(pipeline_handler)
-
-    chat_handler = _rotating("chat.log")
-    for name in ('AI_professor_chat', 'ai_core', 'rag_retriever'):
-        lg = logging.getLogger(name)
-        lg.setLevel(logging.DEBUG)
-        lg.addHandler(chat_handler)
-
-
-_setup_logging()
+# Phase 4.X? LOGGING-1：統一日誌配置入口
+# 依 .claude-logs/2026-05-23_logging_refactor_可行性評估.md v4 §4.8 + §4.17 + §4.18
+# 既有 _setup_logging() 已移除、由 utils/logging_config.setup_logging() 取代
+# - 雲原生 12-factor stdout streaming（production）
+# - dev 環境保留 RotatingFileHandler hybrid 雙軌（baron 本機 tail -f 工作流）
+# - 第三方 logger 噪聲分流（SQLAlchemy DEBUG-only / Uvicorn 動態）
+# - ContextVar 雙保險（LOGGING-2 trace_id middleware 落地後自動受惠）
+from utils.logging_config import setup_logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # 全域設定
@@ -904,4 +872,14 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080, reload=False, log_level="warning", access_log=False)
+    # 🔴 LOGGING-1 v3 陷阱 2 必修：log_config=None 防 uvicorn 預設 LOGGING_CONFIG dictConfig
+    # 覆蓋 setup_logging() 配置的 root logger handlers（依評估報告 v4 §4.14）
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8080,
+        reload=False,
+        log_level="warning",
+        access_log=False,
+        log_config=None,
+    )
