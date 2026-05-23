@@ -180,4 +180,12 @@ processor/test_*.py
 
 # macOS 系統垃圾（永久排除、含所有子目錄）
 **/.DS_Store
+
 # 例外：ref / templates / prompts 三個子目錄入版控、跨環境同步 + GitHub 網頁端檢索
+
+# Pipeline 本機產物
+output/
+.claude-logs/_phase_4_7e_outputs/
+   
+# 本機 debug / 時序分析工具
+tools/timing/
