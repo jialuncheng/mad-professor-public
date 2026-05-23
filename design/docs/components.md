@@ -361,6 +361,114 @@ fallback：缺項靜默省略；只有 title 是 always-show。
 
 ---
 
+## 11.2 Hashtag Token（`.hashtag-token`、chat-input 內、RAG-1 Phase 2 P2-3）
+
+> 註：跟 §11 Tag Pill 同屬「tag 視覺呈現」家族、但用途與互動完全不同——Tag Pill 是 paper toolbar 的**唯讀標籤**、Hashtag Token 是 chat-input 的**可拆卸藍色 token**（類似 Claude 對話框的 `/skill` 行為）。
+
+### 11.2.1 用途
+
+chat-input 內輸入 `#<prefix>` 後從 autocomplete dropdown 選定的 tag、會被轉成藍色不可編輯 token（一整塊原子單元）。Token 用來：
+- 視覺化「此 tag 將觸發跨文獻 RAG 路由」、跟純文字 query 區分
+- 讓用戶確認 tag 已被後端認得（autocomplete 來源 = `allPapers.metadata_json.user_tags`、Q9）
+- 對應後端 `paper_manager.parse_query_hashtag` 解析路徑（P2-2 ship）
+
+容器：`#chat-input`（contenteditable div、`#chat-input-area` 為定位錨點）。
+
+### 11.2.2 樣式契約
+
+```css
+.hashtag-token {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    user-select: none;
+    cursor: default;
+    vertical-align: baseline;
+    line-height: 1.5;
+}
+.hashtag-token-remove {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 2px;
+    line-height: 1;
+}
+.hashtag-token-remove:hover { color: white; }
+```
+
+關鍵：
+- `background: var(--color-accent)`（藍色、跟 toolbar Tag Pill 半透明白形成對比）
+- `user-select: none` + `contenteditable="false"`：用戶 selection 跳過、Backspace 一次刪整顆
+- `vertical-align: baseline` + `line-height: 1.5`：跟周圍純文字基線對齊、不錯位
+- 無 `box-shadow`、無漸層（依本文件 §10 反例規範）
+
+### 11.2.3 互動契約
+
+- **輸入 `#<prefix>`**：autocomplete dropdown 顯示前綴匹配的 user_tags（前 10 筆、超過顯示 `...更多 (N 筆)`、Q8）
+- **鍵盤導覽**：`↑/↓` 切換 active、`Enter`/`Tab` 確認、`Esc` 關閉
+- **滑鼠**：點 item（`mousedown`、非 `click`、避免失焦先觸發 close）確認
+- **確認後**：`#<prefix>` 純文字被刪除、替換為 token span + 後綴空格（cursor 落在空格後）
+- **刪除 token**：
+  - 點 token 內 `×` 按鈕 → 整顆刪除（Q13 不二次確認）
+  - Token 後 Backspace → contenteditable 把 token 視為原子單元、一次刪整顆
+- **中文 IME（Q12）**：`compositionstart` 旗標關閉 autocomplete 觸發、`compositionend` 重新偵測
+- **無 hover tooltip（Q10）**：首版簡單、未來 follow-up 可加「跨 N 篇 paper」提示
+
+### 11.2.4 Autocomplete 定位（§3.3.5-#4 防護）
+
+依 plan v2 §3.3.5-#4、autocomplete dropdown 定位錨點**綁容器、非綁 cursor**：
+
+```css
+#chat-input-area { position: relative; }                  /* 定位上下文 */
+#hashtag-autocomplete.hashtag-popup {
+    position: absolute;
+    bottom: 100%;                                          /* 永遠在 input 正上方 */
+    left:  var(--chat-pad-x, var(--space-5));              /* 對齊 input 左 padding */
+    right: var(--chat-pad-x, var(--space-5));
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: var(--space-2);
+    z-index: 100;
+}
+```
+
+好處：
+- 永遠整齊懸浮、不抖動、不溢出
+- 即使 chat-input 多行展開、dropdown 仍貼齊頂部、視覺穩定
+- 對齊 Claude `/skill` autocomplete 行為
+
+### 11.2.5 跟 §11 Tag Pill 的區別
+
+| 維度 | §11 Tag Pill | §11.2 Hashtag Token |
+|---|---|---|
+| 位置 | paper 標題下方 toolbar | chat-input 內 |
+| 用途 | 顯示 paper 的 user_tags（唯讀） | query 內 hashtag 視覺糖 |
+| 顏色 | 半透明白磨砂玻璃（`rgba(255,255,255,0.6)` + blur） | 純藍色（`var(--color-accent)`） |
+| 互動 | 無互動（未來可 click 過濾） | 鍵盤/滑鼠選 + × 刪除 |
+| contenteditable | N/A | 原子單元（`contenteditable="false"`） |
+| 來源 | paper.metadata_json.user_tags | autocomplete from allPapers cache |
+
+### 11.2.6 contenteditable 防護（§3.3.5 1-3 點）
+
+- **#1 placeholder**：`#chat-input:empty::before { content: attr(data-placeholder); ... }`（contenteditable div 無原生 placeholder）
+- **#2 disabled**：`#chat-input[contenteditable="false"]` 顯式設灰底 + `cursor: not-allowed` + `user-select: none`（disabled 屬性對 div 無效）
+- **#3 全域替換**：`chatInput.value` → `chatInput.textContent.trim()`、`chatInput.disabled = true/false` → `chatInput.setAttribute('contenteditable', 'true'/'false')`、`textarea autosize listener` 移除（contenteditable 自然撐高 + `max-height: 240px`）
+
+### 11.2.7 相關文件
+
+- 後端：`paper_manager.py::parse_query_hashtag` + `list_paper_uuids_by_tag`（P2-2 ship）
+- 前端：`static/index.html#chat-input`（contenteditable div）+ `#hashtag-autocomplete`（popup）+ `hashtagAutocomplete` JS 模組
+- 測試：`tests/test_phase2_p2_3_hashtag_token_ui.py`（grep + 結構驗證）
+
+---
+
 ## 12. 反例
 
 - ❌ 自製按鈕用陰影或漸層

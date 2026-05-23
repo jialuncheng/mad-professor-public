@@ -124,11 +124,11 @@
 |---|---|---|
 | Tab | 全域 | 標準 focus 巡覽 |
 | Shift+Tab | 全域 | 反向巡覽 |
-| Ctrl+Enter | `#chat-input` | 送出訊息 |
-| Enter | `#chat-input` | 換行（避免誤送） |
-| Esc | （未實作） | 預期：關閉最上層 popup / modal |
-| ↑↓ | （未實作） | 預期：popup / dropdown 內切換選項 |
-| Enter / Space | （未實作） | 預期：dropdown 開啟 |
+| Ctrl+Enter | `#chat-input` | 送出訊息（IME 組字中不觸發） |
+| Enter | `#chat-input` | 換行（避免誤送）；autocomplete 開啟時 = 確認當前 hashtag |
+| Tab | `#chat-input` | autocomplete 開啟時 = 確認當前 hashtag（RAG-1 P2-3） |
+| ↑↓ | `#chat-input` | autocomplete 開啟時 = 切換選項（RAG-1 P2-3） |
+| Esc | `#chat-input` | autocomplete 開啟時 = 關閉 popup（RAG-1 P2-3）；未實作其他 popup/modal |
 
 ## 12. 不在規範內的範圍
 

@@ -946,6 +946,8 @@
     flex-shrink: 0;
     padding: var(--pad-panel) var(--chat-pad-x, var(--space-5));
     border-top: 1px solid var(--color-border);
+    /* RAG-1 Phase 2 P2-3 §3.3.5-#4：autocomplete dropdown 定位錨點 */
+    position: relative;
   }
   #chat-input {
     width: 100%;
@@ -954,17 +956,104 @@
     border-radius: var(--radius-md);
     font-size: var(--font-base);
     line-height: 1.5;
-    resize: none;
     min-height: var(--btn-h);
-    max-height: 240px;                    /* 從 132 拉到 240 = 約 10 行；自然隨內容增長 */
+    max-height: 240px;                    /* 約 10 行；contenteditable 自然撐高 */
     overflow-y: auto;
     outline: none;
     background: var(--color-bg);
     color: var(--color-text);
     font-family: inherit;
     display: block;
+    /* contenteditable div 需顯式設 word-break、避免長字串撐破容器 */
+    word-break: break-word;
+    white-space: pre-wrap;
   }
   #chat-input:focus { border-color: var(--color-accent); }
+  /* RAG-1 Phase 2 P2-3 §3.3.5-#1：contenteditable div 無原生 placeholder、
+     用 :empty::before + data-placeholder 模擬；display:block 確保排版正確 */
+  #chat-input:empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-text-subtle);
+    pointer-events: none;
+    display: block;
+  }
+  #chat-input:empty:focus::before { opacity: 0.5; }
+  /* RAG-1 Phase 2 P2-3 §3.3.5-#2：disabled 視覺契約對齊既有 textarea[disabled]
+     contenteditable="false" 替代 disabled 屬性、需顯式樣式維持 UX */
+  #chat-input[contenteditable="false"] {
+    background: var(--color-surface);
+    color: var(--color-text-subtle);
+    cursor: not-allowed;
+    user-select: none;
+  }
+  #chat-input[contenteditable="false"]:empty::before { opacity: 0.4; }
+
+  /* RAG-1 Phase 2 P2-3 §3.3.2 + design/docs/components.md §11.2 Hashtag Token */
+  .hashtag-token {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    user-select: none;
+    cursor: default;
+    /* 跟周圍純文字基線對齊、避免 token 跳行錯位 */
+    vertical-align: baseline;
+    line-height: 1.5;
+    /* 確保 contenteditable 把整顆 token 當原子單元、Backspace 一次刪整顆 */
+  }
+  .hashtag-token-remove {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 2px;
+    font-size: inherit;
+    line-height: 1;
+  }
+  .hashtag-token-remove:hover { color: white; }
+  [data-theme="dark"] .hashtag-token { background: var(--color-accent); }
+
+  /* RAG-1 Phase 2 P2-3 §3.3.5-#4：autocomplete dropdown 綁容器、非綁 cursor
+     永遠在 input 正上方展開、避免溢出畫面與多行抖動 */
+  #hashtag-autocomplete.hashtag-popup {
+    position: absolute;
+    bottom: 100%;
+    left: var(--chat-pad-x, var(--space-5));
+    right: var(--chat-pad-x, var(--space-5));
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-1) 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+  #hashtag-autocomplete.hashtag-popup[hidden] { display: none; }
+  .hashtag-popup-item {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--font-base);
+    color: var(--color-text);
+    cursor: pointer;
+    line-height: 1.6;
+  }
+  .hashtag-popup-item:hover,
+  .hashtag-popup-item.active {
+    background: var(--color-surface);
+  }
+  .hashtag-popup-more {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    cursor: default;
+    font-style: italic;
+  }
 
   .chat-empty {
     text-align: center;
@@ -1293,7 +1382,18 @@
     </div>
     <div id="chat-messages"></div>
     <div id="chat-input-area">
-      <textarea id="chat-input" disabled placeholder="輸入問題（Ctrl+Enter 送出）..."></textarea>
+      <!-- RAG-1 Phase 2 P2-3：textarea → contenteditable div、支援 inline hashtag token
+           plan v2 §3.3.2 + §3.3.5 四點防護；data-placeholder 配對 CSS :empty::before -->
+      <div id="chat-input"
+           contenteditable="false"
+           role="textbox"
+           aria-multiline="true"
+           aria-label="對話輸入"
+           data-placeholder="輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋"></div>
+      <!-- Autocomplete dropdown：定位錨點綁容器（§3.3.5-#4）、非綁 cursor -->
+      <div id="hashtag-autocomplete" class="ctx-popup hashtag-popup" hidden>
+        <!-- 動態填入 .hashtag-popup-item；最後一筆若超過 10 個顯示 .hashtag-popup-more -->
+      </div>
     </div>
   </aside>
 </div>
@@ -1471,19 +1571,23 @@
 
   // ── 搜尋 toggle ──────────────────────────────
   // 切換 .active；同步 placeholder 提示「搜尋模式」
+  // RAG-1 Phase 2 P2-3 §3.3.1 + §3.3.5-#1：chat-input 改 contenteditable div、
+  // 改寫 data-placeholder（非 placeholder 屬性、配對 CSS :empty::before）
   document.getElementById('web-search-toggle').addEventListener('click', function() {
     this.classList.toggle('active');
     const on = this.classList.contains('active');
     document.getElementById('chat-input').setAttribute(
-      'placeholder', on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）...'
-                        : '輸入問題（Ctrl+Enter 送出）...');
+      'data-placeholder',
+      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋'
+         : '輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋');
   });
   // 初始同步（HTML 上預設 .active）
   (function syncSearchPlaceholder() {
     const on = document.getElementById('web-search-toggle').classList.contains('active');
     document.getElementById('chat-input').setAttribute(
-      'placeholder', on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）...'
-                        : '輸入問題（Ctrl+Enter 送出）...');
+      'data-placeholder',
+      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋'
+         : '輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋');
   })();
 
   // ── Tooltip：data-tip 觸發 ─────────────────────────
@@ -1863,12 +1967,9 @@
     }
   });
 
-  // ── chat 自動長高 ────────────────────────────
-  const ta = document.getElementById('chat-input');
-  ta.addEventListener('input', () => {
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
-  });
+  // RAG-1 Phase 2 P2-3：chat-input 改 contenteditable div、自然撐高
+  // 舊 textarea autosize listener 已移除（plan v2 §3.3.5-#3 grep 替換清單）
+  // 容器 max-height:240px + overflow-y:auto 處理上限
 
   /* ════════════════════════════════════════════════════════════
      業務 JS（自 design/old/index.html 行 599–1356 原樣搬入）
@@ -2372,13 +2473,15 @@ document.getElementById('lang-toggle').onclick = async () => {
 let isStreaming = false;
 
 function enableChat() {
-  document.getElementById('chat-input').disabled = false;
+  // RAG-1 Phase 2 P2-3 §3.3.5-#2/#3：chat-input 改 contenteditable div、
+  // disabled 屬性對 div 無效 → 改用 contenteditable="true"/"false"
+  document.getElementById('chat-input').setAttribute('contenteditable', 'true');
   document.getElementById('web-search-toggle').disabled = false;
   document.getElementById('export-btn').style.display = 'block';
 }
 
 function disableChat() {
-  document.getElementById('chat-input').disabled = true;
+  document.getElementById('chat-input').setAttribute('contenteditable', 'false');
   document.getElementById('web-search-toggle').disabled = true;
 }
 
@@ -2432,7 +2535,7 @@ async function deletePaper(paperId, title) {
       document.getElementById('empty-state').style.display = 'flex';
       document.getElementById('paper-content').style.display = 'none';
       document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇文件後開始提問</div>';
-      document.getElementById('chat-input').disabled = true;
+      document.getElementById('chat-input').setAttribute('contenteditable', 'false');
     }
     await loadPapers();
   } catch(e) {
@@ -2597,13 +2700,236 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
 // 變化導致誤覆寫到別的 paper。POST /chat/history endpoint 暫保留供舊
 // 瀏覽器快取兼容、17-4 才移除。
 
+/* ═══════════════════════════════════════════════════════════════
+   RAG-1 Phase 2 P2-3：chat-input hashtag token UI 模組
+   依 plan v2 §3.3.2（核心 UX）+ §3.3.5 四點防護 + Q7-Q14
+   - 來源 (Q9)：allPapers.metadata_json.user_tags 前端 cache
+   - 限制 (Q8)：autocomplete 顯示前 10 筆 + 「...更多」
+   - IME (Q12)：compositionstart/end + e.isComposing 雙重防護
+   - Token 刪除 (Q13)：一次 Backspace 直接刪、不二次確認
+   - Hover tooltip (Q10)：不展開、保留首版簡單
+   設計：以 IIFE 形式封裝、暴露 hashtagAutocomplete 物件給 keydown 用
+   ═══════════════════════════════════════════════════════════════ */
+const hashtagAutocomplete = (() => {
+  const input = document.getElementById('chat-input');
+  const popup = document.getElementById('hashtag-autocomplete');
+  const MAX_VISIBLE = 10;       // Q8 限制 10 筆
+  let isComposing = false;      // Q12 IME 組字旗標
+  let activeIndex = -1;
+  let currentMatches = [];      // 當前 dropdown 顯示的 tags
+  let currentPrefix = '';       // 當前掃描到的 #<prefix>
+  let savedRange = null;        // 觸發 popup 時的 selection、用於 confirm 時刪 prefix
+
+  function collectAllUserTags() {
+    // Q9：直接讀前端 cache allPapers user_tags（不開新 API）
+    // 防禦兩種既有 field shape（Phase 1 既有 inconsistency）：
+    //   - /api/papers 回傳：p.metadata.user_tags（_to_dict key='metadata'）
+    //   - PATCH 後 local 寫入：p.metadata_json.user_tags（既有 tag-modal handler）
+    // 兩個都讀、union 後 dedup
+    const set = new Set();
+    function push(arr) {
+      if (Array.isArray(arr)) {
+        for (const t of arr) if (typeof t === 'string' && t) set.add(t);
+      }
+    }
+    for (const p of (allPapers || [])) {
+      if (p.metadata && p.metadata.user_tags) push(p.metadata.user_tags);
+      if (p.metadata_json && p.metadata_json.user_tags) push(p.metadata_json.user_tags);
+    }
+    // 後端 _normalize_tag 已 lowercase；前端只負責收集 + 字母順排
+    return Array.from(set).sort();
+  }
+
+  function detectHashtagContext() {
+    // 在 cursor 前向後掃描到空白或開頭、若是 `#<word>` pattern → 回 prefix + range
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    if (!input.contains(range.startContainer)) return null;
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) return null;
+    const text = range.startContainer.textContent || '';
+    const offset = range.startOffset;
+    // 向左掃描、找最近的 # 或空白
+    let hashIdx = -1;
+    for (let i = offset - 1; i >= 0; i--) {
+      const ch = text[i];
+      if (ch === '#') { hashIdx = i; break; }
+      if (ch === ' ' || ch === ' ' || ch === '\n') break;
+    }
+    if (hashIdx < 0) return null;
+    const prefix = text.substring(hashIdx + 1, offset);
+    // # 後面若已含空白、視為已 confirmed、不再彈
+    if (/\s/.test(prefix)) return null;
+    return {
+      prefix: prefix.toLowerCase(),
+      textNode: range.startContainer,
+      hashIdx,
+      endOffset: offset,
+    };
+  }
+
+  function open(matches, ctx) {
+    currentMatches = matches.slice(0, MAX_VISIBLE);
+    const overflow = matches.length > MAX_VISIBLE;
+    currentPrefix = ctx.prefix;
+    savedRange = ctx;
+    activeIndex = currentMatches.length > 0 ? 0 : -1;
+
+    if (currentMatches.length === 0) {
+      close();
+      return;
+    }
+
+    popup.innerHTML = '';
+    currentMatches.forEach((tag, i) => {
+      const item = document.createElement('div');
+      item.className = 'hashtag-popup-item' + (i === activeIndex ? ' active' : '');
+      item.textContent = '#' + tag;
+      item.dataset.tag = tag;
+      item.addEventListener('mousedown', (e) => {
+        // mousedown 而非 click、避免 input 失焦先觸發 close
+        e.preventDefault();
+        activeIndex = i;
+        confirm();
+      });
+      popup.appendChild(item);
+    });
+    if (overflow) {
+      const more = document.createElement('div');
+      more.className = 'hashtag-popup-more';
+      more.textContent = `...更多 (${matches.length - MAX_VISIBLE} 筆)`;
+      popup.appendChild(more);
+    }
+    popup.hidden = false;
+  }
+
+  function close() {
+    popup.hidden = true;
+    popup.innerHTML = '';
+    currentMatches = [];
+    activeIndex = -1;
+    savedRange = null;
+  }
+
+  function move(delta) {
+    if (currentMatches.length === 0) return;
+    activeIndex = (activeIndex + delta + currentMatches.length) % currentMatches.length;
+    const items = popup.querySelectorAll('.hashtag-popup-item');
+    items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+  }
+
+  function confirm() {
+    if (activeIndex < 0 || !savedRange) {
+      close();
+      return;
+    }
+    const tag = currentMatches[activeIndex];
+    const { textNode, hashIdx, endOffset } = savedRange;
+    // 刪掉 textNode 上 `#<prefix>` 那一段、用 Range
+    const range = document.createRange();
+    range.setStart(textNode, hashIdx);
+    range.setEnd(textNode, endOffset);
+    range.deleteContents();
+
+    // 插入 token span + 後綴空格
+    const token = document.createElement('span');
+    token.className = 'hashtag-token';
+    token.setAttribute('contenteditable', 'false');
+    token.dataset.tag = tag;
+
+    const label = document.createElement('span');
+    label.className = 'hashtag-token-label';
+    label.textContent = '#' + tag;
+    token.appendChild(label);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'hashtag-token-remove';
+    removeBtn.setAttribute('aria-label', `移除 ${tag} 標籤`);
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      token.remove();
+      input.focus();
+    });
+    token.appendChild(removeBtn);
+
+    range.insertNode(token);
+
+    // 插一個空格、讓 cursor 落在 token 之後（不會被吸進 token）
+    const space = document.createTextNode(' ');
+    token.parentNode.insertBefore(space, token.nextSibling);
+
+    // cursor 落到空格之後
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.setStartAfter(space);
+    newRange.collapse(true);
+    sel.addRange(newRange);
+
+    close();
+  }
+
+  // input 事件：判斷是否要開 popup
+  input.addEventListener('input', () => {
+    if (isComposing) return;          // Q12 組字中、不觸發
+    const ctx = detectHashtagContext();
+    if (!ctx) {
+      if (!popup.hidden) close();
+      return;
+    }
+    const tags = collectAllUserTags();
+    const matches = tags.filter(t => t.startsWith(ctx.prefix));
+    open(matches, ctx);
+  });
+
+  // IME 組字旗標
+  input.addEventListener('compositionstart', () => { isComposing = true; });
+  input.addEventListener('compositionend', () => {
+    isComposing = false;
+    // 組字結束、補一次偵測（用戶可能用 IME 打 # 後的英文 prefix）
+    const ctx = detectHashtagContext();
+    if (ctx) {
+      const tags = collectAllUserTags();
+      const matches = tags.filter(t => t.startsWith(ctx.prefix));
+      open(matches, ctx);
+    }
+  });
+
+  // 失焦關閉（mousedown 攔截已防止點 popup 失焦）
+  input.addEventListener('blur', () => {
+    setTimeout(close, 100);
+  });
+
+  // 點 popup 外、關閉
+  document.addEventListener('mousedown', (e) => {
+    if (popup.hidden) return;
+    if (input.contains(e.target) || popup.contains(e.target)) return;
+    close();
+  });
+
+  return {
+    isOpen: () => !popup.hidden,
+    move,
+    confirm,
+    close,
+    // 測試用 hook（不對外文件化）
+    _collect: collectAllUserTags,
+    _detect: detectHashtagContext,
+  };
+})();
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
-  const query = input.value.trim();
+  // RAG-1 Phase 2 P2-3 §3.3.5-#3：textarea → contenteditable div
+  // - .value → .textContent.trim()（token 已是 #tag 字串、後端 parse_query_hashtag 解析）
+  // - .value = '' → .innerHTML = ''（清掉純文字 + 所有 .hashtag-token）
+  // - 不再 dispatchEvent('input')（autosize listener 已移除）
+  const query = (input.textContent || '').trim();
   if (!query || isStreaming || !currentPaperId) return;
 
-  input.value = '';
-  input.dispatchEvent(new Event('input'));  // 觸發 prototype ta listener 重算高度
+  input.innerHTML = '';
   isStreaming = true;
 
   // 顯示用戶訊息
@@ -2676,12 +3002,42 @@ async function sendMessage() {
   });
   useWebSearch = wsBtn.classList.contains('active');
 })();
-document.getElementById('chat-input').onkeydown = (e) => {
+// RAG-1 Phase 2 P2-3：keydown 含 Ctrl+Enter 送出 + 中文 IME 防護 + autocomplete 導覽
+// 注意：使用 addEventListener 而非 onkeydown=...、避免覆寫掉本檔內其他綁定
+document.getElementById('chat-input').addEventListener('keydown', (e) => {
+  // §3.3.5-#3 + Q12：IME 組字中（如中文輸入法）→ 完全不攔截
+  if (e.isComposing || e.keyCode === 229) return;
+
+  // 1. autocomplete 開啟中、優先處理導覽鍵
+  if (hashtagAutocomplete.isOpen()) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      hashtagAutocomplete.move(1);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      hashtagAutocomplete.move(-1);
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      hashtagAutocomplete.confirm();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hashtagAutocomplete.close();
+      return;
+    }
+  }
+
+  // 2. Ctrl+Enter 送出（既有行為、不變）
   if (e.key === 'Enter' && e.ctrlKey) {
     e.preventDefault();
     sendMessage();
   }
-};
+});
 
 // 上傳論文（衝突 3.2：addEventListener + stopImmediatePropagation 自衛）
 // Phase 4.7d Commit 10：回退 Commit 5 多檔；改為一次只能一份、選多份時 alert

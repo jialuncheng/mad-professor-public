@@ -276,9 +276,12 @@ Phase 4.7c 修正 3。`#current-title` 為 `#content-toolbar` 子元素（取原
 
 ### 5.2 輸入區 🔒 `#chat-input-area`
 
+`position: relative`（autocomplete dropdown 定位錨點、RAG-1 Phase 2 P2-3 §3.3.5-#4）
+
 | 元素 | 用途 |
 |---|---|
-| 🔒 `chat-input` (textarea) | width 100%；Ctrl+Enter 送出；自動長高 max 132 |
+| 🔒 `chat-input` (div, contenteditable) | width 100%；Ctrl+Enter 送出；自然撐高 max 240px；輸入 `#` 觸發 hashtag autocomplete；token 為 `.hashtag-token`（contenteditable=false）。**P2-3 後從 textarea 改 contenteditable div**、`.value` → `.textContent.trim()`、`.disabled` → `contenteditable` 屬性、placeholder 改 `data-placeholder` 配對 CSS `:empty::before`。 |
+| 🔒 `hashtag-autocomplete` (.ctx-popup.hashtag-popup) | 輸入 `#<prefix>` 觸發；綁容器（`bottom: 100%`）；前 10 筆 + 「...更多」；鍵盤 ↑↓ Enter/Tab Esc + 滑鼠 mousedown 選擇。 |
 | ~~`send-btn`~~ | 🧪 **prototype 已移除**，純鍵盤送出；正式 app 是否補回看後續決策 |
 
 ---
