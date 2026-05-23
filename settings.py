@@ -26,6 +26,12 @@ EMBEDDING_OUTPUT_DIMENSIONS = int(os.getenv("EMBEDDING_OUTPUT_DIMENSIONS", "768"
 # 推測 L2 normalize 後可能需升到 0.35-0.45、待 RAG-3 收實測數據確認
 RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 
+# RAG-1 Phase 2 P2-2：多篇跨 paper hashtag RAG 全域 top-k（Q5）
+# 用戶輸入 `#tag question` 時、若 tag 對應 N>1 篇 paper、走
+# rag_retriever.retrieve_multi_with_context 全域 Merge-Sort 取此 k。
+# 預設 7 兼顧 prompt 不爆與多源 grounding；可 env override。
+RAG_MULTI_TOP_K = int(os.getenv("RAG_MULTI_TOP_K", "7"))
+
 # Phase 4.7? MODEL-3 B1：短文 Fast-path Bypass 上限
 # Gemini 3.5 Flash 65k 輸出解鎖、總字數 < 此值的短文整篇進 translate 不切 TextTiling
 # 詳見 .claude-logs/2026-05-22_MODEL-3_短文Bypass_公式穿透_段落滑動_plan.md

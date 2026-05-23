@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
-from settings import RAG_SCORE_THRESHOLD
+from settings import RAG_SCORE_THRESHOLD, RAG_MULTI_TOP_K
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +180,94 @@ class RagRetriever:
         except Exception as e:
             logger.error(f"結構化檢索失敗: {str(e)}")
             return ""
+
+    def retrieve_multi_with_context(
+        self,
+        owner_id: int,
+        query: str,
+        paper_ids: List[str],
+        top_k: Optional[int] = None,
+    ) -> str:
+        """RAG-1 Phase 2 P2-2：跨 paper 全域 Merge-Sort top-k 檢索。
+
+        依 .claude-logs/2026-05-23_RAG-1_Phase2_執行計劃.md §3.2.3
+        + Hashtag Backend Plan §2 L49-54
+        + Q5（top_k 從 env RAG_MULTI_TOP_K 取、預設 7）
+
+        流程：
+        1. 對每個 paper_id 取 vector_store、各自 similarity_search_with_score(k=top_k)
+        2. 收集所有 (score, chunk, paper_id, paper_title) candidate
+        3. 全域降序排序、取前 top_k（L2 normalize 後 score 已是 cosine similarity、依
+           MODEL-1+2 B2 ship；DistanceStrategy.MAX_INNER_PRODUCT 對齊建立端）
+        4. 過濾 < RAG_SCORE_THRESHOLD 雜訊
+        5. 格式化為「## 摘自文件《paper_title》」段落式 context、便於 LLM 引用
+
+        跟既有 retrieve_with_context 解耦：本函式為新增並列函式、不動單篇路徑。
+
+        Args:
+            owner_id: 使用者 ID
+            query: 用戶 query（不含 hashtag、已由 AI_professor_chat 入口 cleaned）
+            paper_ids: 目標 paper uuid 清單（由 list_paper_uuids_by_tag 取得）
+            top_k: 全域 top-k；None → 走 settings.RAG_MULTI_TOP_K（預設 7）
+
+        Returns:
+            統合 RAG context 字串；無命中時回空字串。
+        """
+        if not paper_ids or not query:
+            return ""
+        if not self.is_ready():
+            return ""
+
+        if top_k is None:
+            top_k = RAG_MULTI_TOP_K
+
+        # 每個 paper 各取 top_k chunks、最後全域 Merge-Sort 取 top_k
+        all_candidates = []  # list of (score, chunk_text, paper_id, paper_title)
+        for pid in paper_ids:
+            vs = self._get_vector_store(owner_id, pid)
+            if vs is None:
+                continue
+            try:
+                docs_and_scores = vs.similarity_search_with_score(query=query, k=top_k)
+            except Exception as e:
+                logger.warning(
+                    f"[retrieve_multi] owner={owner_id} paper={pid} 檢索失敗: {e}"
+                )
+                continue
+            rag_tree = self.load_rag_tree(owner_id, pid)
+            paper_title = ""
+            if rag_tree:
+                paper_title = (
+                    rag_tree.get('translated_title')
+                    or rag_tree.get('title')
+                    or ''
+                )
+            for doc, score in docs_and_scores:
+                if score <= RAG_SCORE_THRESHOLD:
+                    continue
+                all_candidates.append(
+                    (score, doc.page_content, pid, paper_title)
+                )
+
+        if not all_candidates:
+            return ""
+
+        # 全域降序排序、取 top_k（L2 normalize 後 score 已 cosine similarity）
+        all_candidates.sort(key=lambda x: x[0], reverse=True)
+        top_chunks = all_candidates[:top_k]
+
+        logger.info(
+            f"[retrieve_multi] owner={owner_id} papers={len(paper_ids)} "
+            f"candidates={len(all_candidates)} top_k={top_k} "
+            f"chosen={[(round(s, 3), pid) for s, _, pid, _ in top_chunks]}"
+        )
+
+        # 格式化為段落式 context（每段標明來源 paper title）
+        sections = ["以下是與您問題最相關的多篇論文段落:"]
+        for score, chunk, pid, title in top_chunks:
+            header = f"## 摘自文件《{title}》" if title else f"## 摘自文件 ({pid})"
+            sections.append(f"{header}\n{chunk}")
+        return "\n\n".join(sections)
 
     def _get_node_from_path(self, tree: Dict, path: str) -> Dict:
         try:

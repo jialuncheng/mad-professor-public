@@ -5,6 +5,9 @@ import re
 from typing import List, Dict, Any, Generator, Tuple
 from llm.client import LLMClient
 
+# RAG-1 Phase 2 P2-2：hashtag 入口分流依賴；惰性 import 避免循環
+# （paper_manager → db → models 無循環、但維持 lazy 以對齊既有風格）
+
 AI_CHARACTER_PROMPT_PATH = "prompt/ai/ai_character_prompt.txt"
 AI_EXPLAIN_PROMPT_PATH = "prompt/ai/ai_explain_prompt.txt"
 AI_ROUTER_PROMPT_PATH = "prompt/ai/ai_router_prompt.txt"
@@ -70,13 +73,99 @@ class AIProfessorChat:
             if len(working_history) > 10:
                 working_history = working_history[-10:]
 
-            # 決策
-            decision = self._make_decision(query, working_history,
+            # ──── RAG-1 Phase 2 P2-2：hashtag 入口分流 ────
+            # 依 plan §3.2.4 + Q3/Q4/Q6
+            # - 偵測 query 開頭 `#tag`
+            # - 0 篇符合 → yield warning + done、return（Q6）
+            # - 1 篇符合 → 替換 effective_paper_id + 用 cleaned_query、走既有路徑
+            # - 多篇符合 → 走 retrieve_multi_with_context、繞過 router、直接 LLM
+            hashtag_routed_multi = False
+            multi_context = ""
+            cleaned_query_for_llm = query
+            if owner_id is not None and isinstance(query, str) and query.startswith("#"):
+                try:
+                    import db
+                    import paper_manager
+                    with db.SessionLocal() as _s:
+                        tag, cleaned = paper_manager.parse_query_hashtag(
+                            _s, owner_id, query
+                        )
+                    if tag:
+                        with db.SessionLocal() as _s:
+                            tagged_uuids = paper_manager.list_paper_uuids_by_tag(
+                                _s, owner_id, tag
+                            )
+                        self.logger.info(
+                            f"[P2-2 hashtag] owner={owner_id} tag={tag!r} "
+                            f"matched_papers={len(tagged_uuids)}"
+                        )
+                        if not tagged_uuids:
+                            # Q6：0 篇 → 友善訊息、不阻塞 stream
+                            warn_msg = f"找不到含 #{tag} 的文獻。"
+                            yield {'type': 'sentence', 'text': warn_msg}
+                            yield {
+                                'type': 'done', 'reply': warn_msg,
+                                'grounding_sources': []
+                            }
+                            return
+                        elif len(tagged_uuids) == 1:
+                            # 單篇：替換 paper_id、用 cleaned_query、走既有路徑
+                            effective_paper_id = tagged_uuids[0]
+                            cleaned_query_for_llm = cleaned or query
+                        else:
+                            # 多篇：標記走 multi、context 直接由 retriever 算
+                            hashtag_routed_multi = True
+                            cleaned_query_for_llm = cleaned or query
+                            if self.retriever is not None:
+                                try:
+                                    multi_context = self.retriever.retrieve_multi_with_context(
+                                        owner_id=owner_id,
+                                        query=cleaned_query_for_llm,
+                                        paper_ids=tagged_uuids,
+                                    )
+                                except Exception as e:
+                                    self.logger.error(
+                                        f"[P2-2 hashtag] retrieve_multi 失敗: {e}"
+                                    )
+                                    multi_context = ""
+                except Exception as e:
+                    self.logger.error(f"[P2-2 hashtag] 入口分流失敗、回退單篇路徑: {e}")
+
+            # 多篇 hashtag 走獨立路徑：繞 router、直接餵 context 給 LLM
+            if hashtag_routed_multi:
+                final_messages = self._prepare_final_messages(
+                    query=cleaned_query_for_llm,
+                    context_info=multi_context,
+                    function_name='rag_retrieval',
+                    conversation_history=working_history,
+                    paper_id=None,
+                    paper_data=None,
+                )
+                full_response = ""
+                for sentence in self.llm_client.chat_stream_by_sentence(
+                    messages=final_messages, temperature=0.7,
+                    use_web_search=use_web_search
+                ):
+                    full_response += sentence
+                    yield {'type': 'sentence', 'text': sentence}
+                grounding = getattr(
+                    self.llm_client, '_last_grounding_sources', None
+                ) or []
+                yield {'type': 'done', 'reply': full_response,
+                       'grounding_sources': grounding}
+                return
+
+            # 單篇 hashtag 路徑用 cleaned_query 跑既有決策器（避免 # 干擾 LLM）
+            query_for_decision = cleaned_query_for_llm
+
+            # 決策（單篇 hashtag 用 cleaned_query_for_llm；無 hashtag 用原 query）
+            decision = self._make_decision(query_for_decision, working_history,
                                            effective_paper_id, effective_paper_data)
             self.logger.info(f"決策結果: {decision}")
 
             function_name = decision.get('function', 'direct_answer')
-            optimized_query = decision.get('query', query)
+            # 單篇 hashtag fallback 用 cleaned_query_for_llm（避免 # 干擾後續 LLM）
+            optimized_query = decision.get('query', query_for_decision)
 
             # 取得上下文
             context_info = ""

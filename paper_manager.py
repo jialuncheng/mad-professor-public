@@ -843,6 +843,116 @@ def set_paper_tags(session, owner_id: int, paper_uuid: str,
     return p
 
 
+# ─────────────────── RAG-1 Phase 2 P2-2: hashtag RAG 路由 helper ───────────────────
+# 依 .claude-logs/2026-05-23_RAG-1_Phase2_執行計劃.md §3.2.1 + §3.2.2
+# + Hashtag Backend Plan §2 L43-47
+#
+# 跟 Phase 1 ship 解耦：本區僅讀 metadata_json.user_tags 陣列；寫入路徑
+# 由 R1 set_paper_tags / R3 _apply_folder_path_tags 維護、本區不動。
+
+
+def list_paper_uuids_by_tag(session, owner_id: int, tag: str) -> list:
+    """掃該 owner 所有 status='done' 的 Paper、回 metadata_json.user_tags
+    含 tag 的 paper_uuid 列表。
+
+    依 plan §3.2.1 + Q3（只查當前 owner、避免權限洩漏）+ Q15（共用 R2 ship
+    的 _normalize_tag、不重做 lowercase）。
+
+    Args:
+        session: SQLAlchemy session
+        owner_id: 使用者 ID（只查此 owner、絕不跨 owner）
+        tag: 用戶輸入的 tag（會走 _normalize_tag 標準化、確保 case-insensitive）
+
+    Returns:
+        list[str]: paper_uuid 清單（含此 tag 的 paper）
+    """
+    normalized = _normalize_tag(tag)
+    if not normalized:
+        return []
+
+    rows = session.query(Paper).filter_by(
+        owner_id=owner_id, status='done'
+    ).all()
+    result = []
+    for p in rows:
+        if not p.metadata_json:
+            continue
+        try:
+            meta = json.loads(p.metadata_json)
+            if not isinstance(meta, dict):
+                continue
+            user_tags = meta.get("user_tags", []) or []
+            # Phase 1 R2 _normalize_tag 保證寫入時已 lowercase、此處直接比對
+            if normalized in user_tags:
+                result.append(p.paper_uuid)
+        except (json.JSONDecodeError, TypeError):
+            continue
+    return result
+
+
+def parse_query_hashtag(session, owner_id: int, query: str) -> tuple:
+    """從 query 開頭解析 #tag、回 (tag_or_None, cleaned_query)。
+
+    依 plan §3.2.2 + Q4（只認開頭單一 hashtag、多 tag 留 follow-up）
+    + Q15（共用 _normalize_tag 比對基準）。
+
+    流程：
+    1. 從該 owner 所有 status='done' paper 的 metadata_json.user_tags
+       蒐集 distinct tag 集合
+    2. 依字串長度由長到短排序匹配（防 #complex 誤攔 #complex_system）
+    3. 若 query 開頭為 `#<tag><space>` 或 `#<tag>` (EOL)、回 (normalized_tag, cleaned)
+    4. 否則回 (None, query 原樣)
+
+    Args:
+        session: SQLAlchemy session
+        owner_id: 使用者 ID
+        query: 用戶原始 query
+
+    Returns:
+        tuple[Optional[str], str]: (matched_tag, cleaned_query)
+    """
+    if not isinstance(query, str) or not query.startswith("#"):
+        return (None, query)
+
+    # 蒐集該 owner 所有 distinct user_tags
+    all_tags = set()
+    rows = session.query(Paper).filter_by(
+        owner_id=owner_id, status='done'
+    ).all()
+    for p in rows:
+        if not p.metadata_json:
+            continue
+        try:
+            meta = json.loads(p.metadata_json)
+            if isinstance(meta, dict):
+                for t in (meta.get("user_tags", []) or []):
+                    if isinstance(t, str):
+                        normalized = _normalize_tag(t)
+                        if normalized:
+                            all_tags.add(normalized)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    if not all_tags:
+        return (None, query)
+
+    # 長度由長到短排序、防 #complex 攔 #complex_system
+    sorted_tags = sorted(all_tags, key=len, reverse=True)
+
+    # 去掉開頭 #、用 lower 比對（user 可能輸入 #HR、_normalize_tag 寫入時是 hr）
+    after_hash = query[1:]
+    after_lower = after_hash.lower()
+    for tag in sorted_tags:
+        if after_lower.startswith(tag + " "):
+            cleaned = after_hash[len(tag):].lstrip()
+            return (tag, cleaned)
+        if after_lower == tag:
+            # query 就是 `#tag`、無後續問題
+            return (tag, "")
+
+    return (None, query)
+
+
 # ─────────────────── MODEL-8 C1: paper_chunks DAL helper ───────────────────
 # 依 plan §3.1（含修正 3 移除 tiling_method、修正 5 不重做 get_paper_db_id）
 # 詳見 .claude-logs/2026-05-22_MODEL-8_SQLite物理防線_plan.md §3.1
