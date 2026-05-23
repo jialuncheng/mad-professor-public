@@ -56,6 +56,10 @@ SCHEMA_VERSION = 2
 _LIST_FIELDS = {"authors", "keywords"}
 _ALL_FIELDS = [
     "title", "translated_title", "authors", "publication_date", "abstract",
+    # RAG-1 Phase 2 P2-1：雙語摘要管道；由 pipeline_core._stage_translate
+    # 完成後從 self.translate_processor.translated_abstract 寫入。對應前端
+    # Phase 1 R1 子項 F 中文模式 abstract fallback 路徑（缺欄時 fallback 英文）。
+    "translated_abstract",
     "journal_or_conference", "doi", "keywords", "publisher",
     "organization", "version", "candidate_name", "domain",
     # Phase 4.7d Commit 4-2：resume 專用（其他 doc_type 永遠 None / False）

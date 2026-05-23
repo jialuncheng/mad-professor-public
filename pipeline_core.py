@@ -631,7 +631,31 @@ class PipelineCore:
         output_path = self._get_stage_output_path('translate', paper_dir, paper_name)
         doc_type = output_paths.get('_confirmed_doc_type', 'academic')
         domain = output_paths.get('_domain', '')
-        return self.translate_processor.process(str(input_path), str(output_path), doc_type=doc_type, domain=domain)
+        result = self.translate_processor.process(
+            str(input_path), str(output_path), doc_type=doc_type, domain=domain
+        )
+        # RAG-1 Phase 2 P2-1：translate 階段完成後、把 translate_processor 內
+        # 已賦值的 translated_abstract 同步寫進 self._metadata，供下游 stage
+        # 與前端中文模式 abstract 顯示。translate_processor.translated_abstract
+        # 屬性確認存在（L20 init / L165 賦值 / L310-312 使用）。
+        try:
+            translated_abstract = getattr(
+                self.translate_processor, 'translated_abstract', None
+            )
+            if translated_abstract and isinstance(self._metadata, dict):
+                from processor.metadata_extractor import _empty_field
+                field = self._metadata.get("translated_abstract")
+                if not isinstance(field, dict):
+                    field = _empty_field(is_list=False)
+                field["value"] = translated_abstract
+                field["source"] = "translate_pipeline"
+                field["confidence"] = "high"
+                self._metadata["translated_abstract"] = field
+        except Exception as exc:  # defensive: 任何失敗不阻塞 translate 主流程
+            logger.warning(
+                "[P2-1] 寫入 translated_abstract 到 _metadata 失敗: %s", exc
+            )
+        return result
 
     def _stage_image_caption(self, pdf_path, paper_dir, paper_name, output_paths):
         """Vision 圖片說明生成，與 translate 並行執行"""
