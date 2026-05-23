@@ -308,3 +308,56 @@ def test_cmd_init_reverse_import_from_faiss(temp_db, monkeypatch, tmp_path):
     assert all(r['doc_type'] == '' for r in rows)
     # index_meta.json 寫入
     assert (vectors_dir / 'index_meta.json').exists()
+
+
+# ─────────────────── 8. LOGGING-3：CLI 統一 setup_logging（不重複 basicConfig）───────────────────
+
+
+def test_main_uses_setup_logging_not_basic_config():
+    """LOGGING-3: CLI main() 改用 setup_logging()、不重複 basicConfig。
+
+    依 .claude-logs/2026-05-23_logging_refactor_可行性評估.md v4 §6 LOGGING-3 行。
+
+    驗證:
+    - regen_rag.py source 內無 `logging.basicConfig(` 調用
+    - setup_logging 已 import
+    - 多次 setup_logging() 不掛重複 handler（冪等性、LOGGING-1 補強 1 保證）
+    """
+    import logging
+
+    src_path = Path(__file__).resolve().parents[1] / "tools" / "regen_rag.py"
+    src = src_path.read_text(encoding='utf-8')
+
+    # 1. 不應再有 basicConfig 實際調用（容許註解內提及）
+    import re as _re
+    # 匹配實際呼叫：行首縮排 + logging.basicConfig( + 排除 # 註解開頭
+    basic_config_calls = [
+        line for line in src.splitlines()
+        if _re.search(r"^\s*logging\.basicConfig\s*\(", line)
+    ]
+    assert not basic_config_calls, (
+        f"LOGGING-3: tools/regen_rag.py 不應再呼叫 logging.basicConfig、"
+        f"應改用 setup_logging() 統一初始化（發現：{basic_config_calls}）"
+    )
+
+    # 2. setup_logging 已 import
+    assert "from utils.logging_config import setup_logging" in src, (
+        "LOGGING-3: tools/regen_rag.py 應 import setup_logging"
+    )
+
+    # 3. 冪等性驗證：多次 setup_logging 不掛重複 handler
+    from utils.logging_config import setup_logging, reset_logging
+    reset_logging()
+    setup_logging()
+    n_first = len(logging.getLogger().handlers)
+
+    setup_logging()  # 模擬 CLI 第二次跑 / import 觸發
+    n_second = len(logging.getLogger().handlers)
+
+    assert n_first == n_second, (
+        "LOGGING-3: 多次 setup_logging 不應掛重複 handler"
+        "（依 LOGGING-1 補強 1 冪等性 guard）"
+    )
+
+    # 後續 test 復原
+    reset_logging()

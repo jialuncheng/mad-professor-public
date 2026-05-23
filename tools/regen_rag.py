@@ -341,8 +341,10 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s %(message)s',
-    )
+    # LOGGING-3：CLI 統一用 setup_logging（取代 logging.basicConfig 寫死）
+    # 依 .claude-logs/2026-05-23_logging_refactor_可行性評估.md v4 §6 LOGGING-3 行
+    # 受 settings.py LOG_LEVEL / LOG_DIR / LOG_FORMAT env 控制、跟 web_server 共用一套配置
+    # 沿用 LOGGING-1 補強 1 冪等性 guard、多次呼叫零風險
+    from utils.logging_config import setup_logging
+    setup_logging()
     main()
