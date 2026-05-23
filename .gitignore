@@ -175,5 +175,9 @@ processor/test_*.py
 .claude/
 .claude/
 
-# 工作記錄（不入版控、不公開）
-.claude-logs/
+# 工作記錄（全目錄入版控、跨環境同步、SOP + 規劃 + 設計 + 執行文件全部追蹤）
+# .claude-logs/ 不排除任何檔案
+
+# macOS 系統垃圾（永久排除、含所有子目錄）
+**/.DS_Store
+# 例外：ref / templates / prompts 三個子目錄入版控、跨環境同步 + GitHub 網頁端檢索
