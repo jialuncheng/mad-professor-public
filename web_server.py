@@ -268,6 +268,63 @@ async def auth_guard(request: Request, call_next):
     return RedirectResponse(url="/login", status_code=302)
 
 
+# ─────────────────── LOGGING-2: trace_id middleware ───────────────────
+# 依 .claude-logs/2026-05-23_logging_refactor_可行性評估.md v4 §4.4 + §4.11 + Q7 / Q12
+#
+# 插入位置策略：本 middleware 用 @app.middleware decorator 加在 auth_guard 之後、
+# SessionMiddleware add_middleware 之前。Starlette middleware stack：last-added = outermost、
+# 執行順序 outer→inner：Session → trace_id → auth_guard → CORS → handler。
+# 結果：trace_id_middleware 內可讀 request.session（已被 SessionMiddleware 注入）。
+#
+# 補強 3 / §4.11：Python 3.9+ asyncio.to_thread 自動繼承 ContextVar、SSE chat 路徑零額外 code。
+# Q8：background pipeline 跑在 run_in_executor、ContextVar 不繼承、本期不解、用既有
+# `[MODEL-8] owner=X paper=Y` log 串連 90% 場景。
+
+import uuid as _uuid
+from utils.logging_config import trace_context as _trace_context
+
+
+@app.middleware("http")
+async def trace_id_middleware(request: Request, call_next):
+    """為每個 HTTP request 注入 trace_id / owner / path / method 到 ContextVar。
+
+    - 若 request 帶 X-Trace-ID header → 重用（前端 / 上游 service 串連用）
+    - 否則自動產生 uuid4 短 ID（8 chars hex）
+    - try/finally reset 防 ContextVar 跨 request 洩漏（提案 L192-194）
+    - response header 回填 X-Trace-ID 供前端 debug 追鏈路
+    """
+    # 1. trace_id 取得（用戶帶 header 重用、否則生成）
+    incoming = request.headers.get("X-Trace-ID")
+    trace_id = incoming if incoming else _uuid.uuid4().hex[:8]
+
+    # 2. 從 session 容錯取 owner（依 grep 證實 session 用 "user" key 存 username）
+    owner = None
+    try:
+        if hasattr(request, "session"):
+            owner = request.session.get("user")
+    except Exception:
+        # 防護：SessionMiddleware 未 add 或 session 設計變動、不阻塞 trace_id
+        owner = None
+
+    # 3. 注入 ContextVar
+    token = _trace_context.set({
+        "trace_id": trace_id,
+        "owner": owner,
+        "path": request.url.path,
+        "method": request.method,
+    })
+
+    try:
+        response = await call_next(request)
+    finally:
+        # 4. 必 reset：防 ContextVar 跨 request 洩漏
+        _trace_context.reset(token)
+
+    # 5. response header 回填、供前端 / 上游 service debug 串連
+    response.headers["X-Trace-ID"] = trace_id
+    return response
+
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SESSION_SECRET or "insecure-dev-secret-change-me",
