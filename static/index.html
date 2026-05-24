@@ -133,7 +133,7 @@
   .modal-mask > .modal-box { cursor: auto; }   /* 內框恢復一般游標 */
   .modal-mask.show { display: flex; }
   .modal-box {
-    /* RAG-1 R1 子項 C（UI Fixes Plan v3 L45-60）：補 radius / font-family
+    /* Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層；補 radius / font-family
        讓 Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層 */
     background: var(--color-bg);
     border: var(--divider-w, 1px) solid var(--color-divider);
@@ -144,7 +144,7 @@
     max-width: 480px;
   }
   .modal-box h3 {
-    /* RAG-1 R1 子項 C：補 font-family 用 display token */
+    /* Modal h3 用 display font token、跟主題標題系統對齊 */
     font-family: var(--font-display);
     font-size: var(--font-lg);
     font-weight: 600;
@@ -687,14 +687,12 @@
   #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
     fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* Phase 4.7c 修正 3：#current-title 搬回 toolbar 內、取原 h2 的 flex 槽
-     （flex:1 min-width:0、可多行）。原 toolbar 本來就是 multi-row + 可變
-     高度 row + title-left/actions-right 設計，commit 7 誤把 title 移出
-     toolbar 是過度保守，此處還原。padding / border-bottom 由 toolbar 提供，
-     此處不重複設定。 */
+  /* #current-title 放在 toolbar 內、取原 h2 的 flex 槽
+     （flex:1 min-width:0、可多行）；toolbar 本身是 multi-row + 可變
+     高度 row + title-left / actions-right 設計、title 留在 toolbar 內可一起捲。
+     padding / border-bottom 由 toolbar 提供、此處不重複設定。 */
   #current-title {
-    /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：補 padding-right
-       防右側 toolbar-actions 按鈕被長標題遮擋 */
+    /* padding-right 防右側 toolbar-actions 按鈕被長標題遮擋 */
     flex: 1; min-width: 0;
     padding-right: var(--space-4, 16px);
     color: var(--color-text);
@@ -728,10 +726,8 @@
     color: var(--color-border);
   }
   #current-title details.title-abstract {
-    /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：摘要展開最大高度 + 滾動條
-       防超長摘要把 toolbar 整個撐爆
-       BUG-F1 Bug 5（ui-fixes-batch B7）：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆
-       BUG-F5 B1（ui-fixes-batch B1）：font-size 廢 fallback、直接走主 scale --font-base */
+    /* 摘要展開最大高度 + 滾動條、防超長摘要把 toolbar 整個撐爆
+       BUG-F1 / BUG-F5：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆、font-size 走主 scale */
     margin-top: var(--space-2);
     font-size: var(--font-base);
     color: var(--color-text);
@@ -741,7 +737,7 @@
     box-sizing: border-box;
   }
 
-  /* RAG-1 R2 子項 G 剩餘：tag-pill 半透明磨砂玻璃
+  /* tag-pill 半透明磨砂玻璃
      依 design/docs/components.md §X tag-pill 規範
      + design/docs/color-tokens.md（半透明 + backdrop-filter） */
   #current-title .paper-tags {
@@ -875,8 +871,8 @@
     max-width: 75%;
     white-space: pre-wrap;
   }
-  /* Phase 4.7d Commit 17-3：attach 到 broker 的 stream 時、ai msg 末尾
-     閃爍游標；既有 sendMessage 用純字「▋」、本 commit 統一為帶 blink 動畫 */
+  /* attach 到 broker 的 stream 時 ai msg 末尾的閃爍游標
+     （sendMessage 用純字「▋」、attach 模式統一帶 blink 動畫）*/
   .cursor-blink {
     animation: blink-cursor 1s step-end infinite;
     margin-left: 2px;
@@ -960,7 +956,7 @@
     flex-shrink: 0;
     padding: var(--pad-panel) var(--chat-pad-x, var(--space-5));
     border-top: 1px solid var(--color-border);
-    /* RAG-1 Phase 2 P2-3 §3.3.5-#4：autocomplete dropdown 定位錨點 */
+    /* autocomplete dropdown 定位錨點（P2-3 §3.3.5-#4） */
     position: relative;
   }
   #chat-input {
@@ -985,7 +981,7 @@
     white-space: pre-wrap;
   }
   #chat-input:focus { border-color: var(--color-accent); }
-  /* RAG-1 Phase 2 P2-3 §3.3.5-#1：contenteditable div 無原生 placeholder、
+  /* contenteditable div 無原生 placeholder（P2-3 §3.3.5-#1）：
      用 :empty::before + data-placeholder 模擬；display:block 確保排版正確 */
   #chat-input:empty::before {
     content: attr(data-placeholder);
@@ -996,7 +992,7 @@
     display: block;
   }
   #chat-input:empty:focus::before { opacity: 0.5; }
-  /* RAG-1 Phase 2 P2-3 §3.3.5-#2：disabled 視覺契約對齊既有 textarea[disabled]
+  /* disabled 視覺契約對齊既有 textarea[disabled]（P2-3 §3.3.5-#2）：
      contenteditable="false" 替代 disabled 屬性、需顯式樣式維持 UX */
   #chat-input[contenteditable="false"] {
     background: var(--color-surface);
@@ -1006,7 +1002,7 @@
   }
   #chat-input[contenteditable="false"]:empty::before { opacity: 0.4; }
 
-  /* RAG-1 Phase 2 P2-3 §3.3.2 + design/docs/components.md §11.2 Hashtag Token */
+  /* Hashtag Token 樣式（P2-3 §3.3.2 + design/docs/components.md §11.2） */
   .hashtag-token {
     display: inline-flex;
     align-items: center;
@@ -1036,7 +1032,7 @@
   .hashtag-token-remove:hover { color: white; }
   [data-theme="dark"] .hashtag-token { background: var(--color-accent); }
 
-  /* RAG-1 Phase 2 P2-3 §3.3.5-#4：autocomplete dropdown 綁容器、非綁 cursor
+  /* autocomplete dropdown 綁容器、非綁 cursor（P2-3 §3.3.5-#4）
      永遠在 input 正上方展開、避免溢出畫面與多行抖動 */
   #hashtag-autocomplete.hashtag-popup {
     position: absolute;
@@ -1250,7 +1246,7 @@
         <svg viewBox="0 0 24 24" class="dropdown-chevron"><path d="M6 9l6 6 6-6"/></svg>
       </button>
     </div>
-    <!-- RAG-1 R2 子項 D：加上傳 CSS 按鈕（後端 endpoint 已 ship、移除既有「⚠ 後端未實作」警語） -->
+    <!-- 上傳自訂主題 CSS 按鈕（後端 endpoint /api/themes/upload 已 ship） -->
     <input type="file" id="theme-upload-input" accept=".css" style="display:none">
     <div class="modal-actions">
       <button id="theme-upload-btn" class="modal-btn">上傳 CSS</button>
@@ -1259,7 +1255,7 @@
   </div>
 </div>
 
-<!-- RAG-1 R2 子項 E：tag 編輯 Modal — 點 #edit-tags-btn 開啟 -->
+<!-- tag 編輯 Modal — 點 #edit-tags-btn 開啟、寫入 metadata_json.user_tags 陣列 -->
 <div id="tag-modal" class="modal-mask">
   <div id="tag-box" class="modal-box" role="dialog" aria-labelledby="tag-title">
     <h3 id="tag-title">編輯標籤</h3>
@@ -1377,9 +1373,9 @@
   <!-- ──── 中欄 ──── -->
   <main id="content-area">
     <div id="content-toolbar">
-      <!-- Phase 4.7c 修正 3：title 區搬回 toolbar 內，取原 h2 的 flex:1 槽。
-           修正 4：不用 hidden 屬性（會 display:none 退出 flex、actions 滑左），
-           沒 paper 時走 innerHTML='' 即可、元素永遠佔 flex:1 槽位 -->
+      <!-- title 區放 toolbar 內、取 flex:1 槽位（多行可自然展開）。
+           沒 paper 時走 innerHTML='' 清空、不用 hidden 屬性（hidden 會 display:none
+           退出 flex layout、actions 會滑左）；元素永遠佔 flex:1 槽位 -->
       <header id="current-title"></header>
       <div class="toolbar-actions">
         <button id="lang-toggle" class="icon-only" data-tip="語言切換">
@@ -1389,7 +1385,7 @@
         <button id="print-btn" class="icon-only" data-tip="列印文件">
           <svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><path d="M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></svg>
         </button>
-        <!-- RAG-1 R2 子項 E：# 標籤編輯按鈕（toolbar-actions 末尾、極小 icon-only） -->
+        <!-- # 標籤編輯按鈕（toolbar-actions 末尾、極小 icon-only、開啟 #tag-modal） -->
         <button id="edit-tags-btn" class="icon-only" data-tip="編輯標籤">
           <svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
         </button>
@@ -1423,7 +1419,7 @@
     </div>
     <div id="chat-messages"></div>
     <div id="chat-input-area">
-      <!-- RAG-1 Phase 2 P2-3：textarea → contenteditable div、支援 inline hashtag token
+      <!-- chat-input：contenteditable div（取代 textarea）、支援 inline hashtag token
            plan v2 §3.3.2 + §3.3.5 四點防護；data-placeholder 配對 CSS :empty::before -->
       <div id="chat-input"
            contenteditable="false"
@@ -1443,11 +1439,13 @@
 </div>
 
 <script>
-  // === Phase 4.7? RAG-9 fix: 關閉 GFM strikethrough (~~text~~ / 單 ~ 撞線) ===
-  // marked.js 9.1.6 預設啟用 GFM strikethrough、tokenizer 對單 ~ 也匹配
-  // 履歷常見 100~500人 / 2003/8~仍在職 等 tilde 範圍語法會撞為 <del>
-  // 經 grep 整份 worktree 確認無歷史合法 ~~text~~ 用法、零代價移除
-  // 全域 override 所有 marked.parse 呼叫（6 處：L2178/2310/2328/2391/2400/2478）
+  // 關閉 GFM strikethrough（~~text~~ 與單 ~ 撞線）
+  //
+  // 為何：marked.js 預設啟用 GFM strikethrough、單 ~ 也會匹配。論文 / 履歷
+  //       常見「100~500 人」「2003/8~ 仍在職」這類數值範圍會被誤判為刪除線。
+  // 何時可移除：marked.js 升到能精準區分「波浪號範圍」與「strikethrough」之後；
+  //             或全文清掃確認無合法 ~~text~~ 用法時。
+  // 全域 override 所有 marked.parse 呼叫
   marked.use({
     extensions: [{
       name: 'del',
@@ -1596,7 +1594,7 @@
 
   // ── 搜尋 toggle ──────────────────────────────
   // 切換 .active；同步 placeholder 提示「搜尋模式」
-  // RAG-1 Phase 2 P2-3 §3.3.1 + §3.3.5-#1：chat-input 改 contenteditable div、
+  // chat-input 改 contenteditable div、
   // 改寫 data-placeholder（非 placeholder 屬性、配對 CSS :empty::before）
   // BUG-F1 Bug 3：data-placeholder 內 `；` → `\n` 換行（HTML 用 &#10;、JS 字面用 \n、各符語境）
   document.getElementById('web-search-toggle').addEventListener('click', function() {
@@ -1872,7 +1870,7 @@
     closeModal('theme-modal');
   });
 
-  // RAG-1 R2 子項 D：theme upload 連動（依 POST /api/themes/upload）
+  // theme upload 連動（依 POST /api/themes/upload）
   // BUG-F2 A5 順序註記：click 觸發 input、無 dropdownAPI 依賴、留原位安全。
   document.getElementById('theme-upload-btn').addEventListener('click', () => {
     document.getElementById('theme-upload-input').click();
@@ -1880,7 +1878,7 @@
   // BUG-F2 A5 順序註記：theme-upload-input 'change' handler 已搬到 dropdownAPI IIFE
   // 下方（見 L~1980 之後 BUG-F2 A5【upload handler】區塊）、保險防 TDZ。
 
-  // RAG-1 R2 子項 E：# 標籤編輯 Modal + PATCH API 串接
+  // # 標籤編輯 Modal + PATCH /api/papers/{uuid} 串接
   document.getElementById('edit-tags-btn').addEventListener('click', () => {
     if (!currentPaperId) return;
     const p = allPapers.find(x => x.id === currentPaperId);
@@ -1948,7 +1946,7 @@
       ['news', '新聞文章'],
       ['resume', '履歷'],
     ];
-    // RAG-1 R2 子項 D：英文化（依 design/docs/copywriting.md）
+    // 主題英文化（依 design/docs/copywriting.md）
     const THEMES = [
       ['mies', 'Mies van der Rohe'],
       ['kahn', 'Kahn · Kimbell Art Museum'],
@@ -2083,7 +2081,7 @@
     }
   });
 
-  // RAG-1 Phase 2 P2-3：chat-input 改 contenteditable div、自然撐高
+  // chat-input 改 contenteditable div、自然撐高
   // 舊 textarea autosize listener 已移除（plan v2 §3.3.5-#3 grep 替換清單）
   // 容器 max-height:240px + overflow-y:auto 處理上限
 
@@ -2141,9 +2139,9 @@ function removeUploadingRow(paperId) {
 }
 
 function setBusy(busy) {
-  // Phase 4.7d Commit 11：upload-btn 不再受 setBusy 控制；上傳期間使用者
-  // 可繼續上傳下一份（後端 thread pool 並行 OK）。upload-btn 的 disabled
-  // 由各 handler 短期 lock（選檔 → upload API 回應期間）。
+  // upload-btn 不受 setBusy 控制：上傳期間使用者可繼續上傳下一份
+  // （後端 thread pool 並行 OK）。upload-btn 的 disabled 由各 handler
+  // 短期 lock（選檔 → upload API 回應期間）。
   isProcessing = busy;
   document.getElementById('cleanup-btn').disabled = busy;
 }
@@ -2280,7 +2278,7 @@ function renderFolderTree() {
     row.innerHTML =
       `<span class="chevron">${chev}</span>` +
       `<span class="fname"></span>` +
-      `<button class="menu-btn" title="資料夾選單">⋯</button>`;
+      `<button class="menu-btn" data-tip="資料夾選單"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>`;
     row.querySelector('.fname').textContent = node.name;
     row.querySelector('.chevron').onclick = (e) => {
       if (!hasChildren) return;
@@ -2367,8 +2365,8 @@ function papersInCurrentFolder() {
   const ids = folderDescendants(currentFolderId);
   return allPapers.filter(p => p.folder_id != null && ids.has(p.folder_id));
 }
-// Phase 4.7c：title fallback 鏈（中文優先）。原 commit 4 把 metadata.title
-// (英文原文) 放前面導致 paper-item 全變英文；本輪改為中文優先。
+// title fallback 鏈（中文優先）。歷史曾把 metadata.title (英文原文) 放前面、
+// 導致 paper-item 全變英文；現中文優先以維持側欄一致性。
 function stripPdfExt(s) {
   if (!s) return '';
   return s.toLowerCase().endsWith('.pdf') ? s.slice(0, -4) : s;
@@ -2396,7 +2394,7 @@ function resolveDisplaySubtitle(p) {
   }
   return '';
 }
-// Phase 4.7c 修正 2：依 doc_type 分支渲染 #current-title 擴充標題區。
+// 依 doc_type 分支渲染 #current-title 擴充標題區。
 // 取代原 renderMetadataHero（hero block 已移除）。缺項靜默省略；
 // title 是 always-show（同 resolveDisplayTitle fallback 鏈）。
 // HTML escape 防 XSS（metadata 值可能包含 PDF 內任意字串）。
@@ -2408,7 +2406,7 @@ function _esc(s) {
 function renderTitleHeader(p) {
   const el = document.getElementById('current-title');
   if (!el) return;
-  // Phase 4.7c 修正 4：沒 paper 時清空但保留元素（占 toolbar flex:1 槽位、
+  // 沒 paper 時清空 innerHTML 但保留元素（占 toolbar flex:1 槽位、
   // 避免 actions 滑到左邊）。不再用 hidden 屬性。
   if (!p) { el.innerHTML = ''; return; }
   const m = p.metadata || {};
@@ -2437,7 +2435,7 @@ function renderTitleHeader(p) {
     if (venue) bits.push(_esc(venue));
     if (bits.length)
       parts.push(`<p class="title-meta">${bits.join('<span class="title-meta-sep">·</span>')}</p>`);
-    // RAG-1 R1 子項 F（UI Fixes Plan v3 L80-87）：雙語摘要 fallback
+    // 雙語摘要 fallback（中文模式優先取 translated_abstract、缺則 fallback 英文 abstract）
     // 繁中優先 → translated_abstract、無中譯則防禦性回退至英文 abstract
     const abstractEn = v('abstract');
     const abstractZh = v('translated_abstract') || abstractEn;
@@ -2451,7 +2449,7 @@ function renderTitleHeader(p) {
       );
     }
   }
-  // RAG-1 R2 子項 G 剩餘：tag-pill 渲染（半透明磨砂玻璃）
+  // tag-pill 渲染（半透明磨砂玻璃、依 components.md §11 規範）
   // BUG-F1 Bug 1：fallback chain 防禦（同 tag-modal 載入、PATCH 後 local 寫 metadata_json、API 回 metadata）
   const userTags = (p.metadata && p.metadata.user_tags) ||
                    (p.metadata_json && p.metadata_json.user_tags) || [];
@@ -2479,7 +2477,7 @@ function renderPapers() {
           <div class="paper-title-zh">${displayTitle}</div>
           <div class="paper-title-en">${displaySubtitle}</div>
         </div>
-        <button class="paper-menu-btn icon-only" title="更多">⋯</button>
+        <button class="paper-menu-btn icon-only" data-tip="文件選單"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
       </div>
     `;
     const openMovePicker = (rb) => {
@@ -2531,7 +2529,7 @@ async function loadPapers() {
 async function loadPaper(paperId, title) {
   currentPaperId = paperId;
 
-  // Phase 4.7d Commit 17-3：切 paper 時關閉舊 EventSource attach（如有）
+  // 切 paper 時關閉舊 EventSource attach（避免 stream broker 串流互相污染）
   if (currentEventSource) {
     try { currentEventSource.close(); } catch (e) {}
     currentEventSource = null;
@@ -2545,11 +2543,11 @@ async function loadPaper(paperId, title) {
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('paper-content').style.display = 'block';
   document.getElementById('paper-content').innerHTML = '<p style="color:#94a3b8">載入中...</p>';
-  // Phase 4.7d Commit 17-1b：立即清空 chat-messages（不等 loadChatHistory）
+  // 立即清空 chat-messages（不等 loadChatHistory 回應、避免切 paper 時舊對話殘留）
   // 切走的舊 paper user query + 閃爍泡泡會殘留到 loadChatHistory 跑完才清；
   // 切 paper 是用戶意圖、UI 應該瞬間反映、不該卡在前一個 paper 的訊息
   document.getElementById('chat-messages').innerHTML = '';
-  // Phase 4.7c 修正 2：渲染 #current-title 擴充標題區（取代 hero + 原 h2.textContent）
+  // 渲染 #current-title 擴充標題區（多 row：title-zh / title-en / meta / abstract / tags）
   renderTitleHeader(allPapers.find(p => p.id === paperId));
 
   await fetchContent(paperId, currentLang);
@@ -2587,7 +2585,7 @@ async function fetchContent(paperId, lang) {
 // 列印
 document.getElementById('print-btn').onclick = () => {
   const original = document.title;
-  // Phase 4.7c 修正 2：#current-title 為 multi-row，僅讀 .title-zh 當瀏覽器
+  // #current-title 為 multi-row、僅讀 .title-zh 當瀏覽器
   // 列印標題（避免 .textContent 把 authors / abstract 全串進來）
   const titleEl = document.querySelector('#current-title .title-zh');
   const title = titleEl ? titleEl.textContent.trim() : '';
@@ -2603,14 +2601,14 @@ document.getElementById('lang-toggle').onclick = async () => {
   document.getElementById('lang-toggle').title = currentLang === 'zh' ? '切換英文' : '切換中文';
   if (currentPaperId) {
     await fetchContent(currentPaperId, currentLang);
-    // RAG-1 R1 子項 F：切語言後重繪 toolbar、雙語摘要無縫聯動
+    // 切語言後重繪 toolbar、雙語摘要無縫聯動
     renderTitleHeader(allPapers.find(p => p.id === currentPaperId));
   }
 };// 聊天功能
 let isStreaming = false;
 
 function enableChat() {
-  // RAG-1 Phase 2 P2-3 §3.3.5-#2/#3：chat-input 改 contenteditable div、
+  // chat-input 改 contenteditable div、
   // disabled 屬性對 div 無效 → 改用 contenteditable="true"/"false"
   document.getElementById('chat-input').setAttribute('contenteditable', 'true');
   document.getElementById('web-search-toggle').disabled = false;
@@ -2640,7 +2638,7 @@ function removeReadingReadyMessage() {
 
 document.getElementById('export-btn').onclick = () => {
   if (!currentPaperId) return;
-  // Phase 4.7d Commit 6：對話為空時擋下載（避免後端回空檔 / 錯誤）
+  // 對話為空時擋下載（避免後端回空檔 / 錯誤）
   const realMessages = document.querySelectorAll(
     '#chat-messages .msg-user, #chat-messages .msg-ai'
   );
@@ -2694,7 +2692,7 @@ function renderSources(aiMsg, sources) {
   aiMsg.appendChild(div);
 }
 
-// Phase 4.7d Commit 17-3：當前 paper 的 EventSource attach（切 paper 時關閉）
+// 當前 paper 的 EventSource attach（切 paper 時關閉、避免互相污染）
 let currentEventSource = null;
 
 async function loadChatHistory(paperId) {
@@ -2704,7 +2702,7 @@ async function loadChatHistory(paperId) {
     const res = await fetch(`/api/papers/${paperId}/chat/history`);
     const data = await res.json();
 
-    // Phase 4.7d Commit 17-2 後端設計 (c)：無 in_progress 回 list、有則回 dict
+    // 後端回應協議：無 in_progress 時回 list、有則回 dict { papers, in_progress }
     const history = Array.isArray(data) ? data : (data.messages || []);
     const in_progress = (!Array.isArray(data) && data.in_progress)
       ? data.in_progress : null;
@@ -2731,7 +2729,7 @@ async function loadChatHistory(paperId) {
       messages.appendChild(div);
     });
 
-    // Phase 4.7d Commit 17-3：in_progress 處理（解最後邊角 bug）
+    // in_progress 處理：reload 時把進行中 paper 接回（解邊角 bug）
     // 17-1 後端進入時已寫 user query 進 DB、history 內已含 in_progress.query；
     // 不重複 render user msg、只 render ai msg + partial、再 EventSource attach
     // 接續 broker 的 SSE。
@@ -2757,7 +2755,7 @@ async function loadChatHistory(paperId) {
   }
 }
 
-// Phase 4.7d Commit 17-3：attach EventSource 到後端 broker 的進行中 stream。
+// attach EventSource 到後端 broker 的進行中 stream。
 // alreadyRenderedPartial：loadChatHistory 已渲染的 partial 字串；replay
 // chunk 的累積字數若仍在此範圍內則 skip（避免雙重 render）。
 function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
@@ -2834,15 +2832,15 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
   };
 }
 
-// Phase 4.7d Commit 17-1：原 saveChatHistory 函式刪除。DB 寫入改由
+// saveChatHistory 函式已刪除：DB 寫入改由
 // 後端 chat endpoint 自身負責（進入時寫 user query、stream finally
 // 寫 assistant 完整回答）；前端不再整包 POST、避免切走切回時 currentPaperId
 // 變化導致誤覆寫到別的 paper。POST /chat/history endpoint 暫保留供舊
 // 瀏覽器快取兼容、17-4 才移除。
 
 /* ═══════════════════════════════════════════════════════════════
-   RAG-1 Phase 2 P2-3：chat-input hashtag token UI 模組
-   依 plan v2 §3.3.2（核心 UX）+ §3.3.5 四點防護 + Q7-Q14
+   chat-input hashtag token UI 模組（P2-3）
+   依 plan §3.3.2（核心 UX）+ §3.3.5 四點防護 + Q7-Q14
    - 來源 (Q9)：allPapers.metadata_json.user_tags 前端 cache
    - 限制 (Q8)：autocomplete 顯示前 10 筆 + 「...更多」
    - IME (Q12)：compositionstart/end + e.isComposing 雙重防護
@@ -3062,7 +3060,7 @@ const hashtagAutocomplete = (() => {
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
-  // RAG-1 Phase 2 P2-3 §3.3.5-#3：textarea → contenteditable div
+  // textarea → contenteditable div（P2-3 §3.3.5-#3）
   // - .value → .textContent.trim()（token 已是 #tag 字串、後端 parse_query_hashtag 解析）
   // - .value = '' → .innerHTML = ''（清掉純文字 + 所有 .hashtag-token）
   // - 不再 dispatchEvent('input')（autosize listener 已移除）
@@ -3122,7 +3120,7 @@ async function sendMessage() {
               aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
               renderSources(aiMsg, chunk.grounding_sources);
             }
-            // Phase 4.7d Commit 17-1：移除 saveChatHistory(currentPaperId)
+            // 移除 saveChatHistory(currentPaperId) 呼叫
             // 呼叫。DB 寫入由後端 chat endpoint finally 區自行 append。
           }
         } catch {}
@@ -3142,7 +3140,7 @@ async function sendMessage() {
   });
   useWebSearch = wsBtn.classList.contains('active');
 })();
-// RAG-1 Phase 2 P2-3：keydown 含 Ctrl+Enter 送出 + 中文 IME 防護 + autocomplete 導覽
+// keydown 含 Ctrl+Enter 送出 + 中文 IME 防護 + autocomplete 導覽（P2-3）
 // 注意：使用 addEventListener 而非 onkeydown=...、避免覆寫掉本檔內其他綁定
 document.getElementById('chat-input').addEventListener('keydown', (e) => {
   // §3.3.5-#3 + Q12：IME 組字中（如中文輸入法）→ 完全不攔截
@@ -3180,7 +3178,7 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
 });
 
 // 上傳論文（衝突 3.2：addEventListener + stopImmediatePropagation 自衛）
-// Phase 4.7d Commit 10：回退 Commit 5 多檔；改為一次只能一份、選多份時 alert
+// 上傳一次只能一份、選多份時 customAlert（避免後端 thread pool 競爭）
 document.getElementById('upload-btn').addEventListener('click', (e) => {
   e.stopImmediatePropagation();
   const input = document.createElement('input');
@@ -3210,7 +3208,7 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
       const data = await res.json();
       const paperId = data.paper_id;
 
-      // Phase 4.7d Commit 11：upload API 回應後立刻 unlock upload-btn，
+      // upload API 回應後立刻 unlock upload-btn、
       // 允許使用者上傳下一份（後端 thread pool 並行 OK）。
       // setBusy(false) 只 unlock cleanup-btn——按目前邏輯交由 trackProgress
       // 觸發；此處保留 setBusy(false) 是維持「上傳階段已結束」語意（pipeline
@@ -3334,7 +3332,7 @@ function showConfirmModal(paperId, detection, btn, filename) {
   document.getElementById('confirm-ok-btn').onclick = async () => {
     const selectedType = document.getElementById('doc-type-dropdown').dataset.value;
     modal.classList.remove('show');
-    // Phase 4.7d Commit 11：不再 btn.disabled = true；上傳階段已在 upload
+    // 不再 btn.disabled = true；上傳階段已在 upload
     // handler 結束、使用者可獨立操作下一份
 
     try {

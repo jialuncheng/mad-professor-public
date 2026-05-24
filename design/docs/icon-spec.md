@@ -101,7 +101,7 @@ M4 18h16 ─────────────
 | 語言切換 | `#lang-toggle` | 水平 ⇄ | arrow-left-right，兩條反向 |
 | Web 搜尋 | `#web-search-toggle` | 放大鏡 | 圓 + 斜柄 |
 | 下載 MD | `#export-btn` | 下載箭頭 | 向下箭頭 + 底線 |
-| 更多 | `.paper-menu-btn` `.menu-btn` | `⋯` 三點 | 三 `<circle>` r=1 |
+| 更多 | `.paper-menu-btn` `.menu-btn` | `⋯` 三點 | 三 `<circle>` r=1（BUG-F6 C7：HTML 從 `⋯` 字元 + `title` 屬性遷移到 SVG + `data-tip`、跟其他 icon-only 按鈕對齊 §5 規範） |
 | chevron | `.folder-item .chevron` | `›` | 單段，靠 linejoin 圓化 |
 | 後退 | `#empty-state` 箭頭 | `←` | 主箭 + 尖端弧 |
 

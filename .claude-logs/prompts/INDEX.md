@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-24（BUG-F5 落地、v3 增補 P2 inconsistencies 完工）
+最後更新：2026-05-24（BUG-F6 落地、v2+v3 前端評估全鏈路完工）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -26,6 +26,7 @@
 - `2026-05-24_BUG-F3_提示詞.md` — BUG-F3 `.modal-input` CSS（Bug 7、ui-fixes-batch B5 全文 + `input[type="text"]` 廣義 selector + color-mix 跨主題 focus ring + 2 pytest、v2 前端三段全完工）
 - `2026-05-24_BUG-F4_提示詞.md` — BUG-F4 P1 critical 4 項（A1 trackProgress renderTitleHeader + A2 empty-state 反轉 + A3 customPrompt 新增 + 全 native dialog 替換 + A4 closeBizPopups 移除統一 closePopups + 9 pytest）
 - `2026-05-24_BUG-F5_提示詞.md` — BUG-F5 P2 inconsistencies（B1 廢 token 替換主 scale 5 處 + B3 demo-bar CSS/JS dead code 刪除 + B4 no-op setupTooltip 已 ship docs 對齊驗證 + 8 pytest）
+- `2026-05-24_BUG-F6_提示詞.md` — BUG-F6 P3 polish（C3+C6 no-op + C4 ~43 ticket 編號註解清理 + C5 marked strikethrough 註解改寫 + C7 paper-menu-btn/folder menu-btn `⋯`→SVG+data-tip + icon-spec.md §4 註記 + 7 pytest、**v2+v3 前端評估全鏈路完工**）
 
 ### Logging / 雲原生
 - `2026-05-23_logging_refactor_可行性評估.md` — logging_refactor_proposal.md 可行性評估（部分採納）
@@ -40,6 +41,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-24 — `2026-05-24_BUG-F6_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F5_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F4_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F3_提示詞.md`
@@ -54,4 +56,3 @@
 - 2026-05-23 — `2026-05-23_RAG-1_R1_提示詞.md`
 - 2026-05-23 — `2026-05-23_RAG-1_標籤強制小寫+TODO+認證.md`
 - 2026-05-23 — `2026-05-23_RAG-1_可行性評估+資料夾自動標籤.md`
-- 2026-05-23 — `2026-05-23_LOGGING-3_提示詞.md`
