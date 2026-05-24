@@ -209,6 +209,49 @@ window.dropdownAPI.getThemeLabel('foo');           // → 'Foo Theme'
 - 與 chat-messages 共用水平 padding `--chat-pad-x`（邊界對齊）
 - 自動長高：min 32 / **max 240** / 隨內容增長
 
+### 6.3 `.modal-input` / `.modal-box input[type="text"]`（BUG-F3 / ui-fixes-batch B5 新增）
+
+Modal 內單行 input 共通樣式（跟 `.modal-box select` 同規格、外觀對齊）：
+
+```css
+.modal-box .modal-input,
+.modal-box input[type="text"] {
+  width: 100%;
+  height: var(--btn-h);                  /* 跟 select / button 同高 */
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-base);
+  outline: none;
+  margin-bottom: var(--space-2);
+  box-sizing: border-box;
+  transition: border-color var(--transition);
+}
+.modal-box .modal-input:focus,
+.modal-box input[type="text"]:focus {
+  border-color: var(--color-accent);
+  /* color-mix 計算 accent 18% 透明度光環、跨主題自動跟色 */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+```
+
+**設計決策**：
+- 雙 selector（class `.modal-input` + 廣義 `input[type="text"]`）：既有 `#tag-input` 用 class；未來新 modal input 不用 class 也能自動繼承
+- `color-mix(in srgb, var(--color-accent) 18%, transparent)`：跨主題 focus ring 自動跟色、不寫死 `rgba()`
+- focus `box-shadow` 是 input ring、**不違反 §10「自製按鈕用陰影或漸層」反例**（業界標準 input focus indicator、非按鈕陰影）
+
+**範例 HTML**：
+
+```html
+<div class="modal-box">
+  <input type="text" id="tag-input" class="modal-input" placeholder="#plant #complex_system">
+  <!-- 或省略 class、走廣義 input[type="text"] 自動套樣式 -->
+</div>
+```
+
 ---
 
 ## 7. 列表項（List Item）

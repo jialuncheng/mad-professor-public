@@ -225,6 +225,35 @@
   }
   .modal-box select:focus { border-color: var(--color-accent); }
 
+  /* BUG-F3 Bug 7（ui-fixes-batch B5）：補 .modal-input + 廣義 input[type="text"] 樣式
+     R2 ship 時 HTML 寫 class="modal-input"（#tag-input）但無 CSS、瀏覽器降 UA 預設、
+     寬度死約 150px、無圓角、無 padding、視覺與下方 select / 按鈕落差大。
+     focus ring 用 color-mix(in srgb, var(--color-accent) 18%, transparent) 跨主題
+     自動跟色、不寫死 rgba；input focus ring 為業界標準、不需補 components.md §10 反例豁免。
+     廣義覆蓋 input[type="text"]：未來新 modal input 同時享受相同主題樣式、不必各自補。 */
+  .modal-box .modal-input,
+  .modal-box input[type="text"] {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+    box-sizing: border-box;
+    transition: border-color var(--transition);
+  }
+  .modal-box .modal-input:focus,
+  .modal-box input[type="text"]:focus {
+    border-color: var(--color-accent);
+    /* color-mix 計算 accent 18% 透明度光環、跨主題自動跟色 */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+
   /* ── 自訂 dropdown（取代 native <select>）── */
   .dropdown {
     margin-bottom: var(--space-2);
