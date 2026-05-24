@@ -62,19 +62,31 @@
 
 ## 3. 工作目錄
 
-.claude-logs/        # 全目錄入版控、跨環境同步
-├── ref/             # 框架核心 + SOP + plan 演進 + 規範文件
-├── templates/       # template_plan / template_execution / template_hotfix 
-├── prompts/         # 提示詞資料庫（README + INDEX + 歷史歸檔）
-├── TODO.md          # 任務狀態真理源
-├── *_plan.md         # plan 階段產出
-├── *_執行.md          # execution 階段產出
-└── *_hotfix.md      # 緊急修正
+.claude-logs/             # 全目錄入版控、跨環境同步
+├── ref/                  # 必讀核心（極簡）：框架本體、WORKFLOW_SOP 索引
+├── sop/                  # 領域 SOP（logging / database / 模型 / 未來新增）
+├── revision_plans/       # 改版規劃書（任務輸入規格、由 baron / Antigravity / Claude Design 產出）
+├── plans/                # 執行計劃（_plan.md / _可行性評估.md、由 Claude Code 產出）
+├── executions/           # 執行報告（_執行.md、ship 後產出）
+├── hotfixes/             # 緊急修補報告（_hotfix.md）
+├── templates/            # 模板（template_plan / template_execution / template_hotfix / 未來新增）
+├── prompts/              # 提示詞資料庫（README + INDEX + 歷史歸檔）
+├── baton/                # 跨 AI 工具交接棒（WORKFLOW-1-0 後生效、平時為空）
+├── archive/              # 過期文件暫存（手動移入、定期清理）
+├── tools/                # 工具腳本（cleanup_push.sh 等）
+└── TODO.md               # 任務狀態真理源
 
 `.gitignore` 規則：
 
 - `.claude-logs/` 全目錄不排除
 - `**/.DS_Store` 永久排除
+
+文件歸屬規則：
+- 改版規劃書 → `revision_plans/`（任務的「Why + What」、長期保留）
+- 執行計劃 → `plans/`（任務的「How」、ship 後可歸 archive）
+- 執行報告 → `executions/`（任務的「What was done」、ship 後可歸 archive）
+- SOP → `sop/`（領域規範、長期保留）
+- 必讀核心 → `ref/`（框架本體、極簡、跨任務必讀）
 
 ---
 

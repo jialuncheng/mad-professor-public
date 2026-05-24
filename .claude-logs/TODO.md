@@ -69,6 +69,31 @@
 > **環境變數**：`OUTPUT_DIR=/app/storage/output`（預設 `_BASE_DIR / "output"`、Docker / K8s 部署用）
 > **Backfill 一次性 SOP**：baron OrcStack 端 `git pull && venv/bin/python tools/regen_rag.py --init` 從 `vectors/` FAISS docstore 反向導入既有 paper、未來升 embedding 直接 `--all`、< 5 分/書籍。
 
+### Phase 4.X? RAG-1 Phase 2 Hashtag RAG 路由 + 雙語摘要 + Chat Token UI（3 commits、P2-1 + P2-2 + P2-3）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| P2-1 | 雙語摘要管道：`processor/metadata_extractor._ALL_FIELDS` 加 `translated_abstract` + `pipeline_core._stage_translate` 完成後同步寫入 `self._metadata["translated_abstract"]`（source=translate_pipeline / confidence=high、try/except 防禦 / 空值不覆寫）；3 個 pytest | 26a4439 |
+| P2-2 | 後端 hashtag RAG 路由：`settings.RAG_MULTI_TOP_K=7` env + `paper_manager.list_paper_uuids_by_tag`（owner-scoped、共用 R2 `_normalize_tag`）+ `paper_manager.parse_query_hashtag`（長標籤優先排序防 `#complex` 攔 `#complex_system`）+ `rag_retriever.retrieve_multi_with_context`（跨 paper 全域 Merge-Sort top-k、L2 normalize 後 cosine 可比）+ `AI_professor_chat.process_query_stream` 入口分流（0/1/多/無 4 路徑、繞 router、單篇路徑 100% 不動）；14 個 pytest | 9ee44f3 |
+| P2-3 | 前端 chat hashtag token UI：`static/index.html` chat-input `<textarea>` → `<div contenteditable>` + placeholder hint（Q11 完整版）+ `:empty::before` data-placeholder CSS（§3.3.5-#1）+ `contenteditable="false"` 禁用契約（§3.3.5-#2）+ 全域 grep 替換 `.value` / `.disabled` / textarea autosize（§3.3.5-#3）+ autocomplete dropdown 綁 `#chat-input-area` 容器（§3.3.5-#4）+ Claude `/skill` 風格 hashtag-token + 6 個 JS handler（input / keydown / compositionstart-end / blur / mousedown / × remove）+ design/docs/components.md §11.2 Hashtag Token + dom-reference.md / interaction.md 同步註記；9 個 pytest（含 §3.3.5-#1 / #3 兩個 v2 grep test） | f85b830 |
+
+> **修法依據**：`.claude-logs/2026-05-23_RAG-1_Phase2_執行計劃.md` v2（8 章節 + §3.3.5 四點防護補強 + 15 Open Questions Q1-Q15）+ `.claude-logs/ref/2026-05-23_RAG-1_Hashtag_Backend_Implementation_Plan.md`（後端全部 Proposed Changes）+ baron 新需求（chat hint + Claude `/skill` 風格 token UI）+ `design/docs/components.md §11.2`（新增）
+> **計畫累積**：plan v1 → v2（補 §3.3.5 4 點防護：CSS placeholder / disabled 樣式 / 全域 grep / dropdown 錨點）→ 落地 P2-1/P2-2/P2-3、共 **26 個 pytest**（3 P2-1 + 14 P2-2 + 9 P2-3、含 §3.3.5-#1 / #3 兩個 v2 grep test）
+> **核心設計亮點**：
+> - **零 schema 變動**：讀 Phase 1 `metadata_json.user_tags` 陣列、共用 `_normalize_tag` 真理源
+> - **單篇 / 多篇 分流**：多篇 hashtag 走新 `retrieve_multi_with_context` + 繞 router；單篇 / 無 hashtag 走既有 `_get_rag_context` 路徑、零變動
+> - **全域 Merge-Sort**：L2 normalize 後 cosine score 跨 paper 可比、防 prompt 爆炸（top_k=7 env override）
+> - **長標籤優先排序**：`sorted(tags, key=len, reverse=True)` 防 `#complex` 攔 `#complex_system`
+> - **contenteditable 四點防護**（§3.3.5）：CSS `:empty::before` placeholder / `contenteditable="false"` 禁用契約 / 全域 grep 替換 `.value` / dropdown 容器錨點
+> - **中文 IME 防護**（Q12）：`compositionstart/end` + `e.isComposing` 雙重防護、組字中不觸發 autocomplete
+> - **跟 Phase 1 解耦**：Phase 1 寫入路徑 100% 不動、Phase 2 純讀 user_tags 陣列、可獨立 ship
+> **手動驗證 SOP**（baron OrcStack）：
+> 1. **P2-1**：上傳英文 paper → 跑完 pipeline → 切中文、toolbar abstract 顯示中文（不再 fallback 英文）
+> 2. **P2-2**：建 3 篇 HR 履歷加 `#hr` tag → 輸入 `#hr 比較這幾篇` → AI 回答含 3 個 paper title 引用、後端 log「matched_papers=3」
+> 3. **P2-3**：chat-input 顯示「輸入 # 可加入 hashtag 跨文獻搜尋」placeholder → 輸入 `#` autocomplete dropdown 跳出 → `↓` `Enter` 確認、`#hr` 變藍色 token → `×` / `Backspace` 一次刪掉
+> 4. **跨文件問答收官**（baron 需求 3）：`#hr 我的學歷區應該怎麼寫？` → AI 跨 3 份履歷比較 + 統一建議
+> **影響範圍**：純 user-facing 功能擴充、無 schema 變動、無 backfill 需求；舊 paper 缺 `translated_abstract` 走前端 R1 子項 F fallback
+
 ### Phase 4.X? RAG-1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫（3 commits、R1 + R2 + R3）
 
 | Commit | 內容 | Hash |
@@ -158,13 +183,22 @@
   - 工時：1-2 個 commits
   - 依賴：無
 
-- 🟡 **RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI**（WIP、依 `.claude-logs/2026-05-23_RAG-1_Phase2_執行計劃.md` v2）
-  - ✅ **P2-1 雙語摘要管道**（已落地、`processor/metadata_extractor.py` `_ALL_FIELDS` 加 `translated_abstract` + `pipeline_core._stage_translate` 完成後寫入 + 3 pytest、hash 待 push 後回填）
-  - ⬜ **P2-2 後端 hashtag 路由**（`list_paper_uuids_by_tag` + `parse_query_hashtag` + `retrieve_multi_with_context` + `AI_professor_chat` 入口分流、≥ 8 pytest）
-  - ⬜ **P2-3 前端 chat hashtag token UI**（placeholder hint + contenteditable + autocomplete + token + design §11.2 + v2 §3.3.5 四點防護、≥ 8 pytest）
-  - 跨文件查詢（baron 需求 3 / Commit 15 plan Q7）由本系列收官、P2-2 ship 後 `retrieve_multi_with_context` 即達成
-  - 工時：~6.5-7.5 hr 累計（P2-1 已 ship、剩 ~5 hr）
-  - 依賴：Phase 1 R1/R2/R3 已 ship 的 `metadata_json.user_tags` + `_normalize_tag`
+- ✅ ~~**RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI**~~（已落地、P2-1 + P2-2 + P2-3 三 commit、共 26 pytest、見上方 ✅ 完成區、跟 Phase 1 R1/R2/R3 並列為 **RAG-1 完整收官**、跨文件查詢 baron 需求 3 / Commit 15 plan Q7 同步收官）
+
+- ✅ ~~**RAG-1 Bug Fix 系列**~~（**已落地、全鏈路收官**、前端 6 + 後端 2 = 8 commits、共 72 pytest、依 `.claude-logs/2026-05-24_RAG-1_前端_Bug_Fix_可行性評估.md` v2/v3 + `.claude-logs/2026-05-24_RAG-1_Bug_Fix_可行性評估.md` v4）
+  - ✅ **BUG-F1 前端 micro fix**（修 Bug 1/3/4/5、5 pytest、hash `9877e54`）
+  - ✅ **BUG-F2 theme dropdown + ESC + P2-3 latent fix**（修 Bug 2 + Bug 11、TDZ-aware 3 段拆分、6 pytest、hash `ae20559`）
+  - ✅ **BUG-F3 modal-input CSS**（修 Bug 7、ui-fixes-batch B5 + color-mix focus ring、2 pytest、hash `57c71c8`）
+  - ✅ **BUG-F4 P1 critical（A1+A2+A3+A4）**（修 4 項：trackProgress / empty-state / customPrompt / closeBizPopups、9 pytest、hash `646afe4`）
+  - ✅ **BUG-F5 P2 inconsistencies（B1+B3、B4 no-op）**（修 B1 廢 token + B3 demo-bar dead code、8 pytest、hash `e799687`）
+  - ✅ **BUG-F6 P3 polish（C4+C5+C7、C3+C6 no-op）**（修 ~43 ticket 註解清理 + marked 註解改寫 + ⋯→SVG、7 pytest、hash `12428aa`）
+  - ✅ **BUG-B1 後端 abstract fallback**（Bug 8 A 側路 + B regex 擴中日文、28 pytest、hash 待 push 後回填）
+  - ✅ **BUG-B2 後端 blockquote → list + 前端 paper-header-meta CSS**（Bug 10 混合 bug、後端 `>` → `-` + wrap + 前端 `@media screen` class hook hide、7 pytest、hash 待 push 後回填）
+  - ⬜ **RAG-11 reload SSE 還原**（延後、Bug 6、API 合約變更獨立 plan）
+  - ⬜ **RAG-12 LaTeX KaTeX**（延後、Bug 9、新 CDN 依賴獨立 plan）
+  - **收官摘要**：6 前端 + 2 後端 = 8 commits、修 9 / 11 bugs（含 P2-3 hashtag-autocomplete latent 自我發現）、共 72 pytest 全綠、零迴歸；2 延後 bug 另開獨立任務 RAG-11/12
+
+### Phase 4.X? RAG-1 Bug Fix 系列（8 commits、BUG-F1~F6 + BUG-B1~B2）
 
 ### 🟡 中優先
 
@@ -363,7 +397,7 @@
 ## 索引（依類別）
 
 ### RAG（7 項 active）
-- 🟡 RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI（WIP、P2-1 ship / P2-2-3 待做）
+- ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - RAG-3 score 校準（中、等數據）
 - RAG-4 前端引用顯示（中）
