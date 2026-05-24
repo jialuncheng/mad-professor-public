@@ -642,6 +642,28 @@ class PipelineCore:
             translated_abstract = getattr(
                 self.translate_processor, 'translated_abstract', None
             )
+            # BUG-B1 Bug 8 方案 A（v4 §B B8.3）：Markdown 未匹配 abstract 區塊時、
+            # 用 metadata 已抽取的英文 abstract 直接翻譯（side-channel fallback）。
+            # 適用情境：中文 / 日文論文（md_processor.abstract_pattern 純英文、Bug 8 方案 B
+            # 已擴中文 regex、但對「**Abstract**」加粗非 # heading 等異常排版仍會漏判）。
+            # 即使翻譯失敗、內層 try/except 包覆、translated_abstract 保留空、
+            # 外層 try/except 防禦 P2-1 主流程不阻塞。
+            # 額外型別防禦：isinstance(abs_field, dict) 防 metadata schema 變動。
+            if not translated_abstract and isinstance(self._metadata, dict):
+                abs_field = self._metadata.get("abstract") or {}
+                eng_abstract = abs_field.get("value") if isinstance(abs_field, dict) else None
+                if eng_abstract:
+                    try:
+                        translated_abstract = self.translate_processor.translate_text(
+                            "abstract", eng_abstract
+                        )
+                        logger.info(
+                            "[BUG-B1] 側路翻譯 abstract（Markdown 未匹配 abstract 區塊）"
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "[BUG-B1] 側路翻譯失敗、translated_abstract 保留空: %s", exc
+                        )
             if translated_abstract and isinstance(self._metadata, dict):
                 from processor.metadata_extractor import _empty_field
                 field = self._metadata.get("translated_abstract")

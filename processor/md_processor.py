@@ -24,8 +24,15 @@ class MarkdownProcessor:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.title_pattern = re.compile(r'^(#+)\s*(\S.*?)$')
+        # BUG-B1 Bug 8 方案 B（v4 §B B8.3）：abstract regex 擴中文 + 日文
+        # 既有純英文 regex 無法匹配「## 摘要」「## 概要」「## 内容提要」等中文論文
+        # heading、translate_processor 跳過摘要翻譯 → translated_abstract 永遠空、
+        # 中文前端 toolbar fallback 走英文 abstract（Phase 1 R1 子項 F 行為）。
+        # 擴 alternation：簡中（摘要 / 概要 / 内容提要）/ 繁中（內容提要）/ 日文（要旨）。
+        # 「梗概」古文罕見不含（v3 評估 Q8 推薦答案）。
         self.abstract_pattern = re.compile(
-            r'^#+\s*(?:\d+\.)?\s*(?:ABSTRACT|Abstract|abstract|SUMMARY|Summary|summary)'
+            r'^#+\s*(?:\d+\.)?\s*(?:ABSTRACT|Abstract|abstract|SUMMARY|Summary|summary'
+            r'|摘要|概要|內容提要|内容提要|要旨)'
         )
         self.reference_pattern = re.compile(r'^#+\s*(?:\d+\.)?\s*(?:REFERENCES?|References?|references?)')
         self.reference_line_pattern = re.compile(r'^(?:REFERENCES?|References?|references?)(?:\s*:|\s*\.)?\s*$')
