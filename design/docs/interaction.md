@@ -81,6 +81,8 @@
 - 視窗捲動（capture phase 監聽）
 - 視窗 resize
 - 點 popup 內某項目 → 觸發該項目動作後關閉
+- **ESC 鍵先關 popup、再關 modal（兩層獨立）**（BUG-F2 A6 ship）：document keydown handler 偵測 `.ctx-popup` 存在時優先 `closePopups()`、不順帶關 modal；下一次 ESC 才關最上層 modal。
+- ⚠️ `#hashtag-autocomplete`（chat-input 內 hashtag dropdown）**不含 `.ctx-popup` class**、`closePopups()` 不會誤刪（BUG-F2 Bug 11 latent fix）；hashtag autocomplete 自有 `blur` / `mousedown` 外圍 listener 管理生命週期。
 
 ### 定位演算法（per-item popup）
 - 水平：靠 `item.right - popup.width - 4px` 對齊 item 右緣
@@ -101,8 +103,9 @@
 ### 關閉
 | Modal | 點 mask | 主按鈕 | ESC | 取消鈕 |
 |---|---|---|---|---|
-| `#help-modal` | ✅ | ✅ | ⚠️ 未實作 | — |
-| `#confirm-modal` | ❌ 故意不可 | ✅ | ⚠️ 未實作 | — |
+| `#help-modal` | ✅ | ✅ | ✅（BUG-F2 A6） | — |
+| `#confirm-modal` | ❌ 故意不可 | ✅ | ✅（BUG-F2 A6、除非 `data-no-esc="true"`） | — |
+| `#theme-modal` / `#tag-modal` | ✅ | ✅ | ✅（先關 popup 再關 modal） | ✅ |
 
 **原則**：流程關鍵 modal（confirm-modal）不可點外面取消，避免誤關。
 

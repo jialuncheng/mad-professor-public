@@ -1415,7 +1415,10 @@
            aria-label="對話輸入"
            data-placeholder="輸入問題（Ctrl+Enter 送出）&#10;輸入 # 可加入 hashtag 跨文獻搜尋"></div>
       <!-- Autocomplete dropdown：定位錨點綁容器（§3.3.5-#4）、非綁 cursor -->
-      <div id="hashtag-autocomplete" class="ctx-popup hashtag-popup" hidden>
+      <!-- BUG-F2 Bug 11（P2-3 latent fix）：移除 .ctx-popup class、避免被 closePopups() 永久 .remove()。
+           .hashtag-popup 為 standalone 完整定義（position / background / border / box-shadow 全有、
+           不依賴 .ctx-popup base style、見 #hashtag-autocomplete.hashtag-popup CSS L1042-1057）。 -->
+      <div id="hashtag-autocomplete" class="hashtag-popup" hidden>
         <!-- 動態填入 .hashtag-popup-item；最後一筆若超過 10 個顯示 .hashtag-popup-more -->
       </div>
     </div>
@@ -1738,15 +1741,27 @@
   });
 
   // ESC + Tab 焦點循環
+  // BUG-F2 A6：ESC 先處理 popup（含 dropdown 展開的 list、.ctx-popup）、再處理 modal、一次只關一層
+  //   Bug 11 已修保護 hashtag-autocomplete（移除 .ctx-popup class、不會被 closePopups 誤刪）
+  // Tab 焦點循環邏輯不變
   document.addEventListener('keydown', (e) => {
-    const open = [...document.querySelectorAll('.modal-mask.show')].pop();
-    if (!open) return;
-    if (e.key === 'Escape' && open.dataset.noEsc !== 'true') {
-      e.preventDefault();
-      closeModal(open);
-      return;
+    if (e.key === 'Escape') {
+      const hasPopup = document.querySelector('.ctx-popup');
+      if (hasPopup) {
+        e.preventDefault();
+        closePopups();
+        return;   // 一次 ESC 只關一層 popup、不順帶關 modal
+      }
+      const open = [...document.querySelectorAll('.modal-mask.show')].pop();
+      if (open && open.dataset.noEsc !== 'true') {
+        e.preventDefault();
+        closeModal(open);
+        return;
+      }
     }
     if (e.key === 'Tab') {
+      const open = [...document.querySelectorAll('.modal-mask.show')].pop();
+      if (!open) return;
       const focusables = open.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
@@ -1802,18 +1817,15 @@
 
   // ── 切換風格 modal + 套用 ────────────────────
   // localStorage 持久化（key: 'madpro-theme'），重整後自動還原
+  // ─── BUG-F2 A5【第一段】TDZ-aware 拆分：dropdownAPI IIFE 之前 ───
+  //   只立即套用 themeLink、避免頁面渲染前閃 fallback；
+  //   dropdown 顯示值同步延後到【第三段】（IIFE 之後）執行；
+  //   L1811 outer labels 已刪除、統一由 dropdownAPI IIFE 內 themeLabels 管理。
   const THEME_KEY = 'madpro-theme';
   const savedTheme = localStorage.getItem(THEME_KEY);
   if (savedTheme) {
     document.getElementById('theme-link').href = `/static/themes/${savedTheme}.css`;
-    const dd = document.getElementById('theme-dropdown');
-    // RAG-1 R2 子項 D：英文化（依 design/docs/copywriting.md）
-    const labels = { mies: 'Mies van der Rohe', kahn: 'Kahn · Kimbell Art Museum',
-                     kandinsky: 'Kandinsky · Bauhaus', nara: 'Yoshitomo Nara' };
-    if (labels[savedTheme]) {
-      dd.dataset.value = savedTheme;
-      dd.querySelector('.dropdown-value').textContent = labels[savedTheme];
-    }
+    // dropdown 顯示值同步：見【第三段】（緊接 dropdownAPI IIFE 之後）
   }
   document.getElementById('theme-btn').addEventListener('click', () => openModal('theme-modal'));
   document.getElementById('theme-ok-btn').addEventListener('click', () => {
@@ -1825,41 +1837,12 @@
   });
 
   // RAG-1 R2 子項 D：theme upload 連動（依 POST /api/themes/upload）
+  // BUG-F2 A5 順序註記：click 觸發 input、無 dropdownAPI 依賴、留原位安全。
   document.getElementById('theme-upload-btn').addEventListener('click', () => {
     document.getElementById('theme-upload-input').click();
   });
-  document.getElementById('theme-upload-input').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.css')) {
-      alert('只接受 .css 檔案');
-      return;
-    }
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const res = await fetch('/api/themes/upload', { method: 'POST', body: fd });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
-        throw new Error(err.detail || 'Upload failed');
-      }
-      const data = await res.json();
-      // 立即套用新主題 + 寫 localStorage
-      const themeName = data.filename.replace(/\.css$/, '');
-      document.getElementById('theme-link').href = data.url;
-      localStorage.setItem(THEME_KEY, themeName);
-      // 更新 dropdown 顯示
-      const dd = document.getElementById('theme-dropdown');
-      dd.dataset.value = themeName;
-      dd.querySelector('.dropdown-value').textContent = themeName;
-      closeModal('theme-modal');
-    } catch (err) {
-      alert('上傳失敗：' + err.message);
-    } finally {
-      // reset input 讓相同檔案可重複上傳
-      e.target.value = '';
-    }
-  });
+  // BUG-F2 A5 順序註記：theme-upload-input 'change' handler 已搬到 dropdownAPI IIFE
+  // 下方（見 L~1980 之後 BUG-F2 A5【upload handler】區塊）、保險防 TDZ。
 
   // RAG-1 R2 子項 E：# 標籤編輯 Modal + PATCH API 串接
   document.getElementById('edit-tags-btn').addEventListener('click', () => {
@@ -1914,7 +1897,10 @@
   });
 
   // ── 自訂 dropdown：用 .ctx-popup 風格清單 ────────────
-  (function setupDropdown() {
+  // ─── BUG-F2 A5【第二段】TDZ-aware：dropdownAPI IIFE（原 setupDropdown 重構） ───
+  //   暴露 addTheme / getThemeLabel API；THEMES 陣列 push 透過 closure 對 setupOne 仍生效；
+  //   themeLabels = Object.fromEntries(THEMES) 統一管理 label、取代既有 L1811 outer labels duplicate。
+  const dropdownAPI = (() => {
     // === doc_type-registry ===
     // 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
     const DOC_TYPES = [
@@ -1932,7 +1918,10 @@
       ['kahn', 'Kahn · Kimbell Art Museum'],
       ['kandinsky', 'Kandinsky · Bauhaus'],
       ['nara', 'Yoshitomo Nara'],
+      // 未來主題依 ui-fixes-batch A5 範例可加 apple / google 等
+      // （需先準備對應 .css 檔；ui-fixes-batch 列 6 主題為期望狀態、目前 codebase 僅 4 個）
     ];
+    const themeLabels = Object.fromEntries(THEMES);
     setupOne(document.getElementById('doc-type-dropdown'), DOC_TYPES);
     setupOne(document.getElementById('theme-dropdown'), THEMES);
 
@@ -1975,7 +1964,65 @@
       });
       obs.observe(document.body, { childList: true });
     }
+
+    return {
+      addTheme(name, label) {
+        label = label || name;
+        if (themeLabels[name]) return;
+        themeLabels[name] = label;
+        THEMES.push([name, label]);  // closure 持有相同 reference、下次點開 dropdown 即生效
+      },
+      getThemeLabel(name) { return themeLabels[name] || name; },
+    };
   })();
+  window.dropdownAPI = dropdownAPI;
+
+  // ─── BUG-F2 A5【第三段】TDZ-aware：dropdownAPI IIFE 之後 ───
+  //   savedTheme 同步 dropdown 顯示值；此時 dropdownAPI 已 init、addTheme/getThemeLabel 可安全呼叫；
+  //   自訂 theme（非預設 4 主題）會在 reload 時自動 register 進 dropdown。
+  if (savedTheme) {
+    dropdownAPI.addTheme(savedTheme);   // 若是自訂 theme 動態註冊
+    const dd = document.getElementById('theme-dropdown');
+    dd.dataset.value = savedTheme;
+    dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(savedTheme);
+  }
+
+  // ─── BUG-F2 A5【upload handler】TDZ-aware：dropdownAPI IIFE 之後 ───
+  //   原 L1831 已搬到此處（保險防 TDZ）；handler body 內呼叫 dropdownAPI.addTheme + getThemeLabel
+  document.getElementById('theme-upload-input').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.css')) {
+      alert('只接受 .css 檔案');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/themes/upload', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+        throw new Error(err.detail || 'Upload failed');
+      }
+      const data = await res.json();
+      // 立即套用新主題 + 寫 localStorage
+      const themeName = data.filename.replace(/\.css$/, '');
+      document.getElementById('theme-link').href = data.url;
+      localStorage.setItem(THEME_KEY, themeName);
+      // BUG-F2 A5：動態追加進 THEMES、dropdown 重渲染時可見、跨重整不失效
+      dropdownAPI.addTheme(themeName);
+      // 更新 dropdown 顯示
+      const dd = document.getElementById('theme-dropdown');
+      dd.dataset.value = themeName;
+      dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(themeName);
+      closeModal('theme-modal');
+    } catch (err) {
+      alert('上傳失敗：' + err.message);
+    } finally {
+      // reset input 讓相同檔案可重複上傳
+      e.target.value = '';
+    }
+  });
 
   // ── AI 訊息動作：copy / regenerate（事件委派、未來動態插入也適用）──
   document.getElementById('chat-messages').addEventListener('click', async (e) => {

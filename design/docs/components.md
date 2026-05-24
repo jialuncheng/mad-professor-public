@@ -173,8 +173,20 @@ if (ok) { /* ... */ }
 - chevron 旋轉 180°（由 `aria-expanded` 切換）
 - 選項點擊 → 寫回 `data-value`、更新 `.dropdown-value` 文字、關閉 popup
 - 點外面 → 關閉
+- **ESC 關閉**（BUG-F2 A6 ship、見 `interaction.md §4`）
 
-### 5.3 鍵盤（建議實作）
+### 5.3 動態新增選項 API（BUG-F2 A5、theme-dropdown 用）
+
+`dropdownAPI` IIFE 暴露 `addTheme(name, label)` 與 `getThemeLabel(name)`、外部可動態註冊新選項：
+
+```js
+window.dropdownAPI.addTheme('foo', 'Foo Theme');   // 加入 THEMES 陣列、下次點開即可見
+window.dropdownAPI.getThemeLabel('foo');           // → 'Foo Theme'
+```
+
+⚠️ **TDZ 注意**：`const dropdownAPI = (() => {...})();` 有 Temporal Dead Zone、IIFE 宣告之前的任何呼叫炸 `ReferenceError`。實作上 savedTheme 載入拆 3 段——themeLink 立即套用（IIFE 之前）+ dropdownAPI IIFE + dropdown 顯示值同步（IIFE 之後）；`theme-upload-input` change handler 註冊位置必須在 IIFE 之後。
+
+### 5.4 鍵盤（建議實作）
 - Enter / Space 開啟
 - ↑↓ 切換選項
 - Enter 選定
@@ -444,6 +456,11 @@ chat-input 內輸入 `#<prefix>` 後從 autocomplete dropdown 選定的 tag、�
 - 即使 chat-input 多行展開、dropdown 仍貼齊頂部、視覺穩定
 - 對齊 Claude `/skill` autocomplete 行為
 
+⚠️ **`#hashtag-autocomplete` HTML 用 `class="hashtag-popup"`、**不含** `.ctx-popup`**（BUG-F2 Bug 11 P2-3 latent fix ship 於 BUG-F2）：
+- 既有 `closePopups()` 用 `document.querySelectorAll('.ctx-popup').forEach(p => p.remove())` 永久 .remove() 任何 `.ctx-popup` element；早期 P2-3 ship 時把 `#hashtag-autocomplete` 也加 `.ctx-popup` class、會被 closePopups 永久刪除、後續 `popup.hidden = false` 操作 detached node 即破。
+- `#hashtag-autocomplete.hashtag-popup { ... }` CSS 自身完整（含 `position` / `background` / `border` / `box-shadow` / `border-radius`）、不依賴 `.ctx-popup` base style、移除 class 零視覺風險。
+- BUG-F2 A6 ESC 加 `closePopups()` 同 commit 才安全（否則 ESC 會放大此 latent bug、永久刪 autocomplete element）。
+
 ### 11.2.5 跟 §11 Tag Pill 的區別
 
 | 維度 | §11 Tag Pill | §11.2 Hashtag Token |
@@ -465,7 +482,7 @@ chat-input 內輸入 `#<prefix>` 後從 autocomplete dropdown 選定的 tag、�
 
 - 後端：`paper_manager.py::parse_query_hashtag` + `list_paper_uuids_by_tag`（P2-2 ship）
 - 前端：`static/index.html#chat-input`（contenteditable div）+ `#hashtag-autocomplete`（popup）+ `hashtagAutocomplete` JS 模組
-- 測試：`tests/test_phase2_p2_3_hashtag_token_ui.py`（grep + 結構驗證）
+- 測試：`tests/test_phase2_p2_3_hashtag_token_ui.py`（grep + 結構驗證）+ `tests/test_bug_f2_theme_dropdown_esc.py`（BUG-F2 Bug 11 latent fix grep）
 
 ---
 
