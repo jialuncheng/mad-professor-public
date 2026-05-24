@@ -1,0 +1,156 @@
+"""RAG-1 BUG-F1：前端 micro fix 包 pytest（5 個）。
+
+涵蓋 4 個 bug（v2 §B 評估報告）：
+- Bug 1：tag-pill / tag-modal fallback chain（讀 metadata 與 metadata_json 雙鍵）
+- Bug 3：chat-input placeholder 斷行（&#10; + white-space:pre-wrap）
+- Bug 4：收合右欄 export-btn 殘留（CSS state class + !important）
+- Bug 5：頂部摘要寬度 + toolbar/正文軸線對齊（--content-max-w token + 4 主題覆寫）
+"""
+import re
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
+THEMES = {
+    name: (ROOT / 'static' / 'themes' / f'{name}.css').read_text(encoding='utf-8')
+    for name in ('kahn', 'kandinsky', 'mies', 'nara')
+}
+
+
+# ─────────────────── Bug 1：tag fallback chain ───────────────────
+
+
+def test_bug1_tag_pill_fallback_chain():
+    """Bug 1：renderTitleHeader tag-pill 渲染 + tag-modal 載入都用 (p.metadata || p.metadata_json) 雙鍵 fallback。"""
+    # tag-modal 載入 + tag-pill 渲染兩處都應含 `p.metadata && p.metadata.user_tags` pattern
+    occurrences = re.findall(
+        r'p\.metadata\s*&&\s*p\.metadata\.user_tags',
+        STATIC_HTML,
+    )
+    # collectAllUserTags(P2-3) 1 處 + tag-modal 載入 1 處 + renderTitleHeader 1 處 = ≥ 3
+    assert len(occurrences) >= 3, (
+        f'p.metadata.user_tags fallback 應至少 3 處（P2-3 collectAllUserTags + '
+        f'tag-modal 載入 + renderTitleHeader）；目前 {len(occurrences)} 處'
+    )
+    # 同時 PATCH 成功 local mutate 必含雙寫
+    assert 'p.metadata = p.metadata || {};' in STATIC_HTML, (
+        'PATCH success local mutate 應雙寫 p.metadata（v2 既有 p.metadata_json 雙鍵同步）'
+    )
+
+
+# ─────────────────── Bug 3：placeholder 斷行 ───────────────────
+
+
+def test_bug3_placeholder_has_newline_entity_and_pre_wrap():
+    """Bug 3：HTML data-placeholder 含 &#10;、CSS :empty::before 含 white-space:pre-wrap、min-height:56px。"""
+    # HTML data-placeholder 用 &#10; 換行（覆蓋既有 `；` 連字）
+    assert re.search(
+        r'data-placeholder="輸入問題（Ctrl\+Enter 送出）&#10;輸入 # 可加入 hashtag',
+        STATIC_HTML,
+    ), 'data-placeholder 應用 &#10; 取代既有 `；` 連字（HTML 語境）'
+
+    # CSS :empty::before 含 white-space:pre-wrap（讓 &#10; / \n 顯示為實際換行）
+    pat_pre_wrap = re.compile(
+        r'#chat-input:empty::before\s*\{[^}]*white-space:\s*pre-wrap',
+        re.DOTALL,
+    )
+    assert pat_pre_wrap.search(STATIC_HTML), (
+        '#chat-input:empty::before 應含 white-space: pre-wrap'
+    )
+
+    # #chat-input { min-height: 56px } 預留兩行高度
+    pat_min_h = re.compile(
+        r'#chat-input\s*\{[^}]*min-height:\s*56px',
+        re.DOTALL,
+    )
+    assert pat_min_h.search(STATIC_HTML), (
+        '#chat-input 應 min-height: 56px 預留兩行 placeholder 高度（C1）'
+    )
+
+    # search-mode toggle 兩處 JS 字面值用 \n（不再用 `；`）
+    # 應有 `（搜尋模式）...\n輸入 #`
+    assert re.search(
+        r"'（搜尋模式）輸入問題（Ctrl\+Enter 送出）\\n輸入 # 可加入 hashtag",
+        STATIC_HTML,
+    ), 'search-mode toggle JS 字面 placeholder 應用 \\n 換行（取代既有 ；）'
+
+
+# ─────────────────── Bug 4：export-btn 收合殘留 ───────────────────
+
+
+def test_bug4_export_btn_collapse_important():
+    """Bug 4：#chat-panel.collapsed > #chat-header-actions > :not(#chat-toggle) 拆出獨立 rule + !important。"""
+    pat = re.compile(
+        r'#chat-panel\.collapsed\s*>\s*#chat-header\s*>\s*#chat-header-actions\s*>\s*:not\(#chat-toggle\)\s*\{\s*display:\s*none\s*!important',
+        re.DOTALL,
+    )
+    assert pat.search(STATIC_HTML), (
+        '#chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) '
+        '應拆出獨立 rule + display:none !important（蓋過 enableChat inline style）'
+    )
+
+
+# ─────────────────── Bug 5：--content-max-w token + 4 主題覆寫 ───────────────────
+
+
+def test_bug5_content_max_w_token_in_root():
+    """Bug 5：主檔 :root 含 --content-max-w token、預設 760px。"""
+    # 主檔 :root 含 --content-max-w
+    assert re.search(
+        r'--content-max-w:\s*760px',
+        STATIC_HTML,
+    ), '主檔 :root 應含 --content-max-w: 760px 預設'
+
+
+def test_bug5_content_toolbar_and_paper_content_use_token_and_themes_override():
+    """Bug 5：#content-toolbar + #paper-content + abstract 用 var(--content-max-w)、4 主題各自覆寫。"""
+    # #content-toolbar 用 token
+    pat_toolbar = re.compile(
+        r'#content-toolbar\s*\{[^}]*max-width:\s*var\(--content-max-w\)',
+        re.DOTALL,
+    )
+    assert pat_toolbar.search(STATIC_HTML), '#content-toolbar 應 max-width: var(--content-max-w)'
+
+    # #paper-content 用 token
+    pat_paper = re.compile(
+        r'#paper-content\s*\{[^}]*max-width:\s*var\(--content-max-w\)',
+        re.DOTALL,
+    )
+    assert pat_paper.search(STATIC_HTML), '#paper-content 應 max-width: var(--content-max-w)'
+
+    # #current-title details.title-abstract 含 width:100%（撐滿 toolbar）
+    pat_abstract = re.compile(
+        r'#current-title\s+details\.title-abstract\s*\{[^}]*width:\s*100%',
+        re.DOTALL,
+    )
+    assert pat_abstract.search(STATIC_HTML), (
+        '#current-title details.title-abstract 應 width:100% + box-sizing'
+    )
+    pat_box = re.compile(
+        r'#current-title\s+details\.title-abstract\s*\{[^}]*box-sizing:\s*border-box',
+        re.DOTALL,
+    )
+    assert pat_box.search(STATIC_HTML), 'details.title-abstract 應 box-sizing: border-box'
+
+    # 4 主題各自含 --content-max-w 覆寫
+    expected_widths = {'kahn': 720, 'kandinsky': 820, 'mies': 860, 'nara': 800}
+    for theme, width in expected_widths.items():
+        css = THEMES[theme]
+        assert re.search(
+            rf'--content-max-w:\s*{width}px',
+            css,
+        ), f'static/themes/{theme}.css 應含 --content-max-w: {width}px'
+        # 同時刪除既有 #paper-content { max-width: ... }（避免重複定義）
+        # 應仍含 padding 但不含 max-width 行
+        m = re.search(r'^#paper-content\s*\{([^}]*)\}', css, re.MULTILINE)
+        assert m, f'{theme}.css 應仍有 #paper-content rule'
+        body = m.group(1)
+        assert 'max-width:' not in body, (
+            f'{theme}.css 內 #paper-content 不應再有 max-width 行（已移到 :root --content-max-w）'
+        )

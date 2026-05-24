@@ -55,6 +55,12 @@
   /* 字體 */
   --font-display: ...;
   --font-body:    ...;
+
+  /* 結構寬度（BUG-F1 Bug 5 / ui-fixes-batch B7 新增）
+     中欄 toolbar + paper-content + abstract 共軌最大寬度；
+     不覆寫則沿用主檔 760px 預設。
+     當前主題：kahn 720 / nara 800 / kandinsky 820 / mies 860 */
+  --content-max-w: 720px | 760px | 800px | 820px | 860px;
 }
 ```
 
@@ -76,7 +82,7 @@ body { font-family: var(--font-body); font-size: ... ; }
 #chat-header > .h-title { font-family / size / weight / spacing / case }
 #content-toolbar h2 { 同上，須與 #paper-content h1 同字級 }
 
-#paper-content { max-width / padding }
+#paper-content { padding }   /* BUG-F1 Bug 5：max-width 由主檔 var(--content-max-w) 統一、不再各主題寫死 */
 #paper-content h1 / h2 / h3 / p { font / size / weight / spacing / margin }
 #paper-content .byline { font / case / spacing }
 #paper-content .figure .ph { 佔位視覺：background / border / font }

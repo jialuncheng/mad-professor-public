@@ -22,6 +22,7 @@
 | `--color-accent` | 主按鈕、user 訊息泡、實心填色 | 不可作大面積背景 |
 | `--color-accent-hover` | 主按鈕 hover | 不可作 idle |
 | `--color-danger` | 刪除、警告（少用） | 不可作確認、成功 |
+| `--content-max-w` | **寬度 token**（非色票、注於此供索引）：中欄 toolbar + paper-content + abstract 共軌最大寬度；各主題覆寫（kahn 720 / nara 800 / kandinsky 820 / mies 860；主檔預設 760）。BUG-F1 Bug 5 / ui-fixes-batch B7 新增 | 不可作色票替代 |
 
 ---
 

@@ -48,6 +48,10 @@
     --gap-btn-normal: var(--space-2);
     --gap-btn-loose: var(--space-4);
 
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄正文 + toolbar 共用最大寬度 token
+       預設 760px、各主題自行覆寫；toolbar + paper-content + abstract 同軌道 */
+    --content-max-w: 760px;
+
     --transition: 150ms ease;
 
     /* ── fallback：若未掛主題，仍可渲染 ── */
@@ -657,7 +661,8 @@
     overflow: hidden;
     background: var(--color-bg-served);
   }
-  /* 中欄標題列：允許標題多行展開；icon 群永遠貼齊頂部 */
+  /* 中欄標題列：允許標題多行展開；icon 群永遠貼齊頂部
+     BUG-F1 Bug 5（ui-fixes-batch B7）：max-width + margin:0 auto 跟 #paper-content 共軌、寬螢幕對稱 */
   #content-toolbar {
     min-height: var(--toolbar-h);
     flex-shrink: 0;
@@ -665,6 +670,10 @@
     border-bottom: 1px solid var(--color-border);
     display: flex; align-items: flex-start;          /* 改 flex-start：標題加高時不會把 icon 往下推 */
     gap: var(--gap-btn-loose);
+    max-width: var(--content-max-w);
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
   }
   /* 痛點 6：中欄 icon 群 normal 間距、同一個 flex 容器 */
   #content-toolbar .toolbar-actions {
@@ -723,12 +732,15 @@
   }
   #current-title details.title-abstract {
     /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：摘要展開最大高度 + 滾動條
-       防超長摘要把 toolbar 整個撐爆 */
+       防超長摘要把 toolbar 整個撐爆
+       BUG-F1 Bug 5（ui-fixes-batch B7）：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆 */
     margin-top: var(--space-2);
     font-size: var(--font-base, 13px);
     color: var(--color-text);
     max-height: 12rem;
     overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* RAG-1 R2 子項 G 剩餘：tag-pill 半透明磨砂玻璃
@@ -783,7 +795,10 @@
     overflow-y: auto;
     margin: 0 auto;
     width: 100%;
-    /* max-width / padding / 字體與字級 → 由主題覆寫 */
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、
+       各主題覆寫；padding / 字體與字級 仍由主題提供 */
+    max-width: var(--content-max-w);
+    box-sizing: border-box;
   }
   #paper-content h1 { text-wrap: pretty; }
   #paper-content h2 {
@@ -956,7 +971,9 @@
     border-radius: var(--radius-md);
     font-size: var(--font-base);
     line-height: 1.5;
-    min-height: var(--btn-h);
+    /* BUG-F1 Bug 3（ui-fixes-batch C1）：預留 placeholder 兩行高度、避免 type 時容器跳動
+       原 min-height: var(--btn-h) (38px) 不夠容納兩行；改 56px = 兩行 line-height(1.5*14=21) + padding */
+    min-height: 56px;
     max-height: 240px;                    /* 約 10 行；contenteditable 自然撐高 */
     overflow-y: auto;
     outline: none;
@@ -973,6 +990,8 @@
      用 :empty::before + data-placeholder 模擬；display:block 確保排版正確 */
   #chat-input:empty::before {
     content: attr(data-placeholder);
+    /* BUG-F1 Bug 3（ui-fixes-batch C1）：讓 data-placeholder 內 &#10; / \n 顯示為實際換行 */
+    white-space: pre-wrap;
     color: var(--color-text-subtle);
     pointer-events: none;
     display: block;
@@ -1089,9 +1108,14 @@
 
   #chat-panel.collapsed { width: var(--rail-w); }
   #chat-panel.collapsed > #chat-header > .h-title,
-  #chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle),
   #chat-panel.collapsed > #chat-messages,
   #chat-panel.collapsed > #chat-input-area { display: none; }
+  /* BUG-F1 Bug 4（ui-fixes-batch B6）：拆出 :not(#chat-toggle) 加 !important、
+     蓋過 enableChat() 內 inline style="display:block"。
+     policy: CSS state class > inline JS（避免未來 inline style 蔓延、TODO 補 design/docs/css.md） */
+  #chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) {
+    display: none !important;
+  }
   #chat-panel.collapsed > #chat-header {
     padding: 0;
     justify-content: center;
@@ -1389,7 +1413,7 @@
            role="textbox"
            aria-multiline="true"
            aria-label="對話輸入"
-           data-placeholder="輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋"></div>
+           data-placeholder="輸入問題（Ctrl+Enter 送出）&#10;輸入 # 可加入 hashtag 跨文獻搜尋"></div>
       <!-- Autocomplete dropdown：定位錨點綁容器（§3.3.5-#4）、非綁 cursor -->
       <div id="hashtag-autocomplete" class="ctx-popup hashtag-popup" hidden>
         <!-- 動態填入 .hashtag-popup-item；最後一筆若超過 10 個顯示 .hashtag-popup-more -->
@@ -1573,21 +1597,22 @@
   // 切換 .active；同步 placeholder 提示「搜尋模式」
   // RAG-1 Phase 2 P2-3 §3.3.1 + §3.3.5-#1：chat-input 改 contenteditable div、
   // 改寫 data-placeholder（非 placeholder 屬性、配對 CSS :empty::before）
+  // BUG-F1 Bug 3：data-placeholder 內 `；` → `\n` 換行（HTML 用 &#10;、JS 字面用 \n、各符語境）
   document.getElementById('web-search-toggle').addEventListener('click', function() {
     this.classList.toggle('active');
     const on = this.classList.contains('active');
     document.getElementById('chat-input').setAttribute(
       'data-placeholder',
-      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋'
-         : '輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋');
+      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）\n輸入 # 可加入 hashtag 跨文獻搜尋'
+         : '輸入問題（Ctrl+Enter 送出）\n輸入 # 可加入 hashtag 跨文獻搜尋');
   });
   // 初始同步（HTML 上預設 .active）
   (function syncSearchPlaceholder() {
     const on = document.getElementById('web-search-toggle').classList.contains('active');
     document.getElementById('chat-input').setAttribute(
       'data-placeholder',
-      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋'
-         : '輸入問題（Ctrl+Enter 送出）；輸入 # 可加入 hashtag 跨文獻搜尋');
+      on ? '（搜尋模式）輸入問題（Ctrl+Enter 送出）\n輸入 # 可加入 hashtag 跨文獻搜尋'
+         : '輸入問題（Ctrl+Enter 送出）\n輸入 # 可加入 hashtag 跨文獻搜尋');
   })();
 
   // ── Tooltip：data-tip 觸發 ─────────────────────────
@@ -1841,7 +1866,11 @@
     if (!currentPaperId) return;
     const p = allPapers.find(x => x.id === currentPaperId);
     if (!p) return;
-    const existing = (p.metadata_json && p.metadata_json.user_tags) || [];
+    // BUG-F1 Bug 1：fallback chain 防禦——API 回 p.metadata.user_tags（_to_dict shape）、
+    // 但 PATCH 後 local 寫 p.metadata_json.user_tags（既有 R2 寫入路徑）；雙鍵都讀、無遺漏
+    // 跟 P2-3 collectAllUserTags (L2736-2737) 同 pattern
+    const existing = (p.metadata && p.metadata.user_tags) ||
+                     (p.metadata_json && p.metadata_json.user_tags) || [];
     document.getElementById('tag-input').value =
       existing.map(t => `#${t}`).join(' ');
     openModal('tag-modal');
@@ -1868,10 +1897,14 @@
       }
       const data = await res.json();
       // 用後端回傳的 normalized tags 更新 in-memory + 重繪
+      // BUG-F1 Bug 1：雙鍵同寫——舊路徑 metadata_json + API shape metadata、
+      // 確保 in-memory 一致；後續 renderTitleHeader / collectAllUserTags 任一鍵都能讀到
       const p = allPapers.find(x => x.id === currentPaperId);
       if (p) {
         p.metadata_json = p.metadata_json || {};
         p.metadata_json.user_tags = data.tags || [];
+        p.metadata = p.metadata || {};
+        p.metadata.user_tags = data.tags || [];
         renderTitleHeader(p);
       }
       closeModal('tag-modal');
@@ -2317,7 +2350,9 @@ function renderTitleHeader(p) {
     }
   }
   // RAG-1 R2 子項 G 剩餘：tag-pill 渲染（半透明磨砂玻璃）
-  const userTags = (p.metadata_json && p.metadata_json.user_tags) || [];
+  // BUG-F1 Bug 1：fallback chain 防禦（同 tag-modal 載入、PATCH 後 local 寫 metadata_json、API 回 metadata）
+  const userTags = (p.metadata && p.metadata.user_tags) ||
+                   (p.metadata_json && p.metadata_json.user_tags) || [];
   if (Array.isArray(userTags) && userTags.length) {
     const pills = userTags.map(t => `<span class="tag-pill">#${_esc(t)}</span>`).join('');
     parts.push(`<div class="paper-tags">${pills}</div>`);

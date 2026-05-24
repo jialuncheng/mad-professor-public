@@ -47,6 +47,9 @@
   --radius-sm: 0;
   --radius-md: 0;
 
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄共用最大寬度 token、覆寫主檔 760px 預設 */
+  --content-max-w: 720px;
+
   /* ── 字體 token（全部非襯線 sans-serif）── */
   --font-display: "IBM Plex Sans", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-body: "IBM Plex Sans", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -121,7 +124,7 @@ body {
 
 /* ── 文章內容 ── */
 #paper-content {
-  max-width: 720px;
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 已由 :root --content-max-w (720px) 覆寫、此處刪除重複定義 */
   padding: var(--space-8);
 }
 #paper-content h1 {

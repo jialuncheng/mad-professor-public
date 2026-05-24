@@ -15,6 +15,7 @@
 | `--space-5` | `24px` | Modal 內距上、訊息區 padding、文章下標題距 |
 | `--space-6` | `32px` | Modal 大內距、文章上下內距 |
 | `--space-8` | `48px` | 文章左右內距、空提示上距 |
+| `--content-max-w` | `760px`（主檔預設）/ 主題覆寫（kahn 720 / nara 800 / kandinsky 820 / mies 860） | 中欄 toolbar + paper-content + abstract 共軌最大寬度（寬螢幕對稱）。BUG-F1 Bug 5 / ui-fixes-batch B7 新增 |
 
 ---
 
