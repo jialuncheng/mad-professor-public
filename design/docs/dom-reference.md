@@ -337,6 +337,16 @@ Phase 4.7c 修正 3。`#current-title` 為 `#content-toolbar` 子元素（取原
 | 🔒 `confirm-ok-btn` | 推進流程 |
 | 點 mask | **不關閉**（流程關鍵 modal） |
 
+#### `#prompt-modal` 🔒 + `#prompt-box` 🔒（BUG-F4 A3 新增、取代瀏覽器原生 `prompt()`）
+| 元素 | 用途 |
+|---|---|
+| 🔒 `prompt-title` | 標題（由 customPrompt({title}) 設定） |
+| 🔒 `prompt-body` | 描述文字（由 customPrompt({body}) 設定） |
+| 🔒 `prompt-input` | 輸入框（class `.modal-input`、套 §6.3 樣式）；Enter = 確定 |
+| 🔒 `prompt-cancel` | 取消（回 `Promise<null>`） |
+| 🔒 `prompt-ok` | 確定（回 `Promise<string>`、有 validate 失敗則 customAlert 後不關閉） |
+| 點 mask | 關閉（取消） |
+
 **原版相容**：若要還原為 native select，把 `.dropdown` 區塊換回：
 ```html
 <select id="doc-type-select">

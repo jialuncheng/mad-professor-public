@@ -74,12 +74,13 @@
 - 開啟時記憶觸發元素，關閉時還原焦點
 - `confirm-modal` 因關鍵流程，**同時帶 `data-no-esc` 與 `data-no-mask-close`**
 
-### 2.4 內建通用 modal（取代瀏覽器原生）
+### 2.4 內建通用 modal（取代瀏覽器原生、BUG-F4 A3 補完三件套）
 
 | 函式 | 用途 | DOM |
 |---|---|---|
 | `customConfirm({ title, body, okLabel, cancelLabel, danger })` | 取代 `confirm()`；回傳 `Promise<boolean>` | `#action-modal` |
 | `customAlert({ title, body, okLabel })` | 取代 `alert()`；回傳 `Promise<void>` | `#notice-modal` |
+| **`customPrompt({ title, body, defaultValue, okLabel, cancelLabel, validate })`** | 取代 `prompt()`；回傳 `Promise<string \| null>`（取消回 `null`）；`validate` hook 失敗時自動跳 customAlert 顯示錯誤、不關閉 prompt | `#prompt-modal`（BUG-F4 A3 新增） |
 
 範例：
 ```js
@@ -89,7 +90,43 @@ const ok = await customConfirm({
   okLabel: '確定刪除', danger: true,
 });
 if (ok) { /* ... */ }
+
+// customPrompt 含 validate hook
+const name = await customPrompt({
+  title: '新增資料夾',
+  body: '輸入資料夾名稱（1–50 字元）',
+  validate: (v) => {
+    const n = (v || '').trim();
+    if (!n || n.length > 50) return '名稱需 1–50 字元';
+    return null;
+  },
+});
+if (name == null) return;   // 使用者取消
 ```
+
+**規範**（BUG-F4 A3）：所有 native `alert / confirm / prompt` 必須改用三件套；提交時跑 grep 驗證無殘留。內部 helper 函式名稱 `confirm()`（如 hashtagAutocomplete 內）不算違規。
+
+### 2.5 `#prompt-modal` DOM 結構（BUG-F4 A3 新增）
+
+```html
+<div id="prompt-modal" class="modal-mask">
+  <div id="prompt-box" class="modal-box" role="dialog" aria-labelledby="prompt-title">
+    <h3 id="prompt-title">輸入</h3>
+    <p id="prompt-body"></p>
+    <input type="text" id="prompt-input" class="modal-input">    <!-- 套用 §6.3 .modal-input 樣式 -->
+    <div class="modal-actions">
+      <button id="prompt-cancel" class="modal-btn">取消</button>
+      <button id="prompt-ok" class="modal-btn primary">確定</button>
+    </div>
+  </div>
+</div>
+```
+
+互動：
+- `Enter` 鍵 = 觸發確定（含 validate 檢查）
+- ESC 鍵 = 取消（v2 BUG-F2 A6 ESC handler 自動覆蓋；先關 popup 再關 modal）
+- 點 mask = 取消（無 `data-no-mask-close`）
+- 開啟時自動 focus 到 `#prompt-input`
 
 ---
 

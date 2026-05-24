@@ -1346,6 +1346,21 @@
   </div>
 </div>
 
+<!-- BUG-F4 A3（ui-fixes-batch A3.1）：通用輸入 Modal — 取代瀏覽器原生 prompt()
+     跟 v2 BUG-F2 A6 ESC handler 自動相容（modal-mask 走通用 ESC 邏輯：先 popup 再 modal）。
+     #prompt-input 套用 BUG-F3 ship 的 .modal-input CSS 樣式（同 .modal-box select 規格）。 -->
+<div id="prompt-modal" class="modal-mask">
+  <div id="prompt-box" class="modal-box" role="dialog" aria-labelledby="prompt-title">
+    <h3 id="prompt-title">輸入</h3>
+    <p id="prompt-body"></p>
+    <input type="text" id="prompt-input" class="modal-input">
+    <div class="modal-actions">
+      <button id="prompt-cancel" class="modal-btn">取消</button>
+      <button id="prompt-ok" class="modal-btn primary">確定</button>
+    </div>
+  </div>
+</div>
+
 <!-- ──────────────  三欄主版面  ────────────── -->
 <div id="app">
 
@@ -1410,11 +1425,14 @@
         </button>
       </div>
     </div>
-    <div id="empty-state" style="display:none">
+    <!-- BUG-F4 A2（ui-fixes-batch A2）：預設顯示反轉——empty-state 預設顯示、paper-content 預設 hide
+         既有 loadPaper 內 toggle 邏輯不變（hide empty / show paper）；
+         初始無 paper 時中欄顯示「從左側選擇文件」、不再空白 -->
+    <div id="empty-state">
       <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-6-6a1.5 1.5 0 0 1 0-2l6-6"/></svg>
       從左側選擇文件
     </div>
-    <div id="paper-content"></div>
+    <div id="paper-content" style="display:none"></div>
   </main>
 
   <!-- ──── 右欄 ──── -->
@@ -1839,9 +1857,47 @@
       openModal('notice-modal');
     });
   }
+  // BUG-F4 A3（ui-fixes-batch A3.1）：customPrompt 取代瀏覽器 prompt()
+  // Promise-based、含 validate hook（驗證錯時用 customAlert 顯示錯誤）
+  // 配對 #prompt-modal DOM（在 #notice-modal 之後新增）
+  function customPrompt({ title = '輸入', body = '', defaultValue = '',
+                          okLabel = '確定', cancelLabel = '取消',
+                          validate = null } = {}) {
+    return new Promise(resolve => {
+      document.getElementById('prompt-title').textContent = title;
+      document.getElementById('prompt-body').textContent = body;
+      const input = document.getElementById('prompt-input');
+      input.value = defaultValue;
+      const okBtn = document.getElementById('prompt-ok');
+      const cancelBtn = document.getElementById('prompt-cancel');
+      okBtn.textContent = okLabel;
+      cancelBtn.textContent = cancelLabel;
+      const cleanup = () => {
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        input.onkeydown = null;
+        closeModal('prompt-modal');
+      };
+      const submit = () => {
+        const v = input.value;
+        if (validate) {
+          const err = validate(v);
+          if (err) { customAlert({ title: '輸入錯誤', body: err }); return; }
+        }
+        cleanup(); resolve(v);
+      };
+      okBtn.onclick = submit;
+      cancelBtn.onclick = () => { cleanup(); resolve(null); };
+      input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+      openModal('prompt-modal');
+      setTimeout(() => input.focus(), 0);
+    });
+  }
+
   // 暴露成全域，供其他模組（如 sb-row 按鈕）呼叫
   window.customConfirm = customConfirm;
   window.customAlert = customAlert;
+  window.customPrompt = customPrompt;
 
 
   // ── 切換風格 modal + 套用 ────────────────────
@@ -1921,7 +1977,7 @@
       }
       closeModal('tag-modal');
     } catch (err) {
-      alert('儲存失敗：' + err.message);
+      customAlert({ title: '儲存失敗', body: err.message });
     }
   });
 
@@ -2022,7 +2078,7 @@
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.css')) {
-      alert('只接受 .css 檔案');
+      customAlert({ title: '只接受 .css 檔案', body: '請選擇副檔名為 .css 的檔案' });
       return;
     }
     const fd = new FormData();
@@ -2046,7 +2102,7 @@
       dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(themeName);
       closeModal('theme-modal');
     } catch (err) {
-      alert('上傳失敗：' + err.message);
+      customAlert({ title: '上傳失敗', body: err.message });
     } finally {
       // reset input 讓相同檔案可重複上傳
       e.target.value = '';
@@ -2082,7 +2138,7 @@
 
   /* ════════════════════════════════════════════════════════════
      業務 JS（自 design/old/index.html 行 599–1356 原樣搬入）
-     唯一改動：closePopups → closeBizPopups（避開 prototype 同名）
+     BUG-F4 A4：closeBizPopups 已刪除、統一走 prototype closePopups
      ════════════════════════════════════════════════════════════ */
 const API = '';
 let currentPaperId = null;
@@ -2216,15 +2272,14 @@ function folderDescendants(id) {
 }
 
 // ── popup（改名/刪除/新增子；移動論文 picker）──
-function closeBizPopups() {
-  document.querySelectorAll('.ctx-popup').forEach(el => el.remove());
-}
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.ctx-popup') && !e.target.closest('.menu-btn')
-      && !e.target.closest('.paper-menu-btn')) closeBizPopups();
-});
+// BUG-F4 A4（ui-fixes-batch A4）：刪除 closeBizPopups 函式 + 第二個 document click listener
+//   原 closeBizPopups (L2275) 跟 prototype closePopups (L1518) 邏輯完全一致
+//   (都 querySelectorAll('.ctx-popup').forEach(p => p.remove()))；保留兩個會：
+//   (a) 每次點擊 body 跑兩次 close（雖然第二次 NOP、但是 dead code 增加維護成本）
+//   (b) 未來修一邊忘了另一邊、行為不一致
+//   統一改走 closePopups（prototype 區既有定義）+ 既有 click listener（L1521）已涵蓋
 function openPopup(x, y, items) {
-  closeBizPopups();
+  closePopups();
   const pop = document.createElement('div');
   pop.className = 'ctx-popup';
   items.forEach(it => {
@@ -2237,7 +2292,7 @@ function openPopup(x, y, items) {
       b.style.cursor = 'not-allowed';
       if (it.title) b.title = it.title;
     } else {
-      b.onclick = (ev) => { ev.stopPropagation(); closeBizPopups(); it.action(); };
+      b.onclick = (ev) => { ev.stopPropagation(); closePopups(); it.action(); };
     }
     pop.appendChild(b);
   });
@@ -2306,31 +2361,51 @@ function selectFolder(key) {
 }
 
 // ── 資料夾操作（prompt/confirm）──
+// BUG-F4 A3.2（ui-fixes-batch A3.2）：folder CRUD 三個 native dialog 全替換為 custom*
 async function folderCreate(parentId) {
-  const name = prompt('資料夾名稱：');
+  const name = await customPrompt({
+    title: '新增資料夾',
+    body: '輸入資料夾名稱（1–50 字元）',
+    validate: (v) => {
+      const n = (v || '').trim();
+      if (!n || n.length > 50) return '名稱需 1–50 字元';
+      return null;
+    },
+  });
   if (name == null) return;
-  const n = name.trim();
-  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
-  try { await createFolderApi(n, parentId); await loadFolders(); }
-  catch (e) { alert(e.message); }
+  try { await createFolderApi(name.trim(), parentId); await loadFolders(); }
+  catch (e) { customAlert({ title: '建立失敗', body: e.message }); }
 }
 function folderCreateSub(pid) { folderCreate(pid); }
 async function folderRename(node) {
-  const name = prompt('新名稱：', node.name);
+  const name = await customPrompt({
+    title: '改名',
+    body: '輸入新名稱',
+    defaultValue: node.name,
+    validate: (v) => {
+      const n = (v || '').trim();
+      if (!n || n.length > 50) return '名稱需 1–50 字元';
+      return null;
+    },
+  });
   if (name == null) return;
-  const n = name.trim();
-  if (!n || n.length > 50) { alert('名稱需 1–50 字元'); return; }
-  try { await updateFolderApi(node.id, { name: n }); await loadFolders(); }
-  catch (e) { alert(e.message); }
+  try { await updateFolderApi(node.id, { name: name.trim() }); await loadFolders(); }
+  catch (e) { customAlert({ title: '更新失敗', body: e.message }); }
 }
 async function folderDelete(node) {
-  if (!confirm(`刪除「${node.name}」？\n子資料夾會一併刪除，內部論文回到未分類。`)) return;
+  const ok = await customConfirm({
+    title: '刪除資料夾',
+    body: `刪除「${node.name}」？子資料夾會一併刪除，內部論文回到未分類`,
+    okLabel: '確定刪除',
+    danger: true,
+  });
+  if (!ok) return;
   try {
     await deleteFolderApi(node.id);
     if (currentFolderId === node.id) currentFolderId = 'all';
     await loadFolders();
     await loadPapers();
-  } catch (e) { alert(e.message); }
+  } catch (e) { customAlert({ title: '刪除失敗', body: e.message }); }
 }
 
 // ── 論文清單（filter 模型）──
@@ -2491,7 +2566,7 @@ async function movePaper(uuid, folderId) {
   try {
     await setPaperFolderApi(uuid, folderId);
     await loadPapers();
-  } catch (e) { alert(e.message); }
+  } catch (e) { customAlert({ title: '移動失敗', body: e.message }); }
 }
 
 // 載入論文列表（fetch → 快取 → 依當前資料夾渲染）
@@ -2619,24 +2694,27 @@ document.getElementById('export-btn').onclick = () => {
     '#chat-messages .msg-user, #chat-messages .msg-ai'
   );
   if (realMessages.length === 0) {
-    alert('目前沒有對話內容可下載');
+    customAlert({ title: '目前沒有對話內容可下載', body: '請先進行對話後再下載' });
     return;
   }
   window.location.href = `/api/papers/${currentPaperId}/chat/export`;
 };
 
-// Phase 4.7d Commit 6：chat-input 預設 disabled 後的雙保險——若未來某 bug
-// 讓 disabled 屬性沒套上、使用者仍能點 textarea，這層 focus 攔截補一條訊息
-document.getElementById('chat-input').addEventListener('focus', () => {
-  if (!currentPaperId) {
-    alert('請先選擇文件');
-    document.getElementById('chat-input').blur();
-  }
-});
+// BUG-F4 A3.2（ui-fixes-batch A3.2）：chat-input focus listener 整段移除
+// 既有 contenteditable="false"（P2-3 ship + BUG-F2 enableChat/disableChat）已防護、
+// disabled state 下 div 不接收 focus、此 listener 是 textarea 時代遺留 dead code。
+// （原邏輯：!currentPaperId 時 alert + blur；contenteditable="false" 已涵蓋此防護）
 
 // 載入對話紀錄
 async function deletePaper(paperId, title) {
-  if (!confirm(`確定要刪除「${title}」嗎？\n此操作無法還原。`)) return;
+  // BUG-F4 A3.2（ui-fixes-batch A3.2）：confirm + alert 替換為 customConfirm / customAlert
+  const ok = await customConfirm({
+    title: '刪除文件',
+    body: `確定刪除「${title}」？此操作無法還原`,
+    okLabel: '確定刪除',
+    danger: true,
+  });
+  if (!ok) return;
   try {
     const res = await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('刪除失敗');
@@ -2650,7 +2728,7 @@ async function deletePaper(paperId, title) {
     }
     await loadPapers();
   } catch(e) {
-    alert('刪除失敗：' + e.message);
+    customAlert({ title: '刪除失敗', body: e.message });
   }
 }
 
@@ -3161,7 +3239,7 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;  // 使用者取消選檔
     if (files.length > 1) {
-      alert('一次只能上傳一份文件');
+      customAlert({ title: '一次只能上傳一份文件', body: '請選擇單一 PDF 檔案' });
       return;
     }
     const file = files[0];
@@ -3196,7 +3274,7 @@ document.getElementById('upload-btn').addEventListener('click', (e) => {
     } catch (err) {
       btn.disabled = false;
       setBusy(false);
-      alert('上傳失敗：' + err.message);
+      customAlert({ title: '上傳失敗', body: err.message });
     }
   };
   input.click();
@@ -3238,10 +3316,13 @@ function trackProgress(paperId, btn) {
       setBusy(false);
       paperReadiness.set(paperId, 'done');
       loadPapers().then(() => {
-        // 回填工具列標題為真實標題（不重 fetch 內容，直接讀剛重建的側欄）
+        // BUG-F4 A1（ui-fixes-batch A1）：用 renderTitleHeader 重繪整個 multi-row 結構
+        // 既有 `current-title.textContent = el.textContent` 會把 <header> 內含的
+        // h1.title-zh / p.title-en / p.title-meta / details.title-abstract / .paper-tags
+        // 清成單行字串、清空 multi-row 排版。
         if (currentPaperId === paperId) {
-          const el = document.querySelector(`.paper-item[data-id="${paperId}"] .paper-title-zh`);
-          if (el) document.getElementById('current-title').textContent = el.textContent;
+          const p = allPapers.find(p => p.id === paperId);
+          if (p) renderTitleHeader(p);
         }
       });
       if (currentPaperId === paperId) {
@@ -3255,7 +3336,7 @@ function trackProgress(paperId, btn) {
       removeUploadingRow(paperId);
       btn.disabled = false;
       setBusy(false);
-      alert('處理失敗：' + (data.error || '未知錯誤'));
+      customAlert({ title: '處理失敗', body: data.error || '未知錯誤' });
     }
   };
 
@@ -3317,26 +3398,36 @@ function showConfirmModal(paperId, detection, btn, filename) {
     } catch(e) {
       btn.disabled = false;
       setBusy(false);
-      alert('確認失敗：' + e.message);
+      customAlert({ title: '確認失敗', body: e.message });
     }
   };
 }
 
 // 清理殘餘檔案
+// BUG-F4 A3.2（ui-fixes-batch A3.2）：confirm + 3 條 alert 替換為 customConfirm / customAlert
 document.getElementById('cleanup-btn').addEventListener('click', async (e) => {
   e.stopImmediatePropagation();
   if (isProcessing) return;
-  if (!confirm('確定要清理殘餘檔案嗎？\n此操作會刪除所有不在論文列表中的目錄。')) return;
+  const ok = await customConfirm({
+    title: '清除殘檔',
+    body: '確定要清理殘餘檔案？此操作會刪除所有不在論文列表中的目錄',
+    okLabel: '確定清除',
+    danger: true,
+  });
+  if (!ok) return;
   try {
     const res = await fetch('/api/cleanup', { method: 'POST' });
     const data = await res.json();
     if (data.count === 0) {
-      alert('沒有殘餘檔案需要清理。');
+      customAlert({ title: '清理結果', body: '沒有殘餘檔案需要清理' });
     } else {
-      alert(`已清理 ${data.count} 個殘餘目錄：\n${data.removed.join('\n')}`);
+      customAlert({
+        title: '清理結果',
+        body: `已清理 ${data.count} 個殘餘目錄：\n${data.removed.join('\n')}`
+      });
     }
   } catch(e) {
-    alert('清理失敗：' + e.message);
+    customAlert({ title: '清理失敗', body: e.message });
   }
 });
 
