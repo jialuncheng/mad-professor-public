@@ -233,9 +233,16 @@ Phase 4.7c 修正 3。`#current-title` 為 `#content-toolbar` 子元素（取原
 容器：`flex:1`、可捲。內容由 `marked.parse()` 渲染 Markdown。
 
 **結構契約**
-- `max-width` 由主題決定（Mies 860 / Kahn 720）
+- `max-width` 由 `--content-max-w` token 控制（BUG-F1 / ui-fixes-batch B7、主題各自覆寫：kahn 720 / nara 800 / kandinsky 820 / mies 860）
 - 圖片相對路徑會被改寫為 `/api/papers/{id}/images/...`
 - h1 / h2 / h3 / p / img / table 樣式由主題定義
+
+**子結構（BUG-B2 / ui-fixes-batch B8 新增）**
+
+| 元素 | 用途 | 行為 |
+|---|---|---|
+| `#paper-content > h1:first-child` | 後端 `_render_header_*` 寫入的文章主標題 | `@media screen` 隱藏（renderTitleHeader 在 toolbar `#current-title` 已動態顯示、避免冗餘）；`@media print` 恢復顯示、補 toolbar 列印模式隱藏的空缺 |
+| `#paper-content > .paper-header-meta` | 後端 wrap 的 metadata 區塊（Authors / Date / Venue / DOI / Keywords 或中文版） | 用 `-` 列表取代 `>` blockquote（避免 marked.js GFM 單換行塌段）；`@media screen` 同上隱藏、`@media print` 恢復；**舊 paper 無 wrap、塌陷顯示問題已存在、本期不 backfill** |
 
 ---
 

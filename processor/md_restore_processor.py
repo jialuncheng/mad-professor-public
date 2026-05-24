@@ -457,20 +457,28 @@ def _render_header_en(
             lines.append("")
         return "\n".join(lines)
 
+    # BUG-B2 Bug 10（v4 §B B10.3 / ui-fixes-batch B8.1）：
+    # `>` blockquote → `-` list（避免 marked.js GFM 單換行不分段、塌成單行）
+    # + 包進 <div class="paper-header-meta"> wrap（前端 CSS class hook 穩定 hide）
+    # 適用：academic / book / technical / slides / news / web 等非 resume doc_type
     meta_bits = []
     if authors_list:
-        meta_bits.append(f"> **Authors**: {', '.join(str(a) for a in authors_list)}")
+        meta_bits.append(f"- **Authors**: {', '.join(str(a) for a in authors_list)}")
     if date:
-        meta_bits.append(f"> **Date**: {date}")
+        meta_bits.append(f"- **Date**: {date}")
     if venue:
-        meta_bits.append(f"> **Venue**: {venue}")
+        meta_bits.append(f"- **Venue**: {venue}")
     if doi:
-        meta_bits.append(f"> **DOI**: {doi}")
+        meta_bits.append(f"- **DOI**: {doi}")
     if keywords:
-        meta_bits.append(f"> **Keywords**: {', '.join(keywords)}")
+        meta_bits.append(f"- **Keywords**: {', '.join(keywords)}")
 
     if meta_bits:
+        lines.append('<div class="paper-header-meta">')
+        lines.append("")
         lines.extend(meta_bits)
+        lines.append("")
+        lines.append('</div>')
         lines.append("")
 
     if abstract:
@@ -506,20 +514,26 @@ def _render_header_zh(
             lines.append("")
         return "\n".join(lines)
 
+    # BUG-B2 Bug 10（v4 §B B10.3 / ui-fixes-batch B8.1）：中文版同上
+    # `>` blockquote → `-` list + 包 <div class="paper-header-meta"> wrap
     meta_bits = []
     if authors_list:
-        meta_bits.append(f"> **作者**：{'、'.join(str(a) for a in authors_list)}")
+        meta_bits.append(f"- **作者**：{'、'.join(str(a) for a in authors_list)}")
     if date:
-        meta_bits.append(f"> **日期**：{date}")
+        meta_bits.append(f"- **日期**：{date}")
     if venue:
-        meta_bits.append(f"> **出處**：{venue}")
+        meta_bits.append(f"- **出處**：{venue}")
     if doi:
-        meta_bits.append(f"> **DOI**：{doi}")
+        meta_bits.append(f"- **DOI**：{doi}")
     if keywords:
-        meta_bits.append(f"> **關鍵字**：{'、'.join(keywords)}")
+        meta_bits.append(f"- **關鍵字**：{'、'.join(keywords)}")
 
     if meta_bits:
+        lines.append('<div class="paper-header-meta">')
+        lines.append("")
         lines.extend(meta_bits)
+        lines.append("")
+        lines.append('</div>')
         lines.append("")
 
     if abstract:

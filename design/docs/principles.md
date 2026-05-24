@@ -48,6 +48,7 @@
 | **非襯線字族** | 介面密度區 12-14px 可讀性、中文 fallback 黑體系一致；**全主題硬規範**（詳 typography.md） |
 | 大字微緊縮（Mies）/ 微鬆（其他） | 配合各主題字族特性 |
 | 中文不斜體 | 瀏覽器斜體扭曲中文，違反誠實 |
+| **論文 metadata 用 `-` 列表、不用 `>` blockquote** | marked.js GFM 對 `>` 單換行不分段、5 行 metadata 會塌成一段；改 `-` 列表 + 包 `<div class="paper-header-meta">` wrap、前端 `@media screen` class hook hide（BUG-B2 / ui-fixes-batch B8） |
 
 **未來新主題如違反以上任一**（例如想做圓角現代風），須在該主題 README 註明，並承擔不一致風險。
 

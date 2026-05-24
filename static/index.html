@@ -795,6 +795,17 @@
     max-width: var(--content-max-w);
     box-sizing: border-box;
   }
+  /* BUG-B2 Bug 10（v4 §B B10.3 / ui-fixes-batch B8.2）：
+     螢幕模式隱藏正文冗餘 h1 + meta（renderTitleHeader 在 #current-title 已動態顯示）
+     - 新 paper：後端 _render_header_*  wrap 進 <div class="paper-header-meta">、class hook 穩定 hide
+     - 舊 paper：無 wrap（既有 > blockquote 格式）、塌陷顯示問題已存在、本期不 backfill（v4 Q9）
+     - @media print：恢復顯示、補列印模式 toolbar 被隱藏的標題空缺 */
+  @media screen {
+    #paper-content > h1:first-child,
+    #paper-content > .paper-header-meta {
+      display: none;
+    }
+  }
   #paper-content h1 { text-wrap: pretty; }
   #paper-content h2 {
     /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
