@@ -1,0 +1,204 @@
+"""RAG-1 BUG-F5：P2 inconsistencies 落地 pytest（依評估 v3 §B B1 + B3）。
+
+涵蓋：
+- B1：5 處廢 token（--font-h1 / --font-h2 / --font-small / --font-base, 13px fallback）
+      替換為主 scale（--font-2xl / --font-sm / --font-xs / --font-base）
+- B1：title-zh font-weight 600 → 700（對齊 typography.md §2「中欄 toolbar 28px / 700」）
+- B3：#demo-bar CSS（32 行）+ stateBtns / syncStateBar JS dead code 全刪除
+- B4 no-op 驗證：setupTooltip IIFE 仍存在（避免被誤刪）+ 200/800/100ms 三常數
+- B4 docs 對齊驗證：components.md §4.1 + interaction.md §3 含 200/800/100ms 數值
+"""
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
+COMPONENTS_MD = (ROOT / 'design' / 'docs' / 'components.md').read_text(encoding='utf-8')
+INTERACTION_MD = (ROOT / 'design' / 'docs' / 'interaction.md').read_text(encoding='utf-8')
+
+
+# ─────────────────── B1：廢 token 替換為主 scale ───────────────────
+
+
+def test_b1_no_legacy_font_tokens_in_css():
+    """B1：靜態 CSS 區塊不應再有 --font-h1 / --font-h2 / --font-small 廢 token
+    或 --font-base, 13px fallback（既有 --font-base = 14px 定義在 :root）。
+    僅允許 comment 內提及（用於說明替換歷史）。"""
+    # 行級檢查、排除 comment（CSS / */ // <!--）
+    def is_active_css_line(line):
+        s = line.lstrip()
+        if s.startswith('/*') or s.startswith('*') or s.startswith('//') or s.startswith('<!--'):
+            return False
+        return True
+
+    bad = []
+    for i, line in enumerate(STATIC_HTML.split('\n'), 1):
+        if not is_active_css_line(line):
+            continue
+        # 偵測 var(--font-h1) / var(--font-h2) / var(--font-small) / var(--font-base, 13px)
+        if re.search(r'var\(--font-h1\)|var\(--font-h2\)|var\(--font-small\)', line):
+            bad.append(f'L{i}: {line.strip()[:80]}')
+        if re.search(r'var\(--font-base,\s*13px\)', line):
+            bad.append(f'L{i} (font-base fallback): {line.strip()[:80]}')
+    assert not bad, (
+        'B1 殘留廢 token：\n' + '\n'.join(bad)
+    )
+
+
+def test_b1_main_scale_tokens_in_current_title():
+    """B1：#current-title 區塊應改用主 scale 4 個 token + title-zh font-weight 700。"""
+    # title-zh: --font-2xl + font-weight: 700
+    pat_title_zh = re.compile(
+        r'#current-title\s+\.title-zh\s*\{[^}]*font-size:\s*var\(--font-2xl\)[^}]*font-weight:\s*700',
+        re.DOTALL,
+    )
+    assert pat_title_zh.search(STATIC_HTML), (
+        'B1：#current-title .title-zh 應 font-size: var(--font-2xl) + font-weight: 700'
+    )
+
+    # title-en: --font-sm
+    pat_title_en = re.compile(
+        r'#current-title\s+\.title-en\s*\{[^}]*font-size:\s*var\(--font-sm\)',
+        re.DOTALL,
+    )
+    assert pat_title_en.search(STATIC_HTML), '#current-title .title-en 應 font-size: var(--font-sm)'
+
+    # title-meta: --font-xs
+    pat_title_meta = re.compile(
+        r'#current-title\s+\.title-meta\s*\{[^}]*font-size:\s*var\(--font-xs\)',
+        re.DOTALL,
+    )
+    assert pat_title_meta.search(STATIC_HTML), '#current-title .title-meta 應 font-size: var(--font-xs)'
+
+    # details.title-abstract: --font-base（no fallback）
+    pat_abstract = re.compile(
+        r'#current-title\s+details\.title-abstract\s*\{[^}]*font-size:\s*var\(--font-base\)\s*;',
+        re.DOTALL,
+    )
+    assert pat_abstract.search(STATIC_HTML), (
+        '#current-title details.title-abstract 應 font-size: var(--font-base);（無 fallback）'
+    )
+
+    # details.title-abstract > summary: --font-xs
+    pat_summary = re.compile(
+        r'#current-title\s+details\.title-abstract\s*>\s*summary\s*\{[^}]*font-size:\s*var\(--font-xs\)',
+        re.DOTALL,
+    )
+    assert pat_summary.search(STATIC_HTML), (
+        '#current-title details.title-abstract > summary 應 font-size: var(--font-xs)'
+    )
+
+
+# ─────────────────── B3：#demo-bar dead code 刪除 ───────────────────
+
+
+def test_b3_demo_bar_css_removed():
+    """B3：#demo-bar CSS rules 應全刪除（僅 comment 內提及說明歷史）。"""
+    # 行級檢查、排除 comment
+    def is_active_line(line):
+        s = line.lstrip()
+        if s.startswith('/*') or s.startswith('*') or s.startswith('//') or s.startswith('<!--'):
+            return False
+        return True
+
+    bad = []
+    for i, line in enumerate(STATIC_HTML.split('\n'), 1):
+        if not is_active_line(line):
+            continue
+        # 不應再有 #demo-bar { 或 #demo-bar . selector
+        if re.search(r'^\s*#demo-bar[\s.{]', line):
+            bad.append(f'L{i}: {line.strip()[:80]}')
+    assert not bad, (
+        'B3 殘留 #demo-bar CSS：\n' + '\n'.join(bad)
+    )
+
+
+def test_b3_state_btns_js_dead_code_removed():
+    """B3：stateBtns / syncStateBar JS dead code 應全刪除。"""
+    # 行級檢查、排除 comment
+    def is_active_line(line):
+        s = line.lstrip()
+        if s.startswith('//') or s.startswith('*') or s.startswith('/*') or s.startswith('<!--'):
+            return False
+        return True
+
+    bad = []
+    for i, line in enumerate(STATIC_HTML.split('\n'), 1):
+        if not is_active_line(line):
+            continue
+        # 不應再有 stateBtns / syncStateBar 識別符
+        if re.search(r'\bstateBtns\b|\bsyncStateBar\b', line):
+            bad.append(f'L{i}: {line.strip()[:80]}')
+    assert not bad, (
+        'B3 殘留 stateBtns / syncStateBar：\n' + '\n'.join(bad)
+    )
+
+
+def test_b3_toggle_handlers_no_syncStateBar_call():
+    """B3：sidebar-toggle / chat-toggle handler 內不應有 syncStateBar() 呼叫。"""
+    # 找 sidebar-toggle handler 區塊
+    for handler in ('sidebar-toggle', 'chat-toggle'):
+        idx = STATIC_HTML.find(
+            f"getElementById('{handler}').addEventListener('click'"
+        )
+        assert idx > 0, f'{handler} handler 應存在'
+        # 取 handler 區塊 400 字
+        block = STATIC_HTML[idx:idx + 400]
+        assert 'syncStateBar()' not in block, (
+            f'{handler} handler 內 syncStateBar() 應移除'
+        )
+        # syncCollapseTips() 仍應保留（tooltip 切換邏輯）
+        assert 'syncCollapseTips()' in block, (
+            f'{handler} handler 內 syncCollapseTips() 應保留'
+        )
+
+
+# ─────────────────── B4 no-op：setupTooltip 已 ship + docs 對齊 ───────────────────
+
+
+def test_b4_setup_tooltip_iife_preserved_with_correct_timings():
+    """B4 no-op：setupTooltip IIFE 應仍存在、含 SHOW_DELAY=200 / VISIBLE_DURATION=800 / HIDE_DELAY=100。
+    本 commit 不應誤刪此 IIFE（v3.2 重評為 no-op）。"""
+    assert '(function setupTooltip()' in STATIC_HTML, (
+        'B4 no-op：setupTooltip IIFE 應仍存在（v3.2 重評為 no-op、不應刪除）'
+    )
+    # 三個常數值
+    for const_pat, expected in [
+        (r'const\s+SHOW_DELAY\s*=\s*200', 'SHOW_DELAY = 200'),
+        (r'const\s+VISIBLE_DURATION\s*=\s*800', 'VISIBLE_DURATION = 800'),
+        (r'const\s+HIDE_DELAY\s*=\s*100', 'HIDE_DELAY = 100'),
+    ]:
+        assert re.search(const_pat, STATIC_HTML), (
+            f'B4 no-op：setupTooltip 應含 {expected}（與 docs §4.1 對齊）'
+        )
+
+
+def test_b4_docs_components_aligned_with_setup_tooltip():
+    """B4 docs 對齊驗證：design/docs/components.md §4.1 含 200ms / 800ms / 100ms。"""
+    # §4.1 觸發 章節含 200ms 觸發 / 800ms 自動消失 / 100ms 隱藏
+    assert '200ms' in COMPONENTS_MD and '觸發顯示' in COMPONENTS_MD, (
+        'components.md §4.1 應含「200ms 觸發顯示」'
+    )
+    assert '800ms 自動消失' in COMPONENTS_MD, (
+        'components.md §4.1 應含「800ms 自動消失」'
+    )
+    assert '100ms' in COMPONENTS_MD and '隱藏' in COMPONENTS_MD, (
+        'components.md §4.1 應含「mouseout 後 100ms 隱藏」'
+    )
+
+
+def test_b4_docs_interaction_aligned_with_setup_tooltip():
+    """B4 docs 對齊驗證：design/docs/interaction.md §3 含 200ms / 800ms / 100ms。"""
+    assert '200ms 計時' in INTERACTION_MD, (
+        'interaction.md §3 應含「啟動 200ms 計時」'
+    )
+    assert '800ms 自動消失' in INTERACTION_MD, (
+        'interaction.md §3 應含「顯示後 800ms 自動消失」'
+    )
+    assert '100ms 後隱藏' in INTERACTION_MD, (
+        'interaction.md §3 應含「排程 100ms 後隱藏」'
+    )

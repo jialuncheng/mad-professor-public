@@ -92,44 +92,9 @@
   button { font-family: inherit; }
   a { color: inherit; }
 
-  /* ─────────────────────────────────────────
-     原型展示控制條（非產品 UI，僅 review 用）
-  /* ─────────────────────────────────────────
-     原型展示控制條（非產品 UI，僅 review 用）
-     字體 / 高度 / 字距 → 由主題覆寫
-     ───────────────────────────────────────── */
-  #demo-bar {
-    flex-shrink: 0;
-    background: var(--color-bg);
-    color: var(--color-text);
-    display: flex;
-    align-items: center;
-    border-bottom: var(--divider-w) solid var(--color-divider);
-  }
-  #demo-bar .label { color: var(--color-text-subtle); }
-  #demo-bar .name {
-    color: var(--color-text);
-    font-weight: 600;
-    margin-right: var(--space-2);
-  }
-  #demo-bar .seg {
-    display: inline-flex;
-    border: 1px solid var(--color-divider);
-  }
-  #demo-bar .seg button {
-    background: transparent;
-    color: var(--color-text);
-    border: 0;
-    border-right: 1px solid var(--color-divider);
-    padding: 0 var(--space-3);
-    cursor: pointer;
-  }
-  #demo-bar .seg button:last-child { border-right: 0; }
-  #demo-bar .seg button.active {
-    background: var(--color-divider);
-    color: var(--color-bg-served);
-  }
-  #demo-bar .spacer { flex: 1; }
+  /* BUG-F5 B3（ui-fixes-batch B3）：#demo-bar CSS 死代碼整段刪除
+     原 prototype 展示控制條的 CSS（約 32 行）保留但 HTML markup 早已移除；
+     對應 JS 的 querySelectorAll 永遠回空 NodeList；本 commit 同時刪 CSS + JS dead code。 */
 
   /* ─────────────────────────────────────────
      Tooltip 系統：data-tip 屬性觸發
@@ -734,21 +699,24 @@
     padding-right: var(--space-4, 16px);
     color: var(--color-text);
   }
+  /* BUG-F5 B1（ui-fixes-batch B1）：廢 token (--font-h1 / h2 / small) 替換為主 scale
+     主檔 :root 定義 --font-xs(12) / sm(13) / base(14) / lg(16) / xl(20) / 2xl(28)
+     對齊 design/docs/typography.md §1 字級階梯、§2 用途對照（中欄 toolbar 標題 28px / 700） */
   #current-title .title-zh {
-    font-size: var(--font-h1, 22px);
-    font-weight: 600;
+    font-size: var(--font-2xl);
+    font-weight: 700;
     color: var(--color-text);
     line-height: 1.3;
     margin: 0 0 var(--space-1) 0;
   }
   #current-title .title-en {
-    font-size: var(--font-h2, 14px);
+    font-size: var(--font-sm);
     color: var(--color-text-subtle);
     line-height: 1.4;
     margin: 0 0 var(--space-2) 0;
   }
   #current-title .title-meta {
-    font-size: var(--font-small, 12px);
+    font-size: var(--font-xs);
     color: var(--color-text-subtle);
     margin: var(--space-1) 0 0 0;
     display: flex;
@@ -762,9 +730,10 @@
   #current-title details.title-abstract {
     /* RAG-1 R1 子項 G 部分（UI Fixes Plan v3 L89-94）：摘要展開最大高度 + 滾動條
        防超長摘要把 toolbar 整個撐爆
-       BUG-F1 Bug 5（ui-fixes-batch B7）：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆 */
+       BUG-F1 Bug 5（ui-fixes-batch B7）：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆
+       BUG-F5 B1（ui-fixes-batch B1）：font-size 廢 fallback、直接走主 scale --font-base */
     margin-top: var(--space-2);
-    font-size: var(--font-base, 13px);
+    font-size: var(--font-base);
     color: var(--color-text);
     max-height: 12rem;
     overflow-y: auto;
@@ -799,7 +768,8 @@
   [data-theme="dark"] .tag-pill:hover { background: rgba(0, 0, 0, 0.55); }
   #current-title details.title-abstract > summary {
     cursor: pointer;
-    font-size: var(--font-small, 12px);
+    /* BUG-F5 B1（ui-fixes-batch B1）：--font-small 廢 token → 主 scale --font-xs */
+    font-size: var(--font-xs);
     color: var(--color-text-subtle);
     user-select: none;
     list-style: none;
@@ -1491,25 +1461,16 @@
   // ── 三欄收合 toggle ─────────────────────────
   const sidebar = document.getElementById('sidebar');
   const chatPanel = document.getElementById('chat-panel');
-  const stateBtns = document.querySelectorAll('#demo-bar .seg button');
-
-  function syncStateBar() {
-    const s = sidebar.classList.contains('collapsed');
-    const c = chatPanel.classList.contains('collapsed');
-    let state = 'default';
-    if (s && !c) state = 'sidebar-collapsed';
-    else if (!s && c) state = 'chat-collapsed';
-    stateBtns.forEach(b => b.classList.toggle('active', b.dataset.state === state));
-  }
+  // BUG-F5 B3（ui-fixes-batch B3）：原 prototype 控制條的狀態指示按鈕邏輯整段刪除
+  //   HTML markup 早已移除、querySelectorAll 永遠回空 NodeList、forEach NOP；
+  //   CSS 已隨上方 #demo-bar 區塊同步清除；toggle handler 內對應呼叫一併刪除。
 
   document.getElementById('sidebar-toggle').addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
-    syncStateBar();
     syncCollapseTips();
   });
   document.getElementById('chat-toggle').addEventListener('click', () => {
     chatPanel.classList.toggle('collapsed');
-    syncStateBar();
     syncCollapseTips();
   });
 
@@ -1521,16 +1482,6 @@
       'data-tip', chatPanel.classList.contains('collapsed') ? '展開本欄' : '收合本欄');
   }
   syncCollapseTips();
-  stateBtns.forEach(b => {
-    b.addEventListener('click', () => {
-      sidebar.classList.remove('collapsed');
-      chatPanel.classList.remove('collapsed');
-      if (b.dataset.state === 'sidebar-collapsed') sidebar.classList.add('collapsed');
-      else if (b.dataset.state === 'chat-collapsed') chatPanel.classList.add('collapsed');
-      syncStateBar();
-      syncCollapseTips();
-    });
-  });
 
   // ── popup（per-item / folder）— 以 item 為錨點 ────
   function closePopups() {
