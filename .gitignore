@@ -177,6 +177,13 @@ processor/test_*.py
 
 # 工作記錄（全目錄入版控、跨環境同步、SOP + 規劃 + 設計 + 執行文件全部追蹤）
 # .claude-logs/ 不排除任何檔案
+# 工作記錄例外排除：
+# - logseq/ + pages/ 為 Logseq 工具產物、不入版控
+# - baton/ 內非 README 為跨 AI 交接棒臨時暫存、用完歸位到正式目錄、不入版控
+.claude-logs/logseq/
+.claude-logs/pages/
+.claude-logs/baton/*
+!.claude-logs/baton/README.md
 
 # macOS 系統垃圾（永久排除、含所有子目錄）
 **/.DS_Store
@@ -189,3 +196,11 @@ output/
    
 # 本機 debug / 時序分析工具
 tools/timing/
+
+
+
+
+
+
+
+
