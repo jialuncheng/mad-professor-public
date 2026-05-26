@@ -11,6 +11,18 @@
 
 ## ✅ 已完成
 
+### WORKFLOW-1 流程簡化與文件治理
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Bootstrap Core（自動載入核心文件治理基礎） | `1a0394c` |
+| C1.5 | Core Spec Align & TODO Bootstrap（核心規格與 TODO 自舉） | `e0c7a17` |
+| C2 & C3 | Templates & Overview + Prompt Templates（模板與引導 / 提示詞模板） | `365aa5d` |
+| C4 | SOP & Diagnostics（領域 SOP 與診斷目錄） | `ad0be4e` |
+| C5 | 收官 (Closure) | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-05-25_WORKFLOW-1_流程簡化與文件治理_plan_v4-final-r4-v6.md`（v11）
+
 ### Phase 4.7d Chat 改造（17 系列）
 
 | Commit | 內容 | Hash |
@@ -173,16 +185,6 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
-
-- 🟡 **WORKFLOW-1 流程簡化與文件治理**（`.claude-logs/baton/2026-05-25_WORKFLOW-1_流程簡化與文件治理_plan_v4-final-r4-v6.md`）
-  - [x] ✅ done: C1 — Bootstrap Core（自動載入核心）
-  - [x] ✅ done: C1.5 — Core Spec Align & TODO Bootstrap（核心規格與 TODO 自舉）
-  - [x] ✅ done: C2 — Templates & Overview（模板與引導）
-  - [x] ✅ done: C3 — Prompt Templates（提示詞模板）
-  - [x] ✅ done: C4 — SOP & Diagnostics（領域 SOP 與診斷目錄）
-  - [/] 🟡 WIP: C5 — 收官（Closure）
-  - 工時：6 個 commits
-  - 依賴：無
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
@@ -438,6 +440,9 @@
 - ✅ ~~7e-1 v2 hotfix~~ `eb2164c`
 - ✅ ~~7e-2 v2~~ `70889aa`
 - 7e-3 v2 端到端驗證（無 commit、純驗證、baron OrcStack 重新上傳 3 份 backfill 後收尾）
+
+### WORKFLOW（✅ 已完成）
+- ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 
 ### QUEUE (1 項 active)
 - 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）

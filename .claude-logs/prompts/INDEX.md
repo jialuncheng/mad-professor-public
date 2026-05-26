@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-25（WORKFLOW-1-1 落地完工、3 份 template 新增）
+最後更新：2026-05-26（WORKFLOW-1 C1~C5 全鏈路收官完工）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -13,7 +13,12 @@
 ### WORKFLOW 系列
 - `2026-05-24_WORKFLOW-1_v3規劃書可行性評估.md` — WORKFLOW-1 改版規劃書 v3 可行性評估（七大子改動 A-G + 五壓力測試 + Q1-Q10 拍板 + Prompt Caching 子題 7.1-7.6 + 執行計畫骨架 10 commits）
 - `2026-05-25_WORKFLOW-1_v4第二輪評估.md` — WORKFLOW-1 v4 第二輪評估（§8 S1-S5 五方案選擇 + §10.1-10.5 可行性判定 + A-F 六壓力測試 + v4 新盲點 4 個、採 §2 拆分式結構試點）
-- `2026-05-25_WORKFLOW-1-1_落地提示詞.md` — WORKFLOW-1-1 落地（新增 3 份 template：template_revision_plan + template_file_governance + template_specification，DOC-Refactor 工作流）
+- ✅ **WORKFLOW-1 C1~C5 落地全鏈路（2026-05-26 收官）**
+  - C1 `1a0394c`：Bootstrap Core（CLAUDE.md / WORKFLOW_SOP.md / framework §0/§9/§99）
+  - C1.5 `e0c7a17`：Core Spec Align + TODO Bootstrap（r11 三核心文件對齊 + TODO.md 自舉）
+  - C2+C3 `365aa5d`：Templates & Overview + Prompt Templates（5 模板重構/新建 + 5 提示詞模板 + GOVERNANCE_OVERVIEW.md）
+  - C4 `ad0be4e`：SOP & Diagnostics（CACHE_OPTIMIZATION_SOP.md + report/.gitkeep）
+  - C5（待 baron 回填 hash）：收官（TODO.md 歸檔 + 設計歷程 + baton 全歸檔 + INDEX 更新）
 
 ### RAG 系列
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
@@ -48,7 +53,7 @@
 
 ## 依時間排序（最新 15 筆）
 
-- 2026-05-25 — `2026-05-25_WORKFLOW-1-1_落地提示詞.md`
+- 2026-05-26 — WORKFLOW-1 C1~C5 全鏈路收官（C1 `1a0394c` / C1.5 `e0c7a17` / C2+C3 `365aa5d` / C4 `ad0be4e` / C5 待回填）
 - 2026-05-25 — `2026-05-25_WORKFLOW-1_v4第二輪評估.md`
 - 2026-05-24 — `2026-05-24_WORKFLOW-1_v3規劃書可行性評估.md`
 - 2026-05-24 — `2026-05-24_BUG-B2_提示詞.md`
