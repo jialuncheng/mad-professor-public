@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-26（WORKFLOW-1 C1~C5 全鏈路收官完工）
+最後更新：2026-05-26（TODO-HOTFIX-1 全案收官完工）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -19,6 +19,11 @@
   - C2+C3 `365aa5d`：Templates & Overview + Prompt Templates（5 模板重構/新建 + 5 提示詞模板 + GOVERNANCE_OVERVIEW.md）
   - C4 `ad0be4e`：SOP & Diagnostics（CACHE_OPTIMIZATION_SOP.md + report/.gitkeep）
   - C5（待 baron 回填 hash）：收官（TODO.md 歸檔 + 設計歷程 + baton 全歸檔 + INDEX 更新）
+- ✅ **TODO-HOTFIX-1 DOC-Hotfix 三階段全鏈路（2026-05-26 收官）**
+  - Plan（`hotfixes/2026-05-26_TODO-HOTFIX-1_hotfix.md`）：TODO.md 損毀診斷 + 5 項問題盤點 + 修法 A/B/C/D/E + 六維度 commit 規劃
+  - Run（`executions/2026-05-26_TODO-HOTFIX-1_執行.md`）：RAG 狀態修復（Bug Fix 表格補建 + active 殘留清除 + RAG-11/12 獨立抽離 + hash 補填）
+  - Tasks / Run-1b（`executions/2026-05-26_TODO-HOTFIX-1b_執行.md`）：MODEL-8 active 殘留清理 + 修法 E 落地
+  - Check（`executions/2026-05-26_TODO-HOTFIX-1_Check_執行.md`）：Conformance 8 項驗證 + TODO.md 收官 + baton 全歸檔
 
 ### RAG 系列
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
@@ -53,6 +58,10 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-26 — TODO-HOTFIX-1 Check（DOC-Hotfix Conformance 驗收 + baton 全歸檔收官）
+- 2026-05-26 — TODO-HOTFIX-1b Run（MODEL-8 active 殘留清理 + 修法 E 落地）
+- 2026-05-26 — TODO-HOTFIX-1 Run（RAG 狀態修復 + Bug Fix 表格補建 + RAG-11/12 抽離）
+- 2026-05-26 — TODO-HOTFIX-1 Plan（TODO.md 損毀分析 + 五問題盤點 + 修法 A/B/C/D/E 規劃）
 - 2026-05-26 — WORKFLOW-1 C1~C5 全鏈路收官（C1 `1a0394c` / C1.5 `e0c7a17` / C2+C3 `365aa5d` / C4 `ad0be4e` / C5 待回填）
 - 2026-05-25 — `2026-05-25_WORKFLOW-1_v4第二輪評估.md`
 - 2026-05-24 — `2026-05-24_WORKFLOW-1_v3規劃書可行性評估.md`
@@ -64,9 +73,3 @@
 - 2026-05-24 — `2026-05-24_BUG-F3_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F2_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F1_提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_P2-3_提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_P2-2_提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_P2-1_提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_Phase2_plan提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_R3_提示詞.md`
-- 2026-05-23 — `2026-05-23_RAG-1_R2_提示詞.md`

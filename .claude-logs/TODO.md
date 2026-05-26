@@ -11,6 +11,16 @@
 
 ## ✅ 已完成
 
+### TODO-HOTFIX-1 TODO.md 緊急狀態與殘留修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| TODO-HOTFIX-1 | RAG 狀態整理與 RAG-11/12 抽離（RAG 狀態修復） | `待 baron 回填` |
+| TODO-HOTFIX-1b | MODEL-8 進行中殘留清理（MODEL-8 狀態清理） | `待 baron 回填` |
+| TODO-HOTFIX-1 Check | Conformance 驗收與歸檔收官（第三階段驗收） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-05-26_TODO-HOTFIX-1_hotfix.md`
+
 ### WORKFLOW-1 流程簡化與文件治理
 
 | Commit | 內容 | Hash |
@@ -201,12 +211,6 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
-
-- 🟡 **TODO-HOTFIX-1 TODO.md 緊急狀態與殘留修復**（`.claude-logs/baton/2026-05-26_TODO-HOTFIX-1_hotfix.md`）
-  - [x] ✅ done: TODO-HOTFIX-1 — RAG 狀態整理與 RAG-11/12 抽離（RAG 狀態修復）
-  - [x] ✅ done: TODO-HOTFIX-1b — MODEL-8 進行中殘留清理（MODEL-8 狀態清理）
-  - 工時：2 個 commits
-  - 依賴：無
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
