@@ -106,22 +106,6 @@
 > 4. **跨文件問答收官**（baron 需求 3）：`#hr 我的學歷區應該怎麼寫？` → AI 跨 3 份履歷比較 + 統一建議
 > **影響範圍**：純 user-facing 功能擴充、無 schema 變動、無 backfill 需求；舊 paper 缺 `translated_abstract` 走前端 R1 子項 F fallback
 
-### Phase 4.X? RAG-1 Bug Fix 系列（8 commits、BUG-F1~F6 + BUG-B1~B2）
-
-| Commit | 內容 | Hash |
-|---|---|---|
-| BUG-F1 | 前端 micro fix 包 — tag fallback / placeholder 斷行 / export-btn / --content-max-w（Bug 1/3/4/5、5 pytest） | `9877e54` |
-| BUG-F2 | theme dropdown + ESC + P2-3 latent fix — dropdownAPI IIFE + TDZ-aware 3 段拆分（Bug 2 + Bug 11、6 pytest） | `ae20559` |
-| BUG-F3 | .modal-input CSS — ui-fixes-batch B5 廣義 selector + color-mix 跨主題 focus ring（Bug 7、2 pytest） | `57c71c8` |
-| BUG-F4 | P1 critical 4 項 — A1 trackProgress / A2 empty-state / A3 customPrompt / A4 closeBizPopups（9 pytest） | `646afe4` |
-| BUG-F5 | P2 inconsistencies — B1 廢 token 替換主 scale + B3 demo-bar dead code + B4 no-op（8 pytest） | `e799687` |
-| BUG-F6 | P3 polish — C4 ~43 ticket 註解清理 / C5 marked 改寫 / C7 ⋯→SVG；C3+C6 no-op（7 pytest） | `12428aa` |
-| BUG-B1 | 後端 abstract fallback — A 側路 translate_text + B regex 擴中日文「摘要/概要/內容提要/要旨」（Bug 8、28 pytest） | `a35a720` |
-| BUG-B2 | 後端 blockquote→list + 前端 paper-header-meta CSS — `>` → `-` list + `<div>` wrap + @media screen（Bug 10、7 pytest、全鏈路收官） | `94ed27d` |
-
-> **修法依據**：`.claude-logs/2026-05-24_RAG-1_前端_Bug_Fix_可行性評估.md` v2/v3 + `.claude-logs/2026-05-24_RAG-1_Bug_Fix_可行性評估.md` v4  
-> **收官摘要**：6 前端 + 2 後端 = 8 commits、修 9 / 11 bugs、共 72 pytest 全綠、零迴歸；Bug 6 / Bug 9 延後為 RAG-11 / RAG-12
-
 ### Phase 4.X? RAG-1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫（3 commits、R1 + R2 + R3）
 
 | Commit | 內容 | Hash |
@@ -202,12 +186,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **TODO-HOTFIX-1 TODO.md 緊急狀態與殘留修復**（`.claude-logs/baton/2026-05-26_TODO-HOTFIX-1_hotfix.md`）
-  - [x] ✅ done: TODO-HOTFIX-1 — RAG 狀態整理與 RAG-11/12 抽離（RAG 狀態修復）
-  - [x] ✅ done: TODO-HOTFIX-1b — MODEL-8 進行中殘留清理（MODEL-8 狀態清理）
-  - 工時：2 個 commits
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -217,15 +195,22 @@
   - 工時：1-2 個 commits
   - 依賴：無
 
-- ⬜ **RAG-11 reload SSE 還原**（Bug 6、需獨立 plan 評估）
-  - 問題：切換 paper / 重新整理後，SSE chat history reload 功能缺失（API 合約需調整）
-  - 工時：待 plan 評估（預估 1-2 commits）
-  - 依賴：無
+- ✅ ~~**RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI**~~（已落地、P2-1 + P2-2 + P2-3 三 commit、共 26 pytest、見上方 ✅ 完成區、跟 Phase 1 R1/R2/R3 並列為 **RAG-1 完整收官**、跨文件查詢 baron 需求 3 / Commit 15 plan Q7 同步收官）
 
-- ⬜ **RAG-12 LaTeX KaTeX 渲染支援**（Bug 9、需獨立 plan 評估）
-  - 問題：論文 / 履歷中的 LaTeX 數學公式無法在前端正確渲染（需引入 KaTeX CDN）
-  - 工時：待 plan 評估（預估 1 commit）
-  - 依賴：無
+- ✅ ~~**RAG-1 Bug Fix 系列**~~（**已落地、全鏈路收官**、前端 6 + 後端 2 = 8 commits、共 72 pytest、依 `.claude-logs/2026-05-24_RAG-1_前端_Bug_Fix_可行性評估.md` v2/v3 + `.claude-logs/2026-05-24_RAG-1_Bug_Fix_可行性評估.md` v4）
+  - ✅ **BUG-F1 前端 micro fix**（修 Bug 1/3/4/5、5 pytest、hash `9877e54`）
+  - ✅ **BUG-F2 theme dropdown + ESC + P2-3 latent fix**（修 Bug 2 + Bug 11、TDZ-aware 3 段拆分、6 pytest、hash `ae20559`）
+  - ✅ **BUG-F3 modal-input CSS**（修 Bug 7、ui-fixes-batch B5 + color-mix focus ring、2 pytest、hash `57c71c8`）
+  - ✅ **BUG-F4 P1 critical（A1+A2+A3+A4）**（修 4 項：trackProgress / empty-state / customPrompt / closeBizPopups、9 pytest、hash `646afe4`）
+  - ✅ **BUG-F5 P2 inconsistencies（B1+B3、B4 no-op）**（修 B1 廢 token + B3 demo-bar dead code、8 pytest、hash `e799687`）
+  - ✅ **BUG-F6 P3 polish（C4+C5+C7、C3+C6 no-op）**（修 ~43 ticket 註解清理 + marked 註解改寫 + ⋯→SVG、7 pytest、hash `12428aa`）
+  - ✅ **BUG-B1 後端 abstract fallback**（Bug 8 A 側路 + B regex 擴中日文、28 pytest、hash 待 push 後回填）
+  - ✅ **BUG-B2 後端 blockquote → list + 前端 paper-header-meta CSS**（Bug 10 混合 bug、後端 `>` → `-` + wrap + 前端 `@media screen` class hook hide、7 pytest、hash 待 push 後回填）
+  - ⬜ **RAG-11 reload SSE 還原**（延後、Bug 6、API 合約變更獨立 plan）
+  - ⬜ **RAG-12 LaTeX KaTeX**（延後、Bug 9、新 CDN 依賴獨立 plan）
+  - **收官摘要**：6 前端 + 2 後端 = 8 commits、修 9 / 11 bugs（含 P2-3 hashtag-autocomplete latent 自我發現）、共 72 pytest 全綠、零迴歸；2 延後 bug 另開獨立任務 RAG-11/12
+
+### Phase 4.X? RAG-1 Bug Fix 系列（8 commits、BUG-F1~F6 + BUG-B1~B2）
 
 ### 🟡 中優先
 
@@ -237,6 +222,9 @@
   - 新增 tests/test_pdf_optimize.py 驗證無損壓縮與正常讀取
   - 工時：1 個 commit
   - 依賴：無
+
+- ✅ ~~**MODEL-8 SQLite paper_chunks 物理防線 + 增強型 backfill CLI**~~（已落地、C1 + C2 + C3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
+
 
 - ⬜ **RAG-4 前端引用顯示**（Commit 15 plan Q3）
   - footnote / 「參考章節」清單 / 連結回原文段落
@@ -420,17 +408,14 @@
 
 ## 索引（依類別）
 
-### RAG（9 項 active）
+### RAG（7 項 active）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
-- ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）
 - RAG-3 score 校準（中、等數據）
 - RAG-4 前端引用顯示（中）
 - RAG-5 合併 cap（低）
 - RAG-6 docs（低）
 - 🔵 RAG-10 中文 Header meta block 軟換行渲染 bug（候選、修法 ~5 行、user-facing 排版）
-- ⬜ RAG-11 reload SSE 還原（高、需獨立 plan）
-- ⬜ RAG-12 LaTeX KaTeX 渲染支援（高、需獨立 plan）
 - ⚙️ ~~RAG-2 backfill CLI~~（合併到 MODEL-8、見 MODEL 區）
 - ✅ ~~RAG-7 doc_analyzer 切 section~~（已落地、拆 RAG-7a `e2ed0e4` + RAG-7b `5c182cf`）
 - ✅ ~~RAG-8 md_restore / translate table 渲染 bug~~ `230ca13`
