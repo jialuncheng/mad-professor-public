@@ -1,0 +1,191 @@
+# WORKFLOW SOP — 工作流程規範
+
+> 五類工作流定義 / 六階段強制觸發鏈 / 命名規則 / 文件歸屬判定 / SOP 一致性核查
+
+---
+
+## §0 改版規則
+
+- 改版觸發：§1–§6 任一規格條款變動
+- 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
+- 完整治理規格 → §99
+
+---
+
+## §1 五類工作流定義
+
+### §1.1 FE-Refactor（前端重構）
+
+| 項目 | 內容 |
+|---|---|
+| 觸發條件 | 改動 `static/`、HTML、CSS、JS（非緊急） |
+| 必讀 SOP | — |
+| 套用 template | template_plan + template_tasks + template_execution |
+| 驗收要求 | 目標頁面手動 E2E 核查；不得有 console error |
+
+### §1.2 BE-Refactor（後端重構）
+
+| 項目 | 內容 |
+|---|---|
+| 觸發條件 | 改動 `.py` 業務邏輯（非緊急） |
+| 必讀 SOP | `sop/2026-05-23_logging_SOP_手冊.md` + `sop/2026-05-23_database_SOP_手冊.md` |
+| 套用 template | template_plan + template_tasks + template_execution |
+| 驗收要求 | pytest 全通過 + §5 SOP 一致性核查（logging + database）|
+
+### §1.3 DOC-Refactor（文件治理）
+
+| 項目 | 內容 |
+|---|---|
+| 觸發條件 | 僅改動 `.md` / 配置 / 治理文件（不含業務代碼） |
+| 必讀 SOP | — |
+| 套用 template | template_plan + template_tasks + template_execution |
+| 驗收要求 | §6.1 驗證清單（wc -l / grep @path / 命名合規等） |
+
+### §1.4 FE-Hotfix（前端緊急修補）
+
+| 項目 | 內容 |
+|---|---|
+| 觸發條件 | 前端 bug 需立即修補（無法等常規 plan-execution 流程） |
+| 必讀 SOP | — |
+| 套用 template | template_hotfix |
+| 驗收要求 | 問題頁面手動核查；hotfix _執行.md 記錄根因 |
+
+### §1.5 BE-Hotfix（後端緊急修補）
+
+| 項目 | 內容 |
+|---|---|
+| 觸發條件 | 後端 bug 需立即修補（非計畫性） |
+| 必讀 SOP | `sop/2026-05-23_logging_SOP_手冊.md` + `sop/2026-05-23_database_SOP_手冊.md` |
+| 套用 template | template_hotfix |
+| 驗收要求 | pytest 全通過 + §5 SOP 一致性核查 |
+
+---
+
+## §2 文書類別（文件歸屬判定）
+
+新增 .md 檔案時依以下分支歸屬：
+
+```
+改版規劃（純規劃、不拆 commit）    → plans/
+Claude Code 拆 commit 結果         → tasks/
+Claude Code 執行紀錄               → executions/
+緊急修補紀錄                       → hotfixes/
+領域 SOP（規範性、長期）           → sop/
+session 必讀核心（跨任務）         → ref/
+模板                               → templates/
+提示詞歸檔                         → prompts/
+跨 AI 交接棒（暫存）               → baton/
+工具產出報告                       → report/
+工具腳本                           → tools/
+過期 / 暫不確定                    → archive/
+```
+
+歷史命名不溯及既往：既有檔案依性質歸資料夾、檔名不改。
+
+---
+
+## §3 六階段強制觸發鏈
+
+```
+階段 1：規劃      主責：baron / Antigravity / Claude Design → 產 plan.md → 中斷
+階段 2：拆 commit 主責：Claude Code → 產 _tasks.md + 同步 TODO.md → 中斷
+階段 3：驗證 plan 主責：baron（Antigravity 輔助）→ 無文件產出 → 🟢通過/🔴重來
+階段 4：執行 OP-N 主責：Claude Code → 每 OP 產 _執行.md → 每 OP 中斷
+階段 5：驗證執行  主責：baron（Antigravity 輔助）→ 所有 commit ship 完才跑 → 🟢通過/🔴重來
+階段 6：收官      主責：Claude Code + baron → 更新 TODO / mv baton→正式目錄 / baron 回填 hash
+```
+
+強制規則：
+- 每階段只產一份新文件、產完即停
+- 嚴禁跨階段（Claude Code 收到單階段提示詞不得執行下一階段）
+- 階段 4 每次只執行單一 Commit/OP（如 C1 / OP-1 / P2-1 等）
+
+---
+
+## §4 驗證分級
+
+### §4.1 核心驗證（所有工作流必跑，3 項）
+
+| # | 驗證項 | 指令 |
+|---|---|---|
+| C1 | 目標檔存在且非空 | `ls -la <檔案>` |
+| C2 | 行數符合規格 | `wc -l <檔案>` |
+| C3 | 命名格式合規 | 對照 §6 命名規則 |
+
+### §4.2 進階驗證（特定條件觸發，5 項）
+
+| # | 驗證項 | 觸發條件 | 指令 |
+|---|---|---|---|
+| A1 | @path 引用存在 | CLAUDE.md 修改時 | `grep "@\.claude-logs" CLAUDE.md` |
+| A2 | §0 / §99 結構存在 | 治理 .md 建立時 | `grep "^## §0\|^## §99" <檔案>` |
+| A3 | baton/*.md 不入版控 | .gitignore 修改時 | `git check-ignore -v .claude-logs/baton/test.md` |
+| A4 | pytest 全通過 | BE-Refactor / BE-Hotfix | `pytest tests/ -v` |
+| A5 | 動態內容缺席 | CLAUDE.md / SOP / framework 修改時 | `grep -n "TODO-hash\|commit-hash" <檔案>` |
+
+---
+
+## §5 SOP 一致性核查機制
+
+觸發時機：**BE-Refactor / BE-Hotfix 落地前強制執行**
+
+Claude Code 在 _執行.md 內必貼 grep 結果（空輸出需貼「無命中（合規）」）；
+Antigravity 驗證時必引用 grep 結果做合規判定。
+
+### §5.1 logging 核查
+
+```bash
+grep -n "traceback.format_exc\|logger\.error\|logger\.exception" <修改檔.py>
+```
+
+規則：用 `logger.error` 必須含 `exc_info=True`
+
+### §5.2 database 核查
+
+```bash
+grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
+```
+
+規則：裸 commit（不在 `with session.begin()` 區塊內）→ 不合規
+寬鬆匹配：涵蓋 `db.commit / self.session.commit / await session.commit` 等變體
+
+### §5.3 違規處理
+
+暫停落地 → 加入 `_plan.md §9 Open Questions` → 等 baron 拍板
+
+---
+
+## §6 命名規則
+
+| 文件類型 | 命名格式 |
+|---|---|
+| plan（純規劃） | `<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md`（可加版本 `_v<N>`） |
+| tasks（commit 拆分） | `<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md` |
+| 執行報告 | `<YYYY-MM-DD>_<任務編碼>_<Commit代號>_執行.md` |
+| 緊急修補 | `<YYYY-MM-DD>_<任務編碼>_hotfix.md` |
+| 提示詞歸檔 | `<YYYY-MM-DD>_<任務編碼>_<階段>_提示詞.md` |
+| 非 .md 檔案 | `<YYYY-MM-DD>_<任務編碼>_<描述>.<ext>`（一律加日期前綴） |
+
+備註：Commit 代號可自取彈性命名（C1、OP-1、P2-1、BUG-F1 等；"OP-N" 為代稱舉例、非強制）。
+
+---
+
+## §99 治理規格
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| 目的 | 定義五類工作流 / 六階段強制觸發鏈 / 命名規則 / 文件歸屬 / SOP 核查機制 |
+| 用途 | 透過 CLAUDE.md @path 自動載入；BE-Refactor / BE-Hotfix 落地前強制引用 §5 |
+| 權威源 | 本檔 §1–§6 |
+| 引用方 | CLAUDE.md §2（工作流類別判定）/ CLAUDE.md §3（文件歸屬判定） |
+| 被引用方 | `<由 Antigravity 自動掃描注入>` |
+| 約束事項 | 五類工作流定義唯一源在本檔；命名規則唯一源在本檔 §6 |
+| 改版觸發條件 | §1–§6 任一規格條款變動 |
+| 改版規則 | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
+| 刪除條件 | 不刪（永久必讀核心） |
+| 重複防護 | 工作流定義不在 CLAUDE.md 重寫；SOP 詳細手冊在 sop/ 目錄 |
+
+### §99.2 Revision 歷程
+
+- v1 (2026-05-26)：WORKFLOW-1 C1 初版——五類工作流 / 六階段觸發鏈 / 驗證分級 / SOP 核查 / 命名規則 / §0 / §99 拆分式結構

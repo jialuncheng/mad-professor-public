@@ -174,16 +174,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **WORKFLOW-1 流程簡化與文件治理**（`.claude-logs/baton/2026-05-25_WORKFLOW-1_流程簡化與文件治理_plan_v4-final-r4-v6.md`）
-  - [x] ✅ done: C1 — Bootstrap Core（自動載入核心）
-  - [x] ✅ done: C1.5 — Core Spec Align & TODO Bootstrap（核心規格與 TODO 自舉）
-  - [x] ✅ done: C2 — Templates & Overview（模板與引導）
-  - [x] ✅ done: C3 — Prompt Templates（提示詞模板）
-  - [x] ✅ done: C4 — SOP & Diagnostics（領域 SOP 與診斷目錄）
-  - [/] 🟡 WIP: C5 — 收官（Closure）
-  - 工時：6 個 commits
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
