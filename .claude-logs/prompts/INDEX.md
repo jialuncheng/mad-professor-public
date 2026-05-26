@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-26（TODO-HOTFIX-1 全案收官完工）
+最後更新：2026-05-27（WORKFLOW-2 C2 WIP）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -24,6 +24,11 @@
   - Run（`executions/2026-05-26_TODO-HOTFIX-1_執行.md`）：RAG 狀態修復（Bug Fix 表格補建 + active 殘留清除 + RAG-11/12 獨立抽離 + hash 補填）
   - Tasks / Run-1b（`executions/2026-05-26_TODO-HOTFIX-1b_執行.md`）：MODEL-8 active 殘留清理 + 修法 E 落地
   - Check（`executions/2026-05-26_TODO-HOTFIX-1_Check_執行.md`）：Conformance 8 項驗證 + TODO.md 收官 + baton 全歸檔
+- 🟡 **WORKFLOW-2 流程模板重構與提示詞自動歸檔（2026-05-27 WIP）**
+  - `2026-05-27_WORKFLOW-2_Plan_提示詞.md` — Plan（五大治理漏洞規格 R1~R5 + 歷史 9 份幽靈提示詞補建計畫）
+  - `2026-05-27_WORKFLOW-2_Tasks_提示詞.md` — Tasks（5 Commit 拆分：C1 五模板自愈 + C2 Check 維度四五 + C3 SOP 鐵律 + C4 歷史 9 份補建 + C5 INDEX 對齊）
+  - `2026-05-27_WORKFLOW-2_C1_run_提示詞.md` — C1 Run（R1 五大提示詞模板自愈歸檔防線 + Tasks 階段補發執行報告）
+  - `2026-05-27_WORKFLOW-2_C2_run_提示詞.md` — C2 Run（R2 Check 模板 Conformance 維度四提示詞歸檔 + 維度五 msg.txt 草稿完整性 + TODO.md hash 自癒）
 
 ### RAG 系列
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
@@ -58,6 +63,10 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_C2_run_提示詞.md`
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_C1_run_提示詞.md`
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_Plan_提示詞.md`
 - 2026-05-26 — TODO-HOTFIX-1 Check（DOC-Hotfix Conformance 驗收 + baton 全歸檔收官）
 - 2026-05-26 — TODO-HOTFIX-1b Run（MODEL-8 active 殘留清理 + 修法 E 落地）
 - 2026-05-26 — TODO-HOTFIX-1 Run（RAG 狀態修復 + Bug Fix 表格補建 + RAG-11/12 抽離）
@@ -69,7 +78,3 @@
 - 2026-05-24 — `2026-05-24_BUG-B1_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F6_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F5_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F4_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F3_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F2_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F1_提示詞.md`

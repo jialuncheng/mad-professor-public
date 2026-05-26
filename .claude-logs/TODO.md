@@ -212,6 +212,15 @@
 
 ### 🔴 高優先
 
+- 🟡 **WORKFLOW-2 流程模板重構與提示詞自動歸檔**（`baton/2026-05-26_WORKFLOW-2_流程模板重構與提示詞自動歸檔_tasks.md`）
+  - ✅ C1：R1 五大提示詞模板自愈歸檔防線（`template_prompt_for_*.md` 5 個模板）
+  - 🟡 WIP C2：R2 Check Conformance 維度四+五（`template_prompt_for_check.md`）
+  - C3：R3+R4 SOP 備份暫存鐵律 + §8 重構（`WORKFLOW_SOP.md` + `template_execution.md` + `template_tasks.md`）
+  - C4：R5a 歷史 9 份提示詞物理補建（`prompts/`）
+  - C5：R5b INDEX.md 雙向對齊收官（`prompts/INDEX.md` + baton→plans/tasks 歸檔）
+  - 工時：5 個 commits
+  - 依賴：無
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
