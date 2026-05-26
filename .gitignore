@@ -182,6 +182,7 @@ processor/test_*.py
 # - baton/ 內非 README 為跨 AI 交接棒臨時暫存、用完歸位到正式目錄、不入版控
 .claude-logs/logseq/
 .claude-logs/pages/
+.claude-logs/journals/
 .claude-logs/baton/*
 !.claude-logs/baton/README.md
 
