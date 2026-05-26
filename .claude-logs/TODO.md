@@ -15,9 +15,9 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| TODO-HOTFIX-1 | RAG 狀態整理與 RAG-11/12 抽離（RAG 狀態修復） | `待 baron 回填` |
-| TODO-HOTFIX-1b | MODEL-8 進行中殘留清理（MODEL-8 狀態清理） | `待 baron 回填` |
-| TODO-HOTFIX-1 Check | Conformance 驗收與歸檔收官（第三階段驗收） | `待 baron 回填` |
+| TODO-HOTFIX-1 | RAG 狀態整理與 RAG-11/12 抽離（RAG 狀態修復） | `a0d1951` |
+| TODO-HOTFIX-1b | MODEL-8 進行中殘留清理（MODEL-8 狀態清理） | `2c78f9e` |
+| TODO-HOTFIX-1 Check | Conformance 驗收與歸檔收官（第三階段驗收） | `5f3ef01` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-05-26_TODO-HOTFIX-1_hotfix.md`
 
@@ -29,7 +29,7 @@
 | C1.5 | Core Spec Align & TODO Bootstrap（核心規格與 TODO 自舉） | `e0c7a17` |
 | C2 & C3 | Templates & Overview + Prompt Templates（模板與引導 / 提示詞模板） | `365aa5d` |
 | C4 | SOP & Diagnostics（領域 SOP 與診斷目錄） | `ad0be4e` |
-| C5 | 收官 (Closure) | `待 baron 回填` |
+| C5 | 收官 (Closure) | `8965725` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-25_WORKFLOW-1_流程簡化與文件治理_plan_v4-final-r4-v6.md`（v11）
 
@@ -214,8 +214,8 @@
 
 - 🟡 **WORKFLOW-2 流程模板重構與提示詞自動歸檔**（`baton/2026-05-26_WORKFLOW-2_流程模板重構與提示詞自動歸檔_tasks.md`）
   - ✅ C1：R1 五大提示詞模板自愈歸檔防線（`template_prompt_for_*.md` 5 個模板）
-  - 🟡 WIP C2：R2 Check Conformance 維度四+五（`template_prompt_for_check.md`）
-  - C3：R3+R4 SOP 備份暫存鐵律 + §8 重構（`WORKFLOW_SOP.md` + `template_execution.md` + `template_tasks.md`）
+  - ✅ C2：R2 Check Conformance 維度四+五（`template_prompt_for_check.md`）
+  - 🟡 WIP C3：R3+R4 SOP 備份暫存鐵律 + §8 重構（`WORKFLOW_SOP.md` + `template_execution.md` + `template_tasks.md`）
   - C4：R5a 歷史 9 份提示詞物理補建（`prompts/`）
   - C5：R5b INDEX.md 雙向對齊收官（`prompts/INDEX.md` + baton→plans/tasks 歸檔）
   - 工時：5 個 commits
