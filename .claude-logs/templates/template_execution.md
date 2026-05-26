@@ -1,101 +1,137 @@
-# Phase [Phase名稱] Commit [N] — 執行報告：[主題名稱]
-
-> **基準**：Commit [前一次的落地 Commit Hash] 後的 worktree 狀態
-> **狀態**：本地改檔完成，[尚未 commit / 已 commit 未 push / 已落地]
+# [任務編碼] [Commit代號/OP序號] — [任務名稱] 執行報告
 
 ---
 
-## 落地 Commit 表格
+**任務代號**：[任務編碼] [Commit代號/OP序號，如 C1 / OP-1]  
+**執行日期**：[YYYY-MM-DD]  
+**依據規劃**：[對應的 plans/ 下 plan 路徑]  
+**次級參考**：[對應的 tasks/ 下 tasks 路徑]  
+**Git commit hash**：[留空，由 baron 回填]  
+**狀態**：Completed (Commit [Commit代號])  
 
-| # | Hash | Subject |
+---
+
+## §0 改版規則
+
+- 改版觸發：§1–§8 任一執行條款變動
+- 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
+- 完整治理規格 → §99
+
+---
+
+## §1 基準與完成狀態
+
+- **執行前基準**：[描述本 Commit 執行前工作區處於哪個落地 Commit 的狀態，以及存在的缺失]
+- **完成狀態**：[描述執行後工作區的最終狀態，達成哪些功能，並宣告業務代碼零改動或有限改動]
+
+---
+
+## §2 Commit 表格
+
+| Commit | 內容 | Hash |
 |---|---|---|
-| **[N]** | `[7碼Hash]` | [Git Commit 訊息，如 feat(rag): chunking optimization] |
+| [Commit代號] | [本次 Commit 的簡述] | [留空，由 baron 回填] |
 
 ---
 
-## diff stat
+## §3 變動檔案清單
 
-貼上 `git diff --stat`（或 uncommitted/committed 改動統計）的真實輸出：
-```
-[在這裡貼上真實的 git diff --stat 結果]
-```
-
----
-
-## 真因
-
-簡述本次執行所對應的計畫真因（與 `_plan.md` 的問題與根因呼應）：
-- **問題對應 §2 [#1]**：[簡述核心原因]
-- **問題對應 §2 [#2]**：[簡述核心原因]
+| 狀態 | 檔案 | 備份路徑 | 說明 |
+|---|---|---|---|
+| [如：修改] | [檔案路徑，如 CLAUDE.md] | [如：.claude-logs/archive/XXXX.bak] | [簡述該檔案具體修改了什麼] |
+| [如：新建] | [檔案路徑，如 SOP.md] | — | [簡述該新建檔案用途] |
 
 ---
 
-## 修法
+## §4 修法說明
 
 詳細條列每個檔案的改動內容，必要時附帶關鍵程式碼片段以利未來回溯：
 
-### 1. `[檔案 A]` — [改動名稱]
+### §4.1 `[檔案 A]` — [改動名稱]
 [詳細描述具體修法與邏輯]
 ```python
 # 關鍵修改代碼片段
 ```
 
-### 2. `[檔案 B]` — [改動名稱]
+### §4.2 `[檔案 B]` — [改動名稱]
 [詳細描述具體修法與邏輯]
 
 ---
 
-## 不可動清單遵守狀態
-
-驗證已嚴格遵守計畫中制定的「邊界限制」：
-
-- [ ] 已確認 `[檔案名稱 A]` 的 `[特定邏輯]` 未被修改。
-- [ ] 已確認 `[檔案名稱 B]` 的 `[特定配置]` 未被修改。
-- [ ] 已確認未引發任何超出本 Commit 範疇的額外副作用。
-
----
-
-## 端到端（E2E）驗證結果
+## §5 測試結果
 
 提供真實、不造假的驗證證據：
 
-### 1. 本地改動狀態確認
+### §5.1 本地改動狀態確認
 執行 `git status -s` 的輸出：
 ```bash
 $ git status -s
 # [貼上真實輸出]
 ```
 
-### 2. 靜態語意檢查
-執行語意編譯或 Lint 檢查的輸出：
-```bash
-$ python -m py_compile [修改的檔案.py]
-# [無輸出或顯示編譯成功]
-```
-
-### 3. 單元測試執行結果
-執行 `pytest` 單元測試的完整輸出：
+### §5.2 單元測試或核查結果
+貼上你執行 tasks.md 中驗收腳本的實際終端輸出：
 ```bash
 $ pytest tests/ -v
-# [貼上真實測試輸出，確認 N passed, 0 failed]
+# [貼上真實測試輸出]
 ```
 
-### 4. 手動端到端（E2E）功能測試
-[描述您跑手動 E2E 的實際行為，並貼上關鍵的後端日誌輸出或前端表現]
-```
-[貼上後端 logger 輸出的關鍵日誌或結果數據]
+### §5.3 SOP 一致性核查（BE-Refactor / BE-Hotfix 強制）
+若非後端業務代碼改動，可寫：`DOC-Refactor 工作流，無 .py 改動，跳過（合規）`。
+若是後端業務代碼，貼上實測 grep 輸出：
+- **logging 檢測** (`grep -n "traceback.format_exc..."`)：[貼上輸出或標明 無命中（合規）]
+- **database 檢測** (`grep -nE "\.commit()..."`)：[貼上輸出或標明 無命中（合規）]
+
+---
+
+## §6 不可動清單遵守
+
+| 項目 | 狀態 |
+|---|---|
+| [如：pipeline_core.py 等業務代碼] | [x] ✅ 未觸碰 |
+| [如：主 repo 目錄] | [x] ✅ 未讀寫 |
+| 既有的 `[特定 API 簽名 / 介面簽名]` | [x] ✅ 未變更 |
+
+---
+
+## §7 銜接
+
+- **baton/ 狀態**：[本執行報告暫存於 baton/，待 C5 收官時以 mv + git add 歸檔至 executions/，恢復 baton/ 只剩 README]
+- **下一步**：[指向 tasks.md 中的下一個 Commit]
+- **消化歸檔之 baton 檔**：[若有，寫入被消化歸檔之 baton 檔名與對應 Git commit hash 映射，完成 Traceability 交接鏈，若無則寫無]
+
+---
+
+## §8 baron 執行命令
+
+```bash
+# git add 清單
+git add [檔案 A]
+git add [檔案 B]
+
+# commit message（已寫入 /tmp/[任務編碼]_[Commit代號]_msg.txt）
+git commit -F /tmp/[任務編碼]_[Commit代號]_msg.txt
 ```
 
 ---
 
-## 回退方式 (Rollback)
+## §99 治理規格與 Revision
 
-若本改動在 Production 或 Staging 環境發生非預期缺陷，可透過以下步驟快速且無痛回退：
+### §99.1 治理規格表
 
-```bash
-# 還原到本次改動前的 Commit
-git reset --hard [落地前的 Commit Hash]
+| 維度 | 內容 |
+|---|---|
+| **目的** | 記錄 [任務編碼] [Commit代號] 的代碼變更與驗收結果，作為 Traceability 審計依據 |
+| **用途** | 暫存於 baton/；階段 6 收官時 Conformance 核對原始 plan；核對後由 Agent 移動歸檔至 executions/ 併入版控 |
+| **權威源** | 本檔 §1–§8 |
+| **引用方** | 階段 6 收官 template_prompt_for_check.md |
+| **被引用方** | <由 Antigravity 自動掃描注入> |
+| **約束事項** | 嚴禁自動 git commit；暫存於 baton/，C5 收官前不入版控 |
+| **改版觸發條件** | 執行報告錯誤修正 / baron 重新驗收 |
+| **改版規則** | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
+| **刪除條件** | 永久保留歸檔於 executions/，不刪除 |
+| **重複防護** | 本檔為本 Commit 執行唯一源，不重複 tasks 中的六維度實作細節，不重複 plan 中的全局規格 |
 
-# 若已推送到遠端且需要強行覆蓋（請謹慎評估）
-# git push origin [branch] --force
-```
+### §99.2 Revision 歷程
+
+- v1 (2026-05-26)：本 Commit 執行完畢產出報告

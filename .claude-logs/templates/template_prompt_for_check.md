@@ -1,0 +1,178 @@
+# template_prompt_for_check.md — 檢驗與收官提示詞模板
+
+> **用途**：baron 套用此模板，向 Claude Code 或 Antigravity 發出階段 5-6 的 Conformance 驗收與歸檔收官指令。
+> 所有 Commit ship 完畢且 baron 確認後，才執行本模板。
+> 使用前將所有 `<佔位符>` 替換為實際值，並移除本說明行。
+
+---
+
+## 使用說明
+
+1. 確認所有 Commit 已由 baron 手動 commit（全部 hash 已知）
+2. 複製以下「提示詞本體」的全部內容
+3. 填寫執行報告清單（所有 _執行.md 路徑）
+4. 提示詞歸檔：發出前先依 `prompts/README.md` 歸檔至 `.claude-logs/prompts/`
+5. 發出提示詞後等待 Claude Code 完成 Conformance 驗收與歸檔，**不要追加任何後續指令**
+
+---
+
+## 提示詞本體（複製此段以下全部內容使用）
+
+---
+
+你現在扮演 **Claude Code**，請對以下任務執行 Conformance 驗收，並在全部合規後執行收官歸檔動作。
+
+### 📋 任務資訊
+
+- **任務編碼**：`<任務編碼>`
+- **Plan 路徑**：`<.claude-logs/plans/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md>`
+- **Tasks 路徑**：`<.claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md>`（或已移至 tasks/ 的路徑）
+- **執行報告清單**：
+  ```
+  .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<Commit代號 1>_執行.md
+  .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<Commit代號 2>_執行.md
+  ...（所有 Commit 的執行報告）
+  ```
+
+### 📖 強制讀檔清單
+
+請在開始驗收前，必須完整閱讀以下文件（按順序）：
+
+```
+CLAUDE.md                                              # 核心規範與契約（已自動載入）
+.claude-logs/ref/WORKFLOW_SOP.md                       # 工作流規範（已自動載入）
+.claude-logs/TODO.md                                   # 任務狀態（已自動載入）
+<plan 路徑>                                            # 原始規格（驗收基準）
+<tasks 路徑>                                           # Commit 拆分與驗收條件（§6 測試計畫）
+<所有 _執行.md 路徑>                                   # 實際執行結果
+```
+
+---
+
+### ✅ Conformance 驗收流程
+
+**第一步：逐項交叉比對**
+
+依以下三個維度，逐項核對：
+
+| 驗收維度 | 來源 | 核對方式 |
+|---|---|---|
+| **目標規格** | `plan.md §2 目標規格` | 逐項確認執行報告中是否有對應的「完成狀態」 |
+| **驗收條件** | `tasks.md §6 測試計畫` | 逐項確認每個 grep / pytest 條件是否在執行報告 §5 中有通過記錄 |
+| **不可動清單** | `tasks.md §7 不可動清單` | 確認所有執行報告 §6 中均標記「✅ 未觸碰」 |
+
+**第二步：產出 Conformance 驗收報告**
+
+```markdown
+## Conformance 驗收結果
+
+### 目標規格合規性
+| # | plan §2 規格項 | 對應執行報告 | 狀態 |
+|---|---|---|---|
+| 1 | <規格項描述> | <Commit代號>_執行.md §1/§4/§5 | ✅ 合規 / ❌ 不符 |
+...
+
+### 測試計畫合規性
+| # | tasks §6 驗收條件 | 執行報告驗證 | 狀態 |
+|---|---|---|---|
+| 1 | <驗收條件描述> | <Commit代號>_執行.md §5.N | ✅ 合規 / ❌ 不符 |
+...
+
+### 不可動清單合規性
+| 項目 | 所有執行報告 §6 | 狀態 |
+|---|---|---|
+| 業務代碼 | 全部標記「✅ 未觸碰」 | ✅ / ❌ |
+...
+
+### 總結
+- 🟢 全部合規：執行收官動作
+- 🔴 有不符項：停止收官，列出例外並等待 baron 拍板
+```
+
+**若有任何不符項**：
+- 明確列出所有例外
+- 拒絕執行收官動作
+- 等待 baron 指示（修正 or 豁免）
+
+---
+
+### 🗃️ 收官自動化動作（全部合規後才執行）
+
+**第一步：更新 TODO.md**
+
+將本任務從「進行中」移至「已完成」：
+
+1. 在 `## ✅ 已完成` 區塊，依任務類型新增完成表格：
+   ```markdown
+   ### <Phase/任務分類> <任務名稱>
+
+   | Commit | 內容 | Hash |
+   |---|---|---|
+   | <Commit代號 1> | <內容簡述> | `待 baron 回填` |
+   | <Commit代號 2> | <內容簡述> | `待 baron 回填` |
+   ```
+
+2. 從 `## 🟡 進行中 / ⬜ 未開始` 區塊**移除**本任務條目
+
+3. 更新 `## 索引（依類別）` 底部，將本任務標記為 ✅
+
+**第二步：歸檔 baton/ 暫存文件**
+
+將 baton/ 下所有本任務的暫存文件移至正式目錄：
+
+```bash
+# plan（若在 baton/ 下尚未移動）
+mv .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md \
+   .claude-logs/plans/
+git add .claude-logs/plans/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md
+
+# tasks
+mv .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md \
+   .claude-logs/tasks/
+git add .claude-logs/tasks/<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md
+
+# 執行報告（所有 _執行.md）
+mv .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<Commit代號 1>_執行.md \
+   .claude-logs/executions/
+git add .claude-logs/executions/<YYYY-MM-DD>_<任務編碼>_<Commit代號 1>_執行.md
+# ...（對每個 _執行.md 重複此步驟）
+```
+
+**第三步：確認 baton/ 只剩 README.md**
+
+```bash
+ls .claude-logs/baton/
+# 期望：只有 README.md
+```
+
+**第四步：更新 prompts/INDEX.md（若有歸檔提示詞）**
+
+```bash
+# 確認本任務相關提示詞是否已歸檔至 prompts/
+ls .claude-logs/prompts/ | grep "<任務編碼>"
+# 若有，確認 INDEX.md 中已有對應條目
+```
+
+---
+
+### 🛑 停止指令
+
+**完成 TODO.md 更新與 baton/ 歸檔後必須立即停止。**
+
+嚴禁：
+- ❌ 自發執行 `git commit` 或 `git push`（baron 手動回填 hash 後由 baron 執行最終 commit）
+- ❌ 修改已歸檔到 executions/ 的執行報告（那是永久審計記錄）
+- ❌ 修改 plans/ 或 tasks/ 下已歸檔的文件
+
+---
+
+## 提示詞歸檔指令
+
+發出提示詞前，請執行：
+```bash
+# 歸檔本提示詞
+cp /dev/stdin .claude-logs/prompts/<YYYY-MM-DD>_<任務編碼>_check_提示詞.md
+echo "- $(date +%Y-%m-%d) | <任務編碼> | check | Conformance 驗收與收官歸檔" >> .claude-logs/prompts/INDEX.md
+```
+
+依 `.claude-logs/prompts/README.md` 完整規則處理（敏感資訊需打碼）。

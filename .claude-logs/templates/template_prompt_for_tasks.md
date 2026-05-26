@@ -1,0 +1,146 @@
+# template_prompt_for_tasks.md — 任務拆分提示詞模板
+
+> **用途**：baron 套用此模板，向 Claude Code 發出階段 2 拆 commit 指令，產出 `_tasks.md` 並同步更新 `TODO.md`。
+> 使用前將所有 `<佔位符>` 替換為實際值，並移除本說明行。
+
+---
+
+## 使用說明
+
+1. 複製以下「提示詞本體」的全部內容
+2. 將 `<佔位符>` 替換為實際值
+3. 提示詞歸檔：發出前先依 `prompts/README.md` 歸檔至 `.claude-logs/prompts/`
+4. 發出提示詞後等待 Claude Code 產出 tasks.md + 更新 TODO.md，**不要追加任何後續指令**
+
+---
+
+## 提示詞本體（複製此段以下全部內容使用）
+
+---
+
+你現在扮演 **Claude Code**，請依以下指令將 plan 拆分為可執行的 Commit 清單。
+
+### 📋 任務資訊
+
+- **任務編碼**：`<任務編碼>`（例：RAG-10 / CHAT-4 / MODEL-11）
+- **工作流類別**：`<FE-Refactor | BE-Refactor | DOC-Refactor | FE-Hotfix | BE-Hotfix>`
+- **Plan 路徑**：`<.claude-logs/plans/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md>`
+
+### 📖 強制讀檔清單
+
+請在開始拆分前，必須完整閱讀以下文件：
+
+```
+CLAUDE.md                                              # 核心規範與契約（已自動載入）
+.claude-logs/ref/WORKFLOW_SOP.md                       # 工作流規範（已自動載入）
+.claude-logs/TODO.md                                   # 任務狀態真理源（已自動載入）
+<plan 路徑>                                            # 本次拆分的依據 plan
+.claude-logs/templates/template_tasks.md               # tasks 模板（套用結構）
+```
+
+### 🏢 工作目錄硬規則（必遵守）
+
+- **唯一合法工作目錄**：`.claude/worktrees/hopeful-yalow-902c50/`
+- **嚴禁讀寫主 repo 目錄**（worktree 父目錄）
+- **嚴禁改動業務代碼**（`pipeline_core.py` / `web_server.py` / `paper_manager.py` / `processor/*.py` / `static/*`）
+- **執行中產出文件必須先放 `baton/`**（非 baton/ 暫存文件不入版控，C5 收官後才 mv + git add 歸檔）
+
+### 📊 成果盤點約束（§0.5 必置文件開頭）
+
+**首先**，在 tasks.md 的 `## §0.5 成果盤點` 章節，強制列出本任務的全量產出：
+
+```markdown
+## §0.5 成果盤點（Outcome Inventory）
+
+| 類別 | 數量 | 明細 |
+|---|---|---|
+| **新增檔案** | N 個 | <檔案 1> / <檔案 2> / ... |
+| **修改檔案** | N 個 | <檔案 1>（改動簡述）/ ... |
+| **目錄初始化** | N 個 | <目錄>（用途）|
+| **狀態更新** | N 個 | TODO.md / prompts/INDEX.md |
+| **Commits** | N 個 | <Commit代號 1> → ... → <最後 Commit代號> |
+| **baton 歸檔** | N 次 | 收官時 mv → plans/ + tasks/ + git add |
+```
+
+### ⚙️ Commit 拆分原則
+
+- **彈性規劃**：Commit 數量可依最佳施行方式彈性安排，無固定上限
+- **語意完整**：每個 Commit 應為獨立可測試的最小功能單元
+- **可逆設計**：每個 Commit 必須可獨立 revert
+- **優先順序**：依 `CLAUDE.md §3 工作目錄硬規則` 與 plan §1.18 Bootstrap First 原則排序
+
+### 📋 §8 六維度 Commit 拆分表格（每個 Commit 必填）
+
+tasks.md 的 `## §8 推薦 Commit 拆分` 章節，每個 Commit 必須包含以下六維度表格：
+
+```markdown
+### <Commit代號> — <Commit名稱>（<中文括號命名>）
+
+| 維度 | 內容 |
+|---|---|
+| **影響範圍** | <列出所有改動檔案與新增檔案> |
+| **安全性** | 🟢 高 / 🟡 中 / 🔴 低 — <理由> |
+| **可逆性** | 🟢 高 / 🟡 中 / 🔴 低 — <回滾方式> |
+| **驗收 grep 條件** | <具體驗收指令，如：grep -n "..." <檔案> # 期望：有命中> |
+| **依賴關係** | <前置 Commit 或「無前置」> |
+| **具體實作細節** | <逐步說明每個檔案的具體改法，含關鍵代碼邏輯> |
+```
+
+### 📝 §1 TL;DR 中文括號命名要求
+
+`## §1 TL;DR（概要）` 章節中，每個 Commit 引用必須含中文括號命名：
+- 正確範例：`C1 — Bootstrap Core（自動載入核心）`
+- 錯誤範例：`C1 Bootstrap Core`（缺少括號中文子標題）
+
+### 🔄 同步更新 TODO.md（必做、即時）
+
+在產出 tasks.md 的同時，**立即**於根目錄 `TODO.md` 的 `## 🟡 進行中 / ⬜ 未開始 → ### 🔴 高優先` 最前方，新增本任務條目：
+
+```markdown
+- 🟡 **<任務編碼> <任務名稱>**（`<plan 路徑>`）
+  - [/] 🟡 WIP: <Commit代號 1> — <Commit名稱>（<中文括號命名>）
+  - [ ] ⬜ 未開始: <Commit代號 2> — <Commit名稱>（<中文括號命名>）
+  - ...（依實際 Commit 數量）
+  - 工時：N 個 commits
+  - 依賴：<依賴項或「無」>
+```
+
+### 📦 歸檔 baton plan（若有）
+
+若 plan 目前位於 `baton/`，請在 tasks.md 產出後執行歸檔：
+
+```bash
+mv .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md \
+   .claude-logs/plans/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md
+git add .claude-logs/plans/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md
+```
+
+### 📁 產出規格
+
+- **產出路徑**：`.claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md`（暫存 baton/）
+- **套用模板**：`.claude-logs/templates/template_tasks.md`
+- **命名格式**：依 `.claude-logs/ref/WORKFLOW_SOP.md §6 命名規則`
+
+---
+
+### 🛑 停止指令
+
+**產出 tasks.md 並更新 TODO.md 後必須立即停止。**
+
+嚴禁：
+- ❌ 繼續產出 `_執行.md`（執行階段由 baron 下達獨立提示詞觸發）
+- ❌ 動任何業務代碼（tasks 階段只能 view / grep / 文件編輯）
+- ❌ 自發執行 `git commit` 或 `git push`
+
+---
+
+## 提示詞歸檔指令
+
+發出提示詞前，請執行：
+```bash
+# 歸檔本提示詞
+cp /dev/stdin .claude-logs/prompts/<YYYY-MM-DD>_<任務編碼>_tasks_提示詞.md
+echo "- $(date +%Y-%m-%d) | <任務編碼> | tasks | 拆 commit 產 tasks.md" >> .claude-logs/prompts/INDEX.md
+```
+
+依 `.claude-logs/prompts/README.md` 完整規則處理（敏感資訊需打碼）。

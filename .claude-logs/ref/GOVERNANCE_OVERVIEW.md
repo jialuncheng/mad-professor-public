@@ -1,0 +1,59 @@
+# 治理框架 Overview
+
+> 本檔為治理框架 entry point，指向各規範之唯一權威源。本檔為純靜態指針，不含實質規格，避免冗餘。
+
+---
+
+## §0 改版規則
+
+- 改版觸發：條款指針路徑變動
+- 完整治理規格 → §99
+
+---
+
+## 1. 工作流（六階段、階段切點、單一文件中斷點）
+詳見 [WORKFLOW_SOP.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/.claude-logs/ref/WORKFLOW_SOP.md) 的 `## §1 五類工作流定義` 及 `## §3 六階段強制觸發鏈`。
+
+## 2. 文件用途範疇 / 命名規則 / 文件歸屬判定
+詳見 [WORKFLOW_SOP.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/.claude-logs/ref/WORKFLOW_SOP.md) 的 `## §2 文書類別` 及 `## §6 命名規則`。
+
+## 3. 工作目錄硬規則 / 跨環境同步 / 工作流類別判定 / 核心規範契約
+詳見 [CLAUDE.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/CLAUDE.md) 的 `## §3 工作目錄硬規則`、`## §4 跨環境同步`、`## §2 工作流類別判定` 及 `## §1 核心規範與契約`。
+
+## 4. 跨 AI 交接（baton 機制）
+詳見 [README.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/.claude-logs/baton/README.md)。
+
+## 5. 模板規格（template_plan / tasks / execution / prompt_for_*）
+詳見各 `templates/<檔名>.md` 的 `## §99 治理規格`。
+
+## 6. SOP 一致性核查（logging / database）
+詳見 [WORKFLOW_SOP.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/.claude-logs/ref/WORKFLOW_SOP.md) 的 `## §5 SOP 一致性核查機制`。
+
+## 7. 快取友善度評分
+詳見 `sop/CACHE_OPTIMIZATION_SOP.md`。
+
+## 8. 任務生命週期 / 雙軌制 / 提示詞歸檔
+詳見 [PROJECT_PROGRESS_CONTROL_FRAMEWORK.md](file:///Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/.claude-logs/ref/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md)。
+
+---
+
+## §99 治理規格與 Revision
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| **目的** | 提供治理框架的極簡 entry point 指針，引導開發者與 AI 快速定位唯一權威源 |
+| **用途** | 當需要查詢系統級代碼治理規範時，作為第一導航頁使用 |
+| **權威源** | 本檔各指針所指之目標文件 |
+| **引用方** | 新人手冊 / 開發者啟動手動查閱 |
+| **被引用方** | <由 Antigravity 自動掃描注入> |
+| **約束事項** | 嚴禁包含任何實質的治理細節（如具體命名、具體目錄名）；總行數限制 ≤ 60 行 |
+| **改版觸發條件** | 引用文件語意錨點變動 / 檔案路徑變更 |
+| **改版規則** | 直接修改指針 + §99.2 登記 |
+| **刪除條件** | 永久保留作為框架入口，不予刪除 |
+| **重複防護** | 本檔僅作為指針，不重複定義任何實質規範以防雙重真理源衝突 |
+
+### §99.2 Revision 歷程
+
+- v1 (2026-05-26)：初版發布，對齊 r11/v11 指針錨點

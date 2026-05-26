@@ -1,0 +1,135 @@
+# template_prompt_for_run.md — 原子執行提示詞模板
+
+> **用途**：baron 套用此模板，向 Claude Code 發出階段 4 單一 Commit/OP 執行指令，產出 `_執行.md`。
+> 每次只執行一個 Commit/OP，產出執行報告後即停。
+> 使用前將所有 `<佔位符>` 替換為實際值，並移除本說明行。
+
+---
+
+## 使用說明
+
+1. 複製以下「提示詞本體」的全部內容
+2. 將 `<佔位符>` 替換為實際值（特別注意：每次只指定一個 Commit 代號）
+3. 填寫元數據審計塊（收到時間等欄位由 baron 填入）
+4. 提示詞歸檔：發出前先依 `prompts/README.md` 歸檔至 `.claude-logs/prompts/`
+5. 發出提示詞後等待 Claude Code 產出執行報告，**不要追加任何後續指令**
+
+---
+
+## 提示詞本體（複製此段以下全部內容使用）
+
+---
+
+### 📊 元數據審計塊（baron 填入）
+
+| 欄位 | 值 |
+|---|---|
+| **收到時間** | `<YYYY-MM-DD HH:MM>` |
+| **任務代號** | `<任務編碼> <Commit代號>`（例：WORKFLOW-1 C3）|
+| **觸發 Commit** | `<Commit代號>`（例：C3）|
+| **相關產出檔案** | `<tasks.md 路徑>` |
+| **觸發情境** | `<baron 確認上一個 Commit 後，下達本次執行指令>` |
+
+---
+
+你現在扮演 **Claude Code**，請執行以下指定的單一 Commit/OP。
+
+### 📋 任務資訊
+
+- **任務編碼**：`<任務編碼>`
+- **當前 Commit 代號**：`<Commit代號>`（例：C1 / OP-1 / P2-1 / BUG-F1）
+- **工作流類別**：`<FE-Refactor | BE-Refactor | DOC-Refactor | FE-Hotfix | BE-Hotfix>`
+- **Tasks 路徑**：`<.claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_tasks.md>`
+
+### 📖 強制讀檔清單
+
+請在開始執行前，必須完整閱讀以下文件：
+
+```
+CLAUDE.md                                              # 核心規範與契約（已自動載入）
+.claude-logs/ref/WORKFLOW_SOP.md                       # 工作流規範（已自動載入）
+<tasks.md 路徑>                                        # 本次執行的依據 tasks（§8 實作細節）
+<若工作流類別為 BE-Refactor / BE-Hotfix，必讀：>
+.claude-logs/sop/2026-05-23_logging_SOP_手冊.md
+.claude-logs/sop/2026-05-23_database_SOP_手冊.md
+```
+
+### 🛠️ 執行命令
+
+請依 `tasks.md §8 <Commit代號> 具體實作細節` 進行代碼修改，並嚴格遵守以下三個防線：
+
+1. **物理防線**（`tasks.md §7 不可動清單`）：逐項確認，不越界
+2. **測試防線**（`tasks.md §6 測試計畫`）：執行對應驗收 grep 條件 + pytest（BE 工作流）+ E2E（前端工作流）
+3. **文件防線**（`CLAUDE.md §1.3`）：所有 commit / push 由 baron 手動執行，嚴禁自發
+
+### 💾 備份規則
+
+修改任何既有檔案前，必須先備份：
+```bash
+cp <檔案路徑> .claude-logs/archive/<YYYY-MM-DD>_<任務編碼>_<Commit代號>_<檔名>.bak
+```
+
+### 📁 產出規格
+
+- **執行報告路徑**：`.claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<Commit代號>_執行.md`（暫存 baton/）
+- **套用模板**：`.claude-logs/templates/template_execution.md`
+- **命名格式**：依 `.claude-logs/ref/WORKFLOW_SOP.md §6 命名規則`
+
+執行報告必須包含：
+- 頂部元數據塊（任務代號 / 執行日期 / 依據規劃 / 次級參考 / hash 留空 / 狀態）
+- §1 基準與完成狀態
+- §2 Commit 表格
+- §3 變動檔案清單（含備份路徑）
+- §4 修法說明（附關鍵代碼片段）
+- §5 測試結果（貼上真實終端輸出）
+- §6 不可動清單遵守
+- §7 銜接（baton 狀態 + 下一步）
+- **§8 baron 執行命令**（見下方格式要求）
+
+### 📝 §8 baron 執行命令格式要求
+
+在執行報告的 `## §8 baron 執行命令` 中，必須提供：
+
+```bash
+# 1. 備份檔案已完成（報告 §3 中已列出）
+
+# 2. git add 清單（所有本次 Commit 涉及的改動）
+git add <檔案 A>
+git add <檔案 B>
+git add .claude-logs/archive/<備份檔案>
+# ...
+
+# 3. commit message 草稿（已寫入 /tmp/<任務編碼>_<Commit代號>_msg.txt）
+cat > /tmp/<任務編碼>_<Commit代號>_msg.txt << 'EOF'
+<工作流類別>: <Commit代號> — <Commit名稱>
+
+<具體改動摘要，3-5 行>
+EOF
+
+# 4. baron 手動執行
+git commit -F /tmp/<任務編碼>_<Commit代號>_msg.txt
+```
+
+---
+
+### 🛑 停止指令
+
+**產出 `<Commit代號>_執行.md` 後必須立即停止所有工具呼叫與代碼修改。**
+
+嚴禁：
+- ❌ 繼續執行下一個 Commit/OP（必須等 baron 確認後另行下達提示詞）
+- ❌ 修改任何未列入本 Commit §8 實作細節的代碼或文件
+- ❌ 自發執行 `git commit` 或 `git push`
+
+---
+
+## 提示詞歸檔指令
+
+發出提示詞前，請執行：
+```bash
+# 歸檔本提示詞
+cp /dev/stdin .claude-logs/prompts/<YYYY-MM-DD>_<任務編碼>_<Commit代號>_run_提示詞.md
+echo "- $(date +%Y-%m-%d) | <任務編碼> <Commit代號> | run | 執行單一 Commit" >> .claude-logs/prompts/INDEX.md
+```
+
+依 `.claude-logs/prompts/README.md` 完整規則處理（敏感資訊需打碼）。
