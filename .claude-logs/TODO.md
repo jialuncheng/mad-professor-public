@@ -216,8 +216,8 @@
   - ✅ C1：R1 五大提示詞模板自愈歸檔防線（`template_prompt_for_*.md` 5 個模板）
   - ✅ C2：R2 Check Conformance 維度四+五（`template_prompt_for_check.md`）
   - ✅ C3：R3+R4 SOP 備份暫存鐵律 + §8 重構（`WORKFLOW_SOP.md` + `template_execution.md` + `template_tasks.md`）
-  - 🟡 WIP C4：R5a 歷史 9 份提示詞物理補建（`prompts/`）
-  - C5：R5b INDEX.md 雙向對齊收官（`prompts/INDEX.md` + baton→plans/tasks 歸檔）
+  - ✅ C4：R5a 歷史 9 份提示詞物理補建（`prompts/`）
+  - 🟡 WIP C5：R5b INDEX.md 雙向對齊收官（`prompts/INDEX.md` + baton→plans/tasks 歸檔）
   - 工時：5 個 commits
   - 依賴：無
 
