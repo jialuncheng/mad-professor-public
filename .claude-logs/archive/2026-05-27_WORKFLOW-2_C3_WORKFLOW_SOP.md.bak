@@ -100,9 +100,6 @@ session 必讀核心（跨任務）         → ref/
 - 嚴禁跨階段（Claude Code 收到單階段提示詞不得執行下一階段）
 - 階段 4 每次只執行單一 Commit/OP（如 C1 / OP-1 / P2-1 等）
 - 階段 2 同步更新 TODO.md：拆 tasks 同時，在 TODO.md 新增任務條目並設狀態 🟡 WIP
-- .bak 備份鐵律：修改既有檔案前產出的 .bak 備份，**必須在對應 Run 階段的 `git add` 清單中強制包含**（審計存檔，便於 git show 追溯）
-- baton/ 暫存鐵律：Run 階段產出的執行報告與 plan，**嚴禁在 Run 階段 `mv` 移動或 `git add`**，必須原封不動留在 baton/ 暫存
-- 收官歸檔鐵律：baton/ 下所有暫存文件，**必須且僅能在最後 Check 階段一次性 `mv` + `git add` 歸檔至正式目錄**
 
 ---
 
@@ -192,6 +189,5 @@ grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
 
 ### §99.2 Revision 歷程
 
-- v3 (2026-05-27)：WORKFLOW-2 C3——§3 強制規則新增三段備份/暫存/收官鐵律（R3）
 - v2 (2026-05-26)：WORKFLOW-1 C1.5——§3 強制規則補入「階段 2 同步更新 TODO.md」規則（對齊 plan r11）
 - v1 (2026-05-26)：WORKFLOW-1 C1 初版——五類工作流 / 六階段觸發鏈 / 驗證分級 / SOP 核查 / 命名規則 / §0 / §99 拆分式結構

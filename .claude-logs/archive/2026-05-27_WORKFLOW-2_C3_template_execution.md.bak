@@ -1,13 +1,13 @@
-# <任務編碼> [Commit代號/OP序號] — [任務名稱] 執行報告
+# [任務編碼] [Commit代號/OP序號] — [任務名稱] 執行報告
 
 ---
 
-**任務代號**：<任務編碼> [Commit代號/OP序號，如 C1 / OP-1]  
+**任務代號**：[任務編碼] [Commit代號/OP序號，如 C1 / OP-1]  
 **執行日期**：[YYYY-MM-DD]  
 **依據規劃**：[對應的 plans/ 下 plan 路徑]  
 **次級參考**：[對應的 tasks/ 下 tasks 路徑]  
 **Git commit hash**：[留空，由 baron 回填]  
-**狀態**：Completed (Commit <Commit代號>)  
+**狀態**：Completed (Commit [Commit代號])  
 
 ---
 
@@ -30,7 +30,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| <Commit代號> | [本次 Commit 的簡述] | [留空，由 baron 回填] |
+| [Commit代號] | [本次 Commit 的簡述] | [留空，由 baron 回填] |
 
 ---
 
@@ -40,8 +40,6 @@
 |---|---|---|---|
 | [如：修改] | [檔案路徑，如 CLAUDE.md] | [如：.claude-logs/archive/XXXX.bak] | [簡述該檔案具體修改了什麼] |
 | [如：新建] | [檔案路徑，如 SOP.md] | — | [簡述該新建檔案用途] |
-
-> ⚠️ **備份欄位強制注意**：備份路徑欄中的每一個 `.bak` 備份檔，**必須**在本 Run Commit 的 `git add` 清單中包含（勿省略）。
 
 ---
 
@@ -106,27 +104,13 @@ $ pytest tests/ -v
 
 ## §8 baron 執行命令
 
-> ℹ️ **Check 執行報告的 §8 僅保留以下一行 commit 指令**；所有 mv + git add 已在本報告 §4 完成（見變動檔案清單）。
-
 ```bash
 # git add 清單
 git add [檔案 A]
 git add [檔案 B]
 
-# commit message（已寫入 /tmp/<任務編碼>_<Commit代號>_msg.txt）
-git commit -F /tmp/<任務編碼>_<Commit代號>_msg.txt
-```
-
-### §8.2 commit message 草稿
-
-（草稿已寫入 `/tmp/<任務編碼>_<Commit代號>_msg.txt`，以下為完整展示）
-
-```
-<工作流類別>: <任務編碼> <Commit代號> — <Commit名稱>
-
-<3-5 行改動摘要>
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+# commit message（已寫入 /tmp/[任務編碼]_[Commit代號]_msg.txt）
+git commit -F /tmp/[任務編碼]_[Commit代號]_msg.txt
 ```
 
 ---
@@ -137,7 +121,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 | 維度 | 內容 |
 |---|---|
-| **目的** | 記錄 <任務編碼> <Commit代號> 的代碼變更與驗收結果，作為 Traceability 審計依據 |
+| **目的** | 記錄 [任務編碼] [Commit代號] 的代碼變更與驗收結果，作為 Traceability 審計依據 |
 | **用途** | 暫存於 baton/；階段 6 收官時 Conformance 核對原始 plan；核對後由 Agent 移動歸檔至 executions/ 併入版控 |
 | **權威源** | 本檔 §1–§8 |
 | **引用方** | 階段 6 收官 template_prompt_for_check.md |

@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-27（WORKFLOW-2 C2 WIP）
+最後更新：2026-05-27（WORKFLOW-2 C3 WIP）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -29,6 +29,7 @@
   - `2026-05-27_WORKFLOW-2_Tasks_提示詞.md` — Tasks（5 Commit 拆分：C1 五模板自愈 + C2 Check 維度四五 + C3 SOP 鐵律 + C4 歷史 9 份補建 + C5 INDEX 對齊）
   - `2026-05-27_WORKFLOW-2_C1_run_提示詞.md` — C1 Run（R1 五大提示詞模板自愈歸檔防線 + Tasks 階段補發執行報告）
   - `2026-05-27_WORKFLOW-2_C2_run_提示詞.md` — C2 Run（R2 Check 模板 Conformance 維度四提示詞歸檔 + 維度五 msg.txt 草稿完整性 + TODO.md hash 自癒）
+  - `2026-05-27_WORKFLOW-2_C3_run_提示詞.md` — C3 Run（R3+R4 SOP 三鐵律 + execution/tasks/run/check 模板 §8 重構 + TODO 自癒防線物理寫入）
 
 ### RAG 系列
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
@@ -63,6 +64,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_C3_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C2_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C1_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`
@@ -77,4 +79,3 @@
 - 2026-05-24 — `2026-05-24_BUG-B2_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-B1_提示詞.md`
 - 2026-05-24 — `2026-05-24_BUG-F6_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F5_提示詞.md`
