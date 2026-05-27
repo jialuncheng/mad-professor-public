@@ -25,7 +25,7 @@ import db
 import paper_manager
 from pipeline_core import PipelineCore
 from ai_core import AICore
-from utils.pdf_optimizer import optimize_pdf_lossless
+from processor.slides_processor import SlidesProcessor
 
 load_dotenv()
 
@@ -432,16 +432,9 @@ async def list_papers(current_user: CurrentUser = Depends(get_current_user)):
 async def upload_paper(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    doc_type: str = Form(...),
     current_user: CurrentUser = Depends(get_current_user)
 ):
-    """上傳 PDF 並開始處理（一字步 UX：前端 Modal 先選類型，FormData 直通 pipeline）"""
-    # === doc_type-registry ===
-    # 新增 doc_type 須同步更新此處。詳見 docs/HOW_TO_ADD_DOC_TYPE.md
-    valid_types = ['academic', 'book', 'technical', 'slides', 'web', 'news', 'resume']
-    if doc_type not in valid_types:
-        raise HTTPException(status_code=400, detail=f"無效的文件類型，可選: {valid_types}")
-
+    """上傳 PDF 並開始處理"""
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
@@ -464,24 +457,27 @@ async def upload_paper(
     with open(pdf_path, 'wb') as f:
         f.write(content)
 
-    # 非阻塞 PDF 無損優化（Atomic Overwrite，失敗靜默降級 — OPTIMIZE-1 C1/C2）
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, optimize_pdf_lossless, str(pdf_path))
+    # 偵測是否為簡報，供前端預選文件類型（不阻塞事件迴圈）
+    try:
+        loop = asyncio.get_event_loop()
+        suggested = await loop.run_in_executor(
+            None, SlidesProcessor.is_slides_pdf, str(pdf_path)
+        )
+        suggested_doc_type = 'slides' if suggested else 'academic'
+    except Exception:
+        suggested_doc_type = 'academic'
 
-    # 直接啟動 pipeline（一字步 UX：跳過 waiting_confirm 狀態）
+    # 上傳完成，立即等待使用者選擇文件類型
     # Phase 0：鍵 = (owner_id, paper_id) tuple；無需 _owner_id 欄事後比對
     with tasks_lock:
         processing_tasks[(current_user.id, paper_id)] = {
-            'status': 'processing',
+            'status': 'waiting_confirm',
             'progress': {'stage': 'upload', 'stage_name': '上傳完成', 'index': 0, 'total': 10, 'progress': 0},
             '_pdf_path': str(pdf_path),
             '_original_filename': file.filename,  # Phase 4.7a：原始檔名（未 sanitize）
         }
-    background_tasks.add_task(
-        run_pipeline, current_user.id, paper_id, str(pdf_path), doc_type, file.filename
-    )
 
-    return {'paper_id': paper_id, 'status': 'processing'}
+    return {'paper_id': paper_id, 'status': 'waiting_confirm', 'suggested_doc_type': suggested_doc_type}
 
 
 async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: str,

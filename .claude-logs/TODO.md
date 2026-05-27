@@ -15,12 +15,12 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| WORKFLOW-2-Tasks | Tasks 拆分（baton 暫存，C5 歸檔） | `待 baron 回填` |
+| WORKFLOW-2-Tasks | Tasks 拆分（baton 暫存，C5 歸檔） | `7a3332f` |
 | C1 | R1 五大提示詞模板自愈歸檔防線 | `b3e22c7` |
 | C2 | R2 Check Conformance 維度四+五 | `5d7bdda` |
 | C3 | R3+R4 SOP 備份暫存鐵律 + §8 重構 | `5a55939` |
 | C4 | R5a 歷史 9 份提示詞物理補建 | `10f9561` |
-| C5 | R5b INDEX 幽靈自癒 + 全案收官歸檔 | `待 baron 回填` |
+| C5 | R5b INDEX 幽靈自癒 + 全案收官歸檔 | `7a3332f` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-26_WORKFLOW-2_流程模板重構與提示詞自動歸檔_plan.md`
 
@@ -234,6 +234,13 @@
   - 工時：1-2 個 commits
   - 依賴：無
 
+- 🟡 **OPTIMIZE-1 PDF上傳自動無損優化 v2**（`.claude-logs/baton/2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`）
+  - [x] ✅ C1 — Implement Core Optimization Module with Atomic Overwrite（實作無損優化核心與單元測試）
+  - [x] ✅ C2 — Integrate 1-Step Upload in Web Server & Frontend（整合一字步上傳端點與前台 UI）
+  - [/] 🟡 WIP: C3 — Final Archiving and TODO Sync（收官歸檔與 TODO 結案同步）
+  - 工時：3 個 commits
+  - 依賴：無
+
 - ⬜ **RAG-11 reload SSE 還原**（Bug 6、需獨立 plan 評估）
   - 問題：切換 paper / 重新整理後，SSE chat history reload 功能缺失（API 合約需調整）
   - 工時：待 plan 評估（預估 1-2 commits）
@@ -245,15 +252,6 @@
   - 依賴：無
 
 ### 🟡 中優先
-
-- 🔵 **OPTIMIZE-1 PDF 上傳自動無損優化**（`2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`）
-  - web_server.py upload_paper 儲存 PDF 後立刻呼叫優化
-  - 實作 fitz 基於 garbage=3 與 deflate=True 的極速無損優化
-  - 加入 try...except 異常優雅降級，防止阻塞上傳主流程
-  - 嚴禁有損壓縮與字型重組，維持 100% 最高 Vision 辨識率
-  - 新增 tests/test_pdf_optimize.py 驗證無損壓縮與正常讀取
-  - 工時：1 個 commit
-  - 依賴：無
 
 - ⬜ **RAG-4 前端引用顯示**（Commit 15 plan Q3）
   - footnote / 「參考章節」清單 / 連結回原文段落
@@ -481,5 +479,5 @@
 - 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
 
 ### OPTIMIZE (1 項 active)
-- 🔵 OPTIMIZE-1 PDF 上傳自動無損優化（中、`2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`）
+- 🟡 OPTIMIZE-1 PDF 上傳自動無損優化（高、tasks v3 拆分完成 3 commits，C1 ✅ / C2 ✅ / C3 🟡 WIP）
 

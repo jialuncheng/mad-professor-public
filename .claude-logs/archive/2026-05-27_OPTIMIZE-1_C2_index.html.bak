@@ -1282,9 +1282,9 @@
 </div>
 
 <!-- 文件類型確認 Modal
-     OPTIMIZE-1 C2 Phase-Shift：ESC / 遮罩關閉已解鎖（Cancel 路徑零網路請求）。
-     data-no-esc="false" / data-no-mask-close="false" 允許 ESC 與遮罩關閉 Modal。 -->
-<div id="confirm-modal" class="modal-mask" data-no-esc="false" data-no-mask-close="false">
+     ⚠ data-no-esc / data-no-mask-close：強制使用者選擇類型才能推進，
+        故不可 ESC 關、不可點遮罩關 — 配合後端處理判斷規則 -->
+<div id="confirm-modal" class="modal-mask" data-no-esc="true" data-no-mask-close="true">
   <div id="confirm-box" class="modal-box" role="dialog" aria-labelledby="confirm-title">
     <h3 id="confirm-title">選擇文件類型</h3>
     <p id="confirm-desc">請選擇文件類型，系統將根據類型選擇最佳解析方式。</p>
@@ -1295,7 +1295,6 @@
       </button>
     </div>
     <div class="modal-actions">
-      <button id="confirm-cancel-btn" class="modal-btn">取消</button>
       <button id="confirm-ok-btn" class="modal-btn primary">確認，開始處理</button>
     </div>
   </div>
@@ -3189,69 +3188,56 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
   }
 });
 
-// 上傳論文（Phase-Shift — OPTIMIZE-1 C2：先選類型，再選檔，一字步 UX）
-// Step B1: upload-btn click → 顯示 #confirm-modal（挪用既有 modal，零新增 CSS）
-// Step B2: 取消/ESC/遮罩關閉 → 零網路請求
-// Step B3: 確定 → 讀取 doc_type → 動態建立 file input → FormData POST（file + doc_type）
+// 上傳論文（衝突 3.2：addEventListener + stopImmediatePropagation 自衛）
+// 上傳一次只能一份、選多份時 customAlert（避免後端 thread pool 競爭）
 document.getElementById('upload-btn').addEventListener('click', (e) => {
   e.stopImmediatePropagation();
-  const modal = document.getElementById('confirm-modal');
-  const dropdown = document.getElementById('doc-type-dropdown');
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf';
+  input.onchange = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;  // 使用者取消選檔
+    if (files.length > 1) {
+      customAlert({ title: '一次只能上傳一份文件', body: '請選擇單一 PDF 檔案' });
+      return;
+    }
+    const file = files[0];
 
-  // 重設 dropdown 預設值為 academic（每次開 Modal 重置）
-  dropdown.dataset.value = 'academic';
-  const valueEl = dropdown.querySelector('.dropdown-value');
-  if (valueEl) valueEl.textContent = DOC_TYPE_LABELS.academic;
-  document.getElementById('confirm-desc').textContent = '請選擇文件類型，系統將根據類型選擇最佳解析方式。';
+    const btn = document.getElementById('upload-btn');
+    btn.disabled = true;
+    setBusy(true);
 
-  // Step B2: 取消路徑 — 僅關閉 Modal，零網路請求（onclick 覆寫確保單一 handler）
-  document.getElementById('confirm-cancel-btn').onclick = () => {
-    modal.classList.remove('show');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/papers/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const paperId = data.paper_id;
+
+      // upload API 回應後立刻 unlock upload-btn、
+      // 允許使用者上傳下一份（後端 thread pool 並行 OK）。
+      // setBusy(false) 只 unlock cleanup-btn——按目前邏輯交由 trackProgress
+      // 觸發；此處保留 setBusy(false) 是維持「上傳階段已結束」語意（pipeline
+      // 由 confirm + trackProgress 接手）。
+      btn.disabled = false;
+      setBusy(false);
+
+      // 上傳完成，立即顯示文件類型選擇框
+      // 進度顯示在左欄 .paper-item.uploading 占位列（不在按鈕文字上）
+      showConfirmModal(paperId, data.suggested_doc_type, btn, file.name);
+
+    } catch (err) {
+      btn.disabled = false;
+      setBusy(false);
+      customAlert({ title: '上傳失敗', body: err.message });
+    }
   };
-
-  // Step B3: 確定路徑 — 讀取 doc_type → 動態建立 <input type="file"> → FormData POST
-  document.getElementById('confirm-ok-btn').onclick = () => {
-    const docType = document.querySelector('#doc-type-dropdown').dataset.value;
-    modal.classList.remove('show');
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf';
-    input.onchange = async (ev) => {
-      const files = ev.target.files;
-      if (!files || files.length === 0) return;  // 使用者取消選檔
-      if (files.length > 1) {
-        customAlert({ title: '一次只能上傳一份文件', body: '請選擇單一 PDF 檔案' });
-        return;
-      }
-      const file = files[0];
-      const btn = document.getElementById('upload-btn');
-      btn.disabled = true;
-      setBusy(true);
-
-      const form = new FormData();
-      form.append('file', file);
-      form.append('doc_type', docType);
-
-      try {
-        const res = await fetch('/api/papers/upload', { method: 'POST', body: form });
-        const data = await res.json();
-        // upload API 回應後立刻 unlock upload-btn，允許使用者上傳下一份
-        btn.disabled = false;
-        setBusy(false);
-        // 插入左欄占位列並開始 SSE 追蹤（pipeline 已在後端直接啟動）
-        insertUploadingRow(data.paper_id, file.name);
-        trackProgress(data.paper_id, btn);
-      } catch (err) {
-        btn.disabled = false;
-        setBusy(false);
-        customAlert({ title: '上傳失敗', body: err.message });
-      }
-    };
-    input.click();
-  };
-
-  modal.classList.add('show');
+  input.click();
 });
 
 // 追蹤處理進度（更新左欄 .paper-item.uploading 占位列；按鈕僅切 disabled）
