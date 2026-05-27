@@ -69,8 +69,6 @@ class PDFProcessor(PDFParser):
                     data={
                         "return_md": "true",
                         "response_format_zip": "true",
-                        # CPU 環境必須鎖定 pipeline backend（PaddleOCR + RapidTable）
-                        # hybrid_auto（MinerU 預設）在無 GPU 時永久卡死 Predict: 0%
                         "backend": "pipeline",
                         # MinerU 3.1.6 預設 return_images=False，不設則 ZIP 無圖
                         "return_images": "true",

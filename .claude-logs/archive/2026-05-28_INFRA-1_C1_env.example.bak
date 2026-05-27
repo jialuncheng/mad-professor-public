@@ -40,10 +40,6 @@ MINERU_OUTPUT_DIR=
 # MinerU HTTP 請求超時（秒）。書籍 PDF 通常需 10-30 分鐘，建議設 1800 以上。
 # 若設為非數字字串，程式自動退回預設 1800 秒（防禦性容錯）。
 MINERU_TIMEOUT=1800
-# ⚠️  CPU 部署模式下，嚴禁設定 MINERU_VIRTUAL_VRAM_SIZE：
-#     設為 8 → 程式嘗試分配 8GB 虛擬 VRAM，導致容器 OOM 崩潰
-#     設為 4 → 拖慢 MinerU 推理約 33 秒（CPU 排程頻繁喚起 GPU 路徑）
-#     GPU 容器中才設定此變數；CPU 部署一律保持此行被完整移除（不留空值也不留 key）。
 
 # ── 環境 ──
 # 環境：development 或 production

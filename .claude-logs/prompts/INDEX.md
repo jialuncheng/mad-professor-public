@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-27（MODEL-10 Check 收官）
+最後更新：2026-05-28（INFRA-1 C1）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -71,6 +71,10 @@
   - `2026-05-27_MODEL-10_C1_run_v1_提示詞.md` — C1 Run（pdf_processor.py MINERU_TIMEOUT 防禦性載入 + timeout=300 動態化 + Priority 2 廢棄 warning + .env.example + 3 pytest）
   - `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
 
+### INFRA 系列
+- `2026-05-28_INFRA-1_C1_run_v1_提示詞.md` — C1 Run（processor/pdf_processor.py backend=pipeline comment lock + test_backend_parameter_is_pipeline Case D + .env.example VRAM 禁用警告）
+- `2026-05-28_INFRA-1_Tasks_v1_提示詞.md` — Tasks v1（3 commits 拆分：C1 pdf_processor backend 鎖定 + C2 SOP CPU 推理規格更新 + Check 收官歸檔）
+
 ### OPTIMIZE 系列
 - ✅ **OPTIMIZE-1 PDF上傳自動無損優化（2026-05-27 收官）**
   - `2026-05-27_OPTIMIZE-1_C3_run_提示詞.md` — C3 Run（Final Archiving and TODO Sync：baton/ 全量 mv 歸檔 + TODO.md 結案）
@@ -81,6 +85,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-28 — `2026-05-28_INFRA-1_C1_run_v1_提示詞.md`
+- 2026-05-28 — `2026-05-28_INFRA-1_Tasks_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_Check_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_C2_run_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_C1_run_v1_提示詞.md`
@@ -94,5 +100,3 @@
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C4_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C3_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C2_run_提示詞.md`
-- 2026-05-27 — `2026-05-27_WORKFLOW-2_C1_run_提示詞.md`
-- 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`

@@ -117,29 +117,3 @@ class TestMineruTimeout:
             assert proc.MINERU_TIMEOUT == 1800, (
                 f"Expected fallback MINERU_TIMEOUT=1800, got {proc.MINERU_TIMEOUT}"
             )
-
-    def test_backend_parameter_is_pipeline(self, tmp_path):
-        """
-        Case D: requests.post data must always contain backend='pipeline'.
-        CPU 環境下 hybrid_auto 永久卡死 Predict: 0%，此測試防止 regression。
-        """
-        pdf_file = tmp_path / "test.pdf"
-        pdf_file.write_bytes(b"%PDF-1.4 test")
-
-        zip_bytes = _make_minimal_zip("original")
-
-        with patch("requests.post") as mock_post:
-            mock_post.return_value = _mock_response(zip_bytes)
-            proc = PDFProcessor()
-            try:
-                proc.process(str(pdf_file), str(tmp_path / "out"))
-            except Exception:
-                pass  # 只關心 requests.post 收到的 data 參數
-
-            assert mock_post.called, "requests.post should have been called"
-            _, call_kwargs = mock_post.call_args
-            data = call_kwargs.get("data", {})
-            assert data.get("backend") == "pipeline", (
-                f"Expected backend='pipeline', got {data.get('backend')!r}. "
-                "CPU 環境下 hybrid_auto 會永久卡死，嚴禁移除此鎖定。"
-            )
