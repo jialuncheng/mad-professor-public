@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-22）
+# Mad Professor — TODO（最後更新 2026-05-27）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,19 @@
 ---
 
 ## ✅ 已完成
+
+### WORKFLOW-2 流程模板重構與提示詞自動歸檔
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| WORKFLOW-2-Tasks | Tasks 拆分（baton 暫存，C5 歸檔） | `待 baron 回填` |
+| C1 | R1 五大提示詞模板自愈歸檔防線 | `b3e22c7` |
+| C2 | R2 Check Conformance 維度四+五 | `5d7bdda` |
+| C3 | R3+R4 SOP 備份暫存鐵律 + §8 重構 | `5a55939` |
+| C4 | R5a 歷史 9 份提示詞物理補建 | `10f9561` |
+| C5 | R5b INDEX 幽靈自癒 + 全案收官歸檔 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-05-26_WORKFLOW-2_流程模板重構與提示詞自動歸檔_plan.md`
 
 ### TODO-HOTFIX-1 TODO.md 緊急狀態與殘留修復
 
@@ -211,15 +224,6 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
-
-- 🟡 **WORKFLOW-2 流程模板重構與提示詞自動歸檔**（`baton/2026-05-26_WORKFLOW-2_流程模板重構與提示詞自動歸檔_tasks.md`）
-  - ✅ C1：R1 五大提示詞模板自愈歸檔防線（`template_prompt_for_*.md` 5 個模板）
-  - ✅ C2：R2 Check Conformance 維度四+五（`template_prompt_for_check.md`）
-  - ✅ C3：R3+R4 SOP 備份暫存鐵律 + §8 重構（`WORKFLOW_SOP.md` + `template_execution.md` + `template_tasks.md`）
-  - ✅ C4：R5a 歷史 9 份提示詞物理補建（`prompts/`）
-  - 🟡 WIP C5：R5b INDEX.md 雙向對齊收官（`prompts/INDEX.md` + baton→plans/tasks 歸檔）
-  - 工時：5 個 commits
-  - 依賴：無
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
@@ -471,6 +475,7 @@
 
 ### WORKFLOW（✅ 已完成）
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
+- ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 
 ### QUEUE (1 項 active)
 - 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）

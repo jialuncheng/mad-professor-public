@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-27（WORKFLOW-2 C3 WIP）
+最後更新：2026-05-27（WORKFLOW-2 全案收官）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -14,22 +14,24 @@
 - `2026-05-24_WORKFLOW-1_v3規劃書可行性評估.md` — WORKFLOW-1 改版規劃書 v3 可行性評估（七大子改動 A-G + 五壓力測試 + Q1-Q10 拍板 + Prompt Caching 子題 7.1-7.6 + 執行計畫骨架 10 commits）
 - `2026-05-25_WORKFLOW-1_v4第二輪評估.md` — WORKFLOW-1 v4 第二輪評估（§8 S1-S5 五方案選擇 + §10.1-10.5 可行性判定 + A-F 六壓力測試 + v4 新盲點 4 個、採 §2 拆分式結構試點）
 - ✅ **WORKFLOW-1 C1~C5 落地全鏈路（2026-05-26 收官）**
-  - C1 `1a0394c`：Bootstrap Core（CLAUDE.md / WORKFLOW_SOP.md / framework §0/§9/§99）
-  - C1.5 `e0c7a17`：Core Spec Align + TODO Bootstrap（r11 三核心文件對齊 + TODO.md 自舉）
-  - C2+C3 `365aa5d`：Templates & Overview + Prompt Templates（5 模板重構/新建 + 5 提示詞模板 + GOVERNANCE_OVERVIEW.md）
-  - C4 `ad0be4e`：SOP & Diagnostics（CACHE_OPTIMIZATION_SOP.md + report/.gitkeep）
-  - C5（待 baron 回填 hash）：收官（TODO.md 歸檔 + 設計歷程 + baton 全歸檔 + INDEX 更新）
+  - `2026-05-26_WORKFLOW-1_C1_提示詞.md` — C1 Bootstrap Core（CLAUDE.md / WORKFLOW_SOP.md / framework §0/§9/§99）
+  - `2026-05-26_WORKFLOW-1_C1.5_提示詞.md` — C1.5 Core Spec Align + TODO Bootstrap（r11 三核心文件對齊 + TODO.md 自舉）
+  - `2026-05-26_WORKFLOW-1_C2+C3_提示詞.md` — C2+C3 Templates & Overview + Prompt Templates（5 模板重構/新建 + 5 提示詞模板 + GOVERNANCE_OVERVIEW.md）
+  - `2026-05-26_WORKFLOW-1_C4_提示詞.md` — C4 SOP & Diagnostics（CACHE_OPTIMIZATION_SOP.md + report/.gitkeep）
+  - `2026-05-26_WORKFLOW-1_C5_提示詞.md` — C5 收官（TODO.md 歸檔 + 設計歷程 + baton 全歸檔 + INDEX 更新）
 - ✅ **TODO-HOTFIX-1 DOC-Hotfix 三階段全鏈路（2026-05-26 收官）**
-  - Plan（`hotfixes/2026-05-26_TODO-HOTFIX-1_hotfix.md`）：TODO.md 損毀診斷 + 5 項問題盤點 + 修法 A/B/C/D/E + 六維度 commit 規劃
-  - Run（`executions/2026-05-26_TODO-HOTFIX-1_執行.md`）：RAG 狀態修復（Bug Fix 表格補建 + active 殘留清除 + RAG-11/12 獨立抽離 + hash 補填）
-  - Tasks / Run-1b（`executions/2026-05-26_TODO-HOTFIX-1b_執行.md`）：MODEL-8 active 殘留清理 + 修法 E 落地
-  - Check（`executions/2026-05-26_TODO-HOTFIX-1_Check_執行.md`）：Conformance 8 項驗證 + TODO.md 收官 + baton 全歸檔
-- 🟡 **WORKFLOW-2 流程模板重構與提示詞自動歸檔（2026-05-27 WIP）**
+  - `2026-05-26_TODO-HOTFIX-1_Plan_提示詞.md` — Plan（TODO.md 損毀診斷 + 5 項問題盤點 + 修法 A/B/C/D/E + 六維度 commit 規劃）
+  - `2026-05-26_TODO-HOTFIX-1_Run_提示詞.md` — Run（RAG 狀態修復 + Bug Fix 表格補建 + active 殘留清除 + RAG-11/12 獨立抽離 + hash 補填）
+  - `2026-05-26_TODO-HOTFIX-1_Tasks+Run-1b_提示詞.md` — Tasks / Run-1b（MODEL-8 active 殘留清理 + 修法 E 落地）
+  - `2026-05-26_TODO-HOTFIX-1_Check_提示詞.md` — Check（Conformance 8 項驗證 + TODO.md 收官 + baton 全歸檔）
+- ✅ **WORKFLOW-2 流程模板重構與提示詞自動歸檔（2026-05-27 收官）**
   - `2026-05-27_WORKFLOW-2_Plan_提示詞.md` — Plan（五大治理漏洞規格 R1~R5 + 歷史 9 份幽靈提示詞補建計畫）
   - `2026-05-27_WORKFLOW-2_Tasks_提示詞.md` — Tasks（5 Commit 拆分：C1 五模板自愈 + C2 Check 維度四五 + C3 SOP 鐵律 + C4 歷史 9 份補建 + C5 INDEX 對齊）
   - `2026-05-27_WORKFLOW-2_C1_run_提示詞.md` — C1 Run（R1 五大提示詞模板自愈歸檔防線 + Tasks 階段補發執行報告）
   - `2026-05-27_WORKFLOW-2_C2_run_提示詞.md` — C2 Run（R2 Check 模板 Conformance 維度四提示詞歸檔 + 維度五 msg.txt 草稿完整性 + TODO.md hash 自癒）
   - `2026-05-27_WORKFLOW-2_C3_run_提示詞.md` — C3 Run（R3+R4 SOP 三鐵律 + execution/tasks/run/check 模板 §8 重構 + TODO 自癒防線物理寫入）
+  - `2026-05-27_WORKFLOW-2_C4_run_提示詞.md` — C4 Run（R5a 歷史 9 份提示詞摘要重建物理補建：WORKFLOW-1 C1~C5 + TODO-HOTFIX-1 四階段）
+  - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
@@ -64,18 +66,18 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_Check_提示詞.md`
+- 2026-05-27 — `2026-05-27_WORKFLOW-2_C4_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C3_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C2_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C1_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Plan_提示詞.md`
-- 2026-05-26 — TODO-HOTFIX-1 Check（DOC-Hotfix Conformance 驗收 + baton 全歸檔收官）
-- 2026-05-26 — TODO-HOTFIX-1b Run（MODEL-8 active 殘留清理 + 修法 E 落地）
-- 2026-05-26 — TODO-HOTFIX-1 Run（RAG 狀態修復 + Bug Fix 表格補建 + RAG-11/12 抽離）
-- 2026-05-26 — TODO-HOTFIX-1 Plan（TODO.md 損毀分析 + 五問題盤點 + 修法 A/B/C/D/E 規劃）
-- 2026-05-26 — WORKFLOW-1 C1~C5 全鏈路收官（C1 `1a0394c` / C1.5 `e0c7a17` / C2+C3 `365aa5d` / C4 `ad0be4e` / C5 待回填）
-- 2026-05-25 — `2026-05-25_WORKFLOW-1_v4第二輪評估.md`
-- 2026-05-24 — `2026-05-24_WORKFLOW-1_v3規劃書可行性評估.md`
-- 2026-05-24 — `2026-05-24_BUG-B2_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-B1_提示詞.md`
-- 2026-05-24 — `2026-05-24_BUG-F6_提示詞.md`
+- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Check_提示詞.md`
+- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Tasks+Run-1b_提示詞.md`
+- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Run_提示詞.md`
+- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Plan_提示詞.md`
+- 2026-05-26 — `2026-05-26_WORKFLOW-1_C5_提示詞.md`
+- 2026-05-26 — `2026-05-26_WORKFLOW-1_C4_提示詞.md`
+- 2026-05-26 — `2026-05-26_WORKFLOW-1_C2+C3_提示詞.md`
+- 2026-05-26 — `2026-05-26_WORKFLOW-1_C1.5_提示詞.md`
