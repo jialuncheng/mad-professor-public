@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-27（WORKFLOW-2 全案收官）
+最後更新：2026-05-27（MODEL-10 C1 執行）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -64,8 +64,27 @@
 - `2026-05-23_LOGGING-2_提示詞.md` — LOGGING-2 落地（trace_id middleware + X-Trace-ID header + ContextVar set/reset）
 - `2026-05-23_LOGGING-3_提示詞.md` — LOGGING-3 落地（tools/regen_rag.py CLI 統一 setup_logging、LOGGING refactor 完工）
 
+### MODEL-10 系列
+- `2026-05-27_MODEL-10_C1_run_v1_提示詞.md` — C1 Run（pdf_processor.py MINERU_TIMEOUT 防禦性載入 + timeout=300 動態化 + Priority 2 廢棄 warning + .env.example + 3 pytest）
+- `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
+
+### OPTIMIZE 系列
+- ✅ **OPTIMIZE-1 PDF上傳自動無損優化（2026-05-27 收官）**
+  - `2026-05-27_OPTIMIZE-1_C3_run_提示詞.md` — C3 Run（Final Archiving and TODO Sync：baton/ 全量 mv 歸檔 + TODO.md 結案）
+  - `2026-05-27_OPTIMIZE-1_C2_run_提示詞.md` — C2 Run（後端 is_slides_pdf 刪除 + optimize_pdf_lossless 整合 + 前端 Phase-Shift 事件控制流翻轉）
+  - `2026-05-27_OPTIMIZE-1_C1_run_提示詞.md` — C1 Run（新建 utils/pdf_optimizer.py Atomic Overwrite + tests/test_pdf_optimize.py 2 個單元測試）
+  - `2026-05-27_OPTIMIZE-1_Tasks_提示詞.md` — Tasks v3（三大前端合規防線：真實行號鋼鐵定位 L1287/L1291/L3193/L3343 + Modal HTML 微調補取消出口/ESC解鎖 + Phase-Shift 事件控制流翻轉）
+  - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
+
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-27 — `2026-05-27_MODEL-10_C1_run_v1_提示詞.md`
+- 2026-05-27 — `2026-05-27_MODEL-10_Tasks_v1_提示詞.md`
+- 2026-05-27 — `2026-05-27_OPTIMIZE-1_C3_run_提示詞.md`
+- 2026-05-27 — `2026-05-27_OPTIMIZE-1_C2_run_提示詞.md`
+- 2026-05-27 — `2026-05-27_OPTIMIZE-1_C1_run_提示詞.md`
+- 2026-05-27 — `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md`
+- 2026-05-27 — `2026-05-27_OPTIMIZE-1_Tasks_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Check_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C4_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C3_run_提示詞.md`
@@ -74,10 +93,3 @@
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Plan_提示詞.md`
 - 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Check_提示詞.md`
-- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Tasks+Run-1b_提示詞.md`
-- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Run_提示詞.md`
-- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Plan_提示詞.md`
-- 2026-05-26 — `2026-05-26_WORKFLOW-1_C5_提示詞.md`
-- 2026-05-26 — `2026-05-26_WORKFLOW-1_C4_提示詞.md`
-- 2026-05-26 — `2026-05-26_WORKFLOW-1_C2+C3_提示詞.md`
-- 2026-05-26 — `2026-05-26_WORKFLOW-1_C1.5_提示詞.md`

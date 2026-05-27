@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-27，OPTIMIZE-1 全案收官）
+# Mad Professor — TODO（最後更新 2026-05-27）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,16 +10,6 @@
 ---
 
 ## ✅ 已完成
-
-### OPTIMIZE-1 PDF上傳自動無損優化
-
-| Commit | 內容 | Hash |
-|---|---|---|
-| C1 | 新建 `utils/pdf_optimizer.py`（Atomic Overwrite + Logging SOP）+ `tests/test_pdf_optimize.py`（2 tests） | `b8892be` |
-| C2 | 後端 is_slides_pdf 刪除 + optimize_pdf_lossless 整合 + doc_type Form 直通 + 前端 Phase-Shift 翻轉 + 3 tests | `28f098e` |
-| C3 | Final Archiving and TODO Sync（baton/ 全量 mv 歸檔 + TODO.md 結案） | （由 baron 回填） |
-
-> **修法依據**：`.claude-logs/plans/2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`（v2）
 
 ### WORKFLOW-2 流程模板重構與提示詞自動歸檔
 
@@ -235,13 +225,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **MODEL-10 MinerU 連線優化與運作維護 SOP**（`baton/2026-05-27_MODEL-10_MinerU_Connection_and_SOP_plan.md`）
-  - ✅ C1：`pdf_processor.py` MINERU_TIMEOUT 防禦性載入 + L71 timeout 動態化 + Priority 2 廢棄 warning + `.env.example` + 3 pytest
-  - 🟡 WIP C2：`sop/2026-05-27_mineru_SOP_手冊.md` 新建（≤250 行、SSH Keep-Alive / cron / Priority 2 規格）
-  - Check：TODO.md 結案 + baton/ 全量歸檔收官
-  - 工時：3 個 commits（C1 BE-Refactor + C2 DOC-Refactor + Check DOC-Refactor）
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -249,6 +232,13 @@
   - 確保 try...finally 結構保證註冊解除，無死鎖
   - 新增 tests/test_priority_scheduler.py 驗證協同暫停與恢復
   - 工時：1-2 個 commits
+  - 依賴：無
+
+- 🟡 **OPTIMIZE-1 PDF上傳自動無損優化 v2**（`.claude-logs/baton/2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`）
+  - [x] ✅ C1 — Implement Core Optimization Module with Atomic Overwrite（實作無損優化核心與單元測試）
+  - [x] ✅ C2 — Integrate 1-Step Upload in Web Server & Frontend（整合一字步上傳端點與前台 UI）
+  - [/] 🟡 WIP: C3 — Final Archiving and TODO Sync（收官歸檔與 TODO 結案同步）
+  - 工時：3 個 commits
   - 依賴：無
 
 - ⬜ **RAG-11 reload SSE 還原**（Bug 6、需獨立 plan 評估）
@@ -489,5 +479,5 @@
 - 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
 
 ### OPTIMIZE (1 項 active)
-- ✅ ~~OPTIMIZE-1 PDF 上傳自動無損優化~~（已落地、C1 `b8892be` + C2 `28f098e` + C3 收官）
+- 🟡 OPTIMIZE-1 PDF 上傳自動無損優化（高、tasks v3 拆分完成 3 commits，C1 ✅ / C2 ✅ / C3 🟡 WIP）
 
