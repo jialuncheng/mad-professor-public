@@ -1,0 +1,193 @@
+# MinerU 運作與維護 SOP 手冊
+
+> **適用範圍**：MinerU PDF 解析服務的日常運維、連線維護、容錯排障，以及與 Mad Professor 後端整合的操作規範。
+> **觸發時機**：調整 MinerU 相關環境變數 / 遇到連線逾時或 ZIP 無圖 / 遠端宿主機磁碟告警 / 容器無回應時。
+
+---
+
+## §0 改版規則
+
+- 改版觸發：§1–§6 任一運維規格條款變動
+- 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
+- 完整治理規格 → §99
+
+---
+
+## §1 環境變數配置
+
+所有 MinerU 連線參數統一在 `.env` 中設定，程式端透過 `os.getenv()` 讀取，預設值詳見下表。
+
+| 變數名稱 | 預設值 | 說明 |
+|---|---|---|
+| `MINERU_API_URL` | `http://localhost:8000/file_parse` | MinerU HTTP 解析主端點。遠端部署時改為宿主機 IP 或 hostname。 |
+| `MINERU_HOST` | `""` | 舊版 SCP fallback 用。留空表示本機或 ZIP 自帶圖模式；有值時使用 SSH/SCP。 |
+| `MINERU_OUTPUT_DIR` | `""` | 舊版 SCP/本地模式的解析結果輸出目錄路徑。 |
+| `MINERU_PAPER_NAME` | `"original"` | 上傳至 MinerU 的解耦識別名稱，與本機 paper_id 無關。 |
+| `MINERU_TIMEOUT` | `1800` | HTTP 請求超時（秒）。書籍 PDF 建議 1800–3600。 |
+
+**核查指令**：
+```bash
+grep "MINERU_" .env.example
+```
+
+---
+
+## §2 超時對策
+
+### §2.1 調整 MINERU_TIMEOUT
+
+書籍 PDF（通常 300+ 頁）MinerU 解析耗時 10–30 分鐘，預設 1800 秒通常足夠。若遇 `ReadTimeout`，依文件大小遞增：
+
+| 文件類型 | 建議值 |
+|---|---|
+| 學術論文 / 履歷（< 50 頁） | 600 |
+| 一般書籍（50–300 頁） | 1800（預設） |
+| 大型書籍 / 掃描版（300+ 頁） | 3600 |
+
+設定方式：
+```bash
+# .env 中修改
+MINERU_TIMEOUT=3600
+```
+
+### §2.2 防禦性容錯機制
+
+`pdf_processor.py` 的 `__init__` 對 `MINERU_TIMEOUT` 包裹 `try/except (ValueError, TypeError)`：
+- 若環境變數未設定 → 預設 1800 秒
+- 若設為非數字字串（如 `abc`）→ `logger.warning` 提示，安全 fallback 1800 秒，不崩潰
+
+**核查指令**：
+```bash
+grep -n "MINERU_TIMEOUT\|ValueError\|TypeError" processor/pdf_processor.py
+```
+
+---
+
+## §3 SSH Tunnel Keep-Alive（本機客戶端）
+
+MinerU 解析期間 SSH Tunnel 無數據流量，易被防火牆或 GCE/AWS 網關 Idle 超時切斷。解決方法：在**本機** `~/.ssh/config` 對 MinerU 宿主機設定 Keep-Alive。
+
+```text
+Host mineru-server
+    HostName <MINERU_HOST_IP>
+    Port 22
+    User <SSH_USERNAME>
+    ServerAliveInterval 30
+    ServerAliveCountMax 6
+```
+
+- `ServerAliveInterval 30`：每 30 秒送一次 keep-alive 封包
+- `ServerAliveCountMax 6`：連續 6 次無回應（3 分鐘）才判斷斷線
+
+設定後無需手動加 `-o` 參數，所有 `ssh` / `scp` 指令自動套用。
+
+**驗證**：
+```bash
+ssh -v mineru-server "echo ok" 2>&1 | grep "keep alive"
+```
+
+---
+
+## §4 Priority 2 舊版遠端 SCP 圖片備援規格（⚠️ Deprecated）
+
+> **狀態**：已棄用。`return_images=true` 後 ZIP 自帶圖（Priority 1），正常情況下不進入此路徑。
+> 若 ZIP 無圖時程式自動退回本路徑，並輸出 `logger.warning` 廢棄提示。
+
+### §4.1 啟用條件
+
+ZIP 解壓後 `_tmp/{MINERU_PAPER_NAME}/auto/images/` 目錄不存在時，自動退回。
+
+### §4.2 配置要求
+
+```bash
+# .env 設定
+MINERU_HOST=user@<MINERU_HOST_IP>
+MINERU_OUTPUT_DIR=/path/to/mineru/output
+```
+
+SSH 免密碼信任（首次設定）：
+```bash
+ssh-copy-id user@<MINERU_HOST_IP>
+```
+
+### §4.3 驗證 SCP 連通性
+
+```bash
+ssh user@<MINERU_HOST_IP> "ls -la ${MINERU_OUTPUT_DIR}" | head -5
+```
+
+---
+
+## §5 定期刪檔維護（遠端宿主機）
+
+MinerU 每次解析會在宿主機留下大尺寸 ZIP 與圖片暫存，長期積累有磁碟滿溢風險。
+
+### §5.1 Cron 設定
+
+在**宿主機**建立 `/etc/cron.d/mineru-cleanup`：
+
+```cron
+# 每日 03:00 清理 2 天前的 MinerU 暫存檔
+0 3 * * * root find /var/mineru_output/ -type f -mtime +2 -delete
+0 3 * * * root find /var/mineru_output/ -mindepth 1 -maxdepth 1 -type d -mtime +2 -exec rm -rf {} +
+```
+
+```bash
+# 設定檔案權限（owner: root, 644）
+chmod 644 /etc/cron.d/mineru-cleanup
+```
+
+### §5.2 手動確認清理效果
+
+```bash
+# 查看 output 目錄大小
+du -sh /var/mineru_output/
+# 查看最舊的 5 個子目錄
+ls -lt /var/mineru_output/ | tail -5
+```
+
+---
+
+## §6 容器卡死釋放（應急排障）
+
+若 MinerU HTTP API 無回應、連線瞬斷或 CPU/RAM 長時間 100%，執行以下步驟：
+
+```bash
+# 登入宿主機
+ssh user@<MINERU_HOST_IP>
+
+# 確認容器狀態
+docker ps -a | grep mineru
+
+# 重啟容器（釋放記憶體與 CPU 鎖定）
+docker restart mineru
+
+# 確認重啟後正常啟動
+docker logs --tail 20 mineru
+curl -s http://localhost:8000/health || echo "API 尚未就緒，稍候重試"
+```
+
+等候 30–60 秒後，再次嘗試 PDF 上傳。
+
+---
+
+## §99 治理規格
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| **目的** | 定義 MinerU PDF 解析服務的日常運維規範、連線配置、容錯排障操作程序 |
+| **用途** | BE-Refactor / BE-Hotfix 涉及 `pdf_processor.py` 或 MinerU 環境配置時強制引用 |
+| **權威源** | 本檔 §1–§6 |
+| **引用方** | `processor/pdf_processor.py` 開發者；MinerU 部署運維人員 |
+| **被引用方** | `<由 Antigravity 自動掃描注入>` |
+| **約束事項** | §4 Priority 2 標記為 Deprecated，後續新功能不得依賴 SCP 路徑 |
+| **改版觸發條件** | §1–§6 任一運維規格條款變動 |
+| **改版規則** | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
+| **刪除條件** | MinerU 服務棄用，且 `pdf_processor.py` 完全改為其他解析方案 |
+| **重複防護** | 環境變數預設值唯一源在本檔 §1；timeout 防禦性載入規格唯一源在 `pdf_processor.py` `__init__` |
+
+### §99.2 Revision 歷程
+
+- v1 (2026-05-27)：初版建立（MODEL-10 C2，隨 pdf_processor.py MINERU_TIMEOUT 防禦性載入落地）

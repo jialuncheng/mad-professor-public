@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-27，OPTIMIZE-1 全案收官）
+# Mad Professor — TODO（最後更新 2026-05-28，MODEL-10 全案收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,16 @@
 ---
 
 ## ✅ 已完成
+
+### MODEL-10 MinerU 連線優化與運作維護 SOP
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `pdf_processor.py` MINERU_TIMEOUT 防禦性載入 + L76 timeout 動態化 + Priority 2 廢棄 warning + `.env.example` + 3 pytest | `19ddac8` |
+| C2 | 新建 `sop/2026-05-27_mineru_SOP_手冊.md`（193 行，§0/§99 治理結構，6 大運維主軸：env 配置 / 超時對策 / SSH Keep-Alive / Priority 2 SCP 備援規格 / cron 清檔 / 容器重啟） | `991258d` |
+| Check | Conformance 驗收 + baton/ 六份全量 mv 歸檔（含 SOP → sop/）+ TODO.md 結案 | （baron 回填） |
+
+> **修法依據**：`.claude-logs/plans/2026-05-27_MODEL-10_MinerU_Connection_and_SOP_plan.md`
 
 ### OPTIMIZE-1 PDF上傳自動無損優化
 
@@ -235,13 +245,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **MODEL-10 MinerU 連線優化與運作維護 SOP**（`baton/2026-05-27_MODEL-10_MinerU_Connection_and_SOP_plan.md`）
-  - ✅ C1：`pdf_processor.py` MINERU_TIMEOUT 防禦性載入 + L71 timeout 動態化 + Priority 2 廢棄 warning + `.env.example` + 3 pytest
-  - ✅ C2：`sop/2026-05-27_mineru_SOP_手冊.md` 新建（≤250 行、SSH Keep-Alive / cron / Priority 2 規格）
-  - 🟡 WIP Check：TODO.md 結案 + baton/ 全量歸檔收官
-  - 工時：3 個 commits（C1 BE-Refactor + C2 DOC-Refactor + Check DOC-Refactor）
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -397,15 +400,6 @@
   - 依賴：等 RAG-3 score 校準後評估必要性（可能 MODEL-1+2 已夠用、是否真的需要再評估）
   - **優先度低、純候選**
 
-- ⬜ **MODEL-10 MinerU SSH/SCP → HTTP API**（容器化前置 / 安全強化、依 model_optimization_blueprint.md §4.5）
-  - 現狀：`processor/pdf_processor.py` 用 shell `scp -r` + OS 級 SSH key 從 MinerU host 拉圖片
-  - 風險：跨平台不可移植、容器化阻塞、SSH key 是安全漏洞、shell command injection 風險
-  - 改法：MinerU `/file_parse` endpoint 改回 JSON 含 base64 圖片 / 簽名 URL、Mad Professor 端用標準 httpx 下載
-  - 工時：2-3 commits（含 MinerU 端改造）
-  - 依賴：先確認 MinerU 是否可改 endpoint
-  - 優先度視「是否要 Docker 化部署」決定
-  - **本項視為 MODEL 系列中優先度最低、純候選**
-
 ### 🚫 評估後不做（依 `.claude-logs/model_optimization_blueprint.md` / `.claude-logs/pipeline_decoupling_plan.md`）
 
 以下提案經評估為過早優化 / 失控感 / 場景不符、暫不加入 TODO：
@@ -466,14 +460,14 @@
 - CHAT-4 取消對話（低、留 4.7e 之後）
 - CHAT-5 dead code 清理（低）
 
-### MODEL（0 項中優先 / 3 項候選 / 4 項已落地）
+### MODEL（0 項中優先 / 2 項候選 / 5 項已落地）
 - ✅ ~~MODEL-8 SQLite paper_chunks 物理防線 + 增強型 backfill CLI~~（已落地、C1 + C2 + C3 三個 commit、hash 待 push 後回填、合併原 RAG-2）
 - ✅ ~~MODEL-1+2 Embedding 2 升級 + L2 正規化 + 短 chunk 過濾~~（已落地、B1 `f415218` + B2 `de649cc`）
 - ✅ ~~MODEL-3 短文 Bypass + 公式穿透 + 段落滑動~~（已落地、B1 + B2 + B3 三個 commit、hash 待 push 後回填）
 - 🔵 MODEL-5 Structured Outputs router
 - 🔵 MODEL-7c Metadata 語意前綴（候選、低優先、等 RAG-3 結果再評估）
 - ✅ ~~MODEL-9 連線彈性防禦~~（已落地、`dd18922`）
-- 🔵 MODEL-10 MinerU SSH/SCP → HTTP（容器化前置、最低優先）
+- ✅ ~~MODEL-10 MinerU 連線優化與運作維護 SOP~~（已落地、C1 `19ddac8` + C2 `991258d` + Check 收官）
 
 ### Phase 4.7e Resume Independent Pipeline（全完工）
 - ✅ ~~7e-1 v2~~ `1fb2d7b`
