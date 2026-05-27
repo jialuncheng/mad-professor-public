@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-27（MODEL-10 C1 執行）
+最後更新：2026-05-27（MODEL-10 C2 執行）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -65,6 +65,7 @@
 - `2026-05-23_LOGGING-3_提示詞.md` — LOGGING-3 落地（tools/regen_rag.py CLI 統一 setup_logging、LOGGING refactor 完工）
 
 ### MODEL-10 系列
+- `2026-05-27_MODEL-10_C2_run_v1_提示詞.md` — C2 Run（新建 .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md ≤250 行，含 §0/§99 治理結構、6 大運維主軸：env 配置 / 超時對策 / SSH Keep-Alive / Priority 2 SCP 備援 / cron 清檔 / 容器重啟）
 - `2026-05-27_MODEL-10_C1_run_v1_提示詞.md` — C1 Run（pdf_processor.py MINERU_TIMEOUT 防禦性載入 + timeout=300 動態化 + Priority 2 廢棄 warning + .env.example + 3 pytest）
 - `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
 
@@ -78,6 +79,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-27 — `2026-05-27_MODEL-10_C2_run_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_C1_run_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_Tasks_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_C3_run_提示詞.md`
@@ -92,4 +94,3 @@
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C1_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Tasks_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Plan_提示詞.md`
-- 2026-05-26 — `2026-05-26_TODO-HOTFIX-1_Check_提示詞.md`

@@ -17,7 +17,7 @@
 |---|---|---|
 | C1 | 新建 `utils/pdf_optimizer.py`（Atomic Overwrite + Logging SOP）+ `tests/test_pdf_optimize.py`（2 tests） | `b8892be` |
 | C2 | 後端 is_slides_pdf 刪除 + optimize_pdf_lossless 整合 + doc_type Form 直通 + 前端 Phase-Shift 翻轉 + 3 tests | `28f098e` |
-| C3 | Final Archiving and TODO Sync（baton/ 全量 mv 歸檔 + TODO.md 結案） | （由 baron 回填） |
+| C3 | Final Archiving and TODO Sync（baton/ 全量 mv 歸檔 + TODO.md 結案） | `93ab716` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-23_OPTIMIZE-1_PDF上傳自動無損優化_plan.md`（v2）
 
@@ -237,8 +237,8 @@
 
 - 🟡 **MODEL-10 MinerU 連線優化與運作維護 SOP**（`baton/2026-05-27_MODEL-10_MinerU_Connection_and_SOP_plan.md`）
   - ✅ C1：`pdf_processor.py` MINERU_TIMEOUT 防禦性載入 + L71 timeout 動態化 + Priority 2 廢棄 warning + `.env.example` + 3 pytest
-  - 🟡 WIP C2：`sop/2026-05-27_mineru_SOP_手冊.md` 新建（≤250 行、SSH Keep-Alive / cron / Priority 2 規格）
-  - Check：TODO.md 結案 + baton/ 全量歸檔收官
+  - ✅ C2：`sop/2026-05-27_mineru_SOP_手冊.md` 新建（≤250 行、SSH Keep-Alive / cron / Priority 2 規格）
+  - 🟡 WIP Check：TODO.md 結案 + baton/ 全量歸檔收官
   - 工時：3 個 commits（C1 BE-Refactor + C2 DOC-Refactor + Check DOC-Refactor）
   - 依賴：無
 
