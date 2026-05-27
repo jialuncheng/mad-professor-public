@@ -37,9 +37,6 @@ MINERU_API_URL=http://localhost:8000/file_parse
 # 兩種模式下圖片複製皆為 best-effort，失敗只 warning、不影響其餘流程。
 MINERU_HOST=
 MINERU_OUTPUT_DIR=
-# MinerU HTTP 請求超時（秒）。書籍 PDF 通常需 10-30 分鐘，建議設 1800 以上。
-# 若設為非數字字串，程式自動退回預設 1800 秒（防禦性容錯）。
-MINERU_TIMEOUT=1800
 
 # ── 環境 ──
 # 環境：development 或 production

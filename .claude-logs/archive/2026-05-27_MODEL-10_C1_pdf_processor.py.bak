@@ -31,11 +31,6 @@ class PDFProcessor(PDFParser):
         # original.pdf 後才送 MinerU，故 MinerU 端固定為 "original"，與本機
         # paper_name（pdf_path.stem）解耦；可用 env 覆寫以防上游改名。
         self.MINERU_PAPER_NAME = os.getenv("MINERU_PAPER_NAME", "original")
-        try:
-            self.MINERU_TIMEOUT = int(os.getenv("MINERU_TIMEOUT", "1800"))
-        except (ValueError, TypeError):
-            self.logger.warning("MINERU_TIMEOUT 設定值無效，退回預設 1800 秒")
-            self.MINERU_TIMEOUT = 1800
         self.logger.debug("初始化 PDF 處理器（MinerU API 模式）")
 
     def process(self, pdf_path: str, output_dir: str) -> Path:
@@ -73,7 +68,7 @@ class PDFProcessor(PDFParser):
                         # MinerU 3.1.6 預設 return_images=False，不設則 ZIP 無圖
                         "return_images": "true",
                     },
-                    timeout=self.MINERU_TIMEOUT
+                    timeout=300
                 )
 
             self.logger.info(
@@ -183,9 +178,8 @@ class PDFProcessor(PDFParser):
                 n = len([p for p in Path(dst).iterdir() if p.is_file()])
                 self.logger.info(f"[copy_images] 從 ZIP 取得 {n} 張圖")
                 return
-            self.logger.warning(
-                "[copy_images] ZIP 無圖，退回已過期 (Deprecated) 的 SCP 遠端取圖機制，"
-                "請確認 MinerU 服務是否支援 return_images"
+            self.logger.info(
+                f"[copy_images] _tmp 無圖（{tmp_images}）→ 退回 server 端取圖"
             )
 
             if self.MINERU_HOST:
