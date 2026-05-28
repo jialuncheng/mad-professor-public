@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS C2 完成）
+# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,16 @@
 ---
 
 ## ✅ 已完成
+
+### FE-AESTHETICS 摘要工具列重構與正文扉頁美化
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | 後端 `_render_header_en/zh` academic path：dash-list → 階梯式 HTML div 置中對稱排版 + 測試 assertions 更新（59 pytest 全綠） | `3cf8acf` |
+| C2 | 前端全棧重構：`#abstract-toolbar` 滿寬摘要容器 + `.paper-header-meta { display:flex }` 螢幕扉頁解鎖 + `renderTitleHeader` JS 重寫 + CSS word-wrap 防禦 + 測試更新（67 pytest 全綠） | `b735a94` |
+| Check | Conformance 驗收 + baton/ tasks/C1/C2 全量歸檔 + TODO.md 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-05-29_FE-AESTHETICS_摘要工具列重構與正文扉頁美化_plan.md`（v1.3）
 
 ### INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新
 
@@ -255,13 +265,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **FE-AESTHETICS 摘要工具列重構與正文扉頁美化**（`.claude-logs/baton/2026-05-29_FE-AESTHETICS_摘要工具列重構與正文扉頁美化_plan.md`）
-  - [x] ✅ C1 — Backend Stepped Layout（後端扉頁 HTML 重塑）`3cf8acf`
-  - [x] ✅ C2 — Frontend Full-Stack Refactor（前端全棧重構）`待 baron 回填`
-  - [/] 🟡 WIP: Check — Conformance 驗收 + baton/ 收官歸檔
-  - 工時：2 個 commits + Check
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -496,8 +499,8 @@
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 
-### FE-AESTHETICS (1 項 🟡 WIP)
-- 🟡 FE-AESTHETICS 摘要工具列重構與正文扉頁美化（高、C1 後端 + C2 前端 + Check）
+### FE-AESTHETICS (✅ 已完成)
+- ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
 
 ### INFRA (✅ 已完成)
 - ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）
