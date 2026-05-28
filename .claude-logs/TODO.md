@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-28，INFRA-1 Tasks 下達）
+# Mad Professor — TODO（最後更新 2026-05-28，INFRA-1 Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,16 @@
 ---
 
 ## ✅ 已完成
+
+### INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `pdf_processor.py` backend=pipeline comment lock + `test_backend_parameter_is_pipeline` Case D + `.env.example` VRAM 禁用警告 | `264dadc` |
+| C2 | `sop/2026-05-27_mineru_SOP_手冊.md` §1 VRAM 禁用列 + §2.3 CPU 後端紅線規格 + §6.2 VRAM OOM 自愈步驟 + §99.2 v2 Revision | `9e05466` |
+| Check | Conformance 驗收 + baton/ 4 份全量 mv 歸檔 + TODO.md 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-05-28_INFRA-1_MinerU_Pipeline_Hotfix_plan.md`
 
 ### MODEL-10 MinerU 連線優化與運作維護 SOP
 
@@ -245,13 +255,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新**（`baton/2026-05-28_INFRA-1_MinerU_Pipeline_Hotfix_plan.md`）
-  - ✅ C1 — pdf_processor backend 鎖定與單元測試（請求參數錨定與斷言測試）
-  - ✅ C2 — SOP 手冊 CPU 推理與環境規格更新（SOP 文件運維規格補強）
-  - 🟡 WIP Check — TODO.md 結案與全量 baton 歸檔（收官結案與物理歸檔）
-  - 工時：3 個 commits
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -486,8 +489,8 @@
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 
-### INFRA (1 項 active)
-- 🟡 INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新（高、`baton/2026-05-28_INFRA-1_MinerU_Pipeline_Hotfix_plan.md`）
+### INFRA (✅ 已完成)
+- ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）
 
 ### QUEUE (1 項 active)
 - 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）

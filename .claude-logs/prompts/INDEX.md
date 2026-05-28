@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-28（INFRA-1 C2）
+最後更新：2026-05-28（INFRA-1 Check）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -72,9 +72,11 @@
   - `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
 
 ### INFRA 系列
-- `2026-05-28_INFRA-1_C2_run_v1_提示詞.md` — C2 Run（sop/2026-05-27_mineru_SOP_手冊.md §1 VRAM 禁用條目 + §2.3 CPU 後端紅線規格 + §6.2 VRAM OOM 自愈 + §99.2 v2）
-- `2026-05-28_INFRA-1_C1_run_v1_提示詞.md` — C1 Run（processor/pdf_processor.py backend=pipeline comment lock + test_backend_parameter_is_pipeline Case D + .env.example VRAM 禁用警告）
-- `2026-05-28_INFRA-1_Tasks_v1_提示詞.md` — Tasks v1（3 commits 拆分：C1 pdf_processor backend 鎖定 + C2 SOP CPU 推理規格更新 + Check 收官歸檔）
+- ✅ **INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新（2026-05-28 收官）**
+  - `2026-05-28_INFRA-1_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + baton/ 4 份全量歸檔 + TODO.md INFRA-1 結案）
+  - `2026-05-28_INFRA-1_C2_run_v1_提示詞.md` — C2 Run（sop/2026-05-27_mineru_SOP_手冊.md §1 VRAM 禁用條目 + §2.3 CPU 後端紅線規格 + §6.2 VRAM OOM 自愈 + §99.2 v2）
+  - `2026-05-28_INFRA-1_C1_run_v1_提示詞.md` — C1 Run（processor/pdf_processor.py backend=pipeline comment lock + test_backend_parameter_is_pipeline Case D + .env.example VRAM 禁用警告）
+  - `2026-05-28_INFRA-1_Tasks_v1_提示詞.md` — Tasks v1（3 commits 拆分：C1 pdf_processor backend 鎖定 + C2 SOP CPU 推理規格更新 + Check 收官歸檔）
 
 ### OPTIMIZE 系列
 - ✅ **OPTIMIZE-1 PDF上傳自動無損優化（2026-05-27 收官）**
@@ -86,6 +88,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-28 — `2026-05-28_INFRA-1_Check_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_C2_run_v1_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_C1_run_v1_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_Tasks_v1_提示詞.md`
@@ -100,4 +103,3 @@
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_Tasks_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_Check_提示詞.md`
 - 2026-05-27 — `2026-05-27_WORKFLOW-2_C4_run_提示詞.md`
-- 2026-05-27 — `2026-05-27_WORKFLOW-2_C3_run_提示詞.md`
