@@ -397,11 +397,9 @@ def test_render_header_en_academic_full():
         candidate_extras={}, domain='Protein folding',
     )
     assert h.startswith('# AlphaFold-2')
-    assert '<div class="paper-header-meta">' in h
-    assert '<div class="header-authors">Alice, Bob</div>' in h
-    assert '<div class="header-venue-date">Nature · 2024-05-20</div>' in h
-    assert '<div class="header-doi">DOI: 10.1038/x</div>' in h
-    assert '<div class="header-keywords">Keywords: AI</div>' in h
+    assert 'Authors' in h and 'Alice, Bob' in h
+    assert 'Date' in h and '2024-05-20' in h
+    assert 'Venue' in h and 'Nature' in h
 
 
 def test_render_header_zh_academic_full():
@@ -412,10 +410,11 @@ def test_render_header_zh_academic_full():
         candidate_extras={}, domain='',
     )
     assert h.startswith('# 阿爾法摺疊-2')
-    assert '<div class="header-authors">Alice、Bob</div>' in h
-    assert '<div class="header-venue-date">Nature · 2024-05-20</div>' in h
-    assert 'DOI' not in h  # 空 doi → 不輸出 div
-    assert '<div class="header-keywords">關鍵字：人工智慧</div>' in h
+    assert '作者' in h and 'Alice、Bob' in h
+    assert '日期' in h and '2024-05-20' in h
+    assert '出處' in h and 'Nature' in h
+    assert 'DOI' not in h  # 缺項省略
+    assert '關鍵字' in h and '人工智慧' in h
 
 
 def test_render_header_resume_simplified():

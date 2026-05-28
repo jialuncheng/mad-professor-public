@@ -1,15 +1,14 @@
-"""FE-AESTHETICS C1 後端 + RAG-1 BUG-B2 前端 CSS pytest
-（依 FE-AESTHETICS C1 2026-05-29 / BUG-B2 評估 v4 §B Bug 10）。
+"""RAG-1 BUG-B2：後端 blockquote → list + 前端 paper-header-meta CSS pytest
+（依評估 v4 §B Bug 10 / ui-fixes-batch B8）。
 
-涵蓋（後端 + 前端跨 commit 驗證）：
+涵蓋（後端 + 前端跨檔同 commit、混合 bug）：
 
-後端（processor/md_restore_processor.py）——FE-AESTHETICS C1 重塑：
-- _render_header_en：academic path 改為置中對稱階梯式 <div class="header-*"> HTML 排版
-- _render_header_zh：academic path 同上（中文 label、中文連頓號）
-- venue + date 合併為 <div class="header-venue-date">（用 · 分隔）
+後端（processor/md_restore_processor.py）：
+- _render_header_en：academic path `>` → `-` list + `<div class="paper-header-meta">` wrap
+- _render_header_zh：academic path 同上（中文 label）
 - resume path 100% 未動（v4 評估範圍外、`>` blockquote 保留）
 
-前端（static/index.html）——C2 更新：
+前端（static/index.html）：
 - @media screen hide #paper-content > h1:first-child + > .paper-header-meta
 - 確保 @media print 不被誤套（class hook 穩定、舊 paper 仍可顯示）
 """
@@ -26,11 +25,11 @@ from processor.md_restore_processor import _render_header_en, _render_header_zh 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
 
 
-# ─────────────────── 後端 academic path：HTML div + wrap（FE-AESTHETICS C1）───────────────────
+# ─────────────────── 後端 academic path：- list + wrap ───────────────────
 
 
 def test_render_header_en_academic_uses_dash_list_and_wrap():
-    """FE-AESTHETICS C1 後端：英文 academic path 改用置中對稱階梯式 HTML 排版 + 包進 paper-header-meta wrap。"""
+    """B10 後端：英文 academic path 用 `- **Authors**`（不再 `> **Authors**`）+ 包進 paper-header-meta wrap。"""
     md = _render_header_en(
         title="Some Paper",
         doc_type="academic",
@@ -42,21 +41,23 @@ def test_render_header_en_academic_uses_dash_list_and_wrap():
         candidate_extras={},
         domain="ml",
     )
-    # 不應再有 `> **Authors**` blockquote 或 `- **Authors**` dash-list
+    # 不應再有 `> **Authors**` blockquote
     assert "> **Authors**" not in md, '英文 academic 不應再用 > blockquote'
-    assert "- **Authors**" not in md, '英文 academic 不應再用 - list'
-    # wrap div 存在
+    # 應有 `- **Authors**` list（5 條 meta_bits 全部）
+    for label in ("Authors", "Date", "Venue", "DOI", "Keywords"):
+        assert f"- **{label}**" in md, f'應有 `- **{label}**` list item'
+    # wrap div 含 5 meta_bits
     assert '<div class="paper-header-meta">' in md
     assert '</div>' in md
-    # 應含對應 HTML 排版標記（不含 affiliation）
-    assert '<div class="header-authors">Alice, Bob</div>' in md
-    assert '<div class="header-venue-date">ICML · 2024-01</div>' in md
-    assert '<div class="header-doi">DOI: 10.1234/xyz</div>' in md
-    assert '<div class="header-keywords">Keywords: k1, k2</div>' in md
+    # wrap 順序：div open → bits → div close
+    open_idx = md.find('<div class="paper-header-meta">')
+    close_idx = md.find('</div>')
+    authors_idx = md.find('- **Authors**')
+    assert open_idx < authors_idx < close_idx, 'wrap 順序：<div> → meta-bits → </div>'
 
 
 def test_render_header_zh_academic_uses_dash_list_and_wrap():
-    """FE-AESTHETICS C1 後端：中文 academic path 改用置中對稱階梯式 HTML 排版 + 包進 paper-header-meta wrap。"""
+    """B10 後端：中文 academic path 用 `- **作者**`（不再 `> **作者**`）+ 包進 paper-header-meta wrap。"""
     md = _render_header_zh(
         title_zh="某論文",
         doc_type="academic",
@@ -69,13 +70,10 @@ def test_render_header_zh_academic_uses_dash_list_and_wrap():
         domain="機器學習",
     )
     assert "> **作者**" not in md, '中文 academic 不應再用 > blockquote'
-    assert "- **作者**" not in md, '中文 academic 不應再用 - list'
+    for label in ("作者", "日期", "出處", "DOI", "關鍵字"):
+        assert f"- **{label}**" in md, f'應有 `- **{label}**` list item'
     assert '<div class="paper-header-meta">' in md
     assert '</div>' in md
-    assert '<div class="header-authors">甲、乙</div>' in md
-    assert '<div class="header-venue-date">某會議 · 2024-01</div>' in md
-    assert '<div class="header-doi">DOI: 10.1234/xyz</div>' in md
-    assert '<div class="header-keywords">關鍵字：關鍵字1、關鍵字2</div>' in md
 
 
 # ─────────────────── 後端 resume path：100% 未動 ───────────────────

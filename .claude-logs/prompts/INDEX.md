@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-28（INFRA-1 Check）
+最後更新：2026-05-29（FE-AESTHETICS Tasks）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -71,6 +71,11 @@
   - `2026-05-27_MODEL-10_C1_run_v1_提示詞.md` — C1 Run（pdf_processor.py MINERU_TIMEOUT 防禦性載入 + timeout=300 動態化 + Priority 2 廢棄 warning + .env.example + 3 pytest）
   - `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
 
+### FE-AESTHETICS 系列
+- 🟡 **FE-AESTHETICS 摘要工具列重構與正文扉頁美化（2026-05-29 進行中）**
+  - `2026-05-29_FE-AESTHETICS_C1_run_提示詞.md` — C1 Run（`_render_header_en/zh` dash-list → 階梯式 HTML div + test_bug_b2 + test_md_restore assertions 更新）
+  - `2026-05-29_FE-AESTHETICS_Tasks_提示詞.md` — Tasks（2 Commits C1 後端扉頁重塑 + C2 前端全棧重構 + Check 收官）
+
 ### INFRA 系列
 - ✅ **INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新（2026-05-28 收官）**
   - `2026-05-28_INFRA-1_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + baton/ 4 份全量歸檔 + TODO.md INFRA-1 結案）
@@ -88,6 +93,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-29 — `2026-05-29_FE-AESTHETICS_C1_run_提示詞.md`
+- 2026-05-29 — `2026-05-29_FE-AESTHETICS_Tasks_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_Check_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_C2_run_v1_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_C1_run_v1_提示詞.md`
@@ -101,5 +108,3 @@
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_C1_run_提示詞.md`
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md`
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_Tasks_提示詞.md`
-- 2026-05-27 — `2026-05-27_WORKFLOW-2_Check_提示詞.md`
-- 2026-05-27 — `2026-05-27_WORKFLOW-2_C4_run_提示詞.md`
