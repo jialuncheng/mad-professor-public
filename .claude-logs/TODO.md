@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS C1 完成）
+# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS C2 完成）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -256,9 +256,9 @@
 ### 🔴 高優先
 
 - 🟡 **FE-AESTHETICS 摘要工具列重構與正文扉頁美化**（`.claude-logs/baton/2026-05-29_FE-AESTHETICS_摘要工具列重構與正文扉頁美化_plan.md`）
-  - [x] ✅ C1 — Backend Stepped Layout（後端扉頁 HTML 重塑）`待 baron 回填`
-  - [/] 🟡 WIP: C2 — Frontend Full-Stack Refactor（前端全棧重構）
-  - [ ] ⬜ 未開始: Check — Conformance 驗收 + baton/ 收官歸檔
+  - [x] ✅ C1 — Backend Stepped Layout（後端扉頁 HTML 重塑）`3cf8acf`
+  - [x] ✅ C2 — Frontend Full-Stack Refactor（前端全棧重構）`待 baron 回填`
+  - [/] 🟡 WIP: Check — Conformance 驗收 + baton/ 收官歸檔
   - 工時：2 個 commits + Check
   - 依賴：無
 

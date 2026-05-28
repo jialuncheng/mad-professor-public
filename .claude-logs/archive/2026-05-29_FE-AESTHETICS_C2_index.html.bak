@@ -713,20 +713,26 @@
     line-height: 1.4;
     margin: 0 0 var(--space-2) 0;
   }
-  /* #abstract-toolbar 獨立摘要容器，滿寬居中且對稱 */
-  #abstract-toolbar {
-    flex-shrink: 0;
-    padding: 0 var(--pad-panel) var(--space-2) var(--pad-panel);
-    border-bottom: 1px solid var(--color-border);
-    max-width: var(--content-max-w);
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
+  #current-title .title-meta {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin: var(--space-1) 0 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: baseline;
   }
-  #abstract-toolbar details.title-abstract {
+  #current-title .title-meta-sep {
+    color: var(--color-border);
+  }
+  #current-title details.title-abstract {
+    /* 摘要展開最大高度 + 滾動條、防超長摘要把 toolbar 整個撐爆
+       BUG-F1 / BUG-F5：撐滿 #current-title 剩餘寬度、box-sizing 防 padding 撐爆、font-size 走主 scale */
     margin-top: var(--space-2);
     font-size: var(--font-base);
     color: var(--color-text);
+    max-height: 12rem;
+    overflow-y: auto;
     width: 100%;
     box-sizing: border-box;
   }
@@ -756,34 +762,32 @@
   .tag-pill:hover { background: rgba(255, 255, 255, 0.8); }
   [data-theme="dark"] .tag-pill { background: rgba(0, 0, 0, 0.4); }
   [data-theme="dark"] .tag-pill:hover { background: rgba(0, 0, 0, 0.55); }
-  #abstract-toolbar details.title-abstract > summary {
+  #current-title details.title-abstract > summary {
     cursor: pointer;
+    /* BUG-F5 B1（ui-fixes-batch B1）：--font-small 廢 token → 主 scale --font-xs */
     font-size: var(--font-xs);
     color: var(--color-text-subtle);
     user-select: none;
     list-style: none;
   }
-  #abstract-toolbar details.title-abstract > summary::before { content: "▸ "; }
-  #abstract-toolbar details.title-abstract[open] > summary::before { content: "▾ "; }
-  #abstract-toolbar details.title-abstract[open] > summary {
+  #current-title details.title-abstract > summary::before { content: "▸ "; }
+  #current-title details.title-abstract[open] > summary::before { content: "▾ "; }
+  #current-title details.title-abstract[open] > summary {
     color: var(--color-text);
     margin-bottom: var(--space-2);
   }
-  #abstract-toolbar details.title-abstract .abstract-body {
+  #current-title details.title-abstract .abstract-body {
     line-height: 1.6;
     white-space: pre-wrap;
     padding: var(--space-2) var(--space-3);
     background: var(--color-surface, var(--color-bg));
     border-left: 3px solid var(--color-border);
     border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
-    width: 100%;
-    box-sizing: border-box;
   }
 
   #paper-content {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden; /* 防止橫向溢出撐破中欄 */
     margin: 0 auto;
     width: 100%;
     /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、
@@ -791,62 +795,16 @@
     max-width: var(--content-max-w);
     box-sizing: border-box;
   }
-
-  /* 正文防禦性折行與防溢出機制 */
-  #paper-content p,
-  #paper-content li,
-  #paper-content div,
-  #paper-content span {
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-word;
-  }
-  #paper-content pre,
-  #paper-content code {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  /* 學術 PDF 經典扉頁排版（FE-AESTHETICS C2）*/
-  .paper-header-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin: var(--space-4) auto var(--space-6) auto;
-    padding-bottom: var(--space-4);
-    border-bottom: var(--divider-w) solid var(--color-border);
-    max-width: var(--content-max-w);
-  }
-  .paper-header-meta .header-authors {
-    font-size: var(--font-base);
-    font-weight: 600;
-    color: var(--color-text);
-    margin-bottom: var(--space-1);
-  }
-  .paper-header-meta .header-venue-date {
-    font-size: var(--font-sm);
-    color: var(--color-text-subtle);
-    margin-bottom: var(--space-1);
-  }
-  .paper-header-meta .header-doi {
-    font-size: var(--font-xs);
-    color: var(--color-text-subtle);
-    margin-bottom: var(--space-2);
-  }
-  .paper-header-meta .header-keywords {
-    font-size: var(--font-sm);
-    color: var(--color-text-subtle);
-    margin-top: var(--space-2);
-  }
-  #paper-content > h1:first-child {
-    text-align: center;
-    font-size: var(--font-2xl);
-    font-weight: 700;
-    color: var(--color-text);
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-2);
-    text-wrap: pretty;
+  /* BUG-B2 Bug 10（v4 §B B10.3 / ui-fixes-batch B8.2）：
+     螢幕模式隱藏正文冗餘 h1 + meta（renderTitleHeader 在 #current-title 已動態顯示）
+     - 新 paper：後端 _render_header_*  wrap 進 <div class="paper-header-meta">、class hook 穩定 hide
+     - 舊 paper：無 wrap（既有 > blockquote 格式）、塌陷顯示問題已存在、本期不 backfill（v4 Q9）
+     - @media print：恢復顯示、補列印模式 toolbar 被隱藏的標題空缺 */
+  @media screen {
+    #paper-content > h1:first-child,
+    #paper-content > .paper-header-meta {
+      display: none;
+    }
   }
   #paper-content h1 { text-wrap: pretty; }
   #paper-content h2 {
@@ -1216,7 +1174,6 @@
     #sidebar,
     #chat-panel,
     #content-toolbar,
-    #abstract-toolbar,
     #empty-state,
     #tooltip,
     .modal-mask,
@@ -1446,7 +1403,6 @@
         </button>
       </div>
     </div>
-    <div id="abstract-toolbar" style="display:none"></div>
     <!-- BUG-F4 A2（ui-fixes-batch A2）：預設顯示反轉——empty-state 預設顯示、paper-content 預設 hide
          既有 loadPaper 內 toggle 邏輯不變（hide empty / show paper）；
          初始無 paper 時中欄顯示「從左側選擇文件」、不再空白 -->
@@ -2461,18 +2417,10 @@ function _esc(s) {
 }
 function renderTitleHeader(p) {
   const el = document.getElementById('current-title');
-  const abstractToolbar = document.getElementById('abstract-toolbar');
   if (!el) return;
   // 沒 paper 時清空 innerHTML 但保留元素（占 toolbar flex:1 槽位、
-  // 避免 actions 滑到左邊）。不再用 hidden 屬性。並清空隱藏摘要列。
-  if (!p) {
-    el.innerHTML = '';
-    if (abstractToolbar) {
-      abstractToolbar.innerHTML = '';
-      abstractToolbar.style.display = 'none';
-    }
-    return;
-  }
+  // 避免 actions 滑到左邊）。不再用 hidden 屬性。
+  if (!p) { el.innerHTML = ''; return; }
   const m = p.metadata || {};
   const v = (k) => (m[k] && m[k].value) || null;
   const isResume = p.doc_type === 'resume';
@@ -2485,31 +2433,34 @@ function renderTitleHeader(p) {
   const parts = [`<h1 class="title-zh">${_esc(titleZh)}</h1>`];
   if (titleEn) parts.push(`<p class="title-en">${_esc(titleEn)}</p>`);
 
-  // 渲染獨立滿寬摘要容器（#abstract-toolbar）
-  if (abstractToolbar) {
-    if (isResume) {
-      abstractToolbar.innerHTML = '';
-      abstractToolbar.style.display = 'none';
-    } else {
-      // 雙語摘要 fallback（中文模式優先取 translated_abstract、缺則 fallback 英文 abstract）
-      // 繁中優先 → translated_abstract、無中譯則防禦性回退至英文 abstract
-      const abstractEn = v('abstract');
-      const abstractZh = v('translated_abstract') || abstractEn;
-      const abstract = currentLang === 'zh' ? abstractZh : abstractEn;
-      if (abstract) {
-        abstractToolbar.innerHTML =
-          `<details class="title-abstract">`
-          + `<summary>顯示摘要</summary>`
-          + `<div class="abstract-body">${_esc(abstract)}</div>`
-          + `</details>`;
-        abstractToolbar.style.display = 'block';
-      } else {
-        abstractToolbar.innerHTML = '';
-        abstractToolbar.style.display = 'none';
-      }
+  if (isResume) {
+    const org = v('organization');
+    if (org) parts.push(`<p class="title-meta">${_esc(org)}</p>`);
+  } else {
+    const bits = [];
+    const authors = v('authors');
+    if (Array.isArray(authors) && authors.length)
+      bits.push(_esc(authors.join('、')));
+    const date = v('publication_date');
+    if (date) bits.push(_esc(date));
+    const venue = v('journal_or_conference') || v('publisher') || v('organization');
+    if (venue) bits.push(_esc(venue));
+    if (bits.length)
+      parts.push(`<p class="title-meta">${bits.join('<span class="title-meta-sep">·</span>')}</p>`);
+    // 雙語摘要 fallback（中文模式優先取 translated_abstract、缺則 fallback 英文 abstract）
+    // 繁中優先 → translated_abstract、無中譯則防禦性回退至英文 abstract
+    const abstractEn = v('abstract');
+    const abstractZh = v('translated_abstract') || abstractEn;
+    const abstract = currentLang === 'zh' ? abstractZh : abstractEn;
+    if (abstract) {
+      parts.push(
+        `<details class="title-abstract">`
+        + `<summary>顯示摘要</summary>`
+        + `<div class="abstract-body">${_esc(abstract)}</div>`
+        + `</details>`
+      );
     }
   }
-
   // tag-pill 渲染（半透明磨砂玻璃、依 components.md §11 規範）
   // BUG-F1 Bug 1：fallback chain 防禦（同 tag-modal 載入、PATCH 後 local 寫 metadata_json、API 回 metadata）
   const userTags = (p.metadata && p.metadata.user_tags) ||
@@ -2731,11 +2682,6 @@ async function deletePaper(paperId, title) {
     if (currentPaperId === paperId) {
       currentPaperId = null;
       document.getElementById('content-toolbar').style.display = 'none';
-      const delAbstractToolbar = document.getElementById('abstract-toolbar');
-      if (delAbstractToolbar) {
-        delAbstractToolbar.innerHTML = '';
-        delAbstractToolbar.style.display = 'none';
-      }
       document.getElementById('empty-state').style.display = 'flex';
       document.getElementById('paper-content').style.display = 'none';
       document.getElementById('chat-messages').innerHTML = '<div class="chat-empty">選擇文件後開始提問</div>';

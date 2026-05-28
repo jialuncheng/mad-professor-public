@@ -149,31 +149,27 @@ def test_render_header_en_academic_no_meta_no_wrap():
 
 
 def test_b10_frontend_media_screen_hides_h1_and_header_meta():
-    """B10 前端：@media screen 區塊 hide #paper-content > h1:first-child 與 > .paper-header-meta、
-    @media print 模式不受此規則影響。"""
-    # @media screen { #paper-content > h1:first-child, #paper-content > .paper-header-meta { display: none; } }
+    """FE-AESTHETICS C2 更新（2026-05-29）：BUG-B2 的 @media screen hide 規則已刪除；
+    h1:first-child 與 .paper-header-meta 現在 screen 模式下正常顯示（置中排版）。"""
+    # FE-AESTHETICS C2：舊 @media screen { display: none } 規則應已刪除
     pat = re.compile(
         r'@media\s+screen\s*\{[^}]*'
         r'#paper-content\s*>\s*h1:first-child\s*,\s*'
         r'#paper-content\s*>\s*\.paper-header-meta\s*\{[^}]*display:\s*none',
         re.DOTALL,
     )
-    assert pat.search(STATIC_HTML), (
-        '前端 CSS 應有 @media screen { #paper-content > h1:first-child, '
-        '#paper-content > .paper-header-meta { display: none; } } 結構'
+    assert not pat.search(STATIC_HTML), (
+        'FE-AESTHETICS C2：舊 BUG-B2 @media screen hide 規則應已刪除'
     )
 
 
 def test_b10_frontend_class_hook_not_in_print_media():
-    """B10 前端：hide 規則必須包在 @media screen、不能裸寫（否則列印也會 hide、破壞列印模式恢復標題契約）。"""
-    # 找所有 #paper-content > .paper-header-meta { display: none } 出現的位置
-    occurrences = [m.start() for m in re.finditer(
-        r'#paper-content\s*>\s*\.paper-header-meta', STATIC_HTML)]
-    assert occurrences, '應有 .paper-header-meta selector'
-
-    # 第一個 occurrence 之前 200 字必須含 @media screen（保證在 media query 內）
-    first = occurrences[0]
-    context_before = STATIC_HTML[max(0, first - 200):first]
-    assert '@media screen' in context_before, (
-        'hide 規則必須包在 @media screen 內、避免影響 @media print 列印模式'
+    """FE-AESTHETICS C2 更新（2026-05-29）：.paper-header-meta 現在應有 display: flex 規則（置中對稱排版）。"""
+    # FE-AESTHETICS C2：.paper-header-meta 應有 display: flex（置中對稱）
+    pat = re.compile(
+        r'\.paper-header-meta\s*\{[^}]*display:\s*flex',
+        re.DOTALL,
+    )
+    assert pat.search(STATIC_HTML), (
+        'FE-AESTHETICS C2：.paper-header-meta 應有 display: flex 規則（置中對稱 HTML 排版）'
     )
