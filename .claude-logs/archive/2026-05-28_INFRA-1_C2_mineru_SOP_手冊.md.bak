@@ -24,7 +24,6 @@
 | `MINERU_OUTPUT_DIR` | `""` | 舊版 SCP/本地模式的解析結果輸出目錄路徑。 |
 | `MINERU_PAPER_NAME` | `"original"` | 上傳至 MinerU 的解耦識別名稱，與本機 paper_id 無關。 |
 | `MINERU_TIMEOUT` | `1800` | HTTP 請求超時（秒）。書籍 PDF 建議 1800–3600。 |
-| `MINERU_VIRTUAL_VRAM_SIZE` | `""` (不設) | **CPU 部署禁用**。設 8 → OOM 崩潰；設 4 → 增加推理耗時 ~33 秒。僅 GPU 容器環境才設定，CPU 部署務必完整移除此變數（連 key 都不留）。 |
 
 **核查指令**：
 ```bash
@@ -61,14 +60,6 @@ MINERU_TIMEOUT=3600
 ```bash
 grep -n "MINERU_TIMEOUT\|ValueError\|TypeError" processor/pdf_processor.py
 ```
-
-### §2.3 CPU 環境後端紅線規格
-
-**🚫 嚴禁使用預設推理後端**：CPU 部署環境下，MinerU 預設的 `hybrid_auto` 推理模式會在 `Predict: 0%` 永久卡死，無法自行恢復。
-
-**強制指定**：`processor/pdf_processor.py` 的 `requests.post` `data` 載荷必須恆常攜帶 `"backend": "pipeline"`，以 PaddleOCR + RapidTable 組合在 CPU 上穩定完成推理（18 頁文件實測約 66 秒）。
-
-**鎖定位置**：`processor/pdf_processor.py` data dict 中已鎖定；回歸防護由 `tests/test_pdf_processor_timeout.py::TestMineruTimeout::test_backend_parameter_is_pipeline` 斷言保護。
 
 ---
 
@@ -178,19 +169,6 @@ curl -s http://localhost:8000/health || echo "API 尚未就緒，稍候重試"
 
 等候 30–60 秒後，再次嘗試 PDF 上傳。
 
-### §6.2 VRAM 超配 OOM 自愈（CPU 部署專用）
-
-若日誌出現 `MemoryError` / `Killed` / `OOM` 且確認為 CPU 部署環境：
-
-```bash
-# 確認 docker-compose.yml 未設定 MINERU_VIRTUAL_VRAM_SIZE
-grep "VIRTUAL_VRAM" /path/to/docker-compose.yml || echo "（未設定，合規）"
-# 若有設定 → 移除該行，再重新部署
-docker compose down && docker compose up -d
-```
-
-> 不論設為 8 或 4，CPU 部署皆必須完整移除此變數（詳見 §1 表格說明）。
-
 ---
 
 ## §99 治理規格
@@ -212,5 +190,4 @@ docker compose down && docker compose up -d
 
 ### §99.2 Revision 歷程
 
-- v2 (2026-05-28)：INFRA-1 C2——§1 補 MINERU_VIRTUAL_VRAM_SIZE CPU 禁用條目 + §2.3 CPU 後端紅線規格 + §6.2 VRAM OOM 自愈步驟
 - v1 (2026-05-27)：初版建立（MODEL-10 C2，隨 pdf_processor.py MINERU_TIMEOUT 防禦性載入落地）

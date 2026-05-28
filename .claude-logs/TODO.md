@@ -247,8 +247,8 @@
 
 - 🟡 **INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新**（`baton/2026-05-28_INFRA-1_MinerU_Pipeline_Hotfix_plan.md`）
   - ✅ C1 — pdf_processor backend 鎖定與單元測試（請求參數錨定與斷言測試）
-  - 🟡 WIP C2 — SOP 手冊 CPU 推理與環境規格更新（SOP 文件運維規格補強）
-  - [ ] ⬜ 未開始: Check — TODO.md 結案與全量 baton 歸檔（收官結案與物理歸檔）
+  - ✅ C2 — SOP 手冊 CPU 推理與環境規格更新（SOP 文件運維規格補強）
+  - 🟡 WIP Check — TODO.md 結案與全量 baton 歸檔（收官結案與物理歸檔）
   - 工時：3 個 commits
   - 依賴：無
 
