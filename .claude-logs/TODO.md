@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，RAG-13-HOTFIX-1 C1 完成）
+# Mad Professor — TODO（最後更新 2026-05-29，RAG-13-HOTFIX-1 Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,15 @@
 ---
 
 ## ✅ 已完成
+
+### RAG-13-HOTFIX-1 — 緊急熱修復：自訂主題下拉選單捲軸無作用修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `static/index.html` scroll handler ctx-popup 過濾 + `tests/test_rag13_hotfix1_scroll_intercept.py` 新增 | `6598d2d` |
+| Check | Conformance 驗收與 baton/ 全量歸檔 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-05-29_RAG-13-HOTFIX-1_選單捲軸失效修復_hotfix_v1.0.md`
 
 ### RAG-13 自訂主題動態清單與選單優化
 
@@ -275,12 +284,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復**（`.claude-logs/hotfixes/2026-05-29_RAG-13-HOTFIX-1_選單捲軸失效修復_hotfix_v1.0.md`）
-  - ✅ C1 — scroll Intercept Hotfix（選單滾動捕獲誤傷修復）
-  - 🟡 WIP: Check — Conformance 驗收與 baton/ 全量歸檔（收官驗收與計畫歸檔）
-  - 工時：1 個 commit + Check
-  - 依賴：baron 手動 commit C1
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -522,8 +525,8 @@
 ### RAG-13 (✅ 已完成)
 - ✅ ~~RAG-13 自訂主題動態清單與選單優化~~（已落地、C1 `9e041ed` + C2 `d842008` + Check 收官）
 
-### RAG-13-HOTFIX-1 (🟡 WIP)
-- 🟡 RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復（C1 + Check、tasks 已拆分）
+### RAG-13-HOTFIX-1 (✅ 已完成)
+- ✅ ~~RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復~~（已落地、C1 `6598d2d` + Check 收官）
 
 ### INFRA (✅ 已完成)
 - ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）

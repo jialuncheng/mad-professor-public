@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-29（RAG-13-HOTFIX-1 C1 Run）
+最後更新：2026-05-29（RAG-13-HOTFIX-1 Check）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -34,9 +34,10 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
-- 🟡 **RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復（2026-05-29 進行中）**
+- ✅ **RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復（2026-05-29 收官）**
   - `2026-05-29_RAG-13-HOTFIX-1_Tasks_提示詞.md` — Tasks（FE-Hotfix tasks 拆分：C1 選單捲軸修復 + Check 收官）
   - `2026-05-29_RAG-13-HOTFIX-1_C1_run_提示詞.md` — C1 Run（static/index.html L1622 scroll handler ctx-popup 過濾 + test_rag13_hotfix1_scroll_intercept.py 新增）
+  - `2026-05-29_RAG-13-HOTFIX-1_Check_提示詞.md` — Check（Conformance 驗收與收官歸檔提示詞）
 - ✅ **RAG-13 自訂主題動態清單與選單優化（2026-05-29 收官）**
   - `2026-05-29_RAG-13_Tasks_提示詞.md` — Tasks（C1 後端 GET /api/themes + fixture 修正 + C2 前端 setThemes/loadThemesFromServer/分隔線/upload handler）
   - `2026-05-29_RAG-13_C1_run_提示詞.md` — C1 Run（web_server.py GET /api/themes list_themes + test_themes_upload.py fixture GET 掛載 + test_list_themes_endpoint）
@@ -103,6 +104,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Check_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_C1_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13_Check_提示詞.md`
@@ -117,5 +119,3 @@
 - 2026-05-28 — `2026-05-28_INFRA-1_C2_run_v1_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_C1_run_v1_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_Tasks_v1_提示詞.md`
-- 2026-05-27 — `2026-05-27_MODEL-10_Check_提示詞.md`
-- 2026-05-27 — `2026-05-27_MODEL-10_C2_run_v1_提示詞.md`
