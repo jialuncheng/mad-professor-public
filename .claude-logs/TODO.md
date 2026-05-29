@@ -11,6 +11,14 @@
 
 ## ✅ 已完成
 
+### RAG-14-HOTFIX-1 — 緊急熱修復：對話置頂氣泡頂部穿透漏出修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| Hotfix | `static/index.html` 移除 `#chat-messages` padding-top，新增 `.qa-group:first-child` margin-top 完美防置頂穿透 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-05-30_RAG-14_hotfix.md`
+
 ### RAG-14 多標籤寬鬆格式跨文章 RAG 檢索與對話體驗升級
 
 | Commit | 內容 | Hash |
