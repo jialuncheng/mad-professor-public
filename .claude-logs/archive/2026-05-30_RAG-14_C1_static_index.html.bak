@@ -911,11 +911,7 @@
     scrollbar-gutter: stable;                                     /* 永遠保留捲軸位、左右視覺對稱 */
     padding: var(--space-5) var(--chat-pad-x, var(--space-5));    /* 與 input-area 共用水平 padding，邊界對齊 */
     display: flex; flex-direction: column;
-    gap: var(--space-6);                                             /* qa-group 外部間距（C1 RAG-14）*/
-  }
-  .qa-group {
-    display: flex; flex-direction: column;
-    gap: var(--space-4);                                             /* user/ai 內部間距（C1 RAG-14）*/
+    gap: var(--space-4);
   }
   .msg-user {
     background: var(--color-accent);
@@ -924,13 +920,9 @@
     border-radius: var(--radius-md);
     font-size: var(--font-base);
     line-height: 1.6;
-    align-self: stretch;                                             /* 滿寬（C1 RAG-14）*/
-    max-width: 100%;                                                 /* 滿寬（C1 RAG-14）*/
+    align-self: flex-end;
+    max-width: 75%;
     white-space: pre-wrap;
-    position: sticky;                                                /* Q&A sticky header（C1 RAG-14）*/
-    top: 0;
-    z-index: 10;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
   /* attach 到 broker 的 stream 時 ai msg 末尾的閃爍游標
      （sendMessage 用純字「▋」、attach 模式統一帶 blink 動畫）*/
@@ -951,8 +943,8 @@
     border-radius: var(--radius-md);
     font-size: var(--font-base);
     line-height: 1.8;
-    align-self: stretch;                                             /* 滿寬（C1 RAG-14）*/
-    max-width: 100%;                                                 /* 滿寬（C1 RAG-14）*/
+    align-self: flex-start;
+    max-width: 90%;
     border: 1px solid var(--color-border);
   }
   /* AI 訊息動作鈕：右下角 hover 顯示 copy / regenerate */
@@ -3229,10 +3221,7 @@ async function sendMessage() {
   // - .value → .textContent.trim()（token 已是 #tag 字串、後端 parse_query_hashtag 解析）
   // - .value = '' → .innerHTML = ''（清掉純文字 + 所有 .hashtag-token）
   // - 不再 dispatchEvent('input')（autosize listener 已移除）
-  // × 按鈕過濾：clone node → 移除 .hashtag-token-remove → 取 textContent（C1 RAG-14）
-  const _tmpDiv = input.cloneNode(true);
-  _tmpDiv.querySelectorAll('.hashtag-token-remove').forEach(btn => btn.remove());
-  const query = (_tmpDiv.textContent || '').trim();
+  const query = (input.textContent || '').trim();
   if (!query || isStreaming || !currentPaperId) return;
 
   input.innerHTML = '';

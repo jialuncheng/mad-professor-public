@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS HOTFIX-1 Check 收官）
+# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 C1 完成）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -16,7 +16,7 @@
 | Commit | 內容 | Hash |
 |---|---|---|
 | C2-hotfix | Frontend Academic Header Self-Healing（CSS 靠左 + normalizeAcademicHeader JS + test_bug_f1 自癒 + 新建 test_fe_aesthetics_c2_hotfix.py）| `bf3c14b` |
-| Check | Conformance 驗收與 baton/ 全量歸檔 | `待 baron 回填` |
+| Check | Conformance 驗收與 baton/ 全量歸檔 | `452c652` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-05-29_FE-AESTHETICS-HOTFIX-1_學術扉頁自癒與靠左排版_hotfix_v1.2.md`
 
@@ -293,6 +293,13 @@
 
 ### 🔴 高優先
 
+- 🟡 **RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級**（`.claude-logs/baton/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`）
+  - [x] ✅ C1 — FE CSS 氣泡滿寬 + sendMessage × 過濾（前端視覺對齊與輸入淨化）hash: `待 baron 回填`
+  - [/] 🟡 WIP: C2 — FE loadChatHistory + sendMessage QA-group DOM 重構（前端 Sticky 容器架構）
+  - [ ] ⬜ 未開始: Check — Conformance 驗收與 baton 全量歸檔（收官）
+  - 工時：3 個 commits（C1 + C2 + Check）
+  - 依賴：無（後端 paper_manager.py / AI_professor_chat.py / tests 已落地）
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -300,6 +307,13 @@
   - 確保 try...finally 結構保證註冊解除，無死鎖
   - 新增 tests/test_priority_scheduler.py 驗證協同暫停與恢復
   - 工時：1-2 個 commits
+  - 依賴：無
+
+- 🔵 **INFRA-2 PipelineCore第一階段切分與定規**（`.claude-logs/baton/2026-05-30_INFRA-2_PipelineCore第一階段切分與定規_plan.md`）
+  - [ ] ⬜ 未開始: 文件一 — 現有架構分析報告（`2026-05-30_INFRA-2_PipelineCore現有架構分析_report.md`）
+  - [ ] ⬜ 未開始: 文件二 — 新流程規劃設計說明書（`2026-05-30_INFRA-2_PipelineCore新流程規劃_design.md`）
+  - [ ] ⬜ 未開始: 文件三 — 數據接口合約 SPEC（`2026-05-30_INFRA-2_PipelineCore接口合約_specification.md`）
+  - 工時：1 個 commit（大改版前置定規規格凍結，無程式碼變動）
   - 依賴：無
 
 - ⬜ **RAG-11 reload SSE 還原**（Bug 6、需獨立 plan 評估）
@@ -487,7 +501,8 @@
 
 ## 索引（依類別）
 
-### RAG（10 項 active）
+### RAG（11 項 active）
+- 🟡 RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級（高、C1 ✅ / WIP C2/Check）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）
@@ -538,7 +553,8 @@
 ### RAG-13-HOTFIX-1 (✅ 已完成)
 - ✅ ~~RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復~~（已落地、C1 `6598d2d` + Check 收官）
 
-### INFRA (✅ 已完成)
+### INFRA (1 項 active)
+- 🔵 INFRA-2 PipelineCore第一階段切分與定規（高、`.claude-logs/baton/2026-05-30_INFRA-2_PipelineCore第一階段切分與定規_plan.md`）
 - ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）
 
 ### QUEUE (1 項 active)
