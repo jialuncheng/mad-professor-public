@@ -2026,24 +2026,7 @@
         const pop = document.createElement('div');
         pop.className = 'ctx-popup dropdown-popup';
         const currentVal = dd.dataset.value;
-        let hasCustomHeader = false;
         items.forEach(([val, label]) => {
-          if (dd.id === 'theme-dropdown' && !['mies', 'kahn', 'kandinsky', 'nara'].includes(val) && !hasCustomHeader) {
-            hasCustomHeader = true;
-            const hr = document.createElement('div');
-            hr.className = 'dropdown-separator';
-            hr.style.height = '1px';
-            hr.style.background = 'var(--color-divider, var(--color-border))';
-            hr.style.margin = '4px 0';
-            pop.appendChild(hr);
-            const header = document.createElement('div');
-            header.textContent = '自訂主題';
-            header.style.fontSize = '10px';
-            header.style.color = 'var(--color-text-subtle)';
-            header.style.padding = '4px 12px';
-            header.style.pointerEvents = 'none';
-            pop.appendChild(header);
-          }
           const b = document.createElement('button');
           b.textContent = label;
           if (val === currentVal) b.style.fontWeight = '600';
@@ -2080,15 +2063,6 @@
         THEMES.push([name, label]);  // closure 持有相同 reference、下次點開 dropdown 即生效
       },
       getThemeLabel(name) { return themeLabels[name] || name; },
-      setThemes(themesList) {
-        // RAG-13：動態覆寫選單資料（清空 + 重建 THEMES 陣列與 themeLabels map）
-        THEMES.length = 0;
-        for (const k in themeLabels) delete themeLabels[k];
-        themesList.forEach(t => {
-          THEMES.push([t.name, t.label]);
-          themeLabels[t.name] = t.label;
-        });
-      },
     };
   })();
   window.dropdownAPI = dropdownAPI;
@@ -2102,33 +2076,6 @@
     dd.dataset.value = savedTheme;
     dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(savedTheme);
   }
-
-  // ─── RAG-13：動態讀取自訂主題清單並渲染 ───
-  async function loadThemesFromServer() {
-    try {
-      const res = await fetch('/api/themes');
-      if (!res.ok) throw new Error('Failed to fetch themes');
-      const themesList = await res.json();
-
-      const builtInOrder = ['mies', 'kahn', 'kandinsky', 'nara'];
-      const builtInThemes = themesList.filter(t => !t.custom)
-        .sort((a, b) => builtInOrder.indexOf(a.name) - builtInOrder.indexOf(b.name));
-      const customThemes = themesList.filter(t => t.custom)
-        .sort((a, b) => b.updated_at - a.updated_at);
-
-      const sortedThemes = [...builtInThemes, ...customThemes];
-      dropdownAPI.setThemes(sortedThemes);
-
-      const currentTheme = localStorage.getItem(THEME_KEY) || 'kahn';
-      const dd = document.getElementById('theme-dropdown');
-      dd.dataset.value = currentTheme;
-      dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(currentTheme);
-    } catch (err) {
-      console.error('[Theme Load Error]', err);
-    }
-  }
-
-  loadThemesFromServer();
 
   // ─── BUG-F2 A5【upload handler】TDZ-aware：dropdownAPI IIFE 之後 ───
   //   原 L1831 已搬到此處（保險防 TDZ）；handler body 內呼叫 dropdownAPI.addTheme + getThemeLabel
@@ -2152,8 +2099,12 @@
       const themeName = data.filename.replace(/\.css$/, '');
       document.getElementById('theme-link').href = data.url;
       localStorage.setItem(THEME_KEY, themeName);
-      // RAG-13：重新從伺服器讀取最新主題清單（含新上傳的自訂主題）
-      await loadThemesFromServer();
+      // BUG-F2 A5：動態追加進 THEMES、dropdown 重渲染時可見、跨重整不失效
+      dropdownAPI.addTheme(themeName);
+      // 更新 dropdown 顯示
+      const dd = document.getElementById('theme-dropdown');
+      dd.dataset.value = themeName;
+      dd.querySelector('.dropdown-value').textContent = dropdownAPI.getThemeLabel(themeName);
       closeModal('theme-modal');
     } catch (err) {
       customAlert({ title: '上傳失敗', body: err.message });

@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，RAG-13 Tasks 拆分）
+# Mad Professor — TODO（最後更新 2026-05-29，RAG-13 C2 完成）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -266,10 +266,11 @@
 ### 🔴 高優先
 
 - 🟡 **RAG-13 自訂主題動態清單與選單優化**（`.claude-logs/baton/2026-05-29_RAG-13_自訂主題動態清單與選單優化_plan.md` v3）
-  - C1：後端 `web_server.py` 新增 `GET /api/themes` + `tests/test_themes_upload.py` fixture 修正 + `test_list_themes_endpoint`
-  - C2：前端 `static/index.html` 新增 `setThemes()` + `setupOne` 分組分隔線 + `loadThemesFromServer()` + upload handler 更新
-  - 工時：2 個 commits
-  - 依賴：無
+  - ✅ C1：後端 `web_server.py` 新增 `GET /api/themes` + `tests/test_themes_upload.py` fixture 修正 + `test_list_themes_endpoint`
+  - ✅ C2：前端 `static/index.html` 新增 `setThemes()` + `setupOne` 分組分隔線 + `loadThemesFromServer()` + upload handler 更新 + test_bug_f2 更新
+  - 🟡 Check：Conformance 驗收 + baton/ 歸檔 + TODO 結案（待 baron commit C1+C2 後）
+  - 工時：2 個 commits + Check
+  - 依賴：baron 手動 commit C1、C2
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表

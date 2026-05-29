@@ -120,14 +120,11 @@ def test_bug2_a5_upload_handler_after_iife():
         f'目前 iife={idx_iife} / handler={idx_handler}'
     )
 
-    # handler body 應用 dropdownAPI.addTheme + getThemeLabel
-    # 從 handler 註冊位置往後找 dropdownAPI 呼叫
+    # RAG-13 C2：handler body 改呼叫 loadThemesFromServer()（取代舊 addTheme + getThemeLabel）
+    # 從 handler 註冊位置往後找 loadThemesFromServer 呼叫
     tail = STATIC_HTML[idx_handler:]
-    assert 'dropdownAPI.addTheme(themeName)' in tail[:3000], (
-        'upload handler body 應呼叫 dropdownAPI.addTheme(themeName)'
-    )
-    assert 'dropdownAPI.getThemeLabel(themeName)' in tail[:3000], (
-        'upload handler body 應呼叫 dropdownAPI.getThemeLabel(themeName) 更新 dropdown 顯示'
+    assert 'await loadThemesFromServer()' in tail[:3000], (
+        'upload handler body 應呼叫 await loadThemesFromServer()（RAG-13 C2 更新）'
     )
 
 
