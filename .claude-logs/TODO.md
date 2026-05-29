@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 C2 完成）
+# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,16 @@
 ---
 
 ## ✅ 已完成
+
+### RAG-14 多標籤寬鬆格式跨文章 RAG 檢索與對話體驗升級
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `static/index.html` CSS 4 項（gap / msg-user 滿寬 sticky / msg-ai 滿寬 / qa-group）+ sendMessage × 過濾 + `tests/test_rag14_c1_css_and_filter.py` 新增（4 pytest）| `6593962` |
+| C2 | `static/index.html` loadChatHistory forEach qa-group 包裝 + in_progress currentGroup + sendMessage qaGroup 包裝 + `tests/test_rag14_c2_dom_structure.py` 新增（3 pytest）| `b8e8770` |
+| Check | Conformance 驗收與 baton/ 全量歸檔 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`
 
 ### FE-AESTHETICS HOTFIX-1 — 前端學術扉頁自癒與排版靠左優化
 
@@ -293,13 +303,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級**（`.claude-logs/baton/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`）
-  - [x] ✅ C1 — FE CSS 氣泡滿寬 + sendMessage × 過濾（前端視覺對齊與輸入淨化）hash: `6593962`
-  - [x] ✅ C2 — FE loadChatHistory + sendMessage QA-group DOM 重構（前端 Sticky 容器架構）hash: `待 baron 回填`
-  - [/] 🟡 WIP: Check — Conformance 驗收與 baton 全量歸檔（收官）
-  - 工時：3 個 commits（C1 + C2 + Check）
-  - 依賴：無（後端 paper_manager.py / AI_professor_chat.py / tests 已落地）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -502,7 +505,7 @@
 ## 索引（依類別）
 
 ### RAG（11 項 active）
-- 🟡 RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級（高、C1 ✅ C2 ✅ / WIP Check）
+- ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）

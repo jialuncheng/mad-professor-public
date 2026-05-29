@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-30（RAG-14 C2 Run）
+最後更新：2026-05-30（RAG-14 Check）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -38,6 +38,7 @@
   - `2026-05-30_RAG-14_Tasks_提示詞.md` — Tasks（C1 後端多標籤解析器 + C2 前端 sendMessage 過濾 + C3 前端 QA-group + CSS + Sticky + C4 測試升級 + Check 收官）
   - `2026-05-30_RAG-14_C1_run_提示詞.md` — C1 Run（CSS 4 項：#chat-messages gap / .msg-user 滿寬 sticky / .msg-ai 滿寬 / .qa-group 新增 + sendMessage × 過濾 + 4 pytest）
   - `2026-05-30_RAG-14_C2_run_提示詞.md` — C2 Run（loadChatHistory history.forEach → qa-group + currentGroup + in_progress currentGroup.appendChild + sendMessage qaGroup 包裝 + 3 pytest）
+  - `2026-05-30_RAG-14_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + baton/ plan_v3/tasks_v1/C1/C2/Check 全量歸檔 + TODO.md RAG-14 結案）
 - ✅ **RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復（2026-05-29 收官）**
   - `2026-05-29_RAG-13-HOTFIX-1_Tasks_提示詞.md` — Tasks（FE-Hotfix tasks 拆分：C1 選單捲軸修復 + Check 收官）
   - `2026-05-29_RAG-13-HOTFIX-1_C1_run_提示詞.md` — C1 Run（static/index.html L1622 scroll handler ctx-popup 過濾 + test_rag13_hotfix1_scroll_intercept.py 新增）
@@ -112,6 +113,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-30 — `2026-05-30_RAG-14_Check_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_C2_run_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_C1_run_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_Tasks_提示詞.md`
@@ -126,4 +128,3 @@
 - 2026-05-29 — `2026-05-29_RAG-13_C1_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_Check_提示詞.md`
-- 2026-05-29 — `2026-05-29_FE-AESTHETICS_C2_run_提示詞.md`
