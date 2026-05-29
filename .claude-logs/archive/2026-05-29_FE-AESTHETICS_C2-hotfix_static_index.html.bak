@@ -811,8 +811,8 @@
   .paper-header-meta {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
+    align-items: center;
+    text-align: center;
     margin: var(--space-4) auto var(--space-6) auto;
     padding-bottom: var(--space-4);
     border-bottom: var(--divider-w) solid var(--color-border);
@@ -2694,44 +2694,6 @@ async function fetchContent(paperId, lang) {
   );
 
   document.getElementById('paper-content').innerHTML = marked.parse(content);
-  normalizeAcademicHeader(); // FE-AESTHETICS HOTFIX-1：學術扉頁自癒
-}
-
-function normalizeAcademicHeader() {
-  const metaEl = document.querySelector('#paper-content .paper-header-meta');
-  if (!metaEl) return;
-  // 🟢 Guard：若已含新格式 class divs（C1 後端正確渲染），直接跳過，防止誤傷
-  if (metaEl.querySelector('.header-authors, .header-venue-date, .header-doi, .header-keywords')) return;
-  const rawText = metaEl.textContent.trim();
-  function extractField(text, labels) {
-    for (const label of labels) {
-      const pattern = new RegExp(
-        label + '\\s*[:：]\\s*([\\s\\S]*?)(?=\\s*(?:作者|Authors|日期|Date|出處|Venue|DOI|關鍵字|Keywords|$))',
-        'i'
-      );
-      const match = text.match(pattern);
-      if (match) return match[1].trim().replace(/^[:：]\s*/, '').trim();
-    }
-    return '';
-  }
-  const authorsVal  = extractField(rawText, ['作者', 'Authors']);
-  const dateVal     = extractField(rawText, ['日期', 'Date']);
-  const venueVal    = extractField(rawText, ['出處', 'Venue']);
-  const doiVal      = extractField(rawText, ['DOI']);
-  const keywordsVal = extractField(rawText, ['關鍵字', 'Keywords']);
-  if (!authorsVal && !dateVal && !venueVal && !doiVal && !keywordsVal) return;
-  const htmlBits = [];
-  if (authorsVal) htmlBits.push(`  <div class="header-authors">${authorsVal}</div>`);
-  const venueDateBits = [];
-  if (venueVal) venueDateBits.push(venueVal);
-  if (dateVal)  venueDateBits.push(dateVal);
-  if (venueDateBits.length) htmlBits.push(`  <div class="header-venue-date">${venueDateBits.join(' · ')}</div>`);
-  if (doiVal)      htmlBits.push(`  <div class="header-doi">DOI: ${doiVal}</div>`);
-  if (keywordsVal) {
-    const isZh = rawText.includes('關鍵字') || keywordsVal.includes('、');
-    htmlBits.push(`  <div class="header-keywords">${isZh ? '關鍵字：' : 'Keywords: '}${keywordsVal}</div>`);
-  }
-  metaEl.innerHTML = htmlBits.join('\n');
 }
 
 // 列印

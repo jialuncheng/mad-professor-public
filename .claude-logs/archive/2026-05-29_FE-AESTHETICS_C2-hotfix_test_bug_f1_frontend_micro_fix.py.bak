@@ -126,14 +126,14 @@ def test_bug5_content_toolbar_and_paper_content_use_token_and_themes_override():
 
     # #current-title details.title-abstract 含 width:100%（撐滿 toolbar）
     pat_abstract = re.compile(
-        r'#abstract-toolbar\s+details\.title-abstract\s*\{[^}]*width:\s*100%',
+        r'#current-title\s+details\.title-abstract\s*\{[^}]*width:\s*100%',
         re.DOTALL,
     )
     assert pat_abstract.search(STATIC_HTML), (
-        '#abstract-toolbar details.title-abstract 應 width:100% + box-sizing'
+        '#current-title details.title-abstract 應 width:100% + box-sizing'
     )
     pat_box = re.compile(
-        r'#abstract-toolbar\s+details\.title-abstract\s*\{[^}]*box-sizing:\s*border-box',
+        r'#current-title\s+details\.title-abstract\s*\{[^}]*box-sizing:\s*border-box',
         re.DOTALL,
     )
     assert pat_box.search(STATIC_HTML), 'details.title-abstract 應 box-sizing: border-box'

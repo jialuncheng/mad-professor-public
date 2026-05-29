@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，RAG-13-HOTFIX-1 Check 收官）
+# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS HOTFIX-1 C2-hotfix 完成）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -16,7 +16,7 @@
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | `static/index.html` scroll handler ctx-popup 過濾 + `tests/test_rag13_hotfix1_scroll_intercept.py` 新增 | `6598d2d` |
-| Check | Conformance 驗收與 baton/ 全量歸檔 | `待 baron 回填` |
+| Check | Conformance 驗收與 baton/ 全量歸檔 | `75ab18a` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-05-29_RAG-13-HOTFIX-1_選單捲軸失效修復_hotfix_v1.0.md`
 
@@ -284,6 +284,12 @@
 
 ### 🔴 高優先
 
+- 🟡 **FE-AESTHETICS HOTFIX-1 前端學術扉頁自癒與排版靠左優化**（`.claude-logs/baton/2026-05-29_FE-AESTHETICS_hotfix.md`）
+  - ✅ C2-hotfix — Frontend Academic Header Self-Healing（前端學術扉頁自癒與靠左重塑）
+  - 🟡 WIP: Check — Conformance 驗收與 baton/ 全量歸檔（收官驗收與計畫歸檔）
+  - 工時：1 個 commit + Check
+  - 依賴：FE-AESTHETICS（`b735a94`）
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -519,8 +525,9 @@
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 
-### FE-AESTHETICS (✅ 已完成)
+### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
+- 🟡 FE-AESTHETICS HOTFIX-1 前端學術扉頁自癒與排版靠左優化（C2-hotfix + Check、tasks 已拆分）
 
 ### RAG-13 (✅ 已完成)
 - ✅ ~~RAG-13 自訂主題動態清單與選單優化~~（已落地、C1 `9e041ed` + C2 `d842008` + Check 收官）
