@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-29，FE-AESTHETICS Check 收官）
+# Mad Professor — TODO（最後更新 2026-05-29，RAG-13 Tasks 拆分）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -17,7 +17,7 @@
 |---|---|---|
 | C1 | 後端 `_render_header_en/zh` academic path：dash-list → 階梯式 HTML div 置中對稱排版 + 測試 assertions 更新（59 pytest 全綠） | `3cf8acf` |
 | C2 | 前端全棧重構：`#abstract-toolbar` 滿寬摘要容器 + `.paper-header-meta { display:flex }` 螢幕扉頁解鎖 + `renderTitleHeader` JS 重寫 + CSS word-wrap 防禦 + 測試更新（67 pytest 全綠） | `b735a94` |
-| Check | Conformance 驗收 + baton/ tasks/C1/C2 全量歸檔 + TODO.md 結案 | `待 baron 回填` |
+| Check | Conformance 驗收 + baton/ tasks/C1/C2 全量歸檔 + TODO.md 結案 | `6947098` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-29_FE-AESTHETICS_摘要工具列重構與正文扉頁美化_plan.md`（v1.3）
 
@@ -265,6 +265,12 @@
 
 ### 🔴 高優先
 
+- 🟡 **RAG-13 自訂主題動態清單與選單優化**（`.claude-logs/baton/2026-05-29_RAG-13_自訂主題動態清單與選單優化_plan.md` v3）
+  - C1：後端 `web_server.py` 新增 `GET /api/themes` + `tests/test_themes_upload.py` fixture 修正 + `test_list_themes_endpoint`
+  - C2：前端 `static/index.html` 新增 `setThemes()` + `setupOne` 分組分隔線 + `loadThemesFromServer()` + upload handler 更新
+  - 工時：2 個 commits
+  - 依賴：無
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -459,10 +465,11 @@
 
 ## 索引（依類別）
 
-### RAG（9 項 active）
+### RAG（10 項 active）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）
+- 🟡 RAG-13 自訂主題動態清單與選單優化（高、C1+C2 兩 commits、plan v3 拍板）
 - RAG-3 score 校準（中、等數據）
 - RAG-4 前端引用顯示（中）
 - RAG-5 合併 cap（低）
@@ -501,6 +508,9 @@
 
 ### FE-AESTHETICS (✅ 已完成)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
+
+### RAG-13 (🟡 WIP)
+- 🟡 RAG-13 自訂主題動態清單與選單優化（C1+C2、plan v3 拍板、tasks 已拆分）
 
 ### INFRA (✅ 已完成)
 - ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）

@@ -38,7 +38,6 @@ def test_client(monkeypatch):
     app = FastAPI()
     # 直接掛 upload_theme function（繞過 auth_guard / SessionMiddleware）
     app.post("/api/themes/upload")(web_server.upload_theme)
-    app.get("/api/themes")(web_server.list_themes)  # 🔴 RAG-13：掛載 GET /api/themes，避免測試回傳 404
 
     client = TestClient(app)
     yield client, tmp
@@ -125,41 +124,3 @@ def test_theme_upload_rejects_invalid_stem(test_client):
     )
     # `___` → 壓縮為 `_` → strip("_") 後為空、應 400
     assert response.status_code == 400
-
-
-# ─────────────────── 6. RAG-13：GET /api/themes 動態清單 ───────────────────
-
-
-def test_list_themes_endpoint(test_client):
-    """RAG-13：GET /api/themes 應回傳 4 個內建主題（custom=False），上傳後追加自訂項目。"""
-    client, tmp = test_client
-
-    # 1. 未上傳時：應只有 4 個內建主題，且 custom 均為 False
-    response = client.get("/api/themes")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 4, f"預期 4 個內建主題，實際 {len(data)}"
-    for t in data:
-        assert t["custom"] is False, f"內建主題 {t['name']} 的 custom 應為 False"
-        assert t["updated_at"] == 0.0
-
-    # 2. 內建主題順序應固定：mies → kahn → kandinsky → nara
-    names = [t["name"] for t in data]
-    assert names == ["mies", "kahn", "kandinsky", "nara"], f"內建主題順序錯誤：{names}"
-
-    # 3. 上傳自訂主題後：回傳應變為 5 個，最新上傳的 custom=True
-    css_content = b".custom { font-size: 14px; }"
-    upload_resp = client.post(
-        "/api/themes/upload",
-        files={"file": ("custom_theme.css", css_content, "text/css")},
-    )
-    assert upload_resp.status_code == 200
-
-    response = client.get("/api/themes")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 5, f"上傳後預期 5 個主題，實際 {len(data)}"
-    custom_items = [t for t in data if t["custom"]]
-    assert len(custom_items) == 1
-    assert custom_items[0]["name"] == "custom_theme"
-    assert custom_items[0]["updated_at"] > 0.0

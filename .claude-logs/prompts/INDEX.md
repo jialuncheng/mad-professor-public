@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-29（FE-AESTHETICS Check 收官）
+最後更新：2026-05-29（RAG-13 Tasks 拆分）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -34,6 +34,9 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
+- 🟡 **RAG-13 自訂主題動態清單與選單優化（2026-05-29 進行中）**
+  - `2026-05-29_RAG-13_Tasks_提示詞.md` — Tasks（C1 後端 GET /api/themes + fixture 修正 + C2 前端 setThemes/loadThemesFromServer/分隔線/upload handler）
+  - `2026-05-29_RAG-13_C1_run_提示詞.md` — C1 Run（web_server.py GET /api/themes list_themes + test_themes_upload.py fixture GET 掛載 + test_list_themes_endpoint）
 - `2026-05-23_RAG-10_中文Header軟換行bug寫入TODO.md` — 中文 Header meta block 軟換行渲染 bug（候選）
 - `2026-05-23_RAG-1_可行性評估+資料夾自動標籤.md` — RAG-1 前端 UI Fixes 可行性評估 + 資料夾自動標籤新需求整合
 - `2026-05-23_RAG-1_標籤強制小寫+TODO+認證.md` — RAG-1 v3 強化（全域 lowercase + 4 點深度評估認證 + TODO 條目）
@@ -95,6 +98,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-29 — `2026-05-29_RAG-13_C1_run_提示詞.md`
+- 2026-05-29 — `2026-05-29_RAG-13_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_Check_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C2_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C1_run_提示詞.md`
@@ -108,5 +113,3 @@
 - 2026-05-27 — `2026-05-27_MODEL-10_C1_run_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_MODEL-10_Tasks_v1_提示詞.md`
 - 2026-05-27 — `2026-05-27_OPTIMIZE-1_C3_run_提示詞.md`
-- 2026-05-27 — `2026-05-27_OPTIMIZE-1_C2_run_提示詞.md`
-- 2026-05-27 — `2026-05-27_OPTIMIZE-1_C1_run_提示詞.md`

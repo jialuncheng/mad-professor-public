@@ -1014,52 +1014,6 @@ async def upload_theme(file: UploadFile = File(...)):
     }
 
 
-@app.get("/api/themes")
-async def list_themes():
-    """RAG-13：取得所有內建與上傳的自訂主題。
-
-    1. 內建主題：mies, kahn, kandinsky, nara（custom=False, updated_at=0.0）
-    2. 自訂主題：讀取 static/themes/ 目錄下非內建的 .css 檔案，附 st_mtime
-    3. 排除內建的主題檔名，避免重複
-    """
-    themes_dir = BASE_DIR / "static" / "themes"
-    built_in = {
-        "mies": "Mies van der Rohe",
-        "kahn": "Kahn · Kimbell Art Museum",
-        "kandinsky": "Kandinsky · Bauhaus",
-        "nara": "Yoshitomo Nara",
-    }
-
-    result = []
-
-    # 1. 加入內建主題（固定順序）
-    for name, label in built_in.items():
-        result.append({
-            "name": name,
-            "label": label,
-            "custom": False,
-            "url": f"/static/themes/{name}.css",
-            "updated_at": 0.0,
-        })
-
-    # 2. 掃描自訂主題（排除內建）
-    if themes_dir.exists() and themes_dir.is_dir():
-        for item in sorted(themes_dir.iterdir()):
-            if item.is_file() and item.suffix.lower() == ".css":
-                name = item.stem
-                if name not in built_in:
-                    stat = item.stat()
-                    result.append({
-                        "name": name,
-                        "label": name,
-                        "custom": True,
-                        "url": f"/static/themes/{item.name}",
-                        "updated_at": stat.st_mtime,
-                    })
-
-    return result
-
-
 # ── 健康檢查 ──
 
 @app.get("/api/health")
