@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-29（FE-AESTHETICS C2-hotfix Run）
+最後更新：2026-05-29（FE-AESTHETICS HOTFIX-1 Check）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -81,9 +81,10 @@
   - `2026-05-27_MODEL-10_Tasks_v1_提示詞.md` — Tasks v1（C1 pdf_processor MINERU_TIMEOUT 防禦性載入 + 廢棄 SCP 警告 + 3 pytest + C2 MinerU SOP 手冊 + Check 結案歸檔）
 
 ### FE-AESTHETICS 系列
-- 🟡 **FE-AESTHETICS HOTFIX-1 前端學術扉頁自癒與排版靠左優化（2026-05-29 進行中）**
+- ✅ **FE-AESTHETICS HOTFIX-1 前端學術扉頁自癒與排版靠左優化（2026-05-29 收官）**
   - `2026-05-29_FE-AESTHETICS_HOTFIX-1_Tasks_提示詞.md` — Tasks（FE-Hotfix tasks 拆分：C2-hotfix 學術扉頁自癒 + Check 收官）
   - `2026-05-29_FE-AESTHETICS_C2-hotfix_run_提示詞.md` — C2-hotfix Run（CSS 靠左 + normalizeAcademicHeader JS + fetchContent 呼叫 + test_bug_f1 斷言自癒 + 新建 test_fe_aesthetics_c2_hotfix.py）
+  - `2026-05-29_FE-AESTHETICS-HOTFIX-1_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + baton/ hotfix/tasks/C2-hotfix/Check 全量歸檔 + TODO.md FE-AESTHETICS HOTFIX-1 結案）
 - ✅ **FE-AESTHETICS 摘要工具列重構與正文扉頁美化（2026-05-29 收官）**
   - `2026-05-29_FE-AESTHETICS_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + baton/ tasks/C1/C2 全量歸檔 + TODO.md FE-AESTHETICS 結案）
   - `2026-05-29_FE-AESTHETICS_C2_run_提示詞.md` — C2 Run（static/index.html：#abstract-toolbar DOM + .paper-header-meta CSS flex + renderTitleHeader JS 重構 + test_bug_b2 / test_bug_f5 assertions 更新）
@@ -107,6 +108,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-05-29 — `2026-05-29_FE-AESTHETICS-HOTFIX-1_Check_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C2-hotfix_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_HOTFIX-1_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Check_提示詞.md`
@@ -121,4 +123,3 @@
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C1_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_Tasks_提示詞.md`
 - 2026-05-28 — `2026-05-28_INFRA-1_Check_提示詞.md`
-- 2026-05-28 — `2026-05-28_INFRA-1_C2_run_v1_提示詞.md`
