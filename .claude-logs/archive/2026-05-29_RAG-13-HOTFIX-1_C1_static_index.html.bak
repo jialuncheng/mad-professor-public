@@ -1619,11 +1619,7 @@
   });
 
   // popup 開啟期間捲動 / 縮放視窗就關閉，避免錨點失準
-  window.addEventListener('scroll', (e) => {
-    // 🟢 RAG-13-HOTFIX-1：若滾動源自彈出選單內部，則忽略，防止誤判關閉
-    if (e.target.closest && e.target.closest('.ctx-popup')) return;
-    closePopups();
-  }, true);
+  window.addEventListener('scroll', closePopups, true);
   window.addEventListener('resize', closePopups);
 
   // ── 點論文 item 切 active ─────────────────────
