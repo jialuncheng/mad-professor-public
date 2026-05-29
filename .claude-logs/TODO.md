@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 C1 完成）
+# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 C2 完成）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -294,9 +294,9 @@
 ### 🔴 高優先
 
 - 🟡 **RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級**（`.claude-logs/baton/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`）
-  - [x] ✅ C1 — FE CSS 氣泡滿寬 + sendMessage × 過濾（前端視覺對齊與輸入淨化）hash: `待 baron 回填`
-  - [/] 🟡 WIP: C2 — FE loadChatHistory + sendMessage QA-group DOM 重構（前端 Sticky 容器架構）
-  - [ ] ⬜ 未開始: Check — Conformance 驗收與 baton 全量歸檔（收官）
+  - [x] ✅ C1 — FE CSS 氣泡滿寬 + sendMessage × 過濾（前端視覺對齊與輸入淨化）hash: `6593962`
+  - [x] ✅ C2 — FE loadChatHistory + sendMessage QA-group DOM 重構（前端 Sticky 容器架構）hash: `待 baron 回填`
+  - [/] 🟡 WIP: Check — Conformance 驗收與 baton 全量歸檔（收官）
   - 工時：3 個 commits（C1 + C2 + Check）
   - 依賴：無（後端 paper_manager.py / AI_professor_chat.py / tests 已落地）
 
@@ -502,7 +502,7 @@
 ## 索引（依類別）
 
 ### RAG（11 項 active）
-- 🟡 RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級（高、C1 ✅ / WIP C2/Check）
+- 🟡 RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級（高、C1 ✅ C2 ✅ / WIP Check）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）

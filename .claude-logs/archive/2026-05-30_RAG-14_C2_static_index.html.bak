@@ -2877,14 +2877,9 @@ async function loadChatHistory(paperId) {
       return;
     }
 
-    let currentGroup = null;  // qa-group 容器，history.forEach + in_progress 共用（C2 RAG-14）
     history.forEach(msg => {
       const div = document.createElement('div');
       if (msg.role === 'user') {
-        // 每個 user message 建立新的 qa-group 容器（C2 RAG-14）
-        currentGroup = document.createElement('div');
-        currentGroup.className = 'qa-group';
-        messages.appendChild(currentGroup);
         div.className = 'msg-user';
         div.textContent = msg.content;
       } else {
@@ -2896,9 +2891,7 @@ async function loadChatHistory(paperId) {
           renderSources(div, msg.grounding_sources);
         }
       }
-      // div 掛到 currentGroup；無 group 時 fallback 直掛 messages（C2 RAG-14）
-      if (currentGroup) currentGroup.appendChild(div);
-      else messages.appendChild(div);
+      messages.appendChild(div);
     });
 
     // in_progress 處理：reload 時把進行中 paper 接回（解邊角 bug）
@@ -2915,13 +2908,7 @@ async function loadChatHistory(paperId) {
       cursor.textContent = '▋';
       cursor.className = 'cursor-blink';
       aiMsg.appendChild(cursor);
-      // in_progress aiMsg 掛到 currentGroup（與 history 內的 user msg 同組）；
-      // 後端已在 history 寫入 in_progress.query，不重複 render user msg（C2 RAG-14）
-      if (currentGroup) {
-        currentGroup.appendChild(aiMsg);
-      } else {
-        messages.appendChild(aiMsg);
-      }
+      messages.appendChild(aiMsg);
 
       attachToStream(paperId, aiMsg, partial);
     }
@@ -3251,23 +3238,19 @@ async function sendMessage() {
   input.innerHTML = '';
   isStreaming = true;
 
-  // 顯示用戶訊息（包裝在 qa-group 容器內，配合 CSS sticky 效果）（C2 RAG-14）
+  // 顯示用戶訊息
   const messages = document.getElementById('chat-messages');
-  const qaGroup = document.createElement('div');
-  qaGroup.className = 'qa-group';
-  messages.appendChild(qaGroup);
-
   const userMsg = document.createElement('div');
   userMsg.className = 'msg-user';
   userMsg.style.whiteSpace = 'pre-wrap';
   userMsg.textContent = query;
-  qaGroup.appendChild(userMsg);
+  messages.appendChild(userMsg);
 
-  // 建立 AI 訊息泡泡（同組）（C2 RAG-14）
+  // 建立 AI 訊息泡泡
   const aiMsg = document.createElement('div');
   aiMsg.className = 'msg-ai';
   aiMsg.textContent = '▋';
-  qaGroup.appendChild(aiMsg);
+  messages.appendChild(aiMsg);
   messages.scrollTop = messages.scrollHeight;
 
   // SSE 串流
