@@ -2,7 +2,7 @@
 
 OP-1 交付：合約層（contracts）+ 狀態層（context）。
 OP-2 交付：策略層（base_strategy / factory）。
-OP-3 將補：指揮層（orchestrator）。
+OP-3 交付：指揮層（orchestrator）。
 """
 
 from pipelines.base_strategy import DocumentStrategy, NullStrategy
@@ -14,6 +14,7 @@ from pipelines.contracts import (
     RagDbSpec,
 )
 from pipelines.factory import PipelineFactory
+from pipelines.orchestrator import Orchestrator, OrchestratorError
 
 __all__ = [
     "PhaseEnum",
@@ -25,4 +26,6 @@ __all__ = [
     "DocumentStrategy",
     "NullStrategy",
     "PipelineFactory",
+    "Orchestrator",
+    "OrchestratorError",
 ]

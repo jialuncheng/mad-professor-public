@@ -18,6 +18,7 @@
   - `2026-06-02_PIPE-CORE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不拆 commit；pipelines/ 三層解耦空骨架 + 四合約 Pydantic + NullStrategy + tests/test_pipe_core.py，最後 OP Checkout 收官保留 _v2）
   - `2026-06-02_PIPE-CORE_OP-1_run_提示詞.md` — OP-1 Run（合約與狀態層：pipelines/contracts.py 四份凍結 Pydantic + pipelines/context.py PipelineContext + tests/test_pipe_core.py 建檔）
   - `2026-06-02_PIPE-CORE_OP-2_run_提示詞.md` — OP-2 Run（工廠與策略基類：pipelines/base_strategy.py DocumentStrategy ABC + NullStrategy 哨兵 + pipelines/factory.py PipelineFactory 註冊/LiteDoc 降級 + tests 追加）
+  - `2026-06-02_PIPE-CORE_OP-3_run_提示詞.md` — OP-3 Run（Orchestrator 四 Phase DAG：pipelines/orchestrator.py 宣告式 P1→P4 + 交接點驗證 + reading_ready/rag_status + P4 非阻塞容錯 + shadow 貫穿；grep doc_type== 0 命中）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -125,6 +126,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-02 — `2026-06-02_PIPE-CORE_OP-3_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_OP-2_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_OP-1_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_Tasks_提示詞.md`
@@ -139,4 +141,3 @@
 - 2026-05-30 — `2026-05-30_RAG-14_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS-HOTFIX-1_Check_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C2-hotfix_run_提示詞.md`
-- 2026-05-29 — `2026-05-29_FE-AESTHETICS_HOTFIX-1_Tasks_提示詞.md`
