@@ -1,0 +1,145 @@
+"""API-PERF API 技術審計與效能優化測試（plan v2 §6.1 / tasks_v3 §6）。
+
+逐 Commit 追加：
+- C1（U6）：SQLite 連接池 QueuePool + busy_timeout 30s + pool_pre_ping。
+- C2（U4/U5）/ C3（U3）/ C4（U1/U2）/ C5（U7）後續追加。
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
+# ── C1（U6）：資料庫連接池與防鎖死配置 ──
+
+def test_db_busy_timeout_and_pool():
+    """db.engine 配 QueuePool(pool_size=5, max_overflow=10, pool_pre_ping=True)；
+    SQLite 連線 busy_timeout=30000（U6）。"""
+    from sqlalchemy.pool import QueuePool
+
+    import db
+
+    # 連接池型別與容量
+    assert isinstance(db.engine.pool, QueuePool)
+    assert db.engine.pool.size() == 5            # pool_size
+    assert db.engine.pool._max_overflow == 10    # max_overflow
+    assert db.engine.pool._pre_ping is True       # pool_pre_ping
+
+    # 運行期 PRAGMA busy_timeout = 30000（僅 sqlite）
+    if db._IS_SQLITE:
+        db._ensure_sqlite_dir()
+        with db.engine.connect() as conn:
+            val = conn.exec_driver_sql("PRAGMA busy_timeout").scalar()
+        assert int(val) == 30000
+
+
+def test_db_pragma_foreign_keys_and_wal_preserved():
+    """既有 PRAGMA（foreign_keys / WAL）未被 C1 破壞（不可動防線）。"""
+    import db
+
+    if not db._IS_SQLITE:
+        return
+    db._ensure_sqlite_dir()
+    with db.engine.connect() as conn:
+        fk = conn.exec_driver_sql("PRAGMA foreign_keys").scalar()
+        journal = conn.exec_driver_sql("PRAGMA journal_mode").scalar()
+    assert int(fk) == 1
+    assert str(journal).lower() == "wal"
+
+
+# ── C2（U4 Streaming + U5 Real IP）──
+
+import asyncio  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+class _FakeUpload:
+    """記錄 read(size) 呼叫的假 UploadFile（驗證 1MB 分塊讀取）。"""
+
+    def __init__(self, chunks, filename="t.pdf"):
+        self._chunks = list(chunks)
+        self.filename = filename
+        self.read_sizes = []
+
+    async def read(self, size=-1):
+        self.read_sizes.append(size)
+        return self._chunks.pop(0) if self._chunks else b""
+
+
+class _FakeBG:
+    def add_task(self, fn, *a, **k):
+        pass
+
+
+class _User:
+    id = 778001
+
+
+class _FakeReq:
+    def __init__(self, xff=None, client_host="9.9.9.9"):
+        self.headers = {"X-Forwarded-For": xff} if xff else {}
+        self.client = type("C", (), {"host": client_host})()
+        self.session = {}
+
+
+_ONE_MB = 1024 * 1024
+
+
+def test_upload_file_streaming_constant_ram(tmp_path, monkeypatch):
+    """U4：非 PDF 首塊魔術字節 → 415；read 以 1MB 分塊；空檔 → 415。"""
+    import web_server
+
+    monkeypatch.setattr(web_server, "OUTPUT_DIR", tmp_path)
+
+    # 非 PDF → 415，且 read 以 1MB(1048576) 分塊（非一次性）
+    up = _FakeUpload([b"NOTAPDF" + b"0" * 100])
+    resp = asyncio.run(web_server.upload_paper(_FakeBG(), file=up, doc_type="academic", current_user=_User()))
+    assert resp.status_code == 415
+    assert up.read_sizes and up.read_sizes[0] == _ONE_MB   # 1MB 分塊讀取
+
+    # 空檔 → 415
+    up2 = _FakeUpload([])
+    resp2 = asyncio.run(web_server.upload_paper(_FakeBG(), file=up2, doc_type="academic", current_user=_User()))
+    assert resp2.status_code == 415
+
+
+def test_upload_oversize_returns_413(tmp_path, monkeypatch):
+    """U4：累計超 100MB 立即截斷 → 413，且 partial 檔被清理。"""
+    import web_server
+    import paper_manager
+
+    monkeypatch.setattr(web_server, "OUTPUT_DIR", tmp_path)
+
+    first = b"%PDF-1.5\n" + b"0" * (_ONE_MB - 9)        # 首塊合法 %PDF、1MB
+    rest = [b"0" * _ONE_MB for _ in range(100)]          # 100×1MB → 總 101MB > 100MB
+    up = _FakeUpload([first, *rest])
+    resp = asyncio.run(web_server.upload_paper(_FakeBG(), file=up, doc_type="academic", current_user=_User()))
+    assert resp.status_code == 413
+
+    paper_id = paper_manager.sanitize_paper_id("t.pdf")
+    pdf_path = tmp_path / str(_User.id) / paper_id / f"{paper_id}.pdf"
+    assert not pdf_path.exists()                          # partial 檔已清理
+
+
+def test_x_forwarded_for_parsing(monkeypatch):
+    """U5：X-Forwarded-For 最左 IP 作為鎖定鍵；無 XFF 才降級 client.host。"""
+    import web_server
+
+    # 有 XFF → 鎖定鍵為最左真實 IP（非代理鏈後段、非 client.host）
+    web_server._login_attempts.pop("1.2.3.4", None)
+    asyncio.run(web_server.login(_FakeReq(xff="1.2.3.4, 10.0.0.1"), username="wrong_user", password="x"))
+    assert "1.2.3.4" in web_server._login_attempts
+    assert "9.9.9.9" not in web_server._login_attempts    # 代理閘道 IP 未被鎖
+    web_server._login_attempts.pop("1.2.3.4", None)
+
+    # 無 XFF → 降級 client.host
+    web_server._login_attempts.pop("5.5.5.5", None)
+    asyncio.run(web_server.login(_FakeReq(xff=None, client_host="5.5.5.5"), username="wrong_user", password="x"))
+    assert "5.5.5.5" in web_server._login_attempts
+    web_server._login_attempts.pop("5.5.5.5", None)

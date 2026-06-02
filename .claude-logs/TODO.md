@@ -16,8 +16,8 @@
 | Commit | 內容 | Hash |
 |---|---|---|
 | OP-1 | `settings.SHADOW_LAUNCH_ENABLED`（預設 false）+ `web_server.run_pipeline_shadow` 附加影子單元（`_shadow` 四重隔離 + ` (測試)` 標題 + 委派 Orchestrator）+ upload_paper 派發點一閘門；A 軌 `run_pipeline` 本體 byte-for-byte 不動 | `13c1dcb` |
-| OP-2 | confirm_type 派發點二閘門納管 + OP-1/OP-2 `=== [PIPE-SCAFFOLD OP-N START/END] ===` 註解標記（Flip 下線錨點）+ `tests/test_pipe_scaffold.py`（5 pytest 全綠） | `待 baron 回填` |
-| OP-3 | Conformance 三維度驗收（目標規格 U1-U9 / 測試 5 項 / 不可動清單 A 軌 byte diff）+ baton/ 全量歸檔（plan_v3/tasks_v3/三報告）+ 結案 | `待 baron 回填` |
+| OP-2 | confirm_type 派發點二閘門納管 + OP-1/OP-2 `=== [PIPE-SCAFFOLD OP-N START/END] ===` 註解標記（Flip 下線錨點）+ `tests/test_pipe_scaffold.py`（5 pytest 全綠） | `6807a7f` |
+| OP-3 | Conformance 三維度驗收（目標規格 U1-U9 / 測試 5 項 / 不可動清單 A 軌 byte diff）+ baton/ 全量歸檔（plan_v3/tasks_v3/三報告）+ 結案 | `58e1b89` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-SCAFFOLD_web_server雙軌派發scaffolding生命週期_plan_v3.md`
 > **範圍**：僅階段一（建）——影子期雙軌派發 scaffolding 注入（旗標預設 false 惰性插入點、線上 0 風險）；**階段二（移／Flip）屬 PIPE-FLIP plan**（觸發＝五路全通 + Golden Diff 0%）。OP-1 commit `13c1dcb` 同時夾帶 PIPE-CORE Check archival。
@@ -345,6 +345,16 @@
 
 ### 🔴 高優先
 
+- 🟡 **API-PERF API技術審計與效能優化**（`.claude-logs/baton/2026-06-03_API-PERF_API技術審計與效能優化_tasks_v3.md`）
+  - [x] ✅ done: C1 — 資料庫連接池與防鎖死配置（U6 SQLite QueuePool：busy_timeout 30s + QueuePool pool_size=5/max_overflow=10/pool_pre_ping；2 pytest 全綠）
+  - [x] ✅ done: C2 — 流式上傳與真實 IP 解析（U4 upload_paper 1MB 分塊流式 + %PDF/415/413 + U5 login X-Forwarded-For；3 pytest 全綠；images 路徑防逃逸未觸）
+  - [/] 🟡 WIP: C3 — 向量庫與 RAG LRU 動態快取（U3 Lazy Load + LRU）
+  - [ ] ⬜ 未開始: C4 — 並發信號量與子進程降優（U1 Semaphore + U2 Nice）
+  - [ ] ⬜ 未開始: C5 — 結構化計時埋點與 CLI 分析工具（U7 (phase,stage) 二維鍵）
+  - [ ] ⬜ 未開始: C6 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v3/六報告 + TODO ✅）
+  - 工時：6 個 commits（C1-C5 實作 + C6 單一收官 Checkout）
+  - 依賴：PIPE-CORE / PIPE-SCAFFOLD（已落地，提供 Orchestrator/雙軌派發點對齊接點）
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -615,5 +625,5 @@
 - ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check `13c1dcb`；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
 
 ### PIPE-SCAFFOLD (✅ 已完成·階段一建)
-- ✅ ~~PIPE-SCAFFOLD web_server 雙軌派發 scaffolding~~（已落地、OP-1 `13c1dcb` + OP-2/OP-3 待回填；旗標惰性插入點 + 影子派發單元 + 兩派發點閘門，A 軌 byte 不動；階段二 Flip 屬 PIPE-FLIP）
+- ✅ ~~PIPE-SCAFFOLD web_server 雙軌派發 scaffolding~~（已落地、OP-1 `13c1dcb` + OP-2 `6807a7f` + OP-3 `58e1b89`；旗標惰性插入點 + 影子派發單元 + 兩派發點閘門，A 軌 byte 不動；階段二 Flip 屬 PIPE-FLIP）
 

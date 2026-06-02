@@ -16,9 +16,6 @@ from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
-# === [API-PERF C1 START] U6 併發連接池 QueuePool ===
-from sqlalchemy.pool import QueuePool
-# === [API-PERF C1 END] ===
 
 import settings
 
@@ -33,13 +30,6 @@ engine: Engine = create_engine(
     connect_args=_connect_args,
     pool_pre_ping=True,
     future=True,
-    # === [API-PERF C1 START] U6 併發連接池（QueuePool / pool_size / max_overflow）===
-    # 高密度併發下以 QueuePool 包容連線需求；pool_pre_ping=True（上方）保證斷線自癒
-    # （database SOP 原則 2）。SQLite 已配 check_same_thread=False 故可安全共用池。
-    poolclass=QueuePool,
-    pool_size=5,
-    max_overflow=10,
-    # === [API-PERF C1 END] ===
 )
 
 
@@ -56,9 +46,7 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
-        # === [API-PERF C1 START] U6 busy_timeout 5s→30s（包容高密度併發寫鎖等待）===
-        cursor.execute("PRAGMA busy_timeout=30000")
-        # === [API-PERF C1 END] ===
+        cursor.execute("PRAGMA busy_timeout=5000")
     finally:
         cursor.close()
 
