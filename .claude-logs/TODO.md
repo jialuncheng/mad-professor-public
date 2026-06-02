@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-05-30，RAG-14 Check 收官）
+# Mad Professor — TODO（最後更新 2026-06-02，GOLDEN-BASELINE Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -10,6 +10,17 @@
 ---
 
 ## ✅ 已完成
+
+### GOLDEN-BASELINE 黃金基準存盤與退化比對
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| OP-1 | 新建旁路 CLI `tools/golden_baseline.py` capture 子命令 + `tests/golden_baseline/queries.json` 固定 query set + 五路代表性 fixtures PDF；baron 端 MinerU 實跑 `capture --all` 物理存盤五路三維度黃金快照（D1 雙語 md / D2 rag_tree.json / D3 召回 + SHA-256 manifest） | `3be0b0d` |
+| OP-2 | `tools/golden_baseline.py` 新增 `diff` 三維度比對引擎（D1 結構樹 / D2 譯文相似度 0.95 / D3 RAG Jaccard 0.90）+ checksum 防竄改 + 影子雜訊正規化 + 紅綠燈裁決 + 雙格式報告 + `tests/test_golden_baseline.py`（18 pytest 全綠）+ 五路自比對歸零 PASS + 負向竄改 FAIL | `74d34e8` |
+| Check | Conformance 三維度驗收（目標規格 U1-U7 / 測試計畫 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan/tasks/OP-1/OP-2/OP-3 報告）+ 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v2.md`
+> **時序修正**：tasks v1 Checkout 誤置 OP-1 → v2 更正為 OP-1 存盤 / OP-2 Diff 腳本 / OP-3 Checkout 收官（WORKFLOW_SOP §3 baton 暫存鐵律）
 
 ### RAG-14-HOTFIX-1 — 緊急熱修復：對話置頂氣泡頂部穿透漏出修復
 
@@ -311,13 +322,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對**（`.claude-logs/plans/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v2.md`）
-  - [x] ✅ done: OP-1 — 五路黃金基準物理存盤（baron 端 MinerU 實跑、`golden/` 五路三維度快照已存盤並 commit `3be0b0d`）
-  - [x] ✅ done: OP-2 — 自動化 Regression Diff 比對腳本開發（`tools/golden_baseline.py` diff 三維度引擎 + `tests/test_golden_baseline.py` 18 pytest 全綠 + 五路自比對歸零 PASS + 負向竄改 FAIL）
-  - [/] 🟡 WIP: OP-3 — Checkout / 收官階段（一次性歸檔計畫/任務/三份報告，保留 _v2 版號）
-  - 工時：3 個 OP 階段
-  - 依賴：無
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -580,4 +584,7 @@
 
 ### OPTIMIZE (1 項 active)
 - ✅ ~~OPTIMIZE-1 PDF 上傳自動無損優化~~（已落地、C1 `b8892be` + C2 `28f098e` + C3 收官）
+
+### GOLDEN-BASELINE (✅ 已完成)
+- ✅ ~~GOLDEN-BASELINE 黃金基準存盤與退化比對~~（已落地、OP-1 `3be0b0d` + OP-2 `74d34e8` + Check 收官；PIPE 大改版階段 1 完成）
 
