@@ -90,7 +90,6 @@ LOG_FORMAT = os.getenv("LOG_FORMAT", "auto").lower()
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(10 * 1024 * 1024)))
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
 
-# === [PIPE-SCAFFOLD OP-1 START] 影子雙軌派發旗標 ===
 # PIPE-SCAFFOLD：影子並行雙軌派發旗標閘門（plan v3 U1）
 # - 預設 false → 上傳→派發→處理 100% 等同現行單軌（僅 A 軌），dual-dispatch 為零作用
 #   惰性插入點、線上 0 風險。
@@ -100,4 +99,3 @@ LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
 SHADOW_LAUNCH_ENABLED = os.getenv("SHADOW_LAUNCH_ENABLED", "false").lower() in (
     "1", "true", "yes",
 )
-# === [PIPE-SCAFFOLD OP-1 END] ===

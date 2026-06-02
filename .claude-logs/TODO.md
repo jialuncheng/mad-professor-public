@@ -335,8 +335,9 @@
 ### 🔴 高優先
 
 - 🟡 **PIPE-SCAFFOLD_v3 web_server 雙軌派發 scaffolding**（`.claude-logs/plans/2026-06-01_PIPE-SCAFFOLD_web_server雙軌派發scaffolding生命週期_plan_v3.md`）
-  - [x] ✅ done: OP-1 — 旗標 + 影子派發單元 + 派發點一（`settings.SHADOW_LAUNCH_ENABLED` 預設 false + `web_server.run_pipeline_shadow` 附加單元 + upload_paper 派發點一閘門；A 軌 byte 不動、純附加 59 insertions / 0 deletions）
-  - [/] 🟡 WIP: OP-2 — 派發點二納管 + 雙軌測試套件（全覆蓋）
+  - [x] ✅ done: OP-1 — 旗標 + 影子派發單元 + 派發點一（`settings.SHADOW_LAUNCH_ENABLED` 預設 false + `web_server.run_pipeline_shadow` 附加單元 + upload_paper 派發點一閘門；A 軌 byte 不動、純附加 59 insertions / 0 deletions；commit `13c1dcb`）
+  - [x] ✅ done: OP-2 — 派發點二納管 + 雙軌測試套件（confirm_type 派發點二閘門 + OP-1/OP-2 註解標記包裹 + `tests/test_pipe_scaffold.py` 5 pytest 全綠；A 軌 run_pipeline 本體 byte-for-byte 相同）
+  - [/] 🟡 WIP: OP-3 — Checkout / 收官歸檔（一次性歸檔 plan_v3/tasks_v3/三報告 + TODO ✅）
   - [ ] ⬜ 未開始: OP-3 — Checkout / 收官歸檔（一次性歸檔 plan_v3/tasks_v3/三報告 + TODO ✅）
   - 工時：3 個 OP 階段（僅階段一「建」；階段二 Flip 屬 PIPE-FLIP）
   - 依賴：PIPE-CORE（已完成）

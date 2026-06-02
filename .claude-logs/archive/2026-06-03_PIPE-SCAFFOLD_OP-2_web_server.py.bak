@@ -480,14 +480,12 @@ async def upload_paper(
     background_tasks.add_task(
         run_pipeline, current_user.id, paper_id, str(pdf_path), doc_type, file.filename
     )
-    # === [PIPE-SCAFFOLD OP-1 START] 派發點一閘門 ===
-    # plan v3 U1/U4：旗標 true 時額外派發 B 軌影子任務（全量雙跑）；
-    # 預設 false → 零作用、100% 等同現行單軌。A 軌派發（上方）不動。
+    # PIPE-SCAFFOLD 派發點一旗標閘門（plan v3 U1/U4）：旗標 true 時額外派發 B 軌影子
+    # 任務（全量雙跑）；預設 false → 零作用、100% 等同現行單軌。A 軌派發（上方）不動。
     if settings.SHADOW_LAUNCH_ENABLED:
         background_tasks.add_task(
             run_pipeline_shadow, current_user.id, paper_id, str(pdf_path), doc_type, file.filename
         )
-    # === [PIPE-SCAFFOLD OP-1 END] ===
 
     return {'paper_id': paper_id, 'status': 'processing'}
 
@@ -535,7 +533,6 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
         logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}")
 
 
-# === [PIPE-SCAFFOLD OP-1 START] 影子 B 軌派發單元 ===
 # ── PIPE-SCAFFOLD：影子 B 軌附加派發單元（plan v3 §2.7.2 / U2 / U3）──
 # 附加式 scaffolding：A 軌 run_pipeline（上方）本體 byte 不動；影子細節（_shadow 命名、
 # (測試) 標題、新核心 Orchestrator 調用）全封裝於此獨立單元。僅當 SHADOW_LAUNCH_ENABLED
@@ -577,7 +574,6 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
             f"影子論文處理失敗（不影響 A 軌正本）: owner={owner_id} {paper_id_shadow} - {e}",
             exc_info=True,
         )
-# === [PIPE-SCAFFOLD OP-1 END] ===
 
 
 # ── 處理進度（SSE） ──
@@ -810,15 +806,6 @@ async def confirm_type(paper_id: str, request: ConfirmTypeRequest,
         run_pipeline, current_user.id, paper_id, pdf_path, request.doc_type,
         original_filename
     )
-    # === [PIPE-SCAFFOLD OP-2 START] 派發點二閘門 ===
-    # plan v3 U4：retry/confirm 第二派發點同步納管，旗標 true 時額外派發 B 軌影子任務；
-    # 預設 false → 零作用、100% 等同現行單軌。A 軌派發（上方）不動。
-    if settings.SHADOW_LAUNCH_ENABLED:
-        background_tasks.add_task(
-            run_pipeline_shadow, current_user.id, paper_id, pdf_path, request.doc_type,
-            original_filename
-        )
-    # === [PIPE-SCAFFOLD OP-2 END] ===
     return {"status": "ok", "doc_type": request.doc_type}
 
 # ── 刪除論文 ──

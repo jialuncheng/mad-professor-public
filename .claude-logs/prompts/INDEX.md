@@ -23,6 +23,7 @@
 - 🟡 **PIPE-SCAFFOLD web_server 雙軌派發 scaffolding（2026-06-02 Tasks）**
   - `2026-06-02_PIPE-SCAFFOLD_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不拆 commit；web_server.py 影子期雙軌派發 scaffolding：SHADOW_LAUNCH_ENABLED 旗標閘門 + run_pipeline_shadow 附加單元 + 兩派發點納管，A 軌 byte 不動，最後 OP Checkout 收官保留 _v3）
   - `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md` — OP-1 Run（settings.SHADOW_LAUNCH_ENABLED 預設 false + web_server.run_pipeline_shadow 附加單元 + upload_paper 派發點一旗標閘門；A 軌 run_pipeline 本體 byte 不動）
+  - `2026-06-03_PIPE-SCAFFOLD_OP-2_run_提示詞.md` — OP-2 Run（retry/confirm 派發點二旗標閘門納管 + 補標 OP-1/OP-2 `=== [PIPE-SCAFFOLD OP-N START/END] ===` 註解包裹 + 新建 tests/test_pipe_scaffold.py 雙軌測試）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -130,6 +131,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-SCAFFOLD_Tasks_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_Check_提示詞.md`
@@ -144,4 +146,3 @@
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_Check_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_C2_run_提示詞.md`
-- 2026-05-30 — `2026-05-30_RAG-14_C1_run_提示詞.md`
