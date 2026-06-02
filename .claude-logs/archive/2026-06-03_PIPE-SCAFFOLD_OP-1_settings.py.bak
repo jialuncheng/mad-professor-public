@@ -89,13 +89,3 @@ LOG_DIR = Path(os.getenv("LOG_DIR", str(_BASE_DIR / "logs")))
 LOG_FORMAT = os.getenv("LOG_FORMAT", "auto").lower()
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(10 * 1024 * 1024)))
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
-
-# PIPE-SCAFFOLD：影子並行雙軌派發旗標閘門（plan v3 U1）
-# - 預設 false → 上傳→派發→處理 100% 等同現行單軌（僅 A 軌），dual-dispatch 為零作用
-#   惰性插入點、線上 0 風險。
-# - true → 每篇上傳額外觸發一條 B 軌（新核心 Orchestrator）背景任務（全量雙跑）。
-#   待 PIPE 縱向第一路（Resume）B 軌可運行後才開啟（plan v3 §7 Q1）；
-#   Flip 後（PIPE-FLIP）連同本旗標一併移除。
-SHADOW_LAUNCH_ENABLED = os.getenv("SHADOW_LAUNCH_ENABLED", "false").lower() in (
-    "1", "true", "yes",
-)

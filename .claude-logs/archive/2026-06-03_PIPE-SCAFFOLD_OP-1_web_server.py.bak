@@ -480,12 +480,6 @@ async def upload_paper(
     background_tasks.add_task(
         run_pipeline, current_user.id, paper_id, str(pdf_path), doc_type, file.filename
     )
-    # PIPE-SCAFFOLD 派發點一旗標閘門（plan v3 U1/U4）：旗標 true 時額外派發 B 軌影子
-    # 任務（全量雙跑）；預設 false → 零作用、100% 等同現行單軌。A 軌派發（上方）不動。
-    if settings.SHADOW_LAUNCH_ENABLED:
-        background_tasks.add_task(
-            run_pipeline_shadow, current_user.id, paper_id, str(pdf_path), doc_type, file.filename
-        )
 
     return {'paper_id': paper_id, 'status': 'processing'}
 
@@ -531,49 +525,6 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
                 processing_tasks[task_key]['status'] = 'error'
                 processing_tasks[task_key]['error'] = str(e)
         logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}")
-
-
-# ── PIPE-SCAFFOLD：影子 B 軌附加派發單元（plan v3 §2.7.2 / U2 / U3）──
-# 附加式 scaffolding：A 軌 run_pipeline（上方）本體 byte 不動；影子細節（_shadow 命名、
-# (測試) 標題、新核心 Orchestrator 調用）全封裝於此獨立單元。僅當 SHADOW_LAUNCH_ENABLED
-# 為 true 時被 upload_paper / retry-confirm 派發點額外觸發（旗標預設 false → 永不執行）。
-# Flip 後（PIPE-FLIP）連同本單元一併移除。
-async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_type: str,
-                              original_filename: Optional[str] = None):
-    """B 軌影子派發：以 _shadow 後綴四重隔離、委派新核心 Orchestrator（plan v3 U3）。"""
-    paper_id_shadow = f"{paper_id}_shadow"
-    # ① 獨立 task_key（與 A 軌 (owner_id, paper_id) 不碰撞）
-    shadow_key = (owner_id, paper_id_shadow)
-    try:
-        with tasks_lock:
-            processing_tasks[shadow_key] = {
-                'status': 'processing',
-                'progress': {'stage': 'upload', 'stage_name': '上傳完成 (測試)',
-                             'index': 0, 'total': 10, 'progress': 0},
-                '_pdf_path': str(pdf_path),
-                # ④ 前端 (測試) 標題後綴肉眼可辨（原始檔名加標記）
-                '_original_filename': f"{original_filename or paper_id} (測試)",
-            }
-        # 委派 B 軌新核心（PIPE-CORE）。骨架期無具體策略註冊 → NullStrategy；
-        # 實際雙跑須待 PIPE-RESUME 註冊策略後（旗標 false 時本函式不被觸發）。
-        from pipelines import Orchestrator, PipelineContext
-        loop = asyncio.get_event_loop()
-        ctx = PipelineContext(doc_type=doc_type, paper_id=paper_id_shadow, shadow=True)
-        await loop.run_in_executor(None, lambda: Orchestrator().run(ctx))
-        with tasks_lock:
-            if shadow_key in processing_tasks:
-                processing_tasks[shadow_key]['status'] = 'done'
-        logger.info(f"影子論文處理完成: owner={owner_id} {paper_id_shadow}")
-    except Exception as e:
-        with tasks_lock:
-            if shadow_key in processing_tasks:
-                processing_tasks[shadow_key]['status'] = 'error'
-                processing_tasks[shadow_key]['error'] = str(e)
-        # 影子失敗不影響 A 軌正本（plan v3 U2）
-        logger.error(
-            f"影子論文處理失敗（不影響 A 軌正本）: owner={owner_id} {paper_id_shadow} - {e}",
-            exc_info=True,
-        )
 
 
 # ── 處理進度（SSE） ──
