@@ -198,7 +198,9 @@ output/
 # 本機 debug / 時序分析工具
 tools/timing/
 
-
+# ── 敏感的黃金基準 PDF 測試集與快照產物（隱私安全保護） ──
+tests/golden_baseline/fixtures/
+tests/golden_baseline/golden/A
 
 
 
