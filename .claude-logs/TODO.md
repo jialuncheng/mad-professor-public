@@ -11,6 +11,17 @@
 
 ## ✅ 已完成
 
+### BE-Refactor PIPE-SCAFFOLD web_server 雙軌派發 scaffolding（PIPE 大改版階段 1·建）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| OP-1 | `settings.SHADOW_LAUNCH_ENABLED`（預設 false）+ `web_server.run_pipeline_shadow` 附加影子單元（`_shadow` 四重隔離 + ` (測試)` 標題 + 委派 Orchestrator）+ upload_paper 派發點一閘門；A 軌 `run_pipeline` 本體 byte-for-byte 不動 | `13c1dcb` |
+| OP-2 | confirm_type 派發點二閘門納管 + OP-1/OP-2 `=== [PIPE-SCAFFOLD OP-N START/END] ===` 註解標記（Flip 下線錨點）+ `tests/test_pipe_scaffold.py`（5 pytest 全綠） | `待 baron 回填` |
+| OP-3 | Conformance 三維度驗收（目標規格 U1-U9 / 測試 5 項 / 不可動清單 A 軌 byte diff）+ baton/ 全量歸檔（plan_v3/tasks_v3/三報告）+ 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-SCAFFOLD_web_server雙軌派發scaffolding生命週期_plan_v3.md`
+> **範圍**：僅階段一（建）——影子期雙軌派發 scaffolding 注入（旗標預設 false 惰性插入點、線上 0 風險）；**階段二（移／Flip）屬 PIPE-FLIP plan**（觸發＝五路全通 + Golden Diff 0%）。OP-1 commit `13c1dcb` 同時夾帶 PIPE-CORE Check archival。
+
 ### BE-Refactor PIPE-CORE 三層解耦調度骨架（PIPE 大改版階段 1）
 
 | Commit | 內容 | Hash |
@@ -18,7 +29,7 @@
 | OP-1 | `pipelines/contracts.py` 四凍結合約（IngestionMetadataSpec extra=forbid 保證 R1.1）+ `pipelines/context.py` PipelineContext/PhaseEnum + `tests/test_pipe_core.py`（8 pytest） | `aa786a1` |
 | OP-2 | `pipelines/base_strategy.py`（DocumentStrategy ABC + NullStrategy 哨兵）+ `pipelines/factory.py`（註冊/LiteDoc 降級）+ 測試追加（14 pytest） | `effb155` |
 | OP-3 | `pipelines/orchestrator.py` 四 Phase DAG 指揮層（宣告式 _PHASES + 交接點驗證 + P4 容錯 + shadow 貫穿）+ 測試追加（20 pytest）+ grep doc_type== 0 命中 | `84b9b30` |
-| OP-4 | Conformance 五維度驗收（目標規格 U1-U7 / 測試 20 項 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan_v2/tasks_v2/四報告）+ 結案 | `待 baron 回填` |
+| OP-4 | Conformance 五維度驗收（目標規格 U1-U7 / 測試 20 項 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan_v2/tasks_v2/四報告）+ 結案 | `13c1dcb` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-CORE_三層解耦調度骨架_plan_v2.md`
 > **三層解耦**：合約層（contracts）/ 狀態層（context）/ 策略層（base_strategy+factory）/ 指揮層（orchestrator）；與舊 `pipeline_core.py` 物理共存、零業務代碼改動；五路具體策略屬 PIPE-RESUME/VISUAL/ACADEMIC/LITEDOC/BOOK；P4 BackgroundTasks 屬 RAG-ASYNC（已留 injectable dispatch_p4）
@@ -334,14 +345,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-SCAFFOLD_v3 web_server 雙軌派發 scaffolding**（`.claude-logs/plans/2026-06-01_PIPE-SCAFFOLD_web_server雙軌派發scaffolding生命週期_plan_v3.md`）
-  - [x] ✅ done: OP-1 — 旗標 + 影子派發單元 + 派發點一（`settings.SHADOW_LAUNCH_ENABLED` 預設 false + `web_server.run_pipeline_shadow` 附加單元 + upload_paper 派發點一閘門；A 軌 byte 不動、純附加 59 insertions / 0 deletions；commit `13c1dcb`）
-  - [x] ✅ done: OP-2 — 派發點二納管 + 雙軌測試套件（confirm_type 派發點二閘門 + OP-1/OP-2 註解標記包裹 + `tests/test_pipe_scaffold.py` 5 pytest 全綠；A 軌 run_pipeline 本體 byte-for-byte 相同）
-  - [/] 🟡 WIP: OP-3 — Checkout / 收官歸檔（一次性歸檔 plan_v3/tasks_v3/三報告 + TODO ✅）
-  - [ ] ⬜ 未開始: OP-3 — Checkout / 收官歸檔（一次性歸檔 plan_v3/tasks_v3/三報告 + TODO ✅）
-  - 工時：3 個 OP 階段（僅階段一「建」；階段二 Flip 屬 PIPE-FLIP）
-  - 依賴：PIPE-CORE（已完成）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -609,5 +612,8 @@
 - ✅ ~~GOLDEN-BASELINE 黃金基準存盤與退化比對~~（已落地、OP-1 `3be0b0d` + OP-2 `74d34e8` + Check 收官；PIPE 大改版階段 1 完成）
 
 ### PIPE-CORE (✅ 已完成)
-- ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check 收官；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
+- ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check `13c1dcb`；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
+
+### PIPE-SCAFFOLD (✅ 已完成·階段一建)
+- ✅ ~~PIPE-SCAFFOLD web_server 雙軌派發 scaffolding~~（已落地、OP-1 `13c1dcb` + OP-2/OP-3 待回填；旗標惰性插入點 + 影子派發單元 + 兩派發點閘門，A 軌 byte 不動；階段二 Flip 屬 PIPE-FLIP）
 
