@@ -324,8 +324,8 @@
 
 - 🟡 **PIPE-CORE_v2 三層解耦調度骨架**（`.claude-logs/plans/2026-06-01_PIPE-CORE_三層解耦調度骨架_plan_v2.md`）
   - [x] ✅ done: OP-1 — 合約與狀態層（`pipelines/contracts.py` 四份凍結 Pydantic + `pipelines/context.py` PipelineContext + `tests/test_pipe_core.py` 8 pytest 全綠）
-  - [/] 🟡 WIP: OP-2 — 工廠與策略基類（DocumentStrategy ABC + NullStrategy + 工廠降級）
-  - [ ] ⬜ 未開始: OP-3 — Orchestrator 四 Phase DAG 調度（宣告式狀態機 + 交接點驗證 + shadow 貫穿）
+  - [x] ✅ done: OP-2 — 工廠與策略基類（`pipelines/base_strategy.py` DocumentStrategy ABC + NullStrategy + `pipelines/factory.py` 註冊/LiteDoc 降級；`tests/test_pipe_core.py` 14 pytest 全綠）
+  - [/] 🟡 WIP: OP-3 — Orchestrator 四 Phase DAG 調度（宣告式狀態機 + 交接點驗證 + shadow 貫穿）
   - [ ] ⬜ 未開始: OP-4 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v2/四報告 + TODO ✅）
   - 工時：4 個 OP 階段
   - 依賴：無（PIPE-SPEC 已存在；PIPE 大改版階段 1 骨架）
