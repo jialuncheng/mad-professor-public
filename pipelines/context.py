@@ -1,0 +1,54 @@
+"""PIPE-CORE PipelineContext 狀態載體（對齊 PIPE-SPEC §0.3 三層解耦狀態層）。
+
+跨 Phase 狀態傳遞的**唯一通道**：以 Pydantic 類型安全模型承載四份凍結合約產物 +
+調度元欄位，取代舊 `pipeline_core.py` 的可變 dict 黑盒（`self._metadata`/`output_paths`
+隱式修改）。Context 本身可變（狀態隨 Phase 推進更新），但承載的合約子模型皆凍結。
+
+本檔為 PIPE-CORE OP-1 交付物，**不含任何 doc_type 業務細節**。
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Literal, Optional
+
+from pydantic import BaseModel, ConfigDict
+
+from pipelines.contracts import (
+    BilingualMarkdownSpec,
+    GlossaryReadySpec,
+    IngestionMetadataSpec,
+    RagDbSpec,
+)
+
+
+class PhaseEnum(str, Enum):
+    """物理四 Phase（PIPE-SPEC 物理四 Phase 解耦）。"""
+
+    P1 = "P1"  # Ingestion（純解析 + 原文元數據）
+    P2 = "P2"  # Glossary & Context Prep（摘要 + LCC + 凍結 Glossary）
+    P3 = "P3"  # Translation & Restore（乾淨雙語 Markdown）
+    P4 = "P4"  # Async RAG（向量化落庫，非阻塞）
+
+
+class PipelineContext(BaseModel):
+    """跨 Phase 唯一狀態通道。
+
+    四份合約欄位由對應 Phase 寫入（寫入前為 None）；調度元欄位記錄當前進度與解鎖狀態。
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    # ── 調度元欄位 ──
+    doc_type: str
+    paper_id: str
+    shadow: bool = False
+    phase: PhaseEnum = PhaseEnum.P1
+    reading_ready: bool = False  # P3 完成後 True（閱讀器/Print PDF 解鎖，SPEC R4.1）
+    rag_status: Literal["pending", "ready", "failed"] = "pending"  # P4 背景回填
+
+    # ── 四份凍結合約產物（對應 Phase 寫入，寫入前為 None）──
+    ingestion: Optional[IngestionMetadataSpec] = None      # 合約①（P1 寫入）
+    glossary_ready: Optional[GlossaryReadySpec] = None     # 合約②（P2 寫入）
+    bilingual: Optional[BilingualMarkdownSpec] = None      # 合約③（P3 寫入）
+    rag: Optional[RagDbSpec] = None                        # 合約④（P4 寫入）

@@ -17,7 +17,7 @@
 |---|---|---|
 | OP-1 | 新建旁路 CLI `tools/golden_baseline.py` capture 子命令 + `tests/golden_baseline/queries.json` 固定 query set + 五路代表性 fixtures PDF；baron 端 MinerU 實跑 `capture --all` 物理存盤五路三維度黃金快照（D1 雙語 md / D2 rag_tree.json / D3 召回 + SHA-256 manifest） | `3be0b0d` |
 | OP-2 | `tools/golden_baseline.py` 新增 `diff` 三維度比對引擎（D1 結構樹 / D2 譯文相似度 0.95 / D3 RAG Jaccard 0.90）+ checksum 防竄改 + 影子雜訊正規化 + 紅綠燈裁決 + 雙格式報告 + `tests/test_golden_baseline.py`（18 pytest 全綠）+ 五路自比對歸零 PASS + 負向竄改 FAIL | `74d34e8` |
-| Check | Conformance 三維度驗收（目標規格 U1-U7 / 測試計畫 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan/tasks/OP-1/OP-2/OP-3 報告）+ 結案 | `待 baron 回填` |
+| Check | Conformance 三維度驗收（目標規格 U1-U7 / 測試計畫 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan/tasks/OP-1/OP-2/OP-3 報告）+ 結案 | `c0c64e9` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v2.md`
 > **時序修正**：tasks v1 Checkout 誤置 OP-1 → v2 更正為 OP-1 存盤 / OP-2 Diff 腳本 / OP-3 Checkout 收官（WORKFLOW_SOP §3 baton 暫存鐵律）
@@ -321,6 +321,14 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **PIPE-CORE_v2 三層解耦調度骨架**（`.claude-logs/plans/2026-06-01_PIPE-CORE_三層解耦調度骨架_plan_v2.md`）
+  - [x] ✅ done: OP-1 — 合約與狀態層（`pipelines/contracts.py` 四份凍結 Pydantic + `pipelines/context.py` PipelineContext + `tests/test_pipe_core.py` 8 pytest 全綠）
+  - [/] 🟡 WIP: OP-2 — 工廠與策略基類（DocumentStrategy ABC + NullStrategy + 工廠降級）
+  - [ ] ⬜ 未開始: OP-3 — Orchestrator 四 Phase DAG 調度（宣告式狀態機 + 交接點驗證 + shadow 貫穿）
+  - [ ] ⬜ 未開始: OP-4 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v2/四報告 + TODO ✅）
+  - 工時：4 個 OP 階段
+  - 依賴：無（PIPE-SPEC 已存在；PIPE 大改版階段 1 骨架）
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表

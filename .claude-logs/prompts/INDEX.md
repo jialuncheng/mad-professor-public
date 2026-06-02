@@ -14,6 +14,9 @@
   - `2026-06-02_GOLDEN-BASELINE_OP-1_run_提示詞.md` — OP-1 Run（五路黃金基準物理存盤：新建 tools/golden_baseline.py capture 子命令 + 五路 fixtures + golden 三維度凍結 + manifest）
   - `2026-06-02_GOLDEN-BASELINE_OP-2_run_提示詞.md` — OP-2 Run（自動化 Regression Diff 比對腳本：diff 子命令 + 三維度引擎 + checksum 驗證 + 正規化 + 紅綠燈裁決 + 雙格式報告 + tests/test_golden_baseline.py）
   - `2026-06-02_GOLDEN-BASELINE_Check_提示詞.md` — Check（Conformance 三維度驗收 + OP-3 收官：一次性 mv plan/tasks/OP-1/OP-2/OP-3 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒）
+- 🟡 **PIPE-CORE 三層解耦調度骨架（2026-06-02 Tasks）**
+  - `2026-06-02_PIPE-CORE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不拆 commit；pipelines/ 三層解耦空骨架 + 四合約 Pydantic + NullStrategy + tests/test_pipe_core.py，最後 OP Checkout 收官保留 _v2）
+  - `2026-06-02_PIPE-CORE_OP-1_run_提示詞.md` — OP-1 Run（合約與狀態層：pipelines/contracts.py 四份凍結 Pydantic + pipelines/context.py PipelineContext + tests/test_pipe_core.py 建檔）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -121,6 +124,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-02 — `2026-06-02_PIPE-CORE_OP-1_run_提示詞.md`
+- 2026-06-02 — `2026-06-02_PIPE-CORE_Tasks_提示詞.md`
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_Check_提示詞.md`
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_OP-2_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_OP-1_run_提示詞.md`
@@ -134,5 +139,3 @@
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_C2-hotfix_run_提示詞.md`
 - 2026-05-29 — `2026-05-29_FE-AESTHETICS_HOTFIX-1_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Check_提示詞.md`
-- 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_C1_run_提示詞.md`
-- 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Tasks_提示詞.md`
