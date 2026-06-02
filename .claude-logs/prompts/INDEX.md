@@ -1,11 +1,17 @@
 # 提示詞資料庫索引
 
-最後更新：2026-05-30（RAG-14 Check）
+最後更新：2026-06-02（GOLDEN-BASELINE Tasks 修正）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### PIPE 大改版系列
+- 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
+  - `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不給 commit；OP-1 Checkout plan baton→plans 保留 _v2、OP-2 五路黃金基準物理存盤、OP-3 自動化 Regression Diff 比對腳本 + 同步 TODO.md）
+  - `2026-06-02_GOLDEN-BASELINE_Tasks_修正提示詞.md` — Tasks 修正（baron 指出 Checkout 時序悖論；重編 OP-1 五路存盤 / OP-2 Diff 腳本 / OP-3 Checkout 收官一次性歸檔 plan+tasks+三報告）
+  - `2026-06-02_GOLDEN-BASELINE_OP-1_run_提示詞.md` — OP-1 Run（五路黃金基準物理存盤：新建 tools/golden_baseline.py capture 子命令 + 五路 fixtures + golden 三維度凍結 + manifest）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -113,6 +119,9 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_OP-1_run_提示詞.md`
+- 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_Tasks_修正提示詞.md`
+- 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_Check_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_C2_run_提示詞.md`
 - 2026-05-30 — `2026-05-30_RAG-14_C1_run_提示詞.md`
@@ -125,6 +134,3 @@
 - 2026-05-29 — `2026-05-29_RAG-13-HOTFIX-1_Tasks_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13_Check_提示詞.md`
 - 2026-05-29 — `2026-05-29_RAG-13_C2_run_提示詞.md`
-- 2026-05-29 — `2026-05-29_RAG-13_C1_run_提示詞.md`
-- 2026-05-29 — `2026-05-29_RAG-13_Tasks_提示詞.md`
-- 2026-05-29 — `2026-05-29_FE-AESTHETICS_Check_提示詞.md`

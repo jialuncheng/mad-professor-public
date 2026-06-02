@@ -15,7 +15,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| Hotfix | `static/index.html` 移除 `#chat-messages` padding-top，新增 `.qa-group:first-child` margin-top 完美防置頂穿透 | `待 baron 回填` |
+| Hotfix | `static/index.html` 移除 `#chat-messages` padding-top，新增 `.qa-group:first-child` margin-top 完美防置頂穿透 | `a5b193f` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-05-30_RAG-14_hotfix.md`
 
@@ -25,7 +25,7 @@
 |---|---|---|
 | C1 | `static/index.html` CSS 4 項（gap / msg-user 滿寬 sticky / msg-ai 滿寬 / qa-group）+ sendMessage × 過濾 + `tests/test_rag14_c1_css_and_filter.py` 新增（4 pytest）| `6593962` |
 | C2 | `static/index.html` loadChatHistory forEach qa-group 包裝 + in_progress currentGroup + sendMessage qaGroup 包裝 + `tests/test_rag14_c2_dom_structure.py` 新增（3 pytest）| `b8e8770` |
-| Check | Conformance 驗收與 baton/ 全量歸檔 | `待 baron 回填` |
+| Check | Conformance 驗收與 baton/ 全量歸檔 | `ebf1b9c` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`
 
@@ -310,6 +310,13 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對**（`.claude-logs/plans/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v2.md`）
+  - [/] 🟡 WIP: OP-1 — 五路黃金基準物理存盤（建立 Golden Baseline）｜**代碼完成且單元驗證**（`tools/golden_baseline.py` capture + `tests/golden_baseline/queries.json` + 防覆寫閘/manifest/CLI 已驗）；**物理 `capture --all` 待 baron 端 MinerU 在線執行**（worktree MinerU 離線、無法當場存盤五路）
+  - [ ] ⬜ 未開始: OP-2 — 自動化 Regression Diff 比對腳本開發（建立質量防線）
+  - [ ] ⬜ 未開始: OP-3 — Checkout / 收官階段（一次性歸檔計畫/任務/三份報告，保留 _v2 版號）
+  - 工時：3 個 OP 階段
+  - 依賴：OP-1 物理存盤待 MinerU 環境
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
