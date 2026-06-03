@@ -20,7 +20,7 @@
 | C3 | U3 廢 lifespan preload + chat 端點按需 Lazy Load + `ai_core`/`rag_retriever` OrderedDict LRU(上限 5)+gc；`retrieve_*` 演算法 byte 不動 + 2 pytest | `76e47ed` |
 | C4 | U1 `PIPELINE_SEMAPHORE`(上限 1) 守 A 軌 run_pipeline + B 軌 run_pipeline_shadow + queued SSE；U2 pdf_processor 子進程 nice 19 soft-fail + 2 pytest | `aad3737` |
 | C5 | U7 (phase,stage) 二維鍵 performance_metric 埋點（pipeline_core A 軌映射 + orchestrator P1-P4 附加式）+ pipeline_finished/rag_finished + `scripts/analyze_performance.py` + 2 pytest | `59e1c56` |
-| C6 | Conformance 驗收（U1-U7 / 測試 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan_v2/tasks_v3/六報告）+ 結案 | `待 baron 回填` |
+| C6 | Conformance 驗收（U1-U7 / 測試 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan_v2/tasks_v3/六報告）+ 結案 | `703cfaa` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_API-PERF_API技術審計與效能優化_plan_v2.md`
 > **PIPE 對齊**：基建前置——U1 PIPELINE_SEMAPHORE 為 PIPE 廢除 QUEUE-1 Thread-level 避讓並發底座；U7 (phase,stage) 埋點介面前向相容 PIPE Orchestrator P1-P4。C3 另有後續微調 commit `beb8f8a`。
@@ -358,6 +358,15 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **DOMAIN-NORM 領域標準化對齊器**（`.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md`）
+  - [x] ✅ C1 — Database Schema（資料庫表建立）：`models.py` 新增 `Domains`（lcc_code PK + name 動態註冊）+ `DomainMapping`（raw→lcc 快取）兩表；`Paper` 等既有表不動（待 baron 回填）
+  - [ ] 🟡 WIP: C2 — Normalizer Core（對齊器核心邏輯）：`processor/domain_normalizer.py` 內容判定（LLM cheap Temp=0.0）+ 動態註冊不塞單字 + 快取防重；LLM 呼叫在 DB 交易外
+  - [ ] ⬜ 未開始: C3 — Entry & Feature Flag（單一入口與熱插拔旗標）：`normalize_to_lcc(raw_domain, context_text=None)->LCCCode` + `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False、舊行為零風險）
+  - [ ] ⬜ 未開始: C4 — Unit Tests（單元測試）：`tests/test_domain_normalizer.py` 4 測試（內容分類 / 動態註冊不塞單字 / 快取命中 0 API / 旗標 off 保舊行為）
+  - [ ] ⬜ 未開始: C5 — Check / Checkout（收官歸檔）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C5 報告
+  - 工時：5 個 commits（C1-C4 實作 + C5 單一收官 Check）
+  - 依賴：PIPE-CORE（contracts 凍結，LCCCode 型別對齊 PIPE-SPEC §1.2.1）
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
