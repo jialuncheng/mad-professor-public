@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### BE-Refactor DOMAIN-NORM 領域標準化對齊器（PIPE 大改版三大共用真理源之一）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `models.py` 新增 `Domains`（lcc_code PK String(3) + name 動態註冊）+ `DomainMapping`（raw_key PK→lcc 快取 + FK）兩表；`Paper` 等既有表 byte 不動 + create_all 自動建表 | `8d4f75f` |
+| C2 | 新建 `processor/domain_normalizer.py` DomainNormalizer：快取查→LLM 內容判定（cheap model Temp=0.0、履歷按技能）→動態註冊 Domains（on_conflict_do_nothing 不塞單字）→寫回；**LLM 呼叫在 session.begin() 交易外** + try/except 降級 general | `125af97` |
+| C3 | 暴露模組級單一入口 `normalize_to_lcc(raw_domain, context_text=None)->LCCCode`（逐字對齊 PIPE-SPEC §1.2.1 / master v10 L69）+ `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False 走舊 raw 直注、零風險）；惰性單例 | `7e7f2a1` |
+| C4 | 新建 `tests/test_domain_normalizer.py` 4 pytest（內容分類 HF/QA + temp=0.0 / 冷門動態註冊 QE 不塞單字 / 快取命中 0 API / 旗標 off 保舊行為）；全套件 452 passed | `aeb4fc2` |
+| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v2/tasks/C1-C5 報告）+ 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md`
+> **流程校正**：原 18:46 Check 提示詞欲收斂為 4-commit（C4=Check），經 baron 拍板「先補 C4 Unit Tests 再收官」→ 回歸 5-commit（C4=Unit Tests / C5=Check）。
+> **PIPE 對齊**：DomainNormalizer 為 GLOSSARY-CORE / Translator 共同上游真理源；簽名凍結對齊 PIPE-SPEC §1.2.1。旗標預設 False、線上 0 風險（接線 translate 屬後續路次 plan）。
+
 ### BE-Refactor API-PERF API 技術審計與效能防呆優化（PIPE 大改版基建前置）
 
 | Commit | 內容 | Hash |
@@ -359,15 +373,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **DOMAIN-NORM 領域標準化對齊器**（`.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md`）
-  - [x] ✅ C1 — Database Schema（資料庫表建立）：`models.py` 新增 `Domains`（lcc_code PK + name 動態註冊）+ `DomainMapping`（raw→lcc 快取）兩表；`Paper` 等既有表不動（`8d4f75f`）
-  - [x] ✅ C2 — Normalizer Core（對齊器核心邏輯）：`processor/domain_normalizer.py` 內容判定（LLM cheap Temp=0.0）+ 動態註冊不塞單字 + 快取防重；LLM 呼叫在 DB 交易外（`125af97`）
-  - [x] ✅ C3 — Entry & Feature Flag（單一入口與熱插拔旗標）：`normalize_to_lcc(raw_domain, context_text=None)->LCCCode` + `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False、舊行為零風險）（`7e7f2a1`）
-  - [x] ✅ C4 — Unit Tests（單元測試）：`tests/test_domain_normalizer.py` 4 測試全綠（內容分類 HF/QA / 動態註冊不塞單字 / 快取命中 0 API / 旗標 off 保舊行為）（待 baron 回填）
-  - [ ] 🟡 WIP: C5 — Check / Checkout（收官歸檔）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C5 報告
-  - 工時：5 個 commits（C1-C4 實作 + C5 單一收官 Check）
-  - 依賴：PIPE-CORE（contracts 凍結，LCCCode 型別對齊 PIPE-SPEC §1.2.1）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -642,4 +647,7 @@
 
 ### API-PERF (✅ 已完成·PIPE 基建前置)
 - ✅ ~~API-PERF API 技術審計與效能防呆優化~~（已落地、C1 `5326437` + C2 `e20054d` + C3 `76e47ed` + C4 `aad3737` + C5 `59e1c56` + C6 收官；U1-U7 並發信號量/nice/LRU/流式上傳/真實 IP/連接池/計時埋點+CLI；PIPE 並發底座就緒）
+
+### DOMAIN-NORM (✅ 已完成·PIPE 共用真理源)
+- ✅ ~~DOMAIN-NORM 領域標準化對齊器~~（已落地、C1 `8d4f75f` + C2 `125af97` + C3 `7e7f2a1` + C4 `aeb4fc2` + C5 收官；Domains/DomainMapping 兩表 + DomainNormalizer 內容判定/動態註冊不塞單字/快取防重 + normalize_to_lcc 入口 + LLM_USE_GLOSSARY_ALIGN 旗標預設 False；GLOSSARY-CORE/Translator 共同上游真理源就緒）
 
