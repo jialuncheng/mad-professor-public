@@ -11,6 +11,23 @@
 
 ## ✅ 已完成
 
+### BE-Refactor GLOSSARY-CORE 中央領域術語庫與跨語系一致性（PIPE 大改版三大共用真理源之二）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `models.py` 新增 `GlobalGlossary` 表（`(source_lang,target_lang,term_key,domain)` 聯合唯一約束 + 級聯查詢輔助索引 + source auto_extract/manual_edit）；`Paper` 等既有表 byte 不動 | `03d85c8` |
+| C2 | 新建 `processor/glossary_extractor.py` GlossaryManager：`query_cascade`（專屬 LCC 覆寫 general）+ LLM `extract_terms`（**交易外**）+ `upsert_terms`（on_conflict_do_nothing 冪等）；全程 try/except 降級不阻斷 | `9af971f` |
+| C3 | `translate_processor.py:237-239` 旗標閘門注入級聯術語表 + `pipeline_core._stage_translate` 尾端**非阻塞**背景回填 hook；旗標 OFF byte 等價舊行為；書籍 ParallelChapterTranslator 融合延後 | `fd0e84f` |
+| C4 | `AI_professor_chat.py:329-335` 旗標閘門按 `_domain` LCC `query_cascade` 注入「不可違背 System constraint」；前台崩潰防護 graceful degradation；只 stage C4 hunks 隔離既存 RAG-14 改動 | `06bf3df` |
+| C5 | 新建 `tools/manage_glossary.py` 自癒 CLI（`--init` / `--test-pipeline --pdf` 離線閉環 / `--backfill-existing-papers` 歷史 domain→LCC 批次升級）；setup_logging + 批次極短交易防鎖 | `待 baron 回填` |
+| C6 | 新建 `tests/test_glossary_core.py` 5 pytest（唯一約束 / 級聯專屬覆寫 / 書籍融合優先 / Chat 注入 / CLI 回填）；全套件 457 passed | `ae705d5` |
+| C7 | Conformance 三維度驗收（U1-U5 / 測試 §6.1-§6.6 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v2/tasks/C1-C7 報告）+ C5 交付物補正 + 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_GLOSSARY-CORE_中央領域術語庫_plan_v2.md`
+> **PIPE 對齊**：消費上游 DomainNormalizer `normalize_to_lcc` LCC（DOMAIN-NORM 已收官）；translate/chat 跨文獻術語一致性注入 + 知識飛輪自癒回填；旗標 `LLM_USE_GLOSSARY_ALIGN` 預設 False、線上 0 風險。
+> **延後項**：書籍並行 `ParallelChapterTranslator` 雙層融合（plan U3 後半）待 TRANSLATE-BOOK 落地後整合（tasks §9）。
+> **流程註**：C4 發現既存未提交 RAG-14 多標籤後端改動 → baron 拍板「只 stage C4 hunks」隔離、RAG-14 獨立 commit `595e3d8`。
+
 ### BE-Refactor DOMAIN-NORM 領域標準化對齊器（PIPE 大改版三大共用真理源之一）
 
 | Commit | 內容 | Hash |
@@ -374,17 +391,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性**（`plans/2026-06-01_GLOSSARY-CORE_中央領域術語庫_plan_v2.md`）
-  - [x] ✅ C1 — Database Schema（資料庫結構與聯合唯一索引）：`models.py` 新增 `GlobalGlossary`（`(source_lang,target_lang,term_key,domain)` 聯合唯一約束）（`03d85c8`）
-  - [x] ✅ C2 — Glossary Core & Cascading Retrieval（術語庫核心與級聯優先權查詢）：`processor/glossary_extractor.py` 級聯查詢（專屬覆寫 general）+LLM 提取（交易外）+冪等回填（`9af971f`）
-  - [x] ✅ C3 — Translate Integration & Backfill（翻譯管線術語融合與增量回填）：`translate_processor.py`+`pipeline_core.py` 旗標閘門注入與背景回填（單文路徑；書籍融合延後）（`fd0e84f`）
-  - [x] ✅ C4 — Chat Injection（前台問答術語強約束注入）：`AI_professor_chat.py` 旗標閘門按 domain 拉術語注入 System Prompt 契約（僅 stage C4 hunks、RAG-14 既存改動隔離）（`06bf3df`）
-  - [x] ✅ C5 — Hot-Pluggable CLI（自癒補丁 CLI）：`tools/manage_glossary.py`（--init / --test-pipeline / --backfill-existing-papers）（待 baron 回填）
-  - [x] ✅ C6 — Unit Tests（單元測試）：`tests/test_glossary_core.py` 5 測試全綠（唯一約束/級聯優先/書籍融合優先/Chat 注入/CLI 回填）；全套件 457 passed（待 baron 回填）
-  - [/] 🟡 WIP C7 — Checkout（收官與成果審計）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C7 報告
-  - 工時：7 個 commits（C1-C6 實作/測試 + C7 收官 Checkout）
-  - 依賴：DOMAIN-NORM (已完成)；書籍並行融合須待 TRANSLATE-BOOK 落地（C3 延後子項）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -662,4 +668,7 @@
 
 ### DOMAIN-NORM (✅ 已完成·PIPE 共用真理源)
 - ✅ ~~DOMAIN-NORM 領域標準化對齊器~~（已落地、C1 `8d4f75f` + C2 `125af97` + C3 `7e7f2a1` + C4 `aeb4fc2` + C5 收官；Domains/DomainMapping 兩表 + DomainNormalizer 內容判定/動態註冊不塞單字/快取防重 + normalize_to_lcc 入口 + LLM_USE_GLOSSARY_ALIGN 旗標預設 False；GLOSSARY-CORE/Translator 共同上游真理源就緒）
+
+### GLOSSARY-CORE (✅ 已完成·PIPE 共用真理源之二)
+- ✅ ~~GLOSSARY-CORE 中央領域術語庫與跨語系一致性~~（已落地、C1 `03d85c8` + C2 `9af971f` + C3 `fd0e84f` + C4 `06bf3df` + C5 收官 + C6 `ae705d5` + C7 收官；GlobalGlossary 表聯合唯一約束 + GlossaryManager 級聯查詢/交易外提取/冪等回填 + translate/chat 旗標閘門注入 + manage_glossary CLI；消費 DomainNormalizer LCC；書籍融合待 TRANSLATE-BOOK）
 

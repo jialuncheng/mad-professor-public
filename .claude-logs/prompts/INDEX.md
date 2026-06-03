@@ -34,6 +34,7 @@
   - `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md` — C4 Run（Chat Injection：AI_professor_chat.py:329-335 旗標閘門按 _domain LCC query_cascade 取術語組「不可違背 System constraint」注入 character/explain prompt；前台崩潰防護 try/except graceful degradation + `=== [GLOSSARY-CORE C4 START/END] ===` 包裹 + 改前 .bak；旗標 OFF byte 等價；發現既存 RAG-14 改動→只 stage C4 hunks 隔離）
   - `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md` — C5 Run（Hot-Pluggable CLI：新建 tools/manage_glossary.py 自癒 CLI——--init / --test-pipeline --pdf 離線閉環 / --backfill-existing-papers 歷史 LCC 批次升級；logging SOP setup_logging 嚴禁 basicConfig + 批次極短交易防 SQLite locked）
   - `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md` — C6 Run（Unit Tests：新建 tests/test_glossary_core.py 5 測試——聯合唯一約束/級聯優先覆寫/書籍融合優先/Chat 注入/CLI 回填；mock LLM 不實打 API + file-based SQLite FK ON fixture）
+  - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -160,6 +161,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_GLOSSARY-CORE_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md`
@@ -174,4 +176,3 @@
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C5_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_API-PERF_C4_run_提示詞.md`
