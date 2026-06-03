@@ -31,7 +31,9 @@
   - `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md` — C1 Run（Database Schema：models.py 新增 GlobalGlossary 表（source_lang/target_lang/term_key/original_term/translation/domain/source）+ (source_lang,target_lang,term_key,domain) 聯合唯一約束 + 級聯查詢輔助索引，`=== [GLOSSARY-CORE C1 START/END] ===` 包裹 + 改前 .bak；Paper 表不動）
   - `2026-06-03_GLOSSARY-CORE_C2_run_提示詞.md` — C2 Run（Glossary Core & Cascading Retrieval：新建 processor/glossary_extractor.py GlossaryManager——query_cascade 級聯查詢（專屬覆寫 general）+ LLM extract_terms（交易外）+ upsert_terms（on_conflict_do_nothing 冪等）；database SOP 交易邊界鐵律）
   - `2026-06-03_GLOSSARY-CORE_C3_run_提示詞.md` — C3 Run（Translate Integration & Backfill：translate_processor.py:237-239 旗標閘門注入級聯術語表 + pipeline_core.py translate 後背景回填 hook；全 `if settings.LLM_USE_GLOSSARY_ALIGN:` 閘門 + 回填 try/except 非阻塞 + `=== [GLOSSARY-CORE C3 START/END] ===` 包裹 + 改前 .bak；旗標 OFF byte 等價；書籍融合延後）
-  - `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md` — C4 Run（Chat Injection：AI_professor_chat.py:329-335 旗標閘門按 _domain LCC query_cascade 取術語組「不可違背 System constraint」注入 character/explain prompt；前台崩潰防護 try/except graceful degradation + `=== [GLOSSARY-CORE C4 START/END] ===` 包裹 + 改前 .bak；旗標 OFF byte 等價）
+  - `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md` — C4 Run（Chat Injection：AI_professor_chat.py:329-335 旗標閘門按 _domain LCC query_cascade 取術語組「不可違背 System constraint」注入 character/explain prompt；前台崩潰防護 try/except graceful degradation + `=== [GLOSSARY-CORE C4 START/END] ===` 包裹 + 改前 .bak；旗標 OFF byte 等價；發現既存 RAG-14 改動→只 stage C4 hunks 隔離）
+  - `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md` — C5 Run（Hot-Pluggable CLI：新建 tools/manage_glossary.py 自癒 CLI——--init / --test-pipeline --pdf 離線閉環 / --backfill-existing-papers 歷史 LCC 批次升級；logging SOP setup_logging 嚴禁 basicConfig + 批次極短交易防 SQLite locked）
+  - `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md` — C6 Run（Unit Tests：新建 tests/test_glossary_core.py 5 測試——聯合唯一約束/級聯優先覆寫/書籍融合優先/Chat 注入/CLI 回填；mock LLM 不實打 API + file-based SQLite FK ON fixture）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -158,6 +160,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md`
+- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C2_run_提示詞.md`
@@ -171,5 +175,3 @@
 - 2026-06-03 — `2026-06-03_API-PERF_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C4_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_API-PERF_C3_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_API-PERF_C2_run_提示詞.md`

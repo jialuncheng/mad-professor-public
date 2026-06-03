@@ -88,11 +88,7 @@
 | C1 | `static/index.html` CSS 4 項（gap / msg-user 滿寬 sticky / msg-ai 滿寬 / qa-group）+ sendMessage × 過濾 + `tests/test_rag14_c1_css_and_filter.py` 新增（4 pytest）| `6593962` |
 | C2 | `static/index.html` loadChatHistory forEach qa-group 包裝 + in_progress currentGroup + sendMessage qaGroup 包裝 + `tests/test_rag14_c2_dom_structure.py` 新增（3 pytest）| `b8e8770` |
 | Check | Conformance 驗收與 baton/ 全量歸檔 | `ebf1b9c` |
-| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
- | C2 | `static/index.html` loadChatHistory forEach qa-group 包裝... | `b8e8770` |
- | Check | Conformance 驗收與 baton/ 全量歸檔 | `ebf1b9c` |
-| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
-+| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
+| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `595e3d8` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`
 
@@ -382,10 +378,10 @@
   - [x] ✅ C1 — Database Schema（資料庫結構與聯合唯一索引）：`models.py` 新增 `GlobalGlossary`（`(source_lang,target_lang,term_key,domain)` 聯合唯一約束）（`03d85c8`）
   - [x] ✅ C2 — Glossary Core & Cascading Retrieval（術語庫核心與級聯優先權查詢）：`processor/glossary_extractor.py` 級聯查詢（專屬覆寫 general）+LLM 提取（交易外）+冪等回填（`9af971f`）
   - [x] ✅ C3 — Translate Integration & Backfill（翻譯管線術語融合與增量回填）：`translate_processor.py`+`pipeline_core.py` 旗標閘門注入與背景回填（單文路徑；書籍融合延後）（`fd0e84f`）
-  - [x] ✅ C4 — Chat Injection（前台問答術語強約束注入）：`AI_professor_chat.py` 旗標閘門按 domain 拉術語注入 System Prompt 契約（僅 stage C4 hunks、RAG-14 既存改動隔離）（待 baron 回填）
-  - [/] 🟡 WIP C5 — Hot-Pluggable CLI（自癒補丁 CLI）：`tools/manage_glossary.py`（--init / --test-pipeline / --backfill-existing-papers）
-  - [ ] ⬜ 未開始: C6 — Unit Tests（單元測試）：`tests/test_glossary_core.py` 5 測試（唯一約束/級聯優先/書籍融合優先/Chat 注入/CLI 回填）
-  - [ ] ⬜ 未開始: C7 — Checkout（收官與成果審計）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C7 報告
+  - [x] ✅ C4 — Chat Injection（前台問答術語強約束注入）：`AI_professor_chat.py` 旗標閘門按 domain 拉術語注入 System Prompt 契約（僅 stage C4 hunks、RAG-14 既存改動隔離）（`06bf3df`）
+  - [x] ✅ C5 — Hot-Pluggable CLI（自癒補丁 CLI）：`tools/manage_glossary.py`（--init / --test-pipeline / --backfill-existing-papers）（待 baron 回填）
+  - [x] ✅ C6 — Unit Tests（單元測試）：`tests/test_glossary_core.py` 5 測試全綠（唯一約束/級聯優先/書籍融合優先/Chat 注入/CLI 回填）；全套件 457 passed（待 baron 回填）
+  - [/] 🟡 WIP C7 — Checkout（收官與成果審計）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C7 報告
   - 工時：7 個 commits（C1-C6 實作/測試 + C7 收官 Checkout）
   - 依賴：DOMAIN-NORM (已完成)；書籍並行融合須待 TRANSLATE-BOOK 落地（C3 延後子項）
 
@@ -590,11 +586,8 @@
 
 ## 索引（依類別）
 
-- - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
-+ - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
-
 ### RAG（11 項 active）
-- ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
+- ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `595e3d8`）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）
