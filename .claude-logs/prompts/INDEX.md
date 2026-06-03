@@ -15,6 +15,7 @@
   - `2026-06-03_API-PERF_C3_run_提示詞.md` — C3 Run（U3 廢 lifespan preload + ai_core/rag_retriever 快取改 OrderedDict + 上限 5 + Lazy Load + LRU popitem/gc.collect；retrieve_* 演算法不動，`=== [API-PERF C3 START/END] ===` 包裹 + 追加 lru 測試）
   - `2026-06-03_API-PERF_C4_run_提示詞.md` — C4 Run（U1 PIPELINE_SEMAPHORE 守 A 軌 run_pipeline + B 軌 run_pipeline_shadow + queued SSE / U2 pdf_processor 子進程 nice 19 soft-fail，`=== [API-PERF C4 START/END] ===` 包裹 + 追加 semaphore/queue 測試）
   - `2026-06-03_API-PERF_C5_run_提示詞.md` — C5 Run（U7 (phase,stage) 二維鍵 performance_metric 埋點落 pipeline_core(A 軌) + orchestrator(P1-P4 附加式) + pipeline_finished/rag_finished + 新建 scripts/analyze_performance.py CLI；orchestrator DAG 本體不動、pipelines 20 pytest 維持全綠）
+  - `2026-06-03_API-PERF_Check_提示詞.md` — Check（C6 收官：Conformance U1-U7/測試/不可動清單驗收 + 一次性 mv plan_v2/tasks_v3/C1-C6 報告至正式目錄 + TODO 結案 + 歷史全量 Hash 自癒）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -141,6 +142,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_API-PERF_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C4_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C3_run_提示詞.md`
@@ -155,4 +157,3 @@
 - 2026-06-02 — `2026-06-02_PIPE-CORE_OP-3_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_OP-2_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_OP-1_run_提示詞.md`
-- 2026-06-02 — `2026-06-02_PIPE-CORE_Tasks_提示詞.md`

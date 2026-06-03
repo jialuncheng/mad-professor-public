@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### BE-Refactor API-PERF API 技術審計與效能防呆優化（PIPE 大改版基建前置）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `db.py` U6 SQLite 連接池（busy_timeout 5s→30s + QueuePool pool_size=5/max_overflow=10/pool_pre_ping）+ 2 pytest | `5326437` |
+| C2 | `web_server.py` U4 1MB 分塊流式上傳（%PDF/415/413/清理 partial）+ U5 login X-Forwarded-For 真實 IP + 3 pytest | `e20054d` |
+| C3 | U3 廢 lifespan preload + chat 端點按需 Lazy Load + `ai_core`/`rag_retriever` OrderedDict LRU(上限 5)+gc；`retrieve_*` 演算法 byte 不動 + 2 pytest | `76e47ed` |
+| C4 | U1 `PIPELINE_SEMAPHORE`(上限 1) 守 A 軌 run_pipeline + B 軌 run_pipeline_shadow + queued SSE；U2 pdf_processor 子進程 nice 19 soft-fail + 2 pytest | `aad3737` |
+| C5 | U7 (phase,stage) 二維鍵 performance_metric 埋點（pipeline_core A 軌映射 + orchestrator P1-P4 附加式）+ pipeline_finished/rag_finished + `scripts/analyze_performance.py` + 2 pytest | `59e1c56` |
+| C6 | Conformance 驗收（U1-U7 / 測試 / 不可動清單 git 驗證）+ baton/ 全量歸檔（plan_v2/tasks_v3/六報告）+ 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_API-PERF_API技術審計與效能優化_plan_v2.md`
+> **PIPE 對齊**：基建前置——U1 PIPELINE_SEMAPHORE 為 PIPE 廢除 QUEUE-1 Thread-level 避讓並發底座；U7 (phase,stage) 埋點介面前向相容 PIPE Orchestrator P1-P4。C3 另有後續微調 commit `beb8f8a`。
+
 ### BE-Refactor PIPE-SCAFFOLD web_server 雙軌派發 scaffolding（PIPE 大改版階段 1·建）
 
 | Commit | 內容 | Hash |
@@ -345,16 +359,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **API-PERF API技術審計與效能優化**（`.claude-logs/baton/2026-06-03_API-PERF_API技術審計與效能優化_tasks_v3.md`）
-  - [x] ✅ done: C1 — 資料庫連接池與防鎖死配置（U6 SQLite QueuePool：busy_timeout 30s + QueuePool pool_size=5/max_overflow=10/pool_pre_ping；2 pytest 全綠）
-  - [x] ✅ done: C2 — 流式上傳與真實 IP 解析（U4 upload_paper 1MB 分塊流式 + %PDF/415/413 + U5 login X-Forwarded-For；3 pytest 全綠；images 路徑防逃逸未觸）
-  - [x] ✅ done: C3 — 向量庫與 RAG LRU 動態快取（U3 廢 lifespan preload + chat 端點按需 Lazy Load + `vector_stores`/`_paper_cache` OrderedDict LRU 上限 5；`retrieve_*` 演算法 byte 不動；2 pytest 全綠）
-  - [x] ✅ done: C4 — 並發信號量與子進程降優（U1 `PIPELINE_SEMAPHORE` 守 A 軌 run_pipeline + B 軌 run_pipeline_shadow + queued SSE；U2 pdf_processor 子進程 nice 19 soft-fail；2 pytest 全綠；A 軌 process 本體不動）
-  - [x] ✅ done: C5 — 結構化計時埋點與 CLI 分析工具（U7 (phase,stage) 二維鍵 performance_metric 落 pipeline_core(A軌映射)+orchestrator(P1-P4 附加式) + pipeline_finished/rag_finished + `scripts/analyze_performance.py`；orchestrator 20 pytest 維持全綠；2 pytest 新增全綠）
-  - [/] 🟡 WIP: C6 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v3/六報告 + TODO ✅）
-  - 工時：6 個 commits（C1-C5 實作 + C6 單一收官 Checkout）
-  - 依賴：PIPE-CORE / PIPE-SCAFFOLD（已落地，提供 Orchestrator/雙軌派發點對齊接點）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -626,4 +630,7 @@
 
 ### PIPE-SCAFFOLD (✅ 已完成·階段一建)
 - ✅ ~~PIPE-SCAFFOLD web_server 雙軌派發 scaffolding~~（已落地、OP-1 `13c1dcb` + OP-2 `6807a7f` + OP-3 `58e1b89`；旗標惰性插入點 + 影子派發單元 + 兩派發點閘門，A 軌 byte 不動；階段二 Flip 屬 PIPE-FLIP）
+
+### API-PERF (✅ 已完成·PIPE 基建前置)
+- ✅ ~~API-PERF API 技術審計與效能防呆優化~~（已落地、C1 `5326437` + C2 `e20054d` + C3 `76e47ed` + C4 `aad3737` + C5 `59e1c56` + C6 收官；U1-U7 並發信號量/nice/LRU/流式上傳/真實 IP/連接池/計時埋點+CLI；PIPE 並發底座就緒）
 
