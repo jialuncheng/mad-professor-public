@@ -38,13 +38,6 @@ RAG_MULTI_TOP_K = int(os.getenv("RAG_MULTI_TOP_K", "7"))
 RAG_MAX_CACHE = int(os.getenv("RAG_MAX_CACHE", "5"))
 # === [API-PERF C3 END] ===
 
-# === [API-PERF C4 START] U1 全系統 Pipeline 並發上限 ===
-# web_server.PIPELINE_SEMAPHORE 以此值建立 asyncio.Semaphore，限制同時運行的 Pipeline
-# 任務數（A 軌 run_pipeline + B 軌 run_pipeline_shadow 共用）；多餘任務內存排隊（queued）。
-# 預設 1（單機高密度上傳防 Event Loop 奪取 / GIL 阻塞）；可 env override。
-PIPELINE_MAX_CONCURRENT = int(os.getenv("PIPELINE_MAX_CONCURRENT", "1"))
-# === [API-PERF C4 END] ===
-
 # Phase 4.7? MODEL-3 B1：短文 Fast-path Bypass 上限
 # Gemini 3.5 Flash 65k 輸出解鎖、總字數 < 此值的短文整篇進 translate 不切 TextTiling
 # 詳見 .claude-logs/2026-05-22_MODEL-3_短文Bypass_公式穿透_段落滑動_plan.md

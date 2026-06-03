@@ -52,11 +52,6 @@ ai_core = None
 processing_tasks: dict = {}  # (owner_id, paper_id) -> {'status': str, 'progress': dict, '_pdf_path': str, '_original_filename': str}
                               # Phase 0：鍵改 tuple，跨 owner 隔離；不再需要 _owner_id 欄事後比對
 tasks_lock = threading.Lock()
-# === [API-PERF C4 START] U1 全系統 Pipeline 並發信號量 ===
-# 限制同時運行的 Pipeline 任務數（A 軌 run_pipeline + B 軌 run_pipeline_shadow 共用），
-# 多餘任務內存排隊並以 SSE 推 queued 狀態。PIPE plan §2 U11「QUEUE-1 重構性廢除」的並發底座。
-PIPELINE_SEMAPHORE = asyncio.Semaphore(settings.PIPELINE_MAX_CONCURRENT)
-# === [API-PERF C4 END] ===
 
 
 # ── Phase 4.7d Commit 17-2：chat stream broker ──
@@ -541,27 +536,15 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
 
         loop = asyncio.get_event_loop()
         output_paths = {'_confirmed_doc_type': doc_type}
-        # === [API-PERF C4 START] U1 並發信號量守護（A 軌；process 本體不動）===
-        # 信號量已滿時先推 queued 狀態（SSE），取得許可後才轉 processing 並派發執行。
-        if PIPELINE_SEMAPHORE.locked():
-            with tasks_lock:
-                if task_key in processing_tasks:
-                    processing_tasks[task_key]['status'] = 'queued'
-                    processing_tasks[task_key]['progress'] = {
-                        'stage': 'queue', 'stage_name': '等待佇列中...（排隊中）',
-                        'index': 0, 'total': 10, 'progress': 0,
-                    }
-        async with PIPELINE_SEMAPHORE:
-            with tasks_lock:
-                processing_tasks[task_key]['status'] = 'processing'
+        with tasks_lock:
+            processing_tasks[task_key]['status'] = 'processing'
 
-            pipeline = PipelineCore(on_progress=on_progress)
-            output_paths2 = await loop.run_in_executor(
-                None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
-                    owner_id=owner_id, existing_paths=output_paths, paper_id=paper_id,
-                    original_filename=original_filename)
-            )
-        # === [API-PERF C4 END] ===
+        pipeline = PipelineCore(on_progress=on_progress)
+        output_paths2 = await loop.run_in_executor(
+            None, lambda: pipeline.process(pdf_path, str(OUTPUT_DIR),
+                owner_id=owner_id, existing_paths=output_paths, paper_id=paper_id,
+                original_filename=original_filename)
+        )
 
         # 檢查是否在處理過程中被刪除
         with tasks_lock:
@@ -610,21 +593,7 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
         from pipelines import Orchestrator, PipelineContext
         loop = asyncio.get_event_loop()
         ctx = PipelineContext(doc_type=doc_type, paper_id=paper_id_shadow, shadow=True)
-        # === [API-PERF C4 START] U1 並發信號量守護（B 軌；與 A 軌共用全系統上限）===
-        if PIPELINE_SEMAPHORE.locked():
-            with tasks_lock:
-                if shadow_key in processing_tasks:
-                    processing_tasks[shadow_key]['status'] = 'queued'
-                    processing_tasks[shadow_key]['progress'] = {
-                        'stage': 'queue', 'stage_name': '等待佇列中...（排隊中）(測試)',
-                        'index': 0, 'total': 10, 'progress': 0,
-                    }
-        async with PIPELINE_SEMAPHORE:
-            with tasks_lock:
-                if shadow_key in processing_tasks:
-                    processing_tasks[shadow_key]['status'] = 'processing'
-            await loop.run_in_executor(None, lambda: Orchestrator().run(ctx))
-        # === [API-PERF C4 END] ===
+        await loop.run_in_executor(None, lambda: Orchestrator().run(ctx))
         with tasks_lock:
             if shadow_key in processing_tasks:
                 processing_tasks[shadow_key]['status'] = 'done'
