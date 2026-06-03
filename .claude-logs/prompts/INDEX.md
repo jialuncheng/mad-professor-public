@@ -29,6 +29,7 @@
 - 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性（2026-06-03 Tasks）**
   - `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Checkout 收官；plan v2 中央術語庫 + 級聯查詢自癒 + 跨語系一致性；上游真理源 DomainNormalizer LCCCode 已凍結；中間 Commit 留 baton、唯 Checkout 一次性歸檔；對齊 PIPE master v10/PIPE-SPEC/PIPE-CORE/DOMAIN-NORM）
   - `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md` — C1 Run（Database Schema：models.py 新增 GlobalGlossary 表（source_lang/target_lang/term_key/original_term/translation/domain/source）+ (source_lang,target_lang,term_key,domain) 聯合唯一約束 + 級聯查詢輔助索引，`=== [GLOSSARY-CORE C1 START/END] ===` 包裹 + 改前 .bak；Paper 表不動）
+  - `2026-06-03_GLOSSARY-CORE_C2_run_提示詞.md` — C2 Run（Glossary Core & Cascading Retrieval：新建 processor/glossary_extractor.py GlossaryManager——query_cascade 級聯查詢（專屬覆寫 general）+ LLM extract_terms（交易外）+ upsert_terms（on_conflict_do_nothing 冪等）；database SOP 交易邊界鐵律）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -155,6 +156,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_Check_提示詞.md`
@@ -169,4 +171,3 @@
 - 2026-06-03 — `2026-06-03_API-PERF_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C1_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_Tasks_提示詞.md`
-- 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_Check_提示詞.md`
