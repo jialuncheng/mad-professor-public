@@ -3,9 +3,6 @@ import logging
 from pathlib import Path
 from llm.client import LLMClient
 from config import TRANSLATE_MODEL
-# === [GLOSSARY-CORE C3 START] ===
-import settings  # GLOSSARY-CORE C3：讀 LLM_USE_GLOSSARY_ALIGN 旗標（預設 False）
-# === [GLOSSARY-CORE C3 END] ===
 
 # 翻译提示词文件路径
 TITLE_TRANSLATE_PROMPT_PATH = "prompt/translate/title_translate_prompt.txt"
@@ -238,30 +235,8 @@ class TranslateProcessor:
         if hint:
             system_prompt = system_prompt + '\n\n' + hint
         domain = getattr(self, 'domain', '')
-        # === [GLOSSARY-CORE C3 START] ===
-        # 旗標 ON：注入中央術語庫級聯查詢結果作為「不可違背」譯法約束；
-        # 旗標 OFF（預設）：維持既有「本文件主題領域：{domain}」單行行為（byte 等價）。
-        if settings.LLM_USE_GLOSSARY_ALIGN and domain:
-            try:
-                from processor.glossary_extractor import GlossaryManager
-                src_lang = getattr(self, 'source_lang', 'en')
-                tgt_lang = getattr(self, 'target_lang', 'zh-tw')
-                glossary = GlossaryManager().query_cascade(src_lang, tgt_lang, domain)
-                if glossary:
-                    term_lines = "\n".join(f"- {orig} → {trans}" for orig, trans in glossary.items())
-                    system_prompt = system_prompt + (
-                        f"\n\n本文件主題領域：{domain}。以下為該領域權威術語對照表"
-                        f"（不可違背，翻譯時必須採用右側既定譯法以維持跨文獻一致性）：\n{term_lines}"
-                    )
-                else:
-                    system_prompt = system_prompt + f"\n\n本文件主題領域：{domain}，請以該領域標準術語翻譯。"
-            except Exception:
-                # 術語注入失敗不得阻斷翻譯：降級回既有單行行為
-                self.logger.error("[glossary] 術語注入失敗，降級回原行為", exc_info=True)
-                system_prompt = system_prompt + f"\n\n本文件主題領域：{domain}，請以該領域標準術語翻譯。"
-        elif domain:
+        if domain:
             system_prompt = system_prompt + f"\n\n本文件主題領域：{domain}，請以該領域標準術語翻譯。"
-        # === [GLOSSARY-CORE C3 END] ===
         
         # 构建用户提示词
         if text_type == "title":

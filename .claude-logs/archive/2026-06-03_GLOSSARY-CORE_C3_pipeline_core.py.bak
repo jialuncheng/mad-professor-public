@@ -2,9 +2,6 @@ from pathlib import Path
 import json
 import logging
 import time
-# === [GLOSSARY-CORE C3 START] ===
-import settings  # GLOSSARY-CORE C3：讀 LLM_USE_GLOSSARY_ALIGN 旗標（預設 False）
-# === [GLOSSARY-CORE C3 END] ===
 from typing import Optional, Dict, List, Union, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import paper_manager
@@ -702,34 +699,6 @@ class PipelineCore:
         result = self.translate_processor.process(
             str(input_path), str(output_path), doc_type=doc_type, domain=domain
         )
-        # === [GLOSSARY-CORE C3 START] ===
-        # 旗標 ON：translate 完成後背景增量回填本文術語至中央術語庫（知識飛輪、單文路徑）。
-        # 嚴格非阻塞：獨立 try/except，任何提取/寫入異常僅寫 error 日誌，絕不中斷翻譯主流程。
-        # 書籍 ParallelChapterTranslator 雙層融合屬 TRANSLATE-BOOK，本 Commit 不接。
-        if settings.LLM_USE_GLOSSARY_ALIGN and domain:
-            try:
-                from processor.glossary_extractor import GlossaryManager
-                src_abstract = ''
-                if isinstance(self._metadata, dict):
-                    _abs = self._metadata.get('abstract') or {}
-                    src_abstract = _abs.get('value') if isinstance(_abs, dict) else ''
-                tgt_abstract = getattr(
-                    self.translate_processor, 'translated_abstract', None
-                ) or ''
-                if src_abstract and tgt_abstract:
-                    gm = GlossaryManager()
-                    pairs = gm.extract_terms(  # LLM 提取（交易外）
-                        src_abstract, tgt_abstract, 'en', 'zh-tw', domain
-                    )
-                    written = gm.upsert_terms(pairs, 'en', 'zh-tw', domain)  # 極短交易冪等
-                    logger.info(
-                        "[glossary] translate 回填 domain=%r 術語 %d 筆", domain, written
-                    )
-            except Exception:
-                logger.error(
-                    "[glossary] translate 術語回填失敗（不阻塞主流程）", exc_info=True
-                )
-        # === [GLOSSARY-CORE C3 END] ===
         # RAG-1 Phase 2 P2-1：translate 階段完成後、把 translate_processor 內
         # 已賦值的 translated_abstract 同步寫進 self._metadata，供下游 stage
         # 與前端中文模式 abstract 顯示。translate_processor.translated_abstract
