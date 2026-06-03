@@ -12,6 +12,7 @@
   - `2026-06-03_API-PERF_Tasks_提示詞.md` — Tasks（07:01 修正版：Commit 拆分 C1-C5 實作 + **單一收官 Checkout C6**；對齊已落地 PIPE-CORE/SCAFFOLD：U1 Semaphore 守 Orchestrator.run+雙軌派發點 / U3 LRU 配 ai_core+rag_retriever / U7 計時埋點對齊 PhaseEnum (phase,stage) 二維鍵；產出 _v3）
   - `2026-06-03_API-PERF_C1_run_提示詞.md` — C1 Run（U6 SQLite 連接池：db.py busy_timeout 30s + QueuePool + pool_pre_ping，`=== [API-PERF C1 START/END] ===` 包裹 + 建 tests/test_api_performance_and_robustness.py）
   - `2026-06-03_API-PERF_C2_run_提示詞.md` — C2 Run（U4 upload_paper 1MB 分塊流式寫 + %PDF/415/413 + U5 login X-Forwarded-For 真實 IP，`=== [API-PERF C2 START/END] ===` 包裹 + 追加 streaming/forwarded 測試）
+  - `2026-06-03_API-PERF_C3_run_提示詞.md` — C3 Run（U3 廢 lifespan preload + ai_core/rag_retriever 快取改 OrderedDict + 上限 5 + Lazy Load + LRU popitem/gc.collect；retrieve_* 演算法不動，`=== [API-PERF C3 START/END] ===` 包裹 + 追加 lru 測試）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -138,6 +139,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_API-PERF_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C1_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_Tasks_提示詞.md`
@@ -152,4 +154,3 @@
 - 2026-06-02 — `2026-06-02_PIPE-CORE_Tasks_提示詞.md`
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_Check_提示詞.md`
 - 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_OP-2_run_提示詞.md`
-- 2026-06-02 — `2026-06-02_GOLDEN-BASELINE_OP-1_run_提示詞.md`

@@ -216,12 +216,8 @@ async def lifespan(app: FastAPI):
             "請確認已執行 scripts/migrate_to_db.py（可安全刪除）"
         )
 
-    # === [API-PERF C3 START] U3 廢除 lifespan 預載（改為 chat 端點按需 Lazy Load）===
-    # 原 `paper_manager.preload_vector_stores(OUTPUT_DIR, ai_core)` 於啟動時一次載入全部
-    # done 論文向量庫，內存隨論文數線性膨脹。改為使用者進入論文發起 RAG 問答時才動態加載
-    # （見 chat 端點 lazy-load 守衛），並由 ai_core/_paper_cache 與 retriever.vector_stores
-    # 的 LRU（上限 5）自動淘汰最久未使用者。preload_vector_stores 函式保留但不再於啟動呼叫。
-    # === [API-PERF C3 END] ===
+    # 載入已有論文的向量庫（DB 來源）
+    paper_manager.preload_vector_stores(OUTPUT_DIR, ai_core)
 
     logger.info("Web server 初始化完成")
     yield
@@ -702,13 +698,6 @@ async def chat(paper_id: str, request: ChatRequest,
     db_id = paper_manager.get_paper_db_id(current_user.id, paper_id)
     if db_id is None:
         raise HTTPException(status_code=404, detail="論文不存在")
-
-    # === [API-PERF C3 START] U3 按需 Lazy Load（取代 lifespan preload）===
-    # 使用者發起 RAG 問答時，若該論文不在 ai_core 快取則動態自磁碟加載其向量庫與 RAG tree；
-    # 加載後由 LRU（上限 5）自動淘汰最久未使用者。被 LRU 淘汰後再次問答將於此重新加載。
-    if (current_user.id, paper_id) not in ai_core._paper_cache:
-        paper_manager.load_paper_resources(OUTPUT_DIR, current_user.id, paper_id, ai_core)
-    # === [API-PERF C3 END] ===
 
     key = (current_user.id, db_id)
 

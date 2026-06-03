@@ -32,12 +32,6 @@ RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 # 預設 7 兼顧 prompt 不爆與多源 grounding；可 env override。
 RAG_MULTI_TOP_K = int(os.getenv("RAG_MULTI_TOP_K", "7"))
 
-# === [API-PERF C3 START] U3 向量庫 / RAG cache LRU 上限 ===
-# 記憶體中同時駐留的活躍 FAISS 向量庫（rag_retriever.vector_stores）與 RAG cache
-# （ai_core._paper_cache）各自上限；超限時自動 LRU 淘汰最久未使用者（按需 Lazy Load）。
-RAG_MAX_CACHE = int(os.getenv("RAG_MAX_CACHE", "5"))
-# === [API-PERF C3 END] ===
-
 # Phase 4.7? MODEL-3 B1：短文 Fast-path Bypass 上限
 # Gemini 3.5 Flash 65k 輸出解鎖、總字數 < 此值的短文整篇進 translate 不切 TextTiling
 # 詳見 .claude-logs/2026-05-22_MODEL-3_短文Bypass_公式穿透_段落滑動_plan.md

@@ -3,11 +3,6 @@ import json
 from typing import AsyncGenerator, List, Optional, Dict, Any, Tuple
 from AI_professor_chat import AIProfessorChat
 from rag_retriever import RagRetriever
-# === [API-PERF C3 START] U3 RAG cache LRU ===
-import gc
-from collections import OrderedDict
-from settings import RAG_MAX_CACHE
-# === [API-PERF C3 END] ===
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +15,7 @@ class AICore:
         self.ai_chat = AIProfessorChat()
         self.retriever: Optional[RagRetriever] = None
         # Phase 0: 鍵改 (owner_id, paper_uuid) tuple，避免跨 owner 撞名
-        # === [API-PERF C3 START] U3 RAG cache 改 OrderedDict（LRU 上限 RAG_MAX_CACHE）===
-        self._paper_cache: "OrderedDict[Tuple[int, str], Any]" = OrderedDict()
-        # === [API-PERF C3 END] ===
+        self._paper_cache: Dict[Tuple[int, str], Any] = {}
 
     def init_rag_retriever(self, base_path: str) -> bool:
         """初始化 RAG 檢索器"""
@@ -62,10 +55,6 @@ class AICore:
             # 取得論文上下文（一律注入；cache-miss 以無論文模式回答）
             paper_data = (self._paper_cache.get((owner_id, paper_id))
                           if paper_id else None)
-            # === [API-PERF C3 START] U3 LRU：命中即更新最近使用序 ===
-            if paper_data is not None:
-                self._paper_cache.move_to_end((owner_id, paper_id))
-            # === [API-PERF C3 END] ===
             if paper_id and paper_data is None:
                 self.logger.warning(
                     f"paper owner={owner_id} {paper_id} 不在快取中，以無論文模式回答"
@@ -101,13 +90,6 @@ class AICore:
             # 同步註冊到 retriever（取代其讀 papers_index.json）
             if self.retriever:
                 self.retriever.set_rag_tree(owner_id, paper_id, paper_data)
-            # === [API-PERF C3 START] U3 RAG cache LRU 淘汰（上限 RAG_MAX_CACHE）===
-            self._paper_cache.move_to_end((owner_id, paper_id))
-            while len(self._paper_cache) > RAG_MAX_CACHE:
-                _ev_key, _ = self._paper_cache.popitem(last=False)
-                gc.collect()  # 顯式回收（FAISS/大 dict 底層記憶體）
-                self.logger.info(f"[lru] RAG cache 淘汰最久未使用: {_ev_key}")
-            # === [API-PERF C3 END] ===
             return True
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")

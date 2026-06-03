@@ -348,8 +348,8 @@
 - 🟡 **API-PERF API技術審計與效能優化**（`.claude-logs/baton/2026-06-03_API-PERF_API技術審計與效能優化_tasks_v3.md`）
   - [x] ✅ done: C1 — 資料庫連接池與防鎖死配置（U6 SQLite QueuePool：busy_timeout 30s + QueuePool pool_size=5/max_overflow=10/pool_pre_ping；2 pytest 全綠）
   - [x] ✅ done: C2 — 流式上傳與真實 IP 解析（U4 upload_paper 1MB 分塊流式 + %PDF/415/413 + U5 login X-Forwarded-For；3 pytest 全綠；images 路徑防逃逸未觸）
-  - [/] 🟡 WIP: C3 — 向量庫與 RAG LRU 動態快取（U3 Lazy Load + LRU）
-  - [ ] ⬜ 未開始: C4 — 並發信號量與子進程降優（U1 Semaphore + U2 Nice）
+  - [x] ✅ done: C3 — 向量庫與 RAG LRU 動態快取（U3 廢 lifespan preload + chat 端點按需 Lazy Load + `vector_stores`/`_paper_cache` OrderedDict LRU 上限 5；`retrieve_*` 演算法 byte 不動；2 pytest 全綠）
+  - [/] 🟡 WIP: C4 — 並發信號量與子進程降優（U1 Semaphore + U2 Nice）
   - [ ] ⬜ 未開始: C5 — 結構化計時埋點與 CLI 分析工具（U7 (phase,stage) 二維鍵）
   - [ ] ⬜ 未開始: C6 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v3/六報告 + TODO ✅）
   - 工時：6 個 commits（C1-C5 實作 + C6 單一收官 Checkout）

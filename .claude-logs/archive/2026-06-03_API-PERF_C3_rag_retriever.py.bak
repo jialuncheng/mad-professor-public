@@ -5,11 +5,6 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
 from settings import RAG_SCORE_THRESHOLD, RAG_MULTI_TOP_K
-# === [API-PERF C3 START] U3 向量庫 LRU ===
-import gc
-from collections import OrderedDict
-from settings import RAG_MAX_CACHE
-# === [API-PERF C3 END] ===
 
 logger = logging.getLogger(__name__)
 
@@ -19,26 +14,12 @@ class RagRetriever:
 
     def __init__(self, base_path: str = None):
         # Phase 0: 鍵改 (owner_id, paper_uuid) tuple，避免跨 owner 相同 sanitize 撞名
-        # === [API-PERF C3 START] U3 向量庫快取改 OrderedDict（LRU 上限 RAG_MAX_CACHE）===
-        # vector_stores（FAISS，記憶體大宗）採 LRU 淘汰；paper_vector_paths（路徑，極輕）
-        # 與 rag_trees（JSON 樹，輕）保持不淘汰，確保 vector 被 LRU 淘汰後可由 paper_vector_paths
-        # 惰性重載、且 retrieve_* 永遠取得到對應 rag_tree（避免兩快取淘汰不同步致檢索回空）。
-        self.vector_stores: "OrderedDict[Tuple[int, str], FAISS]" = OrderedDict()
-        # === [API-PERF C3 END] ===
+        self.vector_stores: Dict[Tuple[int, str], FAISS] = {}
         self.paper_vector_paths: Dict[Tuple[int, str], str] = {}
         self.rag_trees: Dict[Tuple[int, str], Dict] = {}
         self.base_path = base_path
         # 向量庫路徑與 rag_tree 由 paper_manager（DB 來源）透過
         # add_paper / set_rag_tree 註冊，不再讀 papers_index.json。
-
-    # === [API-PERF C3 START] U3 向量庫 LRU 淘汰 helper ===
-    def _evict_vector_lru(self) -> None:
-        """vector_stores 超過 RAG_MAX_CACHE 時，自動釋放最久未使用的 FAISS 向量庫。"""
-        while len(self.vector_stores) > RAG_MAX_CACHE:
-            _ev_key, _ = self.vector_stores.popitem(last=False)
-            gc.collect()  # FAISS 底層 C++ 記憶體不一定隨 ref 歸零即釋放，顯式回收
-            logger.info(f"[lru] 向量庫淘汰最久未使用: {_ev_key}")
-    # === [API-PERF C3 END] ===
 
     def set_rag_tree(self, owner_id: int, paper_id: str, tree: Dict) -> None:
         """由 ai_core 載入 rag_tree 後註冊到記憶體（取代讀 papers_index.json）。"""
@@ -54,10 +35,6 @@ class RagRetriever:
             vector_store = self.load_vector_store(vector_store_path)
             if vector_store:
                 self.vector_stores[key] = vector_store
-                # === [API-PERF C3 START] U3 LRU：更新最近使用序 + 超限淘汰 ===
-                self.vector_stores.move_to_end(key)
-                self._evict_vector_lru()
-                # === [API-PERF C3 END] ===
                 logger.info(f"成功加载新论文 owner={owner_id} {paper_id} 的向量库")
                 return True
             return False
@@ -88,18 +65,11 @@ class RagRetriever:
         """取得向量庫（lazy load）"""
         key = (owner_id, paper_id)
         if key in self.vector_stores:
-            # === [API-PERF C3 START] U3 LRU：命中即更新最近使用序 ===
-            self.vector_stores.move_to_end(key)
-            # === [API-PERF C3 END] ===
             return self.vector_stores[key]
         if key in self.paper_vector_paths:
             store = self.load_vector_store(self.paper_vector_paths[key])
             if store:
                 self.vector_stores[key] = store
-                # === [API-PERF C3 START] U3 LRU：惰性重載後更新序 + 超限淘汰 ===
-                self.vector_stores.move_to_end(key)
-                self._evict_vector_lru()
-                # === [API-PERF C3 END] ===
                 return store
         return None
 

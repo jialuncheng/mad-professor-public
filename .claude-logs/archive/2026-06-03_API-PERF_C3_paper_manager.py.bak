@@ -427,12 +427,7 @@ def delete_conversations(paper_db_id: int) -> None:
 # ─────────────────────── 向量庫 / 資源載入 ───────────────────────
 
 def preload_vector_stores(output_dir, ai_core) -> None:
-    """啟動時預載：DB 所有 status='done' 的 papers。
-
-    # === [API-PERF C3] U3：本函式已不於 web_server lifespan 啟動時呼叫（廢除預載，
-    # 改為 chat 端點按需 Lazy Load + LRU 淘汰）。函式保留以維持向後相容/手動工具用途，
-    # 但無上限預載與 LRU 設計相悖，正常運行路徑不再使用。===
-    """
+    """啟動時預載：DB 所有 status='done' 的 papers。"""
     _ensure_db()
     output_dir = Path(output_dir)
     with db.SessionLocal() as s:
