@@ -88,6 +88,11 @@
 | C1 | `static/index.html` CSS 4 項（gap / msg-user 滿寬 sticky / msg-ai 滿寬 / qa-group）+ sendMessage × 過濾 + `tests/test_rag14_c1_css_and_filter.py` 新增（4 pytest）| `6593962` |
 | C2 | `static/index.html` loadChatHistory forEach qa-group 包裝 + in_progress currentGroup + sendMessage qaGroup 包裝 + `tests/test_rag14_c2_dom_structure.py` 新增（3 pytest）| `b8e8770` |
 | Check | Conformance 驗收與 baton/ 全量歸檔 | `ebf1b9c` |
+| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
+ | C2 | `static/index.html` loadChatHistory forEach qa-group 包裝... | `b8e8770` |
+ | Check | Conformance 驗收與 baton/ 全量歸檔 | `ebf1b9c` |
+| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
++| Fix (補) | 補交遺漏的 `AI_professor_chat.py` 後端多標籤分流路由與解析邏輯 | `待 baron 回填` |
 
 > **修法依據**：`.claude-logs/plans/2026-05-29_RAG-14_多標籤寬鬆格式跨文章RAG檢索_plan_v3.md`
 
@@ -585,8 +590,11 @@
 
 ## 索引（依類別）
 
+- - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
++ - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
+
 ### RAG（11 項 active）
-- ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官）
+- ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `待 baron 回填`）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）
 - ✅ ~~RAG-1 Bug Fix 系列 (BUG-F1~F6 + BUG-B1~B2)~~（已落地、全鏈路收官、8 commits、見 ✅ 完成區）
