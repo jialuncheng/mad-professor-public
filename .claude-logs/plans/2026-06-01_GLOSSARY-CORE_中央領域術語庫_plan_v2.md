@@ -110,7 +110,7 @@ grep -n "domain" processor/translate_processor.py
 | 六階段觸發鏈／命名規則／SOP 核查 | `.claude-logs/ref/WORKFLOW_SOP.md §3 §5 §6` |
 | 領域標準化對齊器（上游硬前置，提供 `LCCCode`） | `.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md` |
 | PipelineCore 大改版（三大共用真理源 U8、本庫為其一） | `.claude-logs/baton/2026-06-01_PIPE_PipelineCore流程重構大改版_plan_v10.md §2 U8` |
-| 書籍並行翻譯規劃 | `.claude-logs/baton/2026-06-01_TRANSLATE-BOOK_書籍並行翻譯與雙語故事板引導_plan_v4.md` |
+| 書籍並行翻譯規劃 | `.claude-logs/baton/2026-06-01_TRANSLATE-BOOK_書籍並行翻譯與雙語故事板引導_plan_v5.md` |
 | ORM 數據結構規格 | `models.py L87-157` |
 
 ---
