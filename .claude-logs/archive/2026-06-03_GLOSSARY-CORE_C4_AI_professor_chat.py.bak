@@ -4,9 +4,6 @@ import os
 import re
 from typing import List, Dict, Any, Generator, Tuple
 from llm.client import LLMClient
-# === [GLOSSARY-CORE C4 START] ===
-import settings  # GLOSSARY-CORE C4：讀 LLM_USE_GLOSSARY_ALIGN 旗標（預設 False）
-# === [GLOSSARY-CORE C4 END] ===
 
 # RAG-1 Phase 2 P2-2：hashtag 入口分流依賴；惰性 import 避免循環
 # （paper_manager → db → models 無循環、但維持 lazy 以對齊既有風格）
@@ -76,35 +73,38 @@ class AIProfessorChat:
             if len(working_history) > 10:
                 working_history = working_history[-10:]
 
-            # ──── RAG-1 Phase 2 P2-2：hashtag 入口分流 ────
-            # 依 plan §3.2.4 + Q3/Q4/Q6
-            # - 偵測 query 開頭 `#tag`
-            # - 0 篇符合 → yield warning + done、return（Q6）
-            # - 1 篇符合 → 替換 effective_paper_id + 用 cleaned_query、走既有路徑
-            # - 多篇符合 → 走 retrieve_multi_with_context、繞過 router、直接 LLM
+            # ──── RAG-1 Phase 2 P2-2：多標籤寬鬆入口分流 ────
             hashtag_routed_multi = False
             multi_context = ""
             cleaned_query_for_llm = query
-            if owner_id is not None and isinstance(query, str) and query.startswith("#"):
+            if owner_id is not None and isinstance(query, str) and query.strip().startswith("#"):
                 try:
                     import db
                     import paper_manager
                     with db.SessionLocal() as _s:
-                        tag, cleaned = paper_manager.parse_query_hashtag(
+                        tags, cleaned = paper_manager.parse_query_hashtags(
                             _s, owner_id, query
                         )
-                    if tag:
+                    if tags:
+                        # 收集所有匹配標籤的文獻 UUID (取聯集 union)
+                        tagged_uuids = []
                         with db.SessionLocal() as _s:
-                            tagged_uuids = paper_manager.list_paper_uuids_by_tag(
-                                _s, owner_id, tag
-                            )
+                            for tag in tags:
+                                uuids = paper_manager.list_paper_uuids_by_tag(
+                                    _s, owner_id, tag
+                                )
+                                for u in uuids:
+                                    if u not in tagged_uuids:
+                                        tagged_uuids.append(u)
+
                         self.logger.info(
-                            f"[P2-2 hashtag] owner={owner_id} tag={tag!r} "
+                            f"[P2-2 hashtag] owner={owner_id} tags={tags!r} "
                             f"matched_papers={len(tagged_uuids)}"
                         )
+
                         if not tagged_uuids:
-                            # Q6：0 篇 → 友善訊息、不阻塞 stream
-                            warn_msg = f"找不到含 #{tag} 的文獻。"
+                            # 0 篇符合
+                            warn_msg = f"找不到含 #{', #'.join(tags)} 的文獻。"
                             yield {'type': 'sentence', 'text': warn_msg}
                             yield {
                                 'type': 'done', 'reply': warn_msg,
@@ -112,11 +112,11 @@ class AIProfessorChat:
                             }
                             return
                         elif len(tagged_uuids) == 1:
-                            # 單篇：替換 paper_id、用 cleaned_query、走既有路徑
+                            # 單篇符合：走原有單篇 RAG 流程
                             effective_paper_id = tagged_uuids[0]
                             cleaned_query_for_llm = cleaned or query
                         else:
-                            # 多篇：標記走 multi、context 直接由 retriever 算
+                            # 多篇符合：啟用多文獻 RAG 檢索
                             hashtag_routed_multi = True
                             cleaned_query_for_llm = cleaned or query
                             if self.retriever is not None:
@@ -128,11 +128,12 @@ class AIProfessorChat:
                                     )
                                 except Exception as e:
                                     self.logger.error(
-                                        f"[P2-2 hashtag] retrieve_multi 失敗: {e}"
+                                        f"[P2-2 hashtag] retrieve_multi 失敗: {e}",
+                                        exc_info=True
                                     )
                                     multi_context = ""
                 except Exception as e:
-                    self.logger.error(f"[P2-2 hashtag] 入口分流失敗、回退單篇路徑: {e}")
+                    self.logger.error(f"[P2-2 hashtag] 入口分流失敗: {e}", exc_info=True)
 
             # 多篇 hashtag 走獨立路徑：繞 router、直接餵 context 給 LLM
             if hashtag_routed_multi:
@@ -329,33 +330,8 @@ class AIProfessorChat:
         if paper_data:
             domain = paper_data.get('_domain', '')
             if domain:
-                # === [GLOSSARY-CORE C4 START] ===
-                # 旗標 ON：按 domain（LCC）級聯拉取中央術語表，組「不可違背 System constraint」
-                # 注入，確保問答譯名與譯本 100% 一致；旗標 OFF（預設）：維持既有「當前文件主題」單行。
-                # 前台崩潰防護：query_cascade 單獨 try/except graceful degradation——任何 DB 異常
-                # 僅寫 error 日誌並退回舊行為，絕不讓資料庫異常阻斷/崩潰前台問答。
-                glossary_block = ""
-                if settings.LLM_USE_GLOSSARY_ALIGN:
-                    try:
-                        from processor.glossary_extractor import GlossaryManager
-                        glossary = GlossaryManager().query_cascade('en', 'zh-tw', domain)
-                        if glossary:
-                            term_lines = "\n".join(
-                                f"- {orig} → {trans}" for orig, trans in glossary.items()
-                            )
-                            glossary_block = (
-                                "\n\n【術語強約束 System constraint】以下專有名詞譯法不可違背，"
-                                f"回答時必須與論文譯本完全一致：\n{term_lines}"
-                            )
-                    except Exception:
-                        # 前台降級：DB/查詢異常僅記錄，退回原樣注入主題領域字串（舊行為）
-                        self.logger.error(
-                            "[glossary] Chat 術語注入失敗，降級回原行為", exc_info=True
-                        )
-                        glossary_block = ""
-                character_prompt = character_prompt + f"\n\n當前文件主題：{domain}" + glossary_block
-                explain_prompt = explain_prompt + f"\n\n當前文件主題：{domain}" + glossary_block
-                # === [GLOSSARY-CORE C4 END] ===
+                character_prompt = character_prompt + f"\n\n當前文件主題：{domain}"
+                explain_prompt = explain_prompt + f"\n\n當前文件主題：{domain}"
 
         system_message = f"{character_prompt}\n{explain_prompt}"
 
