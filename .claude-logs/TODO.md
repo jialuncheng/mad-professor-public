@@ -350,8 +350,8 @@
   - [x] ✅ done: C2 — 流式上傳與真實 IP 解析（U4 upload_paper 1MB 分塊流式 + %PDF/415/413 + U5 login X-Forwarded-For；3 pytest 全綠；images 路徑防逃逸未觸）
   - [x] ✅ done: C3 — 向量庫與 RAG LRU 動態快取（U3 廢 lifespan preload + chat 端點按需 Lazy Load + `vector_stores`/`_paper_cache` OrderedDict LRU 上限 5；`retrieve_*` 演算法 byte 不動；2 pytest 全綠）
   - [x] ✅ done: C4 — 並發信號量與子進程降優（U1 `PIPELINE_SEMAPHORE` 守 A 軌 run_pipeline + B 軌 run_pipeline_shadow + queued SSE；U2 pdf_processor 子進程 nice 19 soft-fail；2 pytest 全綠；A 軌 process 本體不動）
-  - [/] 🟡 WIP: C5 — 結構化計時埋點與 CLI 分析工具（U7 (phase,stage) 二維鍵）
-  - [ ] ⬜ 未開始: C6 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v3/六報告 + TODO ✅）
+  - [x] ✅ done: C5 — 結構化計時埋點與 CLI 分析工具（U7 (phase,stage) 二維鍵 performance_metric 落 pipeline_core(A軌映射)+orchestrator(P1-P4 附加式) + pipeline_finished/rag_finished + `scripts/analyze_performance.py`；orchestrator 20 pytest 維持全綠；2 pytest 新增全綠）
+  - [/] 🟡 WIP: C6 — Checkout / 收官歸檔（一次性歸檔 plan_v2/tasks_v3/六報告 + TODO ✅）
   - 工時：6 個 commits（C1-C5 實作 + C6 單一收官 Checkout）
   - 依賴：PIPE-CORE / PIPE-SCAFFOLD（已落地，提供 Orchestrator/雙軌派發點對齊接點）
 

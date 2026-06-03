@@ -17,9 +17,6 @@ P4 非阻塞派發（injectable dispatcher；真正 BackgroundTasks 屬 RAG-ASYN
 from __future__ import annotations
 
 import logging
-# === [API-PERF C5 START] U7 附加式計時埋點所需 ===
-import time
-# === [API-PERF C5 END] ===
 from typing import Callable, List, Optional, Tuple, Type
 
 from pipelines.context import PhaseEnum, PipelineContext
@@ -80,14 +77,9 @@ class Orchestrator:
             f"shadow={ctx.shadow} strategy={type(strategy).__name__}"
         )
 
-        # === [API-PERF C5 START] U7 附加式計時（不改 DAG/合約/Strategy 本體）===
-        _perf: List[dict] = []
-        # === [API-PERF C5 END] ===
-
         # 2. 宣告式推進 P1→P3（同步、交接點驗證）
         for phase, runner_name, field, expected in _PHASES:
             ctx.phase = phase
-            _c5_t0 = time.time()  # [API-PERF C5] per-phase 計時起點
             result = getattr(strategy, runner_name)(ctx)
             # 交接點驗證（U4）：合約型別斷言（① R1.1 禁欄位由合約 extra='forbid' 結構保證）
             if not isinstance(result, expected):
@@ -102,31 +94,6 @@ class Orchestrator:
                 self.early_emit_hook(ctx)  # Early Emit（Title/Author 快軌）
             if phase is PhaseEnum.P3:
                 ctx.reading_ready = True  # 閱讀器/Print PDF 解鎖（SPEC R4.1）
-            # === [API-PERF C5 START] U7 per-phase performance_metric（(phase,stage) 二維鍵）===
-            _c5_dur = round(time.time() - _c5_t0, 4)
-            _perf.append({"phase": phase.value, "stage": runner_name, "duration_seconds": _c5_dur})
-            logger.info(
-                f"[performance_metric] {ctx.paper_id} {phase.value}/{runner_name} {_c5_dur:.3f}s",
-                extra={"extra_fields": {
-                    "event": "performance_metric", "paper_id": ctx.paper_id,
-                    "owner_id": None, "doc_type": ctx.doc_type,
-                    "phase": phase.value, "stage": runner_name,
-                    "duration_seconds": _c5_dur,
-                }},
-            )
-            # === [API-PERF C5 END] ===
-
-        # === [API-PERF C5 START] U7 pipeline_finished（主鏈 P1-P3 彙總、reading_ready 達成）===
-        logger.info(
-            f"[pipeline_finished] {ctx.paper_id} reading_ready={ctx.reading_ready}",
-            extra={"extra_fields": {
-                "event": "pipeline_finished", "paper_id": ctx.paper_id,
-                "owner_id": None, "doc_type": ctx.doc_type, "success": True,
-                "duration_seconds": round(sum(m["duration_seconds"] for m in _perf), 4),
-                "phases_breakdown": {m["phase"]: {m["stage"]: m["duration_seconds"]} for m in _perf},
-            }},
-        )
-        # === [API-PERF C5 END] ===
 
         # 3. P4 非阻塞派發（不在主鏈 await；失敗僅標記、不阻主鏈，SPEC R4.2）
         ctx.phase = PhaseEnum.P4
@@ -136,7 +103,6 @@ class Orchestrator:
     @staticmethod
     def _default_dispatch_p4(strategy, ctx: PipelineContext) -> None:
         """骨架預設 P4 派發樁（同步執行 + 容錯）。真正背景任務由 RAG-ASYNC plan 注入。"""
-        _c5_t0 = time.time()  # [API-PERF C5] P4 計時起點
         try:
             result = strategy.run_phase4(ctx)
             if not isinstance(result, RagDbSpec):
@@ -152,15 +118,3 @@ class Orchestrator:
                 exc_info=True,
             )
             ctx.rag_status = "failed"
-        # === [API-PERF C5 START] U7 P4 RAG 獨立 rag_finished（不併主鏈 pipeline_finished）===
-        logger.info(
-            f"[rag_finished] {ctx.paper_id} rag_status={ctx.rag_status}",
-            extra={"extra_fields": {
-                "event": "rag_finished", "paper_id": ctx.paper_id,
-                "owner_id": None, "doc_type": ctx.doc_type,
-                "phase": "P4", "stage": "run_phase4",
-                "rag_status": ctx.rag_status,
-                "duration_seconds": round(time.time() - _c5_t0, 4),
-            }},
-        )
-        # === [API-PERF C5 END] ===

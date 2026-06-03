@@ -42,20 +42,6 @@ STAGE_NAMES = [
     "translate", "image_caption", "md_restore", "extra_info", "rag"
 ]
 
-# === [API-PERF C5 START] U7 11-stage → 四 Phase 暫映射（先行落地）===
-# plan v2 U7 / §7 Q3：API-PERF 先行於現行 11-stage，phase 以 stage 群組粗映射；
-# PIPE Orchestrator 落地後改由 PhaseEnum P1-P4 正式填值，performance_metric schema 零改。
-_STAGE_PHASE_MAP = {
-    "pdf2md": "P1", "analyze": "P1", "detect_domain": "P1", "md2json": "P1", "json_process": "P1",
-    "tiling": "P2",
-    "translate": "P3", "image_caption": "P3", "md_restore": "P3",
-    "extra_info": "P4", "rag": "P4",
-}
-
-def _phase_for_stage(stage: str) -> str:
-    return _STAGE_PHASE_MAP.get(stage, "P1")
-# === [API-PERF C5 END] ===
-
 class PipelineCore:
     """學術論文處理管線（不依賴 Qt，供 Web API 使用）"""
 
@@ -306,10 +292,6 @@ class PipelineCore:
         # 支援傳入已有的 output_paths（第二階段繼續處理）
         output_paths = dict(existing_paths) if existing_paths else {}
 
-        # === [API-PERF C5 START] U7 per-stage 計時累積（(phase,stage) 二維鍵）===
-        _perf_metrics = []
-        # === [API-PERF C5 END] ===
-
         self.logger.info(f"[pipeline] {pid} 進入 stage loop（stages={self.stages}）")
         i = 0
         while i < len(self.stages):
@@ -441,60 +423,13 @@ class PipelineCore:
                 output_paths[stage] = stage_output
                 self.logger.info(f"階段 {pid} {stage} 完成")
 
-            # === [API-PERF C5 START] U7 結構化計時埋點（(phase,stage) 二維鍵）===
-            _stage_dur = time.time() - _stage_t0
             self.logger.info(
-                f"[stage] {pid} {stage} 完成 耗時={_stage_dur:.2f}s"
+                f"[stage] {pid} {stage} 完成 耗時={time.time() - _stage_t0:.2f}s"
             )
-            _phase = _phase_for_stage(stage)
-            _perf_metrics.append({"phase": _phase, "stage": stage,
-                                  "duration_seconds": round(_stage_dur, 4)})
-            self.logger.info(
-                f"[performance_metric] {pid} {_phase}/{stage} {_stage_dur:.2f}s",
-                extra={"extra_fields": {
-                    "event": "performance_metric", "paper_id": pid,
-                    "owner_id": self._owner_id, "doc_type": _doc_type,
-                    "phase": _phase, "stage": stage,
-                    "duration_seconds": round(_stage_dur, 4),
-                }},
-            )
-            # === [API-PERF C5 END] ===
 
             i += 1
 
         self._current_stage = None
-
-        # === [API-PERF C5 START] U7 主鏈彙總 pipeline_finished + P4 RAG 獨立 rag_finished ===
-        try:
-            _p13 = [m for m in _perf_metrics if m["phase"] in ("P1", "P2", "P3")]
-            _p4 = [m for m in _perf_metrics if m["phase"] == "P4"]
-            _breakdown = {}
-            for m in _p13:
-                _breakdown.setdefault(m["phase"], {})[m["stage"]] = m["duration_seconds"]
-            self.logger.info(
-                f"[pipeline_finished] {pid} reading_ready",
-                extra={"extra_fields": {
-                    "event": "pipeline_finished", "paper_id": pid,
-                    "owner_id": self._owner_id, "doc_type": _doc_type, "success": True,
-                    "duration_seconds": round(sum(m["duration_seconds"] for m in _p13), 4),
-                    "phases_breakdown": _breakdown,
-                }},
-            )
-            if _p4:
-                _rag_status = "ready" if "rag" in output_paths else "rag_failed"
-                self.logger.info(
-                    f"[rag_finished] {pid} {_rag_status}",
-                    extra={"extra_fields": {
-                        "event": "rag_finished", "paper_id": pid,
-                        "owner_id": self._owner_id, "doc_type": _doc_type,
-                        "rag_status": _rag_status,
-                        "duration_seconds": round(sum(m["duration_seconds"] for m in _p4), 4),
-                        "phases_breakdown": {"P4": {m["stage"]: m["duration_seconds"] for m in _p4}},
-                    }},
-                )
-        except Exception as _perf_e:
-            self.logger.warning(f"[performance_metric] 彙總埋點失敗（soft、不阻主鏈）: {_perf_e}")
-        # === [API-PERF C5 END] ===
 
         final_paths = {}
         if 'md_restore' in output_paths:
