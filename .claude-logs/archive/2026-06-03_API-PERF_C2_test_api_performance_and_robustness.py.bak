@@ -1,0 +1,52 @@
+"""API-PERF API 技術審計與效能優化測試（plan v2 §6.1 / tasks_v3 §6）。
+
+逐 Commit 追加：
+- C1（U6）：SQLite 連接池 QueuePool + busy_timeout 30s + pool_pre_ping。
+- C2（U4/U5）/ C3（U3）/ C4（U1/U2）/ C5（U7）後續追加。
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
+# ── C1（U6）：資料庫連接池與防鎖死配置 ──
+
+def test_db_busy_timeout_and_pool():
+    """db.engine 配 QueuePool(pool_size=5, max_overflow=10, pool_pre_ping=True)；
+    SQLite 連線 busy_timeout=30000（U6）。"""
+    from sqlalchemy.pool import QueuePool
+
+    import db
+
+    # 連接池型別與容量
+    assert isinstance(db.engine.pool, QueuePool)
+    assert db.engine.pool.size() == 5            # pool_size
+    assert db.engine.pool._max_overflow == 10    # max_overflow
+    assert db.engine.pool._pre_ping is True       # pool_pre_ping
+
+    # 運行期 PRAGMA busy_timeout = 30000（僅 sqlite）
+    if db._IS_SQLITE:
+        db._ensure_sqlite_dir()
+        with db.engine.connect() as conn:
+            val = conn.exec_driver_sql("PRAGMA busy_timeout").scalar()
+        assert int(val) == 30000
+
+
+def test_db_pragma_foreign_keys_and_wal_preserved():
+    """既有 PRAGMA（foreign_keys / WAL）未被 C1 破壞（不可動防線）。"""
+    import db
+
+    if not db._IS_SQLITE:
+        return
+    db._ensure_sqlite_dir()
+    with db.engine.connect() as conn:
+        fk = conn.exec_driver_sql("PRAGMA foreign_keys").scalar()
+        journal = conn.exec_driver_sql("PRAGMA journal_mode").scalar()
+    assert int(fk) == 1
+    assert str(journal).lower() == "wal"

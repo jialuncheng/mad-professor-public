@@ -349,15 +349,7 @@ async def login_page():
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    # === [API-PERF C2 START] U5 真實 IP 解析（防反向代理閘道鎖死）===
-    # 優先取 X-Forwarded-For 最左（真實 client IP），無則降級 request.client.host；
-    # 確保暴力破解僅鎖死惡意用戶實體 IP、不鎖死 Docker/Nginx/LB 代理閘道 IP。
-    _xff = request.headers.get("X-Forwarded-For")
-    if _xff:
-        ip = _xff.split(",")[0].strip() or "unknown"
-    else:
-        ip = request.client.host if request.client else "unknown"
-    # === [API-PERF C2 END] ===
+    ip = request.client.host if request.client else "unknown"
     now = time.time()
     with _login_lock:
         fails = [t for t in _login_attempts.get(ip, []) if now - t < 60]
@@ -453,43 +445,24 @@ async def upload_paper(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
-    # === [API-PERF C2 START] U4 1MB 分塊流式寫入（取代一次性 await file.read()）===
-    # 內存常數 (<10MB)：每次僅讀 1MB 緩衝直寫磁碟；首塊校驗 %PDF 魔術字節（415）、
-    # 累計超 100MB 立即截斷刪檔（413）；失敗一律清理 partial 檔。
+    content = await file.read()
+
+    # 檔案大小上限 100 MB
+    if len(content) > 100 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"error": "檔案大小超過 100 MB 上限"})
+
+    # PDF magic bytes 驗證（副檔名檢查之後）
+    if content[:4] != b'%PDF':
+        return JSONResponse(status_code=415, content={"error": "僅支援 PDF 格式"})
+
     paper_id = paper_manager.sanitize_paper_id(file.filename)
     paper_dir = paper_manager.paper_dir(OUTPUT_DIR, current_user.id, paper_id)
     paper_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = paper_dir / f"{paper_id}.pdf"
 
-    _CHUNK_SIZE = 1024 * 1024            # 1MB 分塊
-    _MAX_SIZE = 100 * 1024 * 1024        # 100MB 上限
-    _total = 0
-    _first = True
-    _reject = None                       # (status_code, message)
+    # 儲存上傳的 PDF
     with open(pdf_path, 'wb') as f:
-        while True:
-            chunk = await file.read(_CHUNK_SIZE)
-            if not chunk:
-                break
-            if _first:
-                _first = False
-                if chunk[:4] != b'%PDF':  # 首塊魔術字節校驗
-                    _reject = (415, "僅支援 PDF 格式")
-                    break
-            _total += len(chunk)
-            if _total > _MAX_SIZE:        # 累計超限立即截斷
-                _reject = (413, "檔案大小超過 100 MB 上限")
-                break
-            f.write(chunk)
-    if _first and _reject is None:        # 空檔（無任何 chunk）視為非 PDF
-        _reject = (415, "僅支援 PDF 格式")
-    if _reject is not None:
-        try:
-            pdf_path.unlink(missing_ok=True)  # 清理 partial 檔
-        except OSError:
-            pass
-        return JSONResponse(status_code=_reject[0], content={"error": _reject[1]})
-    # === [API-PERF C2 END] ===
+        f.write(content)
 
     # 非阻塞 PDF 無損優化（Atomic Overwrite，失敗靜默降級 — OPTIMIZE-1 C1/C2）
     loop = asyncio.get_event_loop()
