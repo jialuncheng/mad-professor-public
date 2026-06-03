@@ -25,6 +25,11 @@
   - `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md` — C3 Run（Entry & Feature Flag：domain_normalizer.py 暴露 normalize_to_lcc(raw_domain, context_text=None)->LCCCode 對齊 PIPE-SPEC/master v10 + settings.LLM_USE_GLOSSARY_ALIGN 預設 False 走舊 raw 直注；`=== [DOMAIN-NORM C3 START/END] ===` 包裹 + settings.py 改前 .bak）
   - `2026-06-03_DOMAIN-NORM_Check_提示詞.md` — Check（C5 收官：三維度 Conformance 驗收 U1-U4/測試 §6.1-§6.4/不可動清單 + 一次性 mv plan_v2/tasks/C1-C5 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；前置 18:46 Check 經 baron 拍板「先補 C4 Unit Tests」重導為 C5 收官）
 
+### GLOSSARY-CORE 系列
+- 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性（2026-06-03 Tasks）**
+  - `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Checkout 收官；plan v2 中央術語庫 + 級聯查詢自癒 + 跨語系一致性；上游真理源 DomainNormalizer LCCCode 已凍結；中間 Commit 留 baton、唯 Checkout 一次性歸檔；對齊 PIPE master v10/PIPE-SPEC/PIPE-CORE/DOMAIN-NORM）
+  - `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md` — C1 Run（Database Schema：models.py 新增 GlobalGlossary 表（source_lang/target_lang/term_key/original_term/translation/domain/source）+ (source_lang,target_lang,term_key,domain) 聯合唯一約束 + 級聯查詢輔助索引，`=== [GLOSSARY-CORE C1 START/END] ===` 包裹 + 改前 .bak；Paper 表不動）
+
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
   - `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不給 commit；OP-1 Checkout plan baton→plans 保留 _v2、OP-2 五路黃金基準物理存盤、OP-3 自動化 Regression Diff 比對腳本 + 同步 TODO.md）
@@ -150,6 +155,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md`
+- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
@@ -163,5 +170,3 @@
 - 2026-06-03 — `2026-06-03_API-PERF_C1_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_Check_提示詞.md`
-- 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-2_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md`

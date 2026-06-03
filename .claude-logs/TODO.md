@@ -19,7 +19,7 @@
 | C2 | 新建 `processor/domain_normalizer.py` DomainNormalizer：快取查→LLM 內容判定（cheap model Temp=0.0、履歷按技能）→動態註冊 Domains（on_conflict_do_nothing 不塞單字）→寫回；**LLM 呼叫在 session.begin() 交易外** + try/except 降級 general | `125af97` |
 | C3 | 暴露模組級單一入口 `normalize_to_lcc(raw_domain, context_text=None)->LCCCode`（逐字對齊 PIPE-SPEC §1.2.1 / master v10 L69）+ `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False 走舊 raw 直注、零風險）；惰性單例 | `7e7f2a1` |
 | C4 | 新建 `tests/test_domain_normalizer.py` 4 pytest（內容分類 HF/QA + temp=0.0 / 冷門動態註冊 QE 不塞單字 / 快取命中 0 API / 旗標 off 保舊行為）；全套件 452 passed | `aeb4fc2` |
-| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v2/tasks/C1-C5 報告）+ 結案 | `待 baron 回填` |
+| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v2/tasks/C1-C5 報告）+ 結案 | `1559b08` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md`
 > **流程校正**：原 18:46 Check 提示詞欲收斂為 4-commit（C4=Check），經 baron 拍板「先補 C4 Unit Tests 再收官」→ 回歸 5-commit（C4=Unit Tests / C5=Check）。
@@ -372,6 +372,17 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性**（`plans/2026-06-01_GLOSSARY-CORE_中央領域術語庫_plan_v2.md`）
+  - [x] ✅ C1 — Database Schema（資料庫結構與聯合唯一索引）：`models.py` 新增 `GlobalGlossary`（`(source_lang,target_lang,term_key,domain)` 聯合唯一約束）（待 baron 回填）
+  - [/] 🟡 WIP C2 — Glossary Core & Cascading Retrieval（術語庫核心與級聯優先權查詢）：`processor/glossary_extractor.py` 級聯查詢+LLM 提取+冪等回填（LLM 在交易外）
+  - [ ] ⬜ 未開始: C3 — Translate Integration & Backfill（翻譯管線術語融合與增量回填）：`translate_processor.py`+`pipeline_core.py` 旗標閘門注入與背景回填（單文路徑；書籍融合延後）
+  - [ ] ⬜ 未開始: C4 — Chat Injection（前台問答術語強約束注入）：`AI_professor_chat.py` 旗標閘門按 domain 拉術語注入 System Prompt 契約
+  - [ ] ⬜ 未開始: C5 — Hot-Pluggable CLI（自癒補丁 CLI）：`tools/manage_glossary.py`（--init / --test-pipeline / --backfill-existing-papers）
+  - [ ] ⬜ 未開始: C6 — Unit Tests（單元測試）：`tests/test_glossary_core.py` 5 測試（唯一約束/級聯優先/書籍融合優先/Chat 注入/CLI 回填）
+  - [ ] ⬜ 未開始: C7 — Checkout（收官與成果審計）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C7 報告
+  - 工時：7 個 commits（C1-C6 實作/測試 + C7 收官 Checkout）
+  - 依賴：DOMAIN-NORM (已完成)；書籍並行融合須待 TRANSLATE-BOOK 落地（C3 延後子項）
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
