@@ -23,6 +23,7 @@
   - `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md` — C1 Run（Database Schema：models.py 新增 Domains（lcc_code PK + name 動態註冊）+ DomainMapping（raw→lcc 快取）兩表，`=== [DOMAIN-NORM C1 START/END] ===` 包裹 + 改前 .bak；Paper 表不動）
   - `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md` — C2 Run（Normalizer Core：新建 processor/domain_normalizer.py 快取查→LLM 收斂 Temp=0.0→動態註冊 INSERT OR IGNORE→寫回；LLM 呼叫在 DB 交易外 + try/except 降級 general + logging SOP）
   - `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md` — C3 Run（Entry & Feature Flag：domain_normalizer.py 暴露 normalize_to_lcc(raw_domain, context_text=None)->LCCCode 對齊 PIPE-SPEC/master v10 + settings.LLM_USE_GLOSSARY_ALIGN 預設 False 走舊 raw 直注；`=== [DOMAIN-NORM C3 START/END] ===` 包裹 + settings.py 改前 .bak）
+  - `2026-06-03_DOMAIN-NORM_Check_提示詞.md` — Check（C4 收官：三維度 Conformance 驗收 U1-U4/測試 §6.1-§6.3/不可動清單 + 一次性 mv plan_v2/tasks/C1-C4 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；baron 將 C4 重定義為 Check 收官、原 Unit Tests commit 收斂）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -149,6 +150,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_DOMAIN-NORM_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md`
@@ -163,4 +165,3 @@
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md`
-- 2026-06-02 — `2026-06-02_PIPE-SCAFFOLD_Tasks_提示詞.md`
