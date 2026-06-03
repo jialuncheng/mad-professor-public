@@ -188,3 +188,29 @@ class DomainNormalizer:
                 raw_domain, DEFAULT_LCC, exc_info=True,
             )
             return DEFAULT_LCC
+
+
+# === [DOMAIN-NORM C3 START] ===
+# 模組級單例（旗標啟用時才實例化、避免 import 期建 LLMClient/DB 連線）。
+_normalizer_singleton: Optional[DomainNormalizer] = None
+
+
+def _get_normalizer() -> DomainNormalizer:
+    global _normalizer_singleton
+    if _normalizer_singleton is None:
+        _normalizer_singleton = DomainNormalizer()
+    return _normalizer_singleton
+
+
+def normalize_to_lcc(raw_domain: str, context_text: str | None = None) -> LCCCode:
+    """領域標準化對齊器單一公開入口（簽名對齊 PIPE-SPEC §1.2.1 / PIPE master v10 L69）。
+
+    熱插拔旗標 settings.LLM_USE_GLOSSARY_ALIGN：
+      - False（預設）→ 走舊行為：直接回傳 raw_domain，**不查 DB、不呼 LLM**，零風險。
+      - True → 委派 DomainNormalizer.normalize（快取→LLM→動態註冊→寫回，失敗降級 general）。
+    """
+    if not settings.LLM_USE_GLOSSARY_ALIGN:
+        # 舊行為路徑：原樣回傳 raw（保留既有 domain 直注語意，零副作用）。
+        return raw_domain
+    return _get_normalizer().normalize(raw_domain, context_text)
+# === [DOMAIN-NORM C3 END] ===
