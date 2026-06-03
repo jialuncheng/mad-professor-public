@@ -295,12 +295,12 @@ def test_process_query_stream_zero_papers_for_known_tag(
     # 所以單純這條件不會觸發 0 匹配 warning。
     # 真實 0 篇情境：先寫一個 done paper 含 hashtag、執行 parse 成功、
     # 然後在 list 前刪掉/降級 → 太繞。
-    # 改用 monkeypatch：直接 mock paper_manager.parse_query_hashtag 回 ('ghost', '問題?')
+    # 改用 monkeypatch：直接 mock paper_manager.parse_query_hashtags 回 (['ghost'], '問題?')
     # + mock list_paper_uuids_by_tag 回 []
     import paper_manager as pm_mod
     monkeypatch.setattr(
-        pm_mod, 'parse_query_hashtag',
-        lambda s, oid, q: ('ghost', '問題?')
+        pm_mod, 'parse_query_hashtags',
+        lambda s, oid, q: (['ghost'], '問題?')
     )
     monkeypatch.setattr(
         pm_mod, 'list_paper_uuids_by_tag',
@@ -326,8 +326,8 @@ def test_process_query_stream_multi_papers_routes_to_multi(
     """多篇符合 hashtag → 走 retrieve_multi_with_context + 繞 router。"""
     import paper_manager as pm_mod
     monkeypatch.setattr(
-        pm_mod, 'parse_query_hashtag',
-        lambda s, oid, q: ('hr', '比較這幾篇')
+        pm_mod, 'parse_query_hashtags',
+        lambda s, oid, q: (['hr'], '比較這幾篇')
     )
     monkeypatch.setattr(
         pm_mod, 'list_paper_uuids_by_tag',
@@ -360,15 +360,15 @@ def test_process_query_stream_no_hashtag_falls_back_to_single(
     temp_db, monkeypatch, mocked_chat
 ):
     """無 hashtag 的 query → 完全不觸發 hashtag 分流、走既有 router 路徑。"""
-    # parse_query_hashtag 不應該被呼叫（query 不以 # 開頭、入口先短路）
+    # parse_query_hashtags 不應該被呼叫（query 不以 # 開頭、入口先短路）
     parse_called = {'n': 0}
 
     def _parse(s, oid, q):
         parse_called['n'] += 1
-        return (None, q)
+        return ([], q)
 
     import paper_manager as pm_mod
-    monkeypatch.setattr(pm_mod, 'parse_query_hashtag', _parse)
+    monkeypatch.setattr(pm_mod, 'parse_query_hashtags', _parse)
 
     # mock _make_decision 回 direct_answer
     mocked_chat._make_decision = MagicMock(return_value={
@@ -386,3 +386,42 @@ def test_process_query_stream_no_hashtag_falls_back_to_single(
     assert mocked_chat._make_decision.call_count == 1
     # multi context 沒被呼叫
     mocked_chat.retriever.retrieve_multi_with_context.assert_not_called()
+
+
+def test_parse_query_hashtags_combinations(temp_db):
+    """測試全新 parse_query_hashtags 在多標籤、容錯關閉字元及多種分隔符號下的解析規格。"""
+    db_mod_p, models_mod, pm = temp_db
+    _make_paper(db_mod_p, models_mod, 1, 'p1', ['sst', 'cv', 'latex'])
+
+    with db_mod_p.SessionLocal() as s:
+        # 1. 測試多標籤 + 關閉符號 × + 逗號空格
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#sst×, #cv× 這份簡報的摘要')
+        assert tags == ['sst', 'cv']
+        assert cleaned == '這份簡報的摘要'
+
+        # 2. 測試多標籤 + 關閉符號 x + 空格
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#sstx #cvx 這份簡報')
+        assert tags == ['sst', 'cv']
+        assert cleaned == '這份簡報'
+
+        # 3. 測試多標籤 + 換行
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#sst\n#cv\n這份簡報')
+        assert tags == ['sst', 'cv']
+        assert cleaned == '這份簡報'
+
+        # 4. 測試手打不帶 x 且結尾為 x 的標籤（防範誤切 late + x）
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#latex 這篇有什麼重點？')
+        assert tags == ['latex']
+        assert cleaned == '這篇有什麼重點？'
+
+        # 5. 測試純標籤無提問
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#sst× #cv×')
+        assert tags == ['sst', 'cv']
+        assert cleaned == ''
+
+        # 6. 測試包含無效（不存在）標籤時，自動忽略無效標籤
+        tags, cleaned = pm.parse_query_hashtags(s, 1, '#sst×, #unknown× 這份簡報')
+        # 遇到未知標籤 '#unknown×' 應停止解析標籤，將其視為提問本文一部分
+        assert tags == ['sst']
+        assert cleaned == '#unknown× 這份簡報'
+
