@@ -21,6 +21,7 @@
 - 🟡 **DOMAIN-NORM 領域標準化對齊器（2026-06-03 Tasks + C1 WIP）**
   - `2026-06-03_DOMAIN-NORM_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Check/Checkout 驗收；plan v2 動態 LCC 生成 + Domains/DomainMapping 表 + context_text + LLM_USE_GLOSSARY_ALIGN 旗標；中間 Commit 留 baton、唯 Check 一次性歸檔；對齊 PIPE master v10/PIPE-SPEC v2）
   - `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md` — C1 Run（Database Schema：models.py 新增 Domains（lcc_code PK + name 動態註冊）+ DomainMapping（raw→lcc 快取）兩表，`=== [DOMAIN-NORM C1 START/END] ===` 包裹 + 改前 .bak；Paper 表不動）
+  - `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md` — C2 Run（Normalizer Core：新建 processor/domain_normalizer.py 快取查→LLM 收斂 Temp=0.0→動態註冊 INSERT OR IGNORE→寫回；LLM 呼叫在 DB 交易外 + try/except 降級 general + logging SOP）
 
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
@@ -147,6 +148,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_Check_提示詞.md`
@@ -161,4 +163,3 @@
 - 2026-06-03 — `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-SCAFFOLD_Tasks_提示詞.md`
 - 2026-06-02 — `2026-06-02_PIPE-CORE_Check_提示詞.md`
-- 2026-06-02 — `2026-06-02_PIPE-CORE_OP-3_run_提示詞.md`

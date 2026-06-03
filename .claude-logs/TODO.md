@@ -360,9 +360,9 @@
 ### 🔴 高優先
 
 - 🟡 **DOMAIN-NORM 領域標準化對齊器**（`.claude-logs/plans/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md`）
-  - [x] ✅ C1 — Database Schema（資料庫表建立）：`models.py` 新增 `Domains`（lcc_code PK + name 動態註冊）+ `DomainMapping`（raw→lcc 快取）兩表；`Paper` 等既有表不動（待 baron 回填）
-  - [ ] 🟡 WIP: C2 — Normalizer Core（對齊器核心邏輯）：`processor/domain_normalizer.py` 內容判定（LLM cheap Temp=0.0）+ 動態註冊不塞單字 + 快取防重；LLM 呼叫在 DB 交易外
-  - [ ] ⬜ 未開始: C3 — Entry & Feature Flag（單一入口與熱插拔旗標）：`normalize_to_lcc(raw_domain, context_text=None)->LCCCode` + `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False、舊行為零風險）
+  - [x] ✅ C1 — Database Schema（資料庫表建立）：`models.py` 新增 `Domains`（lcc_code PK + name 動態註冊）+ `DomainMapping`（raw→lcc 快取）兩表；`Paper` 等既有表不動（`8d4f75f`）
+  - [x] ✅ C2 — Normalizer Core（對齊器核心邏輯）：`processor/domain_normalizer.py` 內容判定（LLM cheap Temp=0.0）+ 動態註冊不塞單字 + 快取防重；LLM 呼叫在 DB 交易外（待 baron 回填）
+  - [ ] 🟡 WIP: C3 — Entry & Feature Flag（單一入口與熱插拔旗標）：`normalize_to_lcc(raw_domain, context_text=None)->LCCCode` + `settings.LLM_USE_GLOSSARY_ALIGN`（預設 False、舊行為零風險）
   - [ ] ⬜ 未開始: C4 — Unit Tests（單元測試）：`tests/test_domain_normalizer.py` 4 測試（內容分類 / 動態註冊不塞單字 / 快取命中 0 API / 旗標 off 保舊行為）
   - [ ] ⬜ 未開始: C5 — Check / Checkout（收官歸檔）：Conformance 驗收 + 一次性歸檔 plan_v2/tasks/C1-C5 報告
   - 工時：5 個 commits（C1-C4 實作 + C5 單一收官 Check）
