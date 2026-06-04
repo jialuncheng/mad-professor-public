@@ -29,6 +29,7 @@
 - 🟡 **TRANSLATOR 雙模式原子翻譯器（2026-06-04 Tasks）**
   - `2026-06-04_TRANSLATOR_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Checkout 收官；plan v10 八輪 review 定稿：InjectionContext/TranslateMode 落 processor/translator.py + caption 專屬提示詞 + thinking_config 受控擴充〔§4 唯一例外〕+ GlossaryReadySpec.domain_name 載體；對齊 PIPE-SPEC §1.2.3 v3/DOMAIN-NORM/GLOSSARY-CORE/PIPE-CORE/model_recommendations §1.1）
   - `2026-06-04_TRANSLATOR_C1_run_提示詞.md` — C1 Run（Contract & Context：新建 processor/translator.py 定義 InjectionContext〔7 欄 frozen+forbid〕+ TranslateMode〔NORMAL/DEEP_THINK〕；pipelines/contracts.py GlossaryReadySpec 補 domain_name，`=== [TRANSLATOR C1 START/END] ===` 包裹 + 改前 .bak）
+  - `2026-06-04_TRANSLATOR_C2_run_提示詞.md` — C2 Run（Prompt Engine：translator.py 補 Translator 類 + 系統提示詞五步〔text_type 路由含 caption / doc_type Style Hints / LCC 注入讀 ctx.domain_name 零 DB / Glossary 強約束含大小寫不敏感 / constraints〕+ 用戶提示詞；新建 prompt/translate/caption_translate_prompt.txt，C2 標記包裹 + 改前 .bak）
 
 ### GLOSSARY-CORE 系列
 - 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性（2026-06-03 Tasks）**
@@ -166,6 +167,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_TRANSLATOR_C2_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C1_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_GLOSSARY-CORE_Check_提示詞.md`
@@ -180,4 +182,3 @@
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_API-PERF_C5_run_提示詞.md`

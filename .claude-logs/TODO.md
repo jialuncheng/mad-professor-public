@@ -392,9 +392,9 @@
 ### 🔴 高優先
 
 - 🟡 **TRANSLATOR 雙模式原子翻譯器**（`.claude-logs/baton/2026-06-01_TRANSLATOR_雙模式原子翻譯器_plan_v10.md`）
-  - [x] ✅ C1 — Contract & Context（合約與上下文模型）：`processor/translator.py` 定義 InjectionContext（7 欄 frozen+forbid）+ TranslateMode；`pipelines/contracts.py` GlossaryReadySpec 補 domain_name（待 baron 回填）
-  - [/] 🟡 WIP C2 — Prompt Engine（提示詞與約束動態注入）：系統提示詞五步（text_type 路由含 caption / Style Hints / LCC 注入零 DB / Glossary 強約束含大小寫不敏感 / constraints）+ 用戶提示詞 + 新建 caption_translate_prompt.txt
-  - [ ] ⬜ 未開始: C3 — Dual-Mode Routing & Thinking（雙模式路由與思考受控擴充）：settings.LLM_THINKING_BUDGET + llm/client.py chat() 補 thinking_config 受控例外（§4 唯一例外）+ NORMAL/DEEP_THINK 路由
+  - [x] ✅ C1 — Contract & Context（合約與上下文模型）：`processor/translator.py` 定義 InjectionContext（7 欄 frozen+forbid）+ TranslateMode；`pipelines/contracts.py` GlossaryReadySpec 補 domain_name（`1558f79`）
+  - [x] ✅ C2 — Prompt Engine（提示詞與約束動態注入）：系統提示詞五步（text_type 路由含 caption / Style Hints / LCC 注入零 DB / Glossary 強約束含大小寫不敏感 / constraints）+ 用戶提示詞 + 新建 caption_translate_prompt.txt（待 baron 回填）
+  - [/] 🟡 WIP C3 — Dual-Mode Routing & Thinking（雙模式路由與思考受控擴充）：settings.LLM_THINKING_BUDGET + llm/client.py chat() 補 thinking_config 受控例外（§4 唯一例外）+ NORMAL/DEEP_THINK 路由
   - [ ] ⬜ 未開始: C4 — Formatting Fallback & Tests（分行容錯與單元測試）：U4 re.sub 兜底 + tests/test_translator.py 8 測試
   - [ ] ⬜ 未開始: C5 — Checkout & Clean（結案收官歸檔）：Conformance 驗收 + 一次性歸檔 plan_v10/tasks/C1-C5 報告
   - 工時：5 個 commits（C1-C4 實作/測試 + C5 收官 Checkout）
