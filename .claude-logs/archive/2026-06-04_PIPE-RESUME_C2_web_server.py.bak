@@ -609,14 +609,7 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
         # 實際雙跑須待 PIPE-RESUME 註冊策略後（旗標 false 時本函式不被觸發）。
         from pipelines import Orchestrator, PipelineContext
         loop = asyncio.get_event_loop()
-        # === [PIPE-RESUME C2 START] 影子派發傳入策略輸入源（pdf_path/owner_id）===
-        # PIPE-RESUME P1（run_phase1）需 pdf_path 定位輸入 PDF、owner_id 解析 per-paper 輸出目錄。
-        # 影子 B 軌與 A 軌共用同一實體 PDF；輸出目錄靠 paper_id_shadow（_shadow 後綴）物理隔離。
-        ctx = PipelineContext(
-            doc_type=doc_type, paper_id=paper_id_shadow, shadow=True,
-            pdf_path=str(pdf_path), owner_id=owner_id,
-        )
-        # === [PIPE-RESUME C2 END] ===
+        ctx = PipelineContext(doc_type=doc_type, paper_id=paper_id_shadow, shadow=True)
         # === [API-PERF C4 START] U1 並發信號量守護（B 軌；與 A 軌共用全系統上限）===
         if PIPELINE_SEMAPHORE.locked():
             with tasks_lock:

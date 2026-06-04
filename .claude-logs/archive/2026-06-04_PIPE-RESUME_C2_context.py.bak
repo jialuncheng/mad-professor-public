@@ -46,13 +46,6 @@ class PipelineContext(BaseModel):
     phase: PhaseEnum = PhaseEnum.P1
     reading_ready: bool = False  # P3 完成後 True（閱讀器/Print PDF 解鎖，SPEC R4.1）
     rag_status: Literal["pending", "ready", "failed"] = "pending"  # P4 背景回填
-    # === [PIPE-RESUME C2 START] 策略輸入源（首落地隨 PIPE-RESUME；五路共用）===
-    # P1 策略（run_phase1）定位輸入 PDF 與輸出目錄所需：派發點（web_server 雙軌）寫入，
-    # 策略以 `paper_manager.paper_dir(OUTPUT_DIR, owner_id, paper_id)` 解析 per-paper 輸出目錄。
-    # 預設 None 維持既有 PIPE-CORE/SCAFFOLD 測試與骨架調用前向相容。
-    pdf_path: Optional[str] = None   # 輸入 PDF 絕對/相對路徑（派發點寫入）
-    owner_id: Optional[int] = None   # 擁有者 ID（per-owner 輸出目錄隔離）
-    # === [PIPE-RESUME C2 END] ===
 
     # ── 四份凍結合約產物（對應 Phase 寫入，寫入前為 None）──
     ingestion: Optional[IngestionMetadataSpec] = None      # 合約①（P1 寫入）
