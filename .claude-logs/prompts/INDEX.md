@@ -73,6 +73,7 @@
   - `2026-06-04_PIPE-RESUME_C5_run_提示詞.md` — C5 Run（P4 Async RAG ≥3：run_phase4 讀 ctx.bilingual.final_zh_path → RagProcessor()._create_vector_store〔vectors_path + paper_db_id〕→ _is_chunk_meaningful(doc_type=resume ≥3 保 email/phone/url) → replace_paper_chunks 批量寫庫〔DB 交易不含 LLM/Embedding、paper_db_id None 優雅降級〕→ 讀 index_meta.json + chunks_total → RagDbSpec；錯誤 logger.warning(exc_info)+拋出由 Orchestrator 標 rag_status='failed' 不阻 reading_ready，`=== [PIPE-RESUME C5 START/END] ===` 包裹 + 改前 .bak；四 Phase 全落地）
   - `2026-06-04_PIPE-RESUME_C6_run_提示詞.md` — C6 Run（單元測試：新建 tests/test_resume_pipeline.py mock LLM/Embedding 隔離；策略分派 get_strategy('resume')→ResumePipeline 無 doc_type 分支 / P1 IngestionMetadataSpec 無 Abstract/LCC/Glossary / P2 normalize_to_lcc cache+fallback general+GlossaryReadySpec abstract/translated_abstract/domain_name+缺詞自癒+凍結 / P3 100% Bypass+doc_type='resume'+translated_abstract 沿用 / P4 _is_chunk_meaningful ≥3 保 email/phone/url+RAG 失敗不阻 reading_ready，`# === [PIPE-RESUME C6 START/END] ===` 包裹、純新增檔）
   - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
+  - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -180,6 +181,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C7_check_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C6_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C5_run_提示詞.md`
@@ -194,4 +196,3 @@
 - 2026-06-04 — `2026-06-04_GLOSSARY-CORE_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C3_run_提示詞.md`

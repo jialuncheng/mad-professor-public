@@ -29,11 +29,3 @@ __all__ = [
     "Orchestrator",
     "OrchestratorError",
 ]
-
-# === [PIPE-RESUME C7-hotfix START] ===
-# 惰性註冊觸發：import resume_pipeline 使其 @PipelineFactory.register('resume') 裝飾器執行。
-# runtime（web_server `from pipelines import ...`）原本不 import 具體策略 → get_strategy('resume')
-# 回 NullStrategy → P1 NotImplementedError 阻斷。於此顯式 import 修復線上策略註冊缺失。
-# 後續四路（VISUAL/ACADEMIC/LITEDOC/BOOK）落地時須各補同款 import（見 hotfix 銜接 §1）。
-from pipelines import resume_pipeline  # noqa: E402,F401
-# === [PIPE-RESUME C7-hotfix END] ===

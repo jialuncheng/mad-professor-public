@@ -21,7 +21,8 @@
 | C4 | 實作 `run_phase3`：`InjectionContext(doc_type='resume')` 100% Bypass 整份 `Translator.translate(NORMAL,content)`〔不切 Section/不開 Sliding Window〕+ md_restore 純樣板渲染〔廢除 extra_info、嚴禁 AI Questions/Summary〕→ final_zh/final_en → BilingualMarkdownSpec〔translated_abstract 沿用 P2〕 | `8971a19` |
 | C5 | 實作 `run_phase4`：複用 `RagProcessor._create_vector_store`〔`_is_chunk_meaningful` 門檻 ≥3 保技能詞/email/phone/url + FAISS + paper_chunks 批量寫庫 + index_meta〕；Embedding 於交易外、paper_db_id None 優雅降級；異常拋出由 Orchestrator 標 rag_status='failed' 不阻 reading_ready → RagDbSpec | `e8a7429` |
 | C6 | 新建 `tests/test_resume_pipeline.py` 15 測試（策略分派 + P1-P4 契約、mock LLM/Embedding 隔離）；全套件 480 passed | `fabb114` |
-| C7 | Conformance 三維度驗收（目標規格 U1-U5 / 測試 §6 / 不可動清單）+ baton/ 一次性歸檔（plan_v1〔保留 _v1〕/tasks/C1-C7 報告）+ 歷史全量 Hash 自癒 + 結案 | `待 baron 回填` |
+| C7 | Conformance 三維度驗收（目標規格 U1-U5 / 測試 §6 / 不可動清單）+ baton/ 一次性歸檔（plan_v1〔保留 _v1〕/tasks/C1-C7 報告）+ 歷史全量 Hash 自癒 + 結案 | `a644e48` |
+| C7-hotfix | 緊急熱修復：`pipelines/__init__.py` 補 `from pipelines import resume_pipeline` 觸發 `@register('resume')`——修復 runtime 路徑無人 import 策略致 `get_strategy('resume')` 回 NullStrategy、影子上傳 P1 拋 NotImplementedError 阻斷；factory._registry 含 'resume' 驗證通過、全套件 480 passed | `待 baron 回填` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md`（§99.2 內部 v8、四輪對接稽核定稿）
 > **PIPE 對齊**：PIPE 縱向五路絞殺**第 1 路**；ResumePipeline 四 Phase（P1 Ingestion / P2 Glossary & Context Prep / P3 Translation & Restore / P4 Async RAG）全落地；消費 DomainNormalizer LCC + GlossaryManager 級聯自癒 + 呼叫 Translator 雙模式；對齊 PIPE-CORE 落地 ABC `run_phase1..4` / 四凍結合約 / PIPE-SCAFFOLD 影子機制。
