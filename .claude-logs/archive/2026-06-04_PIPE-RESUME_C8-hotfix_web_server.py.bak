@@ -632,39 +632,6 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
                     processing_tasks[shadow_key]['status'] = 'processing'
             await loop.run_in_executor(None, lambda: Orchestrator().run(ctx))
         # === [API-PERF C4 END] ===
-
-        # === [PIPE-RESUME C8-hotfix START] ===
-        # 影子完成後鏡像登記 Paper row（list_papers 讀 DB → 前端 (測試) 列自動帶出）。
-        # ctx 由 Orchestrator 原地填入四 Phase specs；本寫庫 doc_type-agnostic（五路通用）。
-        # 與 A 軌 pipeline_core.py:547 同款 upsert_paper；final_paths 僅供 rag_tree 標題解析
-        # （Paper 無 paths 欄、不入庫），故傳 str 絕對路徑即可、不做 relative_to。
-        if ctx.bilingual is not None:
-            final_paths = {
-                'zh': str(ctx.bilingual.final_zh_path),
-                'en': str(ctx.bilingual.final_en_path),
-            }
-            if ctx.rag is not None:
-                final_paths['vector_store'] = str(ctx.rag.vectors_path)
-            meta_dict = {
-                'title': {
-                    'value': ctx.ingestion.title if ctx.ingestion else paper_id_shadow,
-                    'source': 'pipeline', 'confidence': 'high',
-                },
-                'translated_abstract': {
-                    'value': ctx.glossary_ready.translated_abstract if ctx.glossary_ready else '',
-                    'source': 'pipeline', 'confidence': 'high',
-                },
-            }
-            paper_manager.upsert_paper(
-                str(OUTPUT_DIR), owner_id, paper_id_shadow,
-                {k: v for k, v in final_paths.items() if v},
-                metadata=meta_dict,
-                domain=(ctx.glossary_ready.domain_name if ctx.glossary_ready else None),
-                doc_type=doc_type,
-                original_filename=f"{original_filename or paper_id} (測試)",
-            )
-        # === [PIPE-RESUME C8-hotfix END] ===
-
         with tasks_lock:
             if shadow_key in processing_tasks:
                 processing_tasks[shadow_key]['status'] = 'done'
