@@ -62,12 +62,6 @@ from processor.resume_processor import ResumeProcessor
 from processor.tiling_processor import TilingProcessor
 # === [PIPE-RESUME C2 END] ===
 
-# === [PIPE-RESUME C3 START] P2 共用真理源（消費既有落地簽名、零改動）===
-from processor.domain_normalizer import normalize_to_lcc
-from processor.glossary_extractor import GlossaryManager
-from processor.translator import InjectionContext, TranslateMode, Translator
-# === [PIPE-RESUME C3 END] ===
-
 logger = logging.getLogger(__name__)
 
 # C2-C5 各 Phase 實作前的統一佔位訊息（明示尚未落地之 Phase）。
@@ -84,17 +78,6 @@ _PHONE_RE = re.compile(r"\+?\d[\d\-\s()]{6,}\d")
 _CJK_MIN = 20
 _CJK_RATIO = 0.2
 # === [PIPE-RESUME C2 END] ===
-
-# === [PIPE-RESUME C3 START] P2 常數 ===
-_TARGET_LANG = "zh-tw"          # 系統固定目標語（繁體中文；GlobalGlossary 聯合鍵）
-_ABSTRACT_MAX_CHARS = 8000      # 摘要輸入截斷（防 token 爆）
-_ABSTRACT_FALLBACK_CHARS = 600  # 摘要 LLM 失敗時的原文截斷兜底
-_SUMMARY_SYSTEM_PROMPT = (
-    "你是專業履歷摘要器。請將以下履歷濃縮為一段精簡摘要，"
-    "保留原文語言、涵蓋姓名／專業領域／核心技能與資歷重點；"
-    "只輸出摘要本文，不要任何前言或標題。"
-)
-# === [PIPE-RESUME C3 END] ===
 
 
 @PipelineFactory.register("resume")
@@ -259,150 +242,11 @@ class ResumePipeline(DocumentStrategy):
         return phone, email
     # === [PIPE-RESUME C2 END] ===
 
-    # === [PIPE-RESUME C3 START] P2 Glossary & Context Prep（四步循序自癒）===
     def run_phase2(self, ctx: PipelineContext) -> GlossaryReadySpec:
-        """P2 Glossary & Context Prep：LCC / 摘要 / Glossary 自癒 / 摘要翻譯（合約②）。
-
-        四步循序（plan §2 U3、消費三大共用真理源）：
-          ① normalize_to_lcc(raw_domain=P1 domain, context_text=履歷全文) → 標準 LCC
-          ② 做整份履歷摘要（原文 abstract）
-          ③ Glossary 自癒（旗標 LLM_USE_GLOSSARY_ALIGN 閘門；query_cascade→缺詞 extract_terms→upsert）
-          ④ Translator(DEEP_THINK) 翻 abstract → translated_abstract；lcc→Domains.name → domain_name
-
-        交易邊界（database SOP）：所有 LLM 呼叫（normalize/summary/translate/extract_terms）皆在
-        DB 交易外；domain_name 為 Domains 表 PK 唯讀檢索（無 session.begin() 寫交易）。
-
-        實作必然序（extract_terms 簽名所迫，保留 baron 意圖）：extract_terms 需 (source, translated)
-        雙語樣本，P2 唯一可用譯文為 translated_abstract，故 DEEP_THINK 翻摘要先於 ③ glossary 抽詞、
-        且**一次翻譯雙用**（交付 translated_abstract + 作 glossary 抽詞樣本），不重複翻譯。
-        """
-        if not ctx.pdf_path:
-            raise ValueError("PIPE-RESUME P2：ctx.pdf_path 缺失，無法定位原文")
-        source_lang = (ctx.ingestion.source_lang if ctx.ingestion else None) or "en"
-        full_text = self._read_source_text(ctx)
-        raw_domain = self._raw_meta.get("domain") or ""
-
-        # ① LCC 分類（旗標 False 時回 raw_domain、不查 DB 不呼 LLM）
-        lcc = normalize_to_lcc(raw_domain, context_text=full_text) or "general"
-
-        # ② 做整份履歷摘要（原文）
-        abstract = self._make_summary(full_text) or full_text[:_ABSTRACT_FALLBACK_CHARS]
-
-        # 翻摘要（DEEP_THINK）→ translated_abstract（雙用：交付 + ③ glossary 抽詞樣本）
-        translator = Translator()
-        summary_ctx = InjectionContext(lcc=lcc, glossary={}, doc_type="resume")
-        translated_abstract = translator.translate(
-            abstract, summary_ctx, TranslateMode.DEEP_THINK, "abstract"
+        """P2 Glossary & Context Prep：LCC / 摘要 / Glossary 自癒 / 摘要翻譯（合約②）。實作見 C3。"""
+        raise NotImplementedError(
+            _NOT_IMPLEMENTED_MSG.format(phase="run_phase2", commit="C3")
         )
-
-        # ③ Glossary 自癒（旗標閘門；LLM 在 DB 交易外、回寫冪等）
-        glossary: Dict[str, str] = {}
-        if settings.LLM_USE_GLOSSARY_ALIGN:
-            glossary = self._heal_glossary(
-                source_lang, _TARGET_LANG, lcc, abstract, translated_abstract
-            )
-
-        # ④ lcc → Domains.name（PK 唯讀免交易）
-        domain_name = self._resolve_domain_name(lcc)
-
-        spec = GlossaryReadySpec(
-            abstract=abstract,
-            lcc=lcc,
-            glossary=glossary,
-            translated_abstract=translated_abstract,
-            chapter_summaries=None,
-            domain_name=domain_name,
-        )
-        logger.info(
-            "[PIPE-RESUME P2] %s lcc=%r glossary=%d domain_name=%r "
-            "abstract=%dchars translated=%dchars",
-            ctx.paper_id, lcc, len(glossary), domain_name,
-            len(abstract), len(translated_abstract or ""),
-        )
-        return spec
-
-    # ── P2 私有輔助 ──
-
-    def _read_source_text(self, ctx: PipelineContext) -> str:
-        """讀 P1 產出的原文 markdown（路徑由 ctx 解析）；失敗 fallback 由 tiles 重組。"""
-        output_dir = paper_manager.paper_dir(settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-        md_path = output_dir / f"{Path(ctx.pdf_path).stem}.md"
-        try:
-            return md_path.read_text(encoding="utf-8")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "[PIPE-RESUME P2] 讀原文 md 失敗，改由 tiles 重組: %s", exc, exc_info=True
-            )
-            tiles = ctx.ingestion.tiles if ctx.ingestion else []
-            return self._tiles_to_text(tiles)
-
-    @staticmethod
-    def _tiles_to_text(tiles: List[Dict[str, Any]]) -> str:
-        """由物理分組 Tiles 重組純文字（fallback；walk sections→content→text）。"""
-        parts: List[str] = []
-        for sec in tiles or []:
-            if not isinstance(sec, dict):
-                continue
-            for item in sec.get("content", []) or []:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    parts.append(str(item.get("content", "")))
-        return "\n".join(parts)
-
-    def _make_summary(self, full_text: str) -> str:
-        """做整份履歷摘要（原文語言、直接 LLM 摘要；失敗回空）。"""
-        from llm.client import LLMClient  # 惰性 import 避免模組載入期重量級依賴
-
-        messages = [
-            {"role": "system", "content": _SUMMARY_SYSTEM_PROMPT},
-            {"role": "user", "content": full_text[:_ABSTRACT_MAX_CHARS]},
-        ]
-        try:
-            out = LLMClient.get_instance().chat(
-                messages=messages, temperature=0.2, stream=False,
-                model=settings.LLM_DOMAIN_MODEL,
-            )
-            return (out or "").strip()
-        except Exception as exc:  # noqa: BLE001 — 摘要失敗不阻斷（兜底原文截斷）
-            logger.warning(
-                "[PIPE-RESUME P2] 履歷摘要生成失敗（兜底原文截斷）: %s", exc, exc_info=True
-            )
-            return ""
-
-    def _heal_glossary(
-        self, source_lang: str, target_lang: str, lcc: str,
-        abstract: str, translated_abstract: str,
-    ) -> Dict[str, str]:
-        """Glossary 級聯查詢 + 缺詞自癒（LLM 在 DB 交易外、upsert 冪等回寫）。"""
-        gm = GlossaryManager()
-        existing = gm.query_cascade(source_lang, target_lang, domain=lcc)
-        if existing:
-            return existing
-        # 缺詞：以 (abstract, translated_abstract) 雙語樣本抽詞（LLM 交易外）→ 冪等回寫
-        pairs = gm.extract_terms(
-            abstract, translated_abstract, source_lang, target_lang, domain=lcc
-        )
-        if pairs:
-            gm.upsert_terms(pairs, source_lang, target_lang, domain=lcc)
-        return {key: val for key, val in pairs}
-
-    def _resolve_domain_name(self, lcc: str) -> Optional[str]:
-        """lcc → Domains.name（PK 唯讀檢索、無 session.begin() 寫交易；database SOP）。"""
-        if not lcc:
-            return None
-        try:
-            from db import SessionLocal
-            from models import Domains
-
-            with SessionLocal() as session:  # 唯讀、不開寫交易
-                row = session.get(Domains, lcc)
-                return row.name if row else None
-        except Exception as exc:  # noqa: BLE001 — 解析失敗不阻斷（domain_name=None）
-            logger.warning(
-                "[PIPE-RESUME P2] Domains.name 解析失敗（domain_name=None）: %s",
-                exc, exc_info=True,
-            )
-            return None
-    # === [PIPE-RESUME C3 END] ===
 
     def run_phase3(self, ctx: PipelineContext) -> BilingualMarkdownSpec:
         """P3 Translation & Restore：100% Bypass 乾淨雙語 Markdown（合約③）。實作見 C4。"""
