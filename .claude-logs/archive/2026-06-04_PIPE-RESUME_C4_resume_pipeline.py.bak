@@ -404,71 +404,11 @@ class ResumePipeline(DocumentStrategy):
             return None
     # === [PIPE-RESUME C3 END] ===
 
-    # === [PIPE-RESUME C4 START] P3 Translation & Restore（100% Bypass 翻譯還原）===
     def run_phase3(self, ctx: PipelineContext) -> BilingualMarkdownSpec:
-        """P3 Translation & Restore：100% Bypass 整份翻譯 + 純樣板渲染（合約③）。
-
-        流程（plan §2 U4）：
-          ① 建 InjectionContext（lcc / glossary / zh_summary←P2 translated_abstract /
-             domain_name / **doc_type='resume'**〔套「正式商務中文」風格〕）。
-          ② 100% Bypass：正文整份一次性 Translator.translate(text, ctx, NORMAL, "content")
-             ——不切 Section、不開 Sliding Window。
-          ③ md_restore 純樣板渲染（廢除 extra_info）：final_en=原著、final_zh=中文版，
-             各寫一份乾淨 Markdown（🚫 嚴禁 AI Questions / 章節 Summary / 非原著文字）。
-          ④ 交付 BilingualMarkdownSpec（translated_abstract 沿用 P2、必填）。
-
-        source_lang='zh*' 時原文已中文：zh=原文、不重複翻譯（Translator 目標為 zh-tw）。
-        """
-        if ctx.glossary_ready is None:
-            raise ValueError("PIPE-RESUME P3：ctx.glossary_ready 缺失（P2 未交付）")
-        gspec = ctx.glossary_ready
-        source_lang = (ctx.ingestion.source_lang if ctx.ingestion else None) or "en"
-        full_text = self._read_source_text(ctx)  # 原著 markdown（複用 C3 helper）
-
-        # ① InjectionContext（doc_type='resume' → 正式商務中文風格、非旗標閘門）
-        inj = InjectionContext(
-            lcc=gspec.lcc,
-            glossary=gspec.glossary,
-            zh_summary=gspec.translated_abstract,
-            domain_name=gspec.domain_name,
-            doc_type="resume",
+        """P3 Translation & Restore：100% Bypass 乾淨雙語 Markdown（合約③）。實作見 C4。"""
+        raise NotImplementedError(
+            _NOT_IMPLEMENTED_MSG.format(phase="run_phase3", commit="C4")
         )
-
-        # ②③ 100% Bypass 整份翻譯 + 純樣板：final_en=原著、final_zh=中文版
-        if source_lang.startswith("zh"):
-            zh_text = full_text            # 原文已中文、不重譯
-            en_text = full_text            # 無 en 譯文（Translator 目標 zh-tw）
-        else:
-            zh_text = Translator().translate(
-                full_text, inj, TranslateMode.NORMAL, "content"
-            )
-            en_text = full_text            # 原著
-
-        zh_path = paper_manager.article_zh_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
-        )
-        en_path = paper_manager.article_en_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
-        )
-        zh_path.parent.mkdir(parents=True, exist_ok=True)
-        zh_path.write_text(zh_text, encoding="utf-8")
-        en_path.write_text(en_text, encoding="utf-8")
-
-        # ④ 交付（translated_abstract 沿用 P2、必填、防 ValidationError）
-        spec = BilingualMarkdownSpec(
-            final_zh_path=str(zh_path),
-            final_en_path=str(en_path),
-            translated_abstract=gspec.translated_abstract,
-            rag_tree_json=None,
-        )
-        logger.info(
-            "[PIPE-RESUME P3] %s bypass 翻譯完成 source_lang=%s zh=%dchars en=%dchars "
-            "(zh=%s / en=%s)",
-            ctx.paper_id, source_lang, len(zh_text), len(en_text),
-            zh_path.name, en_path.name,
-        )
-        return spec
-    # === [PIPE-RESUME C4 END] ===
 
     def run_phase4(self, ctx: PipelineContext) -> RagDbSpec:
         """P4 Async RAG：向量化落庫、門檻 ≥3（合約④，非阻塞）。實作見 C5。"""
