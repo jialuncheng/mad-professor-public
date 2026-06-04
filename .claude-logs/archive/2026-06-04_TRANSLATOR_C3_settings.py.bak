@@ -4,13 +4,7 @@ from pathlib import Path
 
 load_dotenv()
 
-# === [TRANSLATOR C3 START] ===
-# TRANSLATOR C3：預設對齊 model_recommendations.md §1.1（gemini-3.5-flash 解鎖 65k 輸出 + 思考世代）；
-# 否則 DEEP_THINK 因 gating（思考世代模型）不成立而靜默退化 NORMAL（plan §2 U3 退化警告）。env 仍可覆寫。
-TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-3.5-flash")
-# 思考預算 Tokens（0=關閉、預設；> 0 時 DEEP_THINK 經 thinking_config 啟用思考；對齊 SOP §1.1）。
-LLM_THINKING_BUDGET = int(os.getenv("LLM_THINKING_BUDGET", "0"))
-# === [TRANSLATOR C3 END] ===
+TRANSLATE_MODEL = os.getenv("LLM_TRANSLATE_MODEL", "gemini-2.0-flash")
 CHAT_MODEL = os.getenv("LLM_CHAT_MODEL", "gemini-2.0-flash")
 # 主題領域判斷模型（可選，未設定時 fallback 到 CHAT_MODEL）
 LLM_DOMAIN_MODEL = os.getenv("LLM_DOMAIN_MODEL", CHAT_MODEL)

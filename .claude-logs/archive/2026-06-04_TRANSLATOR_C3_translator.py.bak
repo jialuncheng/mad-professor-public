@@ -149,37 +149,3 @@ class Translator:
             return f"前文翻译参考:\n{ctx.preceding}\n\n需要翻译的内容:\n{text}\n\n直接输出："
         return f"需要翻译的内容:\n{text}\n\n直接输出："
 # === [TRANSLATOR C2 END] ===
-
-    # === [TRANSLATOR C3 START] ===
-    def translate(
-        self,
-        text: str,
-        ctx: "InjectionContext",
-        mode: "TranslateMode",
-        text_type: str = "content",
-    ) -> str:
-        """雙模式原子翻譯（公開入口，逐字對齊 PIPE-SPEC §1.2.3 v3）。
-
-        - NORMAL：thinking_budget=0（降本提速、不啟用思考）。
-        - DEEP_THINK：thinking_budget=settings.LLM_THINKING_BUDGET（品質優先、經 thinking_config 啟用）。
-        底層共用 `LLMClient._api_semaphore` 線程安全流控；分行容錯屬 C4。
-        """
-        from llm.client import LLMClient  # 惰性 import 避免循環依賴（translator 不被 client 反向依賴）
-
-        llm = self.llm if self.llm is not None else LLMClient.get_instance()
-        system_prompt = self._build_system_prompt(ctx, text_type)
-        user_prompt = self._build_user_prompt(text, ctx, text_type)
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        # 模式 → thinking_budget 路由（DEEP_THINK 啟用、NORMAL 關閉）
-        thinking_budget = (
-            settings.LLM_THINKING_BUDGET if mode == TranslateMode.DEEP_THINK else 0
-        )
-        translated = llm.chat(
-            messages, stream=True, model=settings.TRANSLATE_MODEL,
-            thinking_budget=thinking_budget,
-        ).strip()
-        return translated
-    # === [TRANSLATOR C3 END] ===

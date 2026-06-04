@@ -26,19 +26,6 @@ from llm.retry import retry_call, retry_stream
 from llm._http_client import build_http_options
 
 
-# === [TRANSLATOR C3 START] ===
-# 思考世代模型判定（前向相容白名單；plan §7 Q3——勿硬編碼單一 "3.5"，採正向偵測）。
-# 涵蓋現行 GA 思考世代（2.5/3.5）與未來世代（4.x）及顯式 "thinking" 命名；可隨模型演進擴充。
-_THINKING_MODEL_MARKERS = ("2.5", "3.5", "4.0", "4.5", "thinking")
-
-
-def _supports_thinking(model: str) -> bool:
-    """判定模型是否支援 thinking_config（前向相容、非硬編碼單一版本）。"""
-    m = (model or "").lower()
-    return any(marker in m for marker in _THINKING_MODEL_MARKERS)
-# === [TRANSLATOR C3 END] ===
-
-
 class LLMClient:
     _instance: Optional['LLMClient'] = None
     _lock = threading.Lock()
@@ -80,40 +67,18 @@ class LLMClient:
 
     @retry_call(retries=3, base=2.0)
     def chat(self, messages: List[Dict[str, Any]], temperature: float = 0.5,
-             stream: bool = True, model: str = None,
-             # === [TRANSLATOR C3 START] ===
-             thinking_budget: int = 0) -> str:
-             # === [TRANSLATOR C3 END] ===
-        """一般對話，回傳完整字串。
-
-        thinking_budget（TRANSLATOR C3、§4 唯一受控例外）：> 0 且模型為思考世代時，
-        注入 types.ThinkingConfig 啟用 Dynamic Thinking（對齊 model_recommendations.md §1.1）；
-        預設 0＝關閉、行為與舊版 byte 等價。
-        """
+             stream: bool = True, model: str = None) -> str:
+        """一般對話，回傳完整字串"""
         # Phase 4.7d Commit 13：with semaphore 包整個 method body，
         # 限制全域並發；retry 時 sleep 在 fn 外、不持有 lock
         with LLMClient._api_semaphore:
             model = model or CHAT_MODEL
             system_instruction, contents = _convert_messages(messages)
 
-            # === [TRANSLATOR C3 START] ===
-            config_kwargs = dict(
+            config = types.GenerateContentConfig(
                 temperature=temperature,
-                system_instruction=system_instruction,
+                system_instruction=system_instruction
             )
-            # 思考受控擴充：僅 budget>0 且思考世代模型時注入；try/except 降級不阻斷
-            # （前向相容判定見 _supports_thinking、plan §7 Q3）。
-            if thinking_budget and thinking_budget > 0 and _supports_thinking(model):
-                try:
-                    config_kwargs["thinking_config"] = types.ThinkingConfig(
-                        thinking_budget=thinking_budget
-                    )
-                except Exception:
-                    logging.getLogger(__name__).warning(
-                        "[thinking] thinking_config 注入失敗、降級無思考 model=%s", model
-                    )
-            config = types.GenerateContentConfig(**config_kwargs)
-            # === [TRANSLATOR C3 END] ===
 
             if stream:
                 full_response = ""
