@@ -11,6 +11,23 @@
 
 ## ✅ 已完成
 
+### BE-Refactor PIPE-RESUME ResumePipeline策略管線（PIPE 大改版縱向五路絞殺第 1 路）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | 新建 `pipelines/resume_pipeline.py` 骨架 + `@PipelineFactory.register('resume')` 註冊 + `DocumentStrategy` 四方法 stub + `rag_char_threshold=3` + interim `_raw_meta` 穿線容器 | `f3d4e41` |
+| C2 | 實作 `run_phase1` 全鏈 P1 Ingestion（`ResumeProcessor` Vision + Metadata Stage A + `DocAnalyzer` + md2json/json_process/tiling 產 Tiles）→ IngestionMetadataSpec〔title=candidate_name / source_lang 啟發式 / 零 Abstract/LCC/Glossary〕；phone/email/domain 暫存 `_raw_meta`；**baron 拍板**擴 `PipelineContext` 加 pdf_path/owner_id + web_server 影子派發傳值 | `d7edcd9` |
+| C3 | 實作 `run_phase2` 四步循序自癒：①`normalize_to_lcc(raw_domain, context_text=履歷全文)` ②LLM 生成原文 `abstract` ③`GlossaryManager` 旗標閘門自癒〔query_cascade→缺詞 extract_terms〔注入摘要+LCC〕→upsert 冪等、LLM 交易外〕④`Translator(DEEP_THINK)`→`translated_abstract` + `lcc→Domains.name` PK 唯讀免交易 → GlossaryReadySpec | `48aa5df` |
+| C4 | 實作 `run_phase3`：`InjectionContext(doc_type='resume')` 100% Bypass 整份 `Translator.translate(NORMAL,content)`〔不切 Section/不開 Sliding Window〕+ md_restore 純樣板渲染〔廢除 extra_info、嚴禁 AI Questions/Summary〕→ final_zh/final_en → BilingualMarkdownSpec〔translated_abstract 沿用 P2〕 | `8971a19` |
+| C5 | 實作 `run_phase4`：複用 `RagProcessor._create_vector_store`〔`_is_chunk_meaningful` 門檻 ≥3 保技能詞/email/phone/url + FAISS + paper_chunks 批量寫庫 + index_meta〕；Embedding 於交易外、paper_db_id None 優雅降級；異常拋出由 Orchestrator 標 rag_status='failed' 不阻 reading_ready → RagDbSpec | `e8a7429` |
+| C6 | 新建 `tests/test_resume_pipeline.py` 15 測試（策略分派 + P1-P4 契約、mock LLM/Embedding 隔離）；全套件 480 passed | `fabb114` |
+| C7 | Conformance 三維度驗收（目標規格 U1-U5 / 測試 §6 / 不可動清單）+ baton/ 一次性歸檔（plan_v1〔保留 _v1〕/tasks/C1-C7 報告）+ 歷史全量 Hash 自癒 + 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md`（§99.2 內部 v8、四輪對接稽核定稿）
+> **PIPE 對齊**：PIPE 縱向五路絞殺**第 1 路**；ResumePipeline 四 Phase（P1 Ingestion / P2 Glossary & Context Prep / P3 Translation & Restore / P4 Async RAG）全落地；消費 DomainNormalizer LCC + GlossaryManager 級聯自癒 + 呼叫 Translator 雙模式；對齊 PIPE-CORE 落地 ABC `run_phase1..4` / 四凍結合約 / PIPE-SCAFFOLD 影子機制。
+> **baron 拍板（AskUserQuestion）**：① C2 擴 `PipelineContext` 加 pdf_path/owner_id（首落地隨 PIPE-RESUME、五路共用基建）；② P1 全鏈編排（忠實 PIPE-SPEC §1.1①「Tiles 在 P1 產出」）。
+> **defer / Flip 阻擋**：`custom_metadata` 履歷專屬欄暫存 `_raw_meta` 穿線（tasks §9 硬前置）；P1 凍結合約未全域擴 `custom_metadata` 前僅影子 B 軌驗證、不得正式 Flip 線上流量。
+
 ### BE-Refactor TRANSLATOR 雙模式原子翻譯器（PIPE 大改版三大共用真理源之三）
 
 | Commit | 內容 | Hash |
@@ -19,7 +36,7 @@
 | C2 | `Translator` 系統提示詞五步拼接（text_type 路由含 caption / doc_type Style Hints / LCC 注入讀 ctx.domain_name 零 DB / Glossary 強約束含大小寫不敏感 / constraints）+ 用戶提示詞；新建 `prompt/translate/caption_translate_prompt.txt`（保留 Figure/Table 編號） | `27db830` |
 | C3 | `settings.LLM_THINKING_BUDGET`（預設 0）+ `TRANSLATE_MODEL` 預設改 `gemini-3.5-flash`；`llm/client.py::chat()` 受控擴充 `thinking_config` 注入（**§4 唯一例外**、前向相容 gating 涵蓋 2.5/3.5/4.0 + try/except 降級、budget=0 byte 等價）；`Translator.translate()` NORMAL/DEEP_THINK 雙模式路由 | `11ea52a` |
 | C4 | `Translator.translate()` 末加 U4 多行 `re.sub` 分行容錯；新建 `tests/test_translator.py` 8 pytest（雙模式/style/路由/LCC/glossary/兜底/用戶提示詞）；全套件 465 passed | `2ebda03` |
-| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v10/tasks_v1/C1-C5 報告）+ 結案 | `待 baron 回填` |
+| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v10/tasks_v1/C1-C5 報告）+ 結案 | `b55219b` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-01_TRANSLATOR_雙模式原子翻譯器_plan_v10.md`（八輪嚴格交叉 review 定稿）
 > **PIPE 對齊**：消費 DomainNormalizer LCC（`Domains.name` 英文領域名）+ GlossaryManager 凍結 Glossary；`InjectionContext`/`TranslateMode` 落 `processor/translator.py`（非 contracts.py）；`thinking_config` 列 §4 唯一受控例外（依 model_recommendations.md §1.1）；旗標 `LLM_USE_GLOSSARY_ALIGN`=False + `LLM_THINKING_BUDGET`=0 時行為等同舊狀、線上 0 風險。
@@ -688,4 +705,7 @@
 
 ### TRANSLATOR (✅ 已完成·PIPE 共用真理源之三)
 - ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
+
+### PIPE-RESUME (✅ 已完成·PIPE 縱向五路絞殺第 1 路)
+- ✅ ~~PIPE-RESUME ResumePipeline策略管線~~（已落地、C1 `f3d4e41` + C2 `d7edcd9` + C3 `48aa5df` + C4 `8971a19` + C5 `e8a7429` + C6 `fabb114` + C7 收官；`pipelines/resume_pipeline.py` 四 Phase 策略〔P1 Vision 全鏈/P2 LCC+摘要+Glossary 自癒/P3 100% Bypass/P4 RAG ≥3〕+ tests/test_resume_pipeline.py 15 測試；消費 PIPE-CORE ABC/三大真理源/PIPE-SCAFFOLD 影子；baron 拍板擴 PipelineContext pdf_path/owner_id；custom_metadata 硬前置 defer 僅影子 B 軌、不 Flip）
 

@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-06-02（GOLDEN-BASELINE Tasks 修正）
+最後更新：2026-06-04（PIPE-RESUME Tasks）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -63,6 +63,16 @@
   - `2026-06-03_PIPE-SCAFFOLD_OP-1_run_提示詞.md` — OP-1 Run（settings.SHADOW_LAUNCH_ENABLED 預設 false + web_server.run_pipeline_shadow 附加單元 + upload_paper 派發點一旗標閘門；A 軌 run_pipeline 本體 byte 不動）
   - `2026-06-03_PIPE-SCAFFOLD_OP-2_run_提示詞.md` — OP-2 Run（retry/confirm 派發點二旗標閘門納管 + 補標 OP-1/OP-2 `=== [PIPE-SCAFFOLD OP-N START/END] ===` 註解包裹 + 新建 tests/test_pipe_scaffold.py 雙軌測試）
   - `2026-06-03_PIPE-SCAFFOLD_Check_提示詞.md` — Check（Conformance 三維度驗收 + OP-3 收官：一次性 mv plan_v3/tasks_v3/OP-1~OP-3 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；階段二 Flip 屬 PIPE-FLIP）
+
+- 🟡 **PIPE-RESUME ResumePipeline 策略管線（2026-06-04 Tasks + C1 WIP）**
+  - `2026-06-04_PIPE-RESUME_Tasks_提示詞.md` — Tasks（BE-Refactor Commit 拆分含最後 Checkout 收官；plan_v1〔§99.2 內部 v8、四輪對接稽核定稿〕ResumePipeline 四 Phase 策略：P1 Vision 整份解析+去浮水印+四欄 / P2 4 步循序〔LCC→做摘要→Glossary 自癒→DEEP_THINK 翻摘要〕/ P3 100% Bypass+doc_type='resume' / P4 非同步 RAG ≥3 技能詞保護；對齊 PIPE-CORE 落地 ABC run_phase1..4/四凍結合約/三大真理源/PIPE-SCAFFOLD 影子；custom_metadata 列硬前置不自落地；中間 Commit 留 baton、唯 Checkout 一次性歸檔保留 _v1）
+  - `2026-06-04_PIPE-RESUME_C1_run_提示詞.md` — C1 Run（策略骨架與工廠註冊：新建 pipelines/resume_pipeline.py `@PipelineFactory.register('resume')` class ResumePipeline(DocumentStrategy) + run_phase1..4 NotImplementedError stub + self._raw_meta interim 暫存欄，`=== [PIPE-RESUME C1 START/END] ===` 包裹；純新建檔零既有改動）
+  - `2026-06-04_PIPE-RESUME_C2_run_提示詞.md` — C2 Run（P1 Ingestion：實作 run_phase1 複用 ResumeProcessor Vision 核心整份解析+去浮水印、抽 candidate_name→title 建 IngestionMetadataSpec〔零 Abstract/LCC/Glossary〕、phone/email/domain 暫存 self._raw_meta interim 穿線，`=== [PIPE-RESUME C2 START/END] ===` 包裹 + 改前 .bak；baron AskUserQuestion 拍板擴 context.py 加 pdf_path/owner_id + web_server 影子派發傳值 + P1 全鏈編排）
+  - `2026-06-04_PIPE-RESUME_C3_run_提示詞.md` — C3 Run（P2 Glossary & Context Prep 四步自癒：run_phase2 ①normalize_to_lcc(raw_domain+context_text) ②做履歷摘要 ③GlossaryManager 自癒〔摘要+LCC 注入 prompt context、LLM 交易外〕④Translator(DEEP_THINK)→translated_abstract + lcc→Domains.name 唯讀免交易→domain_name；交付 GlossaryReadySpec，`=== [PIPE-RESUME C3 START/END] ===` 包裹 + 改前 .bak）
+  - `2026-06-04_PIPE-RESUME_C4_run_提示詞.md` — C4 Run（P3 Translation & Restore 100% Bypass：run_phase3 建 InjectionContext〔lcc/glossary/zh_summary←P2 translated_abstract/domain_name/doc_type='resume'〕→ 正文整份 Translator.translate(NORMAL,content) 不切 Section/不開 Sliding Window → md_restore 純樣板渲染 → final_zh_path/final_en_path → BilingualMarkdownSpec〔translated_abstract 沿用 P2、必填〕；嚴禁 AI Questions/Summary，`=== [PIPE-RESUME C4 START/END] ===` 包裹 + 改前 .bak）
+  - `2026-06-04_PIPE-RESUME_C5_run_提示詞.md` — C5 Run（P4 Async RAG ≥3：run_phase4 讀 ctx.bilingual.final_zh_path → RagProcessor()._create_vector_store〔vectors_path + paper_db_id〕→ _is_chunk_meaningful(doc_type=resume ≥3 保 email/phone/url) → replace_paper_chunks 批量寫庫〔DB 交易不含 LLM/Embedding、paper_db_id None 優雅降級〕→ 讀 index_meta.json + chunks_total → RagDbSpec；錯誤 logger.warning(exc_info)+拋出由 Orchestrator 標 rag_status='failed' 不阻 reading_ready，`=== [PIPE-RESUME C5 START/END] ===` 包裹 + 改前 .bak；四 Phase 全落地）
+  - `2026-06-04_PIPE-RESUME_C6_run_提示詞.md` — C6 Run（單元測試：新建 tests/test_resume_pipeline.py mock LLM/Embedding 隔離；策略分派 get_strategy('resume')→ResumePipeline 無 doc_type 分支 / P1 IngestionMetadataSpec 無 Abstract/LCC/Glossary / P2 normalize_to_lcc cache+fallback general+GlossaryReadySpec abstract/translated_abstract/domain_name+缺詞自癒+凍結 / P3 100% Bypass+doc_type='resume'+translated_abstract 沿用 / P4 _is_chunk_meaningful ≥3 保 email/phone/url+RAG 失敗不阻 reading_ready，`# === [PIPE-RESUME C6 START/END] ===` 包裹、純新增檔）
+  - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
 
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
@@ -170,18 +180,18 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C7_check_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C6_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C5_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C4_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C3_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C2_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_C1_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_PIPE-RESUME_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_Check_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C4_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_TRANSLATOR_C3_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C2_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_TRANSLATOR_C1_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_TRANSLATOR_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_GLOSSARY-CORE_Check_提示詞.md`
-- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C4_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C3_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C2_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C1_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md`
-- 2026-06-03 — `2026-06-03_DOMAIN-NORM_Check_提示詞.md`
