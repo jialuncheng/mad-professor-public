@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### BE-Refactor TRANSLATOR 雙模式原子翻譯器（PIPE 大改版三大共用真理源之三）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `processor/translator.py` 定義 `InjectionContext`（7 欄 frozen+forbid、逐字對齊 PIPE-SPEC §1.2.3 v3）+ `TranslateMode`（NORMAL/DEEP_THINK）；`pipelines/contracts.py` GlossaryReadySpec 補 `domain_name`（P2→P3 載體、向後相容） | `1558f79` |
+| C2 | `Translator` 系統提示詞五步拼接（text_type 路由含 caption / doc_type Style Hints / LCC 注入讀 ctx.domain_name 零 DB / Glossary 強約束含大小寫不敏感 / constraints）+ 用戶提示詞；新建 `prompt/translate/caption_translate_prompt.txt`（保留 Figure/Table 編號） | `27db830` |
+| C3 | `settings.LLM_THINKING_BUDGET`（預設 0）+ `TRANSLATE_MODEL` 預設改 `gemini-3.5-flash`；`llm/client.py::chat()` 受控擴充 `thinking_config` 注入（**§4 唯一例外**、前向相容 gating 涵蓋 2.5/3.5/4.0 + try/except 降級、budget=0 byte 等價）；`Translator.translate()` NORMAL/DEEP_THINK 雙模式路由 | `11ea52a` |
+| C4 | `Translator.translate()` 末加 U4 多行 `re.sub` 分行容錯；新建 `tests/test_translator.py` 8 pytest（雙模式/style/路由/LCC/glossary/兜底/用戶提示詞）；全套件 465 passed | `2ebda03` |
+| C5 | Conformance 三維度驗收（U1-U4 / 測試 §6.1-§6.4 / 不可動清單 git 全量證據）+ baton/ 一次性歸檔（plan_v10/tasks_v1/C1-C5 報告）+ 結案 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_TRANSLATOR_雙模式原子翻譯器_plan_v10.md`（八輪嚴格交叉 review 定稿）
+> **PIPE 對齊**：消費 DomainNormalizer LCC（`Domains.name` 英文領域名）+ GlossaryManager 凍結 Glossary；`InjectionContext`/`TranslateMode` 落 `processor/translator.py`（非 contracts.py）；`thinking_config` 列 §4 唯一受控例外（依 model_recommendations.md §1.1）；旗標 `LLM_USE_GLOSSARY_ALIGN`=False + `LLM_THINKING_BUDGET`=0 時行為等同舊狀、線上 0 風險。
+> **三大共用真理源全數就緒**：DOMAIN-NORM / GLOSSARY-CORE / TRANSLATOR。
+
 ### BE-Refactor GLOSSARY-CORE 中央領域術語庫與跨語系一致性（PIPE 大改版三大共用真理源之二）
 
 | Commit | 內容 | Hash |
@@ -391,15 +405,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **TRANSLATOR 雙模式原子翻譯器**（`.claude-logs/baton/2026-06-01_TRANSLATOR_雙模式原子翻譯器_plan_v10.md`）
-  - [x] ✅ C1 — Contract & Context（合約與上下文模型）：`processor/translator.py` 定義 InjectionContext（7 欄 frozen+forbid）+ TranslateMode；`pipelines/contracts.py` GlossaryReadySpec 補 domain_name（`1558f79`）
-  - [x] ✅ C2 — Prompt Engine（提示詞與約束動態注入）：系統提示詞五步（text_type 路由含 caption / Style Hints / LCC 注入零 DB / Glossary 強約束含大小寫不敏感 / constraints）+ 用戶提示詞 + 新建 caption_translate_prompt.txt（`27db830`）
-  - [x] ✅ C3 — Dual-Mode Routing & Thinking（雙模式路由與思考受控擴充）：settings.LLM_THINKING_BUDGET + TRANSLATE_MODEL 預設 3.5-flash + llm/client.py chat() 補 thinking_config 受控例外（§4 唯一例外、前向相容 gating）+ Translator.translate 雙模式路由（`11ea52a`）
-  - [x] ✅ C4 — Formatting Fallback & Tests（分行容錯與單元測試）：U4 re.sub 兜底 + tests/test_translator.py 8 測試全綠（全套件 465 passed）（待 baron 回填）
-  - [/] 🟡 WIP C5 — Checkout & Clean（結案收官歸檔）：Conformance 驗收 + 一次性歸檔 plan_v10/tasks/C1-C5 報告
-  - 工時：5 個 commits（C1-C4 實作/測試 + C5 收官 Checkout）
-  - 依賴：無（DOMAIN-NORM/GLOSSARY-CORE/PIPE-CORE 已落地、PIPE-SPEC §1.2.3 v3 凍結合約已含 text_type/domain_name/doc_type）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -680,4 +685,7 @@
 
 ### GLOSSARY-CORE (✅ 已完成·PIPE 共用真理源之二)
 - ✅ ~~GLOSSARY-CORE 中央領域術語庫與跨語系一致性~~（已落地、C1 `03d85c8` + C2 `9af971f` + C3 `fd0e84f` + C4 `06bf3df` + C5 收官 + C6 `ae705d5` + C7 收官；GlobalGlossary 表聯合唯一約束 + GlossaryManager 級聯查詢/交易外提取/冪等回填 + translate/chat 旗標閘門注入 + manage_glossary CLI；消費 DomainNormalizer LCC；書籍融合待 TRANSLATE-BOOK）
+
+### TRANSLATOR (✅ 已完成·PIPE 共用真理源之三)
+- ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
 
