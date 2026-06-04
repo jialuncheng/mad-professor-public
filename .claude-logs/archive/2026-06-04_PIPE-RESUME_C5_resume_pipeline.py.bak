@@ -68,10 +68,6 @@ from processor.glossary_extractor import GlossaryManager
 from processor.translator import InjectionContext, TranslateMode, Translator
 # === [PIPE-RESUME C3 END] ===
 
-# === [PIPE-RESUME C5 START] P4 RAG 向量化（複用既有 RagProcessor、零改動）===
-from processor.rag_processor import RagProcessor
-# === [PIPE-RESUME C5 END] ===
-
 logger = logging.getLogger(__name__)
 
 # C2-C5 各 Phase 實作前的統一佔位訊息（明示尚未落地之 Phase）。
@@ -474,77 +470,9 @@ class ResumePipeline(DocumentStrategy):
         return spec
     # === [PIPE-RESUME C4 END] ===
 
-    # === [PIPE-RESUME C5 START] P4 Async RAG（門檻 ≥3 技能詞保護）===
     def run_phase4(self, ctx: PipelineContext) -> RagDbSpec:
-        """P4 Async RAG：向量化落庫、門檻 ≥3 技能詞保護（合約④，非阻塞）。
-
-        流程（plan §2 U5、複用既有 RagProcessor 零改動）：
-          ① 唯一輸入＝P3 中文 Markdown 路徑 `ctx.bilingual.final_zh_path`。
-          ② RagProcessor()._create_vector_store(final_zh_path, vectors_path,
-             doc_type='resume', paper_db_id) 一站式：MarkdownHeader 分割 →
-             `_is_chunk_meaningful`(doc_type='resume'、門檻 ≥3、保 email/phone/url、
-             不改演算法) 過濾 → FAISS save_local → paper_chunks 批量寫庫 → index_meta.json。
-          ③ 讀 vectors/index_meta.json（chunks_total）→ 交付 RagDbSpec。
-
-        DB 交易邊界（database SOP）：Embedding 計算在 FAISS.from_documents 階段（DB 交易外）；
-        `replace_paper_chunks` 批量寫入不含 LLM/Embedding。paper_db_id 為 None → 優雅降級
-        （_create_vector_store 內部 log warning、跳過 SQL、僅 FAISS + index_meta）。
-
-        錯誤隔離（plan U5 / SPEC R4.2）：P4 異常僅 logger.warning(exc_info=True) 後**拋出**，
-        交 Orchestrator `_default_dispatch_p4` 設 rag_status='failed'，**絕不阻塞 reading_ready**。
-        """
-        if ctx.bilingual is None:
-            raise ValueError("PIPE-RESUME P4：ctx.bilingual 缺失（P3 未交付）")
-        final_zh_path = ctx.bilingual.final_zh_path
-        vectors_dir = paper_manager.vectors_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
+        """P4 Async RAG：向量化落庫、門檻 ≥3（合約④，非阻塞）。實作見 C5。"""
+        raise NotImplementedError(
+            _NOT_IMPLEMENTED_MSG.format(phase="run_phase4", commit="C5")
         )
-        # paper_db_id：None → _create_vector_store 內部優雅降級（僅 FAISS、跳過 paper_chunks）
-        paper_db_id = paper_manager.get_paper_db_id(ctx.owner_id, ctx.paper_id)
-        if paper_db_id is None:
-            logger.warning(
-                "[PIPE-RESUME P4] %s paper_db_id 未取得（DB 寫入降級、僅 FAISS + index_meta）",
-                ctx.paper_id,
-            )
-
-        try:
-            # ② 一站式向量化（過濾 + FAISS + paper_chunks + index_meta；Embedding 於交易外）
-            RagProcessor()._create_vector_store(
-                str(final_zh_path), str(vectors_dir),
-                doc_type="resume", paper_db_id=paper_db_id,
-            )
-            # ③ 讀 index_meta.json → chunks_total / 完整 dict
-            index_meta = self._load_index_meta(vectors_dir)
-            chunk_count = int(index_meta.get("chunks_total", 0))
-            spec = RagDbSpec(
-                vectors_path=str(vectors_dir),
-                paper_chunk_count=chunk_count,
-                index_meta=index_meta,
-            )
-            logger.info(
-                "[PIPE-RESUME P4] %s RAG 完成 chunks=%d vectors=%s",
-                ctx.paper_id, chunk_count, vectors_dir.name,
-            )
-            return spec
-        except Exception as exc:  # noqa: BLE001 — 拋出由 Orchestrator 標 rag_status='failed'
-            logger.warning(
-                "[PIPE-RESUME P4] %s RAG 向量化失敗（不阻主鏈、Orchestrator 將標 "
-                "rag_status='failed'）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            raise
-
-    @staticmethod
-    def _load_index_meta(vectors_dir: "Path") -> Dict[str, Any]:
-        """讀 vectors/index_meta.json → dict（失敗回 {}、不阻斷交付）。"""
-        try:
-            meta_path = Path(vectors_dir) / "index_meta.json"
-            return json.loads(meta_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "[PIPE-RESUME P4] 讀 index_meta.json 失敗（index_meta={{}}）: %s",
-                exc, exc_info=True,
-            )
-            return {}
-    # === [PIPE-RESUME C5 END] ===
 # === [PIPE-RESUME C1 END] ===
