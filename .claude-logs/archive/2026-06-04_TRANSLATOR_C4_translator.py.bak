@@ -13,9 +13,6 @@ C1 僅交付合約與 Context 模型；Prompt Engine（C2）/ 雙模式路由與
 from __future__ import annotations
 
 import logging
-# === [TRANSLATOR C4 START] ===
-import re  # U4 多行重分行容錯
-# === [TRANSLATOR C4 END] ===
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -184,13 +181,5 @@ class Translator:
             messages, stream=True, model=settings.TRANSLATE_MODEL,
             thinking_budget=thinking_budget,
         ).strip()
-        # === [TRANSLATOR C4 START] ===
-        # U4 多行重分行容錯：原文多行但譯文行數較少時、按句末標點重分行（對齊既有 translate_text）。
-        original_lines = text.strip().split("\n")
-        if len(original_lines) > 1:
-            translated_lines = translated.split("\n")
-            if len(translated_lines) < len(original_lines):
-                translated = re.sub(r"([。！？])\s*", r"\1\n", translated).strip()
-        # === [TRANSLATOR C4 END] ===
         return translated
     # === [TRANSLATOR C3 END] ===

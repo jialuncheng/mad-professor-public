@@ -31,6 +31,7 @@
   - `2026-06-04_TRANSLATOR_C1_run_提示詞.md` — C1 Run（Contract & Context：新建 processor/translator.py 定義 InjectionContext〔7 欄 frozen+forbid〕+ TranslateMode〔NORMAL/DEEP_THINK〕；pipelines/contracts.py GlossaryReadySpec 補 domain_name，`=== [TRANSLATOR C1 START/END] ===` 包裹 + 改前 .bak）
   - `2026-06-04_TRANSLATOR_C2_run_提示詞.md` — C2 Run（Prompt Engine：translator.py 補 Translator 類 + 系統提示詞五步〔text_type 路由含 caption / doc_type Style Hints / LCC 注入讀 ctx.domain_name 零 DB / Glossary 強約束含大小寫不敏感 / constraints〕+ 用戶提示詞；新建 prompt/translate/caption_translate_prompt.txt，C2 標記包裹 + 改前 .bak）
   - `2026-06-04_TRANSLATOR_C3_run_提示詞.md` — C3 Run（Dual-Mode Routing & Thinking：settings.py +LLM_THINKING_BUDGET〔+TRANSLATE_MODEL 預設改 gemini-3.5-flash〕+ llm/client.py chat() 補 thinking_config 受控擴充〔§4 唯一例外、gated budget>0+思考世代、前向相容〕+ translator.py Translator.translate() 雙模式 chat 路由；C3 標記包裹 + 三檔 .bak）
+  - `2026-06-04_TRANSLATOR_C4_run_提示詞.md` — C4 Run（Formatting Fallback & Tests：translator.py translate() 末加 U4 多行 re.sub 分行兜底；新建 tests/test_translator.py 8 測試〔normal/deep_think/style_hints/prompt_file_routing/lcc_domain_injection/glossary_injection/formatting_fallback/user_prompt_references〕；C4 標記包裹 + 改前 .bak）
 
 ### GLOSSARY-CORE 系列
 - 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性（2026-06-03 Tasks）**
@@ -168,6 +169,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_TRANSLATOR_C4_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C3_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C2_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C1_run_提示詞.md`
@@ -182,4 +184,3 @@
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
