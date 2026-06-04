@@ -49,11 +49,6 @@ class GlossaryReadySpec(BaseModel):
     glossary: Dict[str, str]  # 凍結最終 Glossary（融合去重後）
     translated_abstract: str  # 目標語摘要（一次到位、R2.2）
     chapter_summaries: Optional[List[str]] = None  # Book 滾動章節摘要（非 Book 為 None）
-    # === [TRANSLATOR C1 START] ===
-    # P2→P3 凍結載體：P2 一次性 lcc→Domains.name 唯讀解析的領域英文名（例 "Mathematics"），
-    # 供 P3 建構 InjectionContext.domain_name 免再查 DB（對齊 PIPE-SPEC §1.1 ② v3 / TRANSLATOR plan §7 Q1）。
-    domain_name: Optional[str] = None
-    # === [TRANSLATOR C1 END] ===
 
 
 class BilingualMarkdownSpec(BaseModel):

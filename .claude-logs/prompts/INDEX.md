@@ -25,6 +25,11 @@
   - `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md` — C3 Run（Entry & Feature Flag：domain_normalizer.py 暴露 normalize_to_lcc(raw_domain, context_text=None)->LCCCode 對齊 PIPE-SPEC/master v10 + settings.LLM_USE_GLOSSARY_ALIGN 預設 False 走舊 raw 直注；`=== [DOMAIN-NORM C3 START/END] ===` 包裹 + settings.py 改前 .bak）
   - `2026-06-03_DOMAIN-NORM_Check_提示詞.md` — Check（C5 收官：三維度 Conformance 驗收 U1-U4/測試 §6.1-§6.4/不可動清單 + 一次性 mv plan_v2/tasks/C1-C5 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；前置 18:46 Check 經 baron 拍板「先補 C4 Unit Tests」重導為 C5 收官）
 
+### TRANSLATOR 系列
+- 🟡 **TRANSLATOR 雙模式原子翻譯器（2026-06-04 Tasks）**
+  - `2026-06-04_TRANSLATOR_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Checkout 收官；plan v10 八輪 review 定稿：InjectionContext/TranslateMode 落 processor/translator.py + caption 專屬提示詞 + thinking_config 受控擴充〔§4 唯一例外〕+ GlossaryReadySpec.domain_name 載體；對齊 PIPE-SPEC §1.2.3 v3/DOMAIN-NORM/GLOSSARY-CORE/PIPE-CORE/model_recommendations §1.1）
+  - `2026-06-04_TRANSLATOR_C1_run_提示詞.md` — C1 Run（Contract & Context：新建 processor/translator.py 定義 InjectionContext〔7 欄 frozen+forbid〕+ TranslateMode〔NORMAL/DEEP_THINK〕；pipelines/contracts.py GlossaryReadySpec 補 domain_name，`=== [TRANSLATOR C1 START/END] ===` 包裹 + 改前 .bak）
+
 ### GLOSSARY-CORE 系列
 - 🟡 **GLOSSARY-CORE 中央領域術語庫與跨語系一致性（2026-06-03 Tasks）**
   - `2026-06-03_GLOSSARY-CORE_Tasks_提示詞.md` — Tasks（Commit 拆分含最後 Checkout 收官；plan v2 中央術語庫 + 級聯查詢自癒 + 跨語系一致性；上游真理源 DomainNormalizer LCCCode 已凍結；中間 Commit 留 baton、唯 Checkout 一次性歸檔；對齊 PIPE master v10/PIPE-SPEC/PIPE-CORE/DOMAIN-NORM）
@@ -161,6 +166,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-04 — `2026-06-04_TRANSLATOR_C1_run_提示詞.md`
+- 2026-06-04 — `2026-06-04_TRANSLATOR_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_GLOSSARY-CORE_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_GLOSSARY-CORE_C5_run_提示詞.md`
@@ -173,6 +180,4 @@
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C3_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C2_run_提示詞.md`
 - 2026-06-03 — `2026-06-03_DOMAIN-NORM_C1_run_提示詞.md`
-- 2026-06-03 — `2026-06-03_DOMAIN-NORM_Tasks_提示詞.md`
-- 2026-06-03 — `2026-06-03_API-PERF_Check_提示詞.md`
 - 2026-06-03 — `2026-06-03_API-PERF_C5_run_提示詞.md`
