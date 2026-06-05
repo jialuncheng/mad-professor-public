@@ -77,7 +77,7 @@
 | C3 | `run_phase3` 廢 100% Bypass → 逐 heading section 遞迴翻譯（標題/正文分流）+ pipelines/ 內私有還原（`_restore_sections_markdown`/`_restore_one_section`/`_translate_whole`/`_t`、**不耦合 A 軌**）+ source_lang zh* 不重譯；契約 BilingualMarkdownSpec 不變 | `52e0769` |
 | C4 | `run_phase3` heading 退化偵測（`_is_heading_degraded`：heading 數<2 或單一 section 自身文字佔比>85%）→ warning + 降級整檔 `_translate_whole` fallback、保證交付契約 | `6658b48` |
 | C5 | `tests/test_resume_pipeline.py` 修 C1 carryover（FakeMd 輸出含 section JSON 對齊 opt-out）+ 追加 5 測試（C1 opt-out / C3 逐 section 分流翻譯+無英文標題殘留 / 無 doubling / C4 單一巨 section fallback / 契約完備）；resume 26 passed、全套件 495 passed | `3a30394` |
-| C6 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U8〔U6 待重捕量測〕/ tasks §6 pytest+grep〔目標 54 passed〕/ 不可動清單 git 證據）+ SOP 核查 + 提示詞 7 份稽核 + baton 一次性歸檔（plan_v1/tasks/C1-C6 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+| C6 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U8〔U6 待重捕量測〕/ tasks §6 pytest+grep〔目標 54 passed〕/ 不可動清單 git 證據）+ SOP 核查 + 提示詞 7 份稽核 + baton 一次性歸檔（plan_v1/tasks/C1-C6 報告 → plans//tasks//executions/）+ hash 全量自癒 | `a1d5d7f` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_plan_v1.md`（§99.2 v3、OQ Q1/Q2/Q3/Q4/Q9/Q10 核准）
 > **PIPE 對齊**：B軌（影子）P3 翻譯品質重構——廢「100% Bypass 整檔單發」、改逐 `###` heading section 翻譯+結構還原；履歷 P1 opt-out TextTiling（戰術、源頭滅 429）；resume 停用 U4 保行結構；heading 退化 fallback 兜底。消費既有 Translator/InjectionContext，**不耦合即將棄用的 A 軌 translate_processor**。
@@ -490,6 +490,14 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次**（`.claude-logs/baton/2026-06-06_MODEL-11_Embedding模型換用gemini-embedding-001與真批次_plan_v1.md`）
+  - [x] ✅ C1 — Settings Config（配置常數調整：settings.py 換 gemini-embedding-001 預設 + 批次段數/請求 token/單段 token 三常數）（待 baron 回填）
+  - [/] 🟡 WIP: C2 — EmbeddingModel 真批次與 task_type（批次語意重構：embed_documents token-aware 貪婪拆批 + log 正名 + 過時註解更新）
+  - [ ] ⬜ 未開始: C3 — Unit Tests（單元測試追加：真批次 N→N / 超量拆批保序 / task_type DOCUMENT+QUERY / 真 429 fallback）
+  - [ ] ⬜ 未開始: C4 — Checkout（Conformance 三維度驗收 + SOP 核查 + baton 一次性歸檔）
+  - 工時：4 個 commits
+  - 依賴：無（向量值改變、各環境 regen_rag --all + resume 單路 Golden 重捕屬 baron 運維、非 commit）
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表

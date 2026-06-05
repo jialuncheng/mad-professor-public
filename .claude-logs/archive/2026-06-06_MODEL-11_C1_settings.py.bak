@@ -22,25 +22,11 @@ LLM_VISION_MODEL = os.getenv("LLM_VISION_MODEL", CHAT_MODEL)
 # extra_info 章節摘要 / 問題 / 公式解析
 LLM_EXTRA_INFO_MODEL = os.getenv("LLM_EXTRA_INFO_MODEL", CHAT_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# === [MODEL-11 C1 START] ===
-# MODEL-11：換用文字 embedding GA 模型 gemini-embedding-001——支援文字 list 真批次
-# （≤250 段/請求）與 task_type（RETRIEVAL_DOCUMENT / RETRIEVAL_QUERY 非對稱），
-# 取代舊的多模態交錯模型（SDK 對其特例 t_contents 將 list 併成單一向量、且忽略 task_type）。
-# ⚠️ 各環境 .env 若 pin 了 EMBEDDING_MODEL 舊值，須同步更新為 gemini-embedding-001 或移除該行，
-#    本預設換用才會在 runtime 生效（os.getenv 以 .env 值優先）。
-EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
-# === [MODEL-11 C1 END] ===
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "gemini-embedding-2")
 # Phase 4.7? MODEL-1+2: MRL 降維到 768、與既有 FAISS 768 維 schema 相容
 # 3072 維預設 pre-normalized、768 維降維後需手動 normalize
 # （見 config.py::EmbeddingModel._l2_normalize）
 EMBEDDING_OUTPUT_DIMENSIONS = int(os.getenv("EMBEDDING_OUTPUT_DIMENSIONS", "768"))
-# === [MODEL-11 C1 START] ===
-# MODEL-11：embedding 批次/token 約束（gemini-embedding-001 上限 ≤250 段 / 20,000 token
-# 每請求 / 2,048 token 每段）。C2 才消費；以 token 為硬約束、段數為軟上限，超限自動拆批。
-EMBEDDING_BATCH_MAX_ITEMS = int(os.getenv("EMBEDDING_BATCH_MAX_ITEMS", "100"))        # 段數軟上限（防禦保守值）
-EMBEDDING_BATCH_MAX_TOKENS = int(os.getenv("EMBEDDING_BATCH_MAX_TOKENS", "18000"))    # 請求 token 硬約束（對 20,000 留 buffer）
-EMBEDDING_MAX_TOKENS_PER_ITEM = int(os.getenv("EMBEDDING_MAX_TOKENS_PER_ITEM", "2048"))  # 單段 token 上限
-# === [MODEL-11 C1 END] ===
 # Phase 4.7? MODEL-1+2 階段 B2：RAG 檢索分數閾值（plan §4.6、修正 1）
 # 預設保留現有 0.22、env override 讓 baron 觀察 raw score 後動態調整
 # 推測 L2 normalize 後可能需升到 0.35-0.45、待 RAG-3 收實測數據確認
