@@ -645,28 +645,16 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
             }
             if ctx.rag is not None:
                 final_paths['vector_store'] = str(ctx.rag.vectors_path)
-            # === [PIPE-RESUME v9 C5 START] ===
-            # 影子寫庫保真：優先沿用 P1（C2）寫入 ctx.raw_metadata 的整包原始 metadata
-            # （candidate_name/domain/phone/email + confidence/source）→ Paper.metadata_json，
-            # 對齊 A 軌 upsert_paper(self._metadata) 保真度。title 沿用 ctx.ingestion.title
-            # （已自帶 (測試) 後綴、C2）；translated_abstract 補入供前端摘要。
-            _title_val = ctx.ingestion.title if ctx.ingestion else paper_id_shadow
-            _tabs_val = ctx.glossary_ready.translated_abstract if ctx.glossary_ready else ''
-            if ctx.raw_metadata:
-                meta_dict = dict(ctx.raw_metadata)
-                meta_dict['title'] = {
-                    'value': _title_val, 'source': 'pipeline', 'confidence': 'high',
-                }
-                meta_dict['translated_abstract'] = {
-                    'value': _tabs_val, 'source': 'pipeline', 'confidence': 'high',
-                }
-            else:
-                # 防禦性 fallback：raw_metadata 未寫入時退回最小 meta_dict（保 title 顯示）
-                meta_dict = {
-                    'title': {'value': _title_val, 'source': 'pipeline', 'confidence': 'high'},
-                    'translated_abstract': {'value': _tabs_val, 'source': 'pipeline', 'confidence': 'high'},
-                }
-            # === [PIPE-RESUME v9 C5 END] ===
+            meta_dict = {
+                'title': {
+                    'value': ctx.ingestion.title if ctx.ingestion else paper_id_shadow,
+                    'source': 'pipeline', 'confidence': 'high',
+                },
+                'translated_abstract': {
+                    'value': ctx.glossary_ready.translated_abstract if ctx.glossary_ready else '',
+                    'source': 'pipeline', 'confidence': 'high',
+                },
+            }
             paper_manager.upsert_paper(
                 str(OUTPUT_DIR), owner_id, paper_id_shadow,
                 {k: v for k, v in final_paths.items() if v},

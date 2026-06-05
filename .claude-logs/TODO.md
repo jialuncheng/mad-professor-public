@@ -429,12 +429,9 @@
   - [x] ✅ C2 — P1 + Context（raw_metadata 基建欄 + run_phase1 寫入 + 影子後綴）（待 baron 回填）
   - [x] ✅ C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata；2 測試紅燈待 C6 修）（待 baron 回填）
   - [x] ✅ C4 — P3 Business Constraints（履歷業務規則注入）（待 baron 回填）
-  - [/] 🟡 WIP: C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）
-  - [ ] ⬜ 未開始: C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata）
-  - [ ] ⬜ 未開始: C4 — P3 Business Constraints（履歷業務規則注入）
-  - [ ] ⬜ 未開始: C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）
-  - [ ] ⬜ 未開始: C6 — Unit Tests（v9 契約單元測試）
-  - [ ] ⬜ 未開始: C7 — Checkout / 收官歸檔（mv plan_v1→plans/ + 報告歸檔、保留 _v1 與內部 v11）
+  - [x] ✅ C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）（待 baron 回填）
+  - [x] ✅ C6 — Unit Tests（v9 契約單元測試；修復 C3 的 2 紅燈）（待 baron 回填）
+  - [/] 🟡 WIP: C7 — Checkout / 收官歸檔（mv plan_v1→plans/ + 報告歸檔、保留 _v1 與內部 v11）
   - 工時：7 個 commits（C1 三文件同步 + C2-C5 實作 + C6 測試 + C7 Checkout）
   - 依賴：plan §99.2 v11 已定稿；C1 同步上游 plan_v1+母 plan v10+PIPE-SPEC 後方可動 PipelineContext
   - 拆分依據：`.claude-logs/baton/2026-06-05_PIPE-RESUME_ResumePipeline策略管線_tasks.md`（03:35 精修 v2）
