@@ -19,8 +19,7 @@ Resume（履歷）文體的四 Phase 策略插件，繼承 PIPE-CORE `DocumentSt
 
 > custom_metadata 硬前置（tasks §9）：P1 履歷專屬欄 phone/email/domain 於凍結合約
 > `IngestionMetadataSpec`（extra="forbid"）尚未具備落點前，暫存於本策略實例
-> 整包原始 metadata 走 `ctx.raw_metadata`（v9 C2/C3、PIPE-SPEC §1.1.1）穿線給 P2/寫庫；
-> 取代早期 `self._raw_meta` 實例暫存（已於 C3 廢除）與 custom_metadata-in-Spec defer。
+> `self._raw_meta` 穿線給 P2；正式接線待上游擴 custom_metadata 後另行授權。
 > phone/email 既有 metadata_extractor 無對應欄，C2 以 markdown regex 自足抽取（不動既有檔）。
 """
 
@@ -101,18 +100,6 @@ _SUMMARY_SYSTEM_PROMPT = (
 )
 # === [PIPE-RESUME C3 END] ===
 
-# === [PIPE-RESUME v9 C4 START] P3 履歷業務翻譯約束 ===
-# 履歷專屬翻譯規則：由 run_phase3 經 InjectionContext.constraints 逐路注入共用 Translator
-# （`_build_system_prompt` ⑤ 貼為「【額外譯文約束】」、PIPE-SPEC §1.2.3.1 翻譯策略隔離原則）。
-# 規則由策略擁有、引擎共用執行；不為各路 fork prompt 或污染 Translator 核心。
-_RESUME_CONSTRAINTS = [
-    "公司名稱、產品名稱保留原文不翻",
-    "Email／電話／URL 原樣保留",
-    "專業技能詞（Python/Docker 等）保留英文",
-    "專有名詞（如專利、期刊等名稱）保留原文並在中譯中附加對照",
-]
-# === [PIPE-RESUME v9 C4 END] ===
-
 
 @PipelineFactory.register("resume")
 class ResumePipeline(DocumentStrategy):
@@ -121,10 +108,10 @@ class ResumePipeline(DocumentStrategy):
     # SPEC §3.1：Vision 短文檔（resume/slides）RAG 入庫字數門檻放寬至 3（保 Python/Docker 等技能詞）。
     rag_char_threshold: int = 3
 
-    # === [PIPE-RESUME v9 C3 START] ===
-    # （v9 C3 廢除 self._raw_meta 實例暫存——改以 C2 導入的 ctx.raw_metadata 為唯一穿線載體；
-    #   無實例狀態、移除 __init__。）
-    # === [PIPE-RESUME v9 C3 END] ===
+    def __init__(self) -> None:
+        # interim 穿線容器（tasks §9 硬前置）：P1 抽出的 phone/email/domain 暫存於此，
+        # 供 P2 消費 domain 餵 normalize_to_lcc；待 custom_metadata 正式入合約後改走合約欄。
+        self._raw_meta: Dict[str, Any] = {}
 
     # === [PIPE-RESUME C2 START] P1 Ingestion 全鏈編排 ===
     def run_phase1(self, ctx: PipelineContext) -> IngestionMetadataSpec:
@@ -136,7 +123,7 @@ class ResumePipeline(DocumentStrategy):
           ③ analyze：doc_analyzer 雙保險 heading fix（baron Q6）
           ④ md2json → ⑤ json_process → ⑥ tiling → 物理分組 Tiles
         交付 IngestionMetadataSpec（🚫 零 Abstract/LCC/Glossary、零翻譯）。
-        整包原始 metadata（含 phone/email/domain）寫 ctx.raw_metadata（v9 C2、供 P2/寫庫）。
+        phone/email/domain 暫存 self._raw_meta（custom_metadata 硬前置、tasks §9）。
         """
         if not ctx.pdf_path:
             raise ValueError("PIPE-RESUME P1：ctx.pdf_path 缺失，無法定位輸入 PDF")
@@ -174,9 +161,8 @@ class ResumePipeline(DocumentStrategy):
         source_lang = self._detect_source_lang(markdown_text)
         phone, email = self._extract_contact(markdown_text)
         domain = self._meta_value(meta, "domain") or ""
-        # === [PIPE-RESUME v9 C3 START] ===
-        # （v9 C3：移除 self._raw_meta 過渡雙寫——P2 改讀 ctx.raw_metadata、不再需實例暫存。）
-        # === [PIPE-RESUME v9 C3 END] ===
+        # interim 穿線（過渡期雙寫、供尚未改的 P2 消費 domain；C3 切換 ctx.raw_metadata 後移除）
+        self._raw_meta = {"phone": phone, "email": email, "domain": domain}
 
         # === [PIPE-RESUME v9 C2 START] ===
         # 影子標題後綴：_shadow 時 title 加綴 (測試)，使前端列表（顯示 DB title）肉眼可辨。
@@ -312,16 +298,13 @@ class ResumePipeline(DocumentStrategy):
             raise ValueError("PIPE-RESUME P2：ctx.pdf_path 缺失，無法定位原文")
         source_lang = (ctx.ingestion.source_lang if ctx.ingestion else None) or "en"
         full_text = self._read_source_text(ctx)
-        # === [PIPE-RESUME v9 C3 START] ===
-        # raw_domain 改讀 ctx.raw_metadata（C2 穿線載體；廢 self._raw_meta 死路）
-        raw_domain = (self._meta_value(ctx.raw_metadata, "domain") or "") if ctx.raw_metadata else ""
+        raw_domain = self._raw_meta.get("domain") or ""
 
-        # ① 做整份履歷摘要（原文）——v10 摘要先行（跨路統一；與 LCC 互不依賴、功能等價）
-        abstract = self._make_summary(full_text) or full_text[:_ABSTRACT_FALLBACK_CHARS]
-
-        # ② LCC 分類（旗標 False 時回 raw_domain、不查 DB 不呼 LLM）
+        # ① LCC 分類（旗標 False 時回 raw_domain、不查 DB 不呼 LLM）
         lcc = normalize_to_lcc(raw_domain, context_text=full_text) or "general"
-        # === [PIPE-RESUME v9 C3 END] ===
+
+        # ② 做整份履歷摘要（原文）
+        abstract = self._make_summary(full_text) or full_text[:_ABSTRACT_FALLBACK_CHARS]
 
         # 翻摘要（DEEP_THINK）→ translated_abstract（雙用：交付 + ③ glossary 抽詞樣本）
         translator = Translator()
@@ -467,9 +450,6 @@ class ResumePipeline(DocumentStrategy):
             zh_summary=gspec.translated_abstract,
             domain_name=gspec.domain_name,
             doc_type="resume",
-            # === [PIPE-RESUME v9 C4 START] ===
-            constraints=_RESUME_CONSTRAINTS,  # 履歷業務規則逐路注入共用 Translator（PIPE-SPEC §1.2.3.1）
-            # === [PIPE-RESUME v9 C4 END] ===
         )
 
         # ②③ 100% Bypass 整份翻譯 + 純樣板：final_en=原著、final_zh=中文版
