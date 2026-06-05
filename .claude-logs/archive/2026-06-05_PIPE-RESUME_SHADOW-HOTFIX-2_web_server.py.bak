@@ -660,14 +660,6 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
                 meta_dict['translated_abstract'] = {
                     'value': _tabs_val, 'source': 'pipeline', 'confidence': 'high',
                 }
-                # === [PIPE-RESUME SHADOW-HOTFIX-2 START] ===
-                # 影子標題後綴同步至 translated_title：前端列表優先取 translated_title
-                # （web_server.py:985），若僅 title 帶 (測試) 而 translated_title 乾淨 → 漏顯。
-                if isinstance(meta_dict.get('translated_title'), dict):
-                    _tt_val = meta_dict['translated_title'].get('value')
-                    if _tt_val and not str(_tt_val).endswith(" (測試)"):
-                        meta_dict['translated_title']['value'] = f"{_tt_val} (測試)"
-                # === [PIPE-RESUME SHADOW-HOTFIX-2 END] ===
             else:
                 # 防禦性 fallback：raw_metadata 未寫入時退回最小 meta_dict（保 title 顯示）
                 meta_dict = {

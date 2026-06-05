@@ -37,11 +37,7 @@ _STYLE_HINTS = {
     "slides": "文件為簡報投影片，請保持簡潔的條列式風格，勿過度詮釋。",
     "news": "文件為新聞文章，請使用流暢自然的新聞文體，不要過於學術化。",
     "web": "文件為網頁文章，請使用自然口語化的繁體中文。",
-    # === [PIPE-RESUME SHADOW-HOTFIX-2 START] ===
-    # 移除「公司名」保留：公司/機構名交回母提示詞 content_translate_prompt.txt L5
-    #（機構名稱翻譯後附原文）統一治理，消除與母提示詞反向覆寫的矛盾（doubling 源頭）。
-    "resume": "文件為個人履歷（CV），請使用正式商務中文，職稱、技術名詞保留原文。",
-    # === [PIPE-RESUME SHADOW-HOTFIX-2 END] ===
+    "resume": "文件為個人履歷（CV），請使用正式商務中文，職稱、公司名、技術名詞保留原文。",
 }
 # === [TRANSLATOR C2 END] ===
 

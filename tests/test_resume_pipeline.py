@@ -526,4 +526,71 @@ def test_c5_shadow_write_uses_raw_metadata(tmp_path, monkeypatch):
     assert meta["translated_abstract"]["value"] == "中文摘要"
     assert captured["domain"] == "CS"                      # domain_name 傳入
 # === [PIPE-RESUME v9 C6 END] ===
+
+
+# === [PIPE-RESUME SHADOW-HOTFIX-2 START] ===
+def test_shadow_write_appends_translated_title_suffix(tmp_path, monkeypatch):
+    """SHADOW-HOTFIX-2：raw_metadata 帶 translated_title（乾淨）→ 影子寫庫補綴 (測試)。
+    （C6 test_c5_shadow_write_uses_raw_metadata 的 FakeOrch 未帶 translated_title、走 guard=False，
+    不覆蓋本行為，故獨立補測。）"""
+    import asyncio
+
+    import pipelines  # noqa: F401
+    import web_server
+
+    monkeypatch.setattr(web_server, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    def fake_upsert(base, owner, pid, paths, metadata=None, **kw):
+        captured["metadata"] = metadata
+        return 1
+
+    monkeypatch.setattr(web_server.paper_manager, "upsert_paper", fake_upsert)
+
+    class FakeOrch:
+        def run(self, ctx):
+            ctx.raw_metadata = {
+                "candidate_name": {"value": "王小明"},
+                "translated_title": {"value": "王小明 (李小明)"},  # 乾淨、無 (測試)
+            }
+            ctx.ingestion = IngestionMetadataSpec(
+                title="王小明 (測試)", source_lang="en", tiles=[]
+            )
+            ctx.glossary_ready = GlossaryReadySpec(
+                abstract="a", lcc="QA", glossary={},
+                translated_abstract="中文摘要", domain_name="CS",
+            )
+            ctx.bilingual = BilingualMarkdownSpec(
+                final_zh_path=str(tmp_path / "zh.md"),
+                final_en_path=str(tmp_path / "en.md"),
+                translated_abstract="中文摘要",
+            )
+            return ctx
+
+    monkeypatch.setattr(pipelines, "Orchestrator", FakeOrch)
+
+    owner, pid = 777003, "pHF2"
+    try:
+        asyncio.run(
+            web_server.run_pipeline_shadow(owner, pid, "/tmp/x.pdf", "resume", "x.pdf")
+        )
+    finally:
+        with web_server.tasks_lock:
+            web_server.processing_tasks.pop((owner, f"{pid}_shadow"), None)
+
+    meta = captured["metadata"]
+    assert meta["translated_title"]["value"] == "王小明 (李小明) (測試)"  # 補綴 (測試)
+
+
+def test_shadow_hotfix2_company_conflict_removed():
+    """SHADOW-HOTFIX-2：B 軌兩處「公司保留原文」矛盾已移除（交回母提示詞 L5）。"""
+    import processor.translator as tr
+
+    # ⑤ constraints：不再保留公司原文（只留產品）
+    joined = "".join(rp._RESUME_CONSTRAINTS)
+    assert "公司" not in joined
+    assert "產品名稱保留原文" in rp._RESUME_CONSTRAINTS[0]
+    # ② STYLE_HINTS：resume 不再含「公司名」
+    assert "公司" not in tr._STYLE_HINTS["resume"]
+# === [PIPE-RESUME SHADOW-HOTFIX-2 END] ===
 # === [PIPE-RESUME C6 END] ===
