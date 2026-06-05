@@ -72,13 +72,6 @@ TILING_PARAGRAPH_THRESHOLD = int(os.getenv("TILING_PARAGRAPH_THRESHOLD", "30000"
 # 連線會把 Gemini endpoint 打斷）；太低會慢。預設 6 為經驗值；env override。
 LLM_MAX_CONCURRENT = int(os.getenv("LLM_MAX_CONCURRENT", "6"))
 
-# === [MODEL-9-OPT C1 START] ===
-# EmbeddingModel 全域併發上限（C2 消費）：與 LLM_MAX_CONCURRENT 各自獨立，避免
-# Embedding 高頻呼叫壟斷全域 API 配額（per API key/project RPM/TPM）。Semaphore 限
-# 併發數、非 RPM 限流，僅削平突發；env 可調、撞 429 時據 429 log 調整（plan §7 OQ3）。
-EMBEDDING_MAX_CONCURRENT = int(os.getenv("EMBEDDING_MAX_CONCURRENT", "5"))
-# === [MODEL-9-OPT C1 END] ===
-
 # === [DOMAIN-NORM C3 START] ===
 # DOMAIN-NORM：領域標準化對齊器（DomainNormalizer）熱插拔旗標。
 # False（預設）→ normalize_to_lcc 走舊行為：直接回傳 raw_domain，不查 DB、不呼 LLM、零風險。

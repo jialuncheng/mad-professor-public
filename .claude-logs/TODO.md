@@ -61,7 +61,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| SHADOW-HOTFIX-2 | B軌三處「移除矛盾、交回母提示詞」：①`web_server.py` 影子寫庫補綴 `translated_title` ` (測試)`〔前端列表優先取 translated_title、防漏顯〕②`processor/translator.py:40` STYLE_HINTS['resume'] 移除「公司名」③`pipelines/resume_pipeline.py:109` `_RESUME_CONSTRAINTS[0]` 改「產品名保留原文」——公司/機構交回母提示詞 `content_translate_prompt.txt` L5 統一「翻譯 (原文)」，消除 ②⑤ 與母提示詞反向覆寫的矛盾（公司沒翻 + doubling 源頭）；不改 `translate_processor.py`（A軌棄修）/母提示詞；`# === [PIPE-RESUME SHADOW-HOTFIX-2 START/END] ===` 包裹 + 補 2 回歸測試；resume 21 / translator 8 / 相關 19 passed、全套件 486 passed（僅 env flake） | `待 baron 回填` |
+| SHADOW-HOTFIX-2 | B軌三處「移除矛盾、交回母提示詞」：①`web_server.py` 影子寫庫補綴 `translated_title` ` (測試)`〔前端列表優先取 translated_title、防漏顯〕②`processor/translator.py:40` STYLE_HINTS['resume'] 移除「公司名」③`pipelines/resume_pipeline.py:109` `_RESUME_CONSTRAINTS[0]` 改「產品名保留原文」——公司/機構交回母提示詞 `content_translate_prompt.txt` L5 統一「翻譯 (原文)」，消除 ②⑤ 與母提示詞反向覆寫的矛盾（公司沒翻 + doubling 源頭）；不改 `translate_processor.py`（A軌棄修）/母提示詞；`# === [PIPE-RESUME SHADOW-HOTFIX-2 START/END] ===` 包裹 + 補 2 回歸測試；resume 21 / translator 8 / 相關 19 passed、全套件 486 passed（僅 env flake） | `3d2778a` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-05_PIPE-RESUME_SHADOW-HOTFIX-2_hotfix.md`（v2 三處「移除矛盾」版）
 > **根因**：B軌履歷翻譯指令三層打架——母提示詞 L5「機構翻譯附原文」vs ②STYLE_HINTS / ⑤constraints「公司保留原文」；②為 A軌 STYLE_HINTS 逐字複製殘渣。移除 ②⑤ 矛盾後公司由 L5 統一翻譯。
@@ -462,6 +462,15 @@
 
 ### 🔴 高優先
 
+- 🟡 **MODEL-9-OPT Embedding連線與限流框架優化**（`.claude-logs/baton/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_plan.md`）
+  - [x] ✅ C1 — Settings Knob（限流參數初始化）（待 baron 回填）
+  - [/] 🟡 WIP: C2 — Embedding Resilience Core（限流與退避框架重構）
+  - [ ] ⬜ 未開始: C3 — Unit Tests（限流與重試契約測試）
+  - [ ] ⬜ 未開始: C4 — Checkout（收官與 baton 檔案歸檔）
+  - 工時：4 個 commits（C1 settings + C2 config 重構 + C3 測試 + C4 Checkout）
+  - 依賴：無（不改向量值、不觸發 Golden 重捕、可獨立先做；排序 hotfix → **MODEL-9-OPT** → RESUME-P3）
+  - 拆分依據：`.claude-logs/baton/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_tasks.md`
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -750,5 +759,5 @@
 - ✅ ~~PIPE-RESUME ResumePipeline策略管線~~（已落地、C1 `f3d4e41` + C2 `d7edcd9` + C3 `48aa5df` + C4 `8971a19` + C5 `e8a7429` + C6 `fabb114` + C7 收官；`pipelines/resume_pipeline.py` 四 Phase 策略〔P1 Vision 全鏈/P2 LCC+摘要+Glossary 自癒/P3 100% Bypass/P4 RAG ≥3〕+ tests/test_resume_pipeline.py 15 測試；消費 PIPE-CORE ABC/三大真理源/PIPE-SCAFFOLD 影子；baron 拍板擴 PipelineContext pdf_path/owner_id；custom_metadata 硬前置 defer 僅影子 B 軌、不 Flip）
 - ✅ ~~PIPE-RESUME v9 影子整合與規格同步~~（已落地、C1 `b97958b` + C2 `e64417a` + C3 `f239721` + C4 `9bbad2d` + C5 `9291c5c` + C6 `4e15905` + C7 收官；raw_metadata 旁路穿線 + P1 影子標題後綴 (測試) + P2 摘要先行步序 + P3 翻譯策略隔離 constraints + C5 影子寫庫保真〔對齊 A 軌 upsert_paper〕+ 廢 self._raw_meta；resume 19 測試、全套件 483 passed；A 軌 byte 不動）
 - ✅ ~~TILING-HOTFIX-1 — 緊急熱修復：TextTiling Embedding 速率超限 (429) 批次化修復~~（已落地、`702347a`；`tiling_processor.py:425` 逐筆 embed_query→批次 embed_documents〔1/32 請求+線性退避+順序保證〕；根治 429 阻斷+test_tiling_paragraph 併發 flaky；全套件 484 passed；⚠️ task_type RETRIEVAL_QUERY→DOCUMENT 行為變更、Flip/結案前須重捕 Golden Baseline）
-- ✅ ~~SHADOW-HOTFIX-2 — B軌影子標題 (測試) 後綴與履歷公司名翻譯修復~~（已落地、`待 baron 回填`；3 處移除矛盾交回母提示詞：web_server translated_title 補 (測試) + translator.py:40 STYLE_HINTS 移除公司名 + resume_pipeline.py:109 constraints 改產品-only；全套件 486 passed；⚠️ B軌譯文改變、與 TILING-HOTFIX-1 合併重捕 Golden Baseline；學歷 doubling 殘留歸 RESUME-P3）
+- ✅ ~~SHADOW-HOTFIX-2 — B軌影子標題 (測試) 後綴與履歷公司名翻譯修復~~（已落地、`3d2778a`；3 處移除矛盾交回母提示詞：web_server translated_title 補 (測試) + translator.py:40 STYLE_HINTS 移除公司名 + resume_pipeline.py:109 constraints 改產品-only；全套件 486 passed；⚠️ B軌譯文改變、與 TILING-HOTFIX-1 合併重捕 Golden Baseline；學歷 doubling 殘留歸 RESUME-P3）
 
