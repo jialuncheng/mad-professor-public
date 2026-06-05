@@ -68,6 +68,19 @@
 > **⚠️ 行為變更 + 重捕**：B軌譯文內容改變 → 衝擊 D2/chunk；**Flip/結案前須與 TILING-HOTFIX-1 合併一次重捕 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`）。
 > **保留意見**：學歷地點行錯亂 / doubling 殘留（U4 + 100% Bypass 整檔單發）屬 B軌 P3 架構問題，已立 `RESUME-P3` plan 另開任務、不在本 hotfix 硬修。
 
+### BE-Refactor MODEL-9-OPT Embedding連線與限流框架優化
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `settings.py` 新增 `EMBEDDING_MAX_CONCURRENT`（預設 5、env 可調）；純新增常數、C2 才消費、行為等價 | `8feaa12` |
+| C2 | `config.py` EmbeddingModel 引入 class-level `_api_semaphore=threading.Semaphore(EMBEDDING_MAX_CONCURRENT)` + `embed_query/embed_image/_embed_batch〔新〕/_embed_one` 套 `@retry_call`〔Full Jitter 指數退避〕+ `with semaphore` + 重構 `embed_documents` 批次降級逐筆〔移除手動 time.sleep linear〕+ 429 extra_fields 觀測 log；`_embed_one` fallback retries=2；同步 `tiling_processor.py` 過時退避註解；embed_content 參數/_l2_normalize 不變→向量值不變→不觸發 Golden 重捕 | `9a44d41` |
+| C3 | 新建 `tests/test_embedding_retry.py` 4 測試（embed_query 429 退避 / embed_image 503 重試 / embed_documents 批次降級保序+warning / Semaphore 併發上限）；4 passed、全套件 490 passed | `e86ced9` |
+| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 / tasks §6 grep+pytest / 不可動清單 git 證據）+ SOP 核查 + 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan/tasks/C1-C3 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_plan.md`（§99.2 v3、review 5 點補強定稿）
+> **PIPE 對齊**：基建韌性層——EmbeddingModel 接入 `llm/retry.py` 統一彈性框架（與 LLMClient 機制一致、各自獨立 Semaphore 避免跨模組死鎖）；根治高頻 Embedding 削爆全域配額連帶拖垮 LLM。**不改向量值、不觸發 Golden Baseline 重捕、可獨立先做**（排序 hotfix → MODEL-9-OPT → RESUME-P3）。
+> **OQ3 上線觀察項**：併發鎖 ≠ RPM 限流；預設 5+env 可調+429 log 觀測，撞不過才上 token bucket（非本任務）。
+
 ### BE-Refactor TRANSLATOR 雙模式原子翻譯器（PIPE 大改版三大共用真理源之三）
 
 | Commit | 內容 | Hash |
@@ -462,17 +475,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **MODEL-9-OPT Embedding連線與限流框架優化**（`.claude-logs/baton/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_plan.md`）
-  - [x] ✅ C1 — Settings Knob（限流參數初始化）（`8feaa12`）
-  - [x] ✅ C2 — Embedding Resilience Core（限流與退避框架重構）（`9a44d41`）
-  - [x] ✅ C3 — Unit Tests（限流與重試契約測試）（待 baron 回填）
-  - [/] 🟡 WIP: C4 — Checkout（收官與 baton 檔案歸檔）
-  - [ ] ⬜ 未開始: C3 — Unit Tests（限流與重試契約測試）
-  - [ ] ⬜ 未開始: C4 — Checkout（收官與 baton 檔案歸檔）
-  - 工時：4 個 commits（C1 settings + C2 config 重構 + C3 測試 + C4 Checkout）
-  - 依賴：無（不改向量值、不觸發 Golden 重捕、可獨立先做；排序 hotfix → **MODEL-9-OPT** → RESUME-P3）
-  - 拆分依據：`.claude-logs/baton/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_tasks.md`
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -704,6 +706,7 @@
 - 🔵 MODEL-5 Structured Outputs router
 - 🔵 MODEL-7c Metadata 語意前綴（候選、低優先、等 RAG-3 結果再評估）
 - ✅ ~~MODEL-9 連線彈性防禦~~（已落地、`dd18922`）
+- ✅ ~~MODEL-9-OPT Embedding連線與限流框架優化~~（已落地、C1 `8feaa12` + C2 `9a44d41` + C3 `e86ced9` + C4 收官；EmbeddingModel Semaphore + retry_call 統一退避 + embed_documents 批次降級；不改向量值/不觸發 Golden 重捕；OQ3 RPM 令牌桶屬上線觀察項）
 - ✅ ~~MODEL-10 MinerU 連線優化與運作維護 SOP~~（已落地、C1 `19ddac8` + C2 `991258d` + Check 收官）
 
 ### Phase 4.7e Resume Independent Pipeline（全完工）
