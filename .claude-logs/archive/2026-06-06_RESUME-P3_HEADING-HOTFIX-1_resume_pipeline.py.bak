@@ -549,29 +549,19 @@ class ResumePipeline(DocumentStrategy):
         parts: List[str] = []
         for sec in sections or []:
             if isinstance(sec, dict):
-                # === [RESUME-P3 HEADING-HOTFIX-1 START] 頂層 section 由 depth=0 起算（→ h2）===
-                self._restore_one_section(sec, inj, tr, translate, parts, depth=0)
-                # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+                self._restore_one_section(sec, inj, tr, translate, parts)
         return ("\n\n".join(p for p in parts if p)).strip() + "\n"
 
     def _restore_one_section(
         self, sec: Dict[str, Any], inj: "InjectionContext", tr: "Translator",
-        translate: bool, parts: List[str], depth: int = 0,
+        translate: bool, parts: List[str],
     ) -> None:
         """單一 section：還原標題（# * level）+ 逐 content item 分流，遞迴 children。"""
         title = (sec.get("title") or "").strip()
         if title:
-            # === [RESUME-P3 HEADING-HOTFIX-1 START] ===
-            # 標題層級改由「遞迴深度」推算，不再讀資料欄位。
-            # 真因：processed JSON 的 level 欄恆=1（扁平死欄），原本「level 欄 or heading_level 欄」
-            # 的取值因 or 短路永遠取到恆真的 1 → 全標題塌成 h1、無階層。
-            # 深度推算：頂層 section = h2（候選人名為 h1、另由 md_restore 樣板渲染），
-            # 每下潛一層 children +1、上限 h6；等價於資料正確時的 heading_level（= 2 + 深度），
-            # 但不依賴該欄位是否被正確填寫（結構保證階層）。
-            level = min(2 + depth, 6)
-            # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+            level = int(sec.get("level") or sec.get("heading_level") or 1)
             zh_title = self._t(title, inj, tr, "title") if translate else title
-            parts.append(f"{'#' * level} {zh_title}")
+            parts.append(f"{'#' * max(1, min(level, 6))} {zh_title}")
 
         for item in sec.get("content", []) or []:
             if isinstance(item, dict):
@@ -591,9 +581,7 @@ class ResumePipeline(DocumentStrategy):
 
         for child in sec.get("children", []) or []:
             if isinstance(child, dict):
-                # === [RESUME-P3 HEADING-HOTFIX-1 START] children 下潛一層 depth+1 ===
-                self._restore_one_section(child, inj, tr, translate, parts, depth=depth + 1)
-                # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+                self._restore_one_section(child, inj, tr, translate, parts)
 
     def _translate_whole(
         self, full_text: str, inj: "InjectionContext", tr: "Translator", translate: bool,

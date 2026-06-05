@@ -84,6 +84,16 @@
 > **⚠️ 行為變更 + 重捕**：B軌履歷 Markdown 輸出改變（逐 section 重組）→ 衝擊 D2/chunk；**Flip/結案前須與 TILING-HOTFIX-1 / SHADOW-HOTFIX-2 合併一次重捕 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`）；U6 對齊度於重捕後 diff 裁決。
 > **後續**：通用化各路 chunking opt-in 機制歸 `INFRA-3`（五路收完 + A軌死後）。
 
+### BE-Hotfix RESUME-P3 HEADING-HOTFIX-1 — B軌履歷標題層級塌陷（全 h1、無階層）修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HEADING-HOTFIX-1 | `pipelines/resume_pipeline.py` `_restore_one_section` 標題層級改由**遞迴深度**推算：`_restore_sections_markdown` 傳起始 `depth=0`、簽名加 `depth:int=0`、廢除恆=1 的 `level` 扁平死欄短路改 `level=min(2+depth,6)`〔頂層 h2、children 遞迴 `depth+1`、上限 h6〕；根治 C3 `_restore_one_section` 因 `level 欄 or heading_level 欄` 短路永取 1 → 全標題塌成 h1、無階層；`# === [RESUME-P3 HEADING-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_heading_level_by_recursion_depth`〔3 層巢狀全 level=1 仍還原 ##/###/####〕；resume 27 passed、全套件 500 passed（僅 env flake） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_HEADING-HOTFIX-1_hotfix.md`
+> **真因**：processed JSON `level` 欄恆=1（扁平死欄、真實深度在 children 樹與 `heading_level`＝2+樹深度）；C3 `_restore_one_section` 寫 `sec.get("level") or sec.get("heading_level")`，因 `or` 短路先取恆真的 1 → 每標題都 `#`(h1)。改遞迴深度推算後等價 `heading_level` 但不依賴資料欄位。
+> **⚠️ 行為變更 + 重捕**：改 B軌 `final_zh` 標題層級（`#`→`##`/`###`/`####`）→ 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3 同屬 B軌輸出變更類）。
+
 ### BE-Refactor MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次
 
 | Commit | 內容 | Hash |
@@ -91,7 +101,7 @@
 | C1 | `settings.py` 換 `EMBEDDING_MODEL` 預設 `gemini-embedding-2`→`gemini-embedding-001`（文字 embedding GA、支援文字 list 真批次 + task_type）+ 追加 `EMBEDDING_BATCH_MAX_ITEMS`(100 段數軟上限)/`EMBEDDING_BATCH_MAX_TOKENS`(18000 請求 token 硬約束)/`EMBEDDING_MAX_TOKENS_PER_ITEM`(2048 單段上限) 三常數；C2 才消費、`# === [MODEL-11 C1] ===` 包裹 | `1f56547` |
 | C2 | `config.py` `embed_documents` 廢 `BATCH_SIZE=32` 固定切分 → **token-aware 貪婪封批**〔`est=max(1,len(text))` 字元上界估值、封批臨界 段數≥`EMBEDDING_BATCH_MAX_ITEMS` 或 累計 token>`EMBEDDING_BATCH_MAX_TOKENS`、殘留 flush、巢狀 `_flush` 保 `_embed_one` 真 fallback〕+ 單段超上限發 `embedding_oversized_item` warning 不截斷 + log 正名 `embedding_429`→`embedding_batch_fallback`+`reason`；`_embed_batch` 校驗/`_embed_one`/`embed_query`/`embed_image` 不動；MODEL-9-OPT C2 頂部過時註解更新〔換 -001 向量改變、須 regen_rag --all + Golden 重捕〕；`# === [MODEL-11 C2] ===` 包裹 | `d7f26be` |
 | C3 | `tests/test_embedding_retry.py` mock 實例 model 對齊 -001 + 追加 4 測試〔real_batch_no_fallback 真批次 N→N spy `_embed_one` 0 呼叫保序 / auto_split_preserves_order patch `config.EMBEDDING_BATCH_MAX_ITEMS=2` 拆 2 批保序 / task_type_document_vs_query DOCUMENT vs QUERY / embed_batch_429_falls_back_to_one patch `_embed_batch` 拋 429 退逐筆〕；該檔 8 passed、全套件 499 passed | `8c5a0eb` |
-| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U6 遷移/U7 Golden 屬 baron 運維〕/ tasks §6 grep+全套件 499 passed / 不可動清單 git 證據〔僅 settings.py+config.py+test_embedding_retry.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U6 遷移/U7 Golden 屬 baron 運維〕/ tasks §6 grep+全套件 499 passed / 不可動清單 git 證據〔僅 settings.py+config.py+test_embedding_retry.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `01a4e5b` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-06_MODEL-11_Embedding模型換用gemini-embedding-001與真批次_plan_v1.md`（§99.2 v2、§7 OQ Q1-Q8 核准）
 > **根因**：`gemini-embedding-2` 為多模態交錯模型——SDK 特例 `t_contents()` 把 `contents=[N 段]` 併成 1 向量 → 批次永遠退逐筆（慢、log 誤標 429）；且不支援 task_type → query/doc 向量同質、RAG 召回非對稱性喪失（品質打折非僅效能）。Dev API 探針鋼證：`gemini-embedding-001 embeddings=3`（真批次）vs `gemini-embedding-2 embeddings=1`（融合）。

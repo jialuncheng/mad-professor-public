@@ -76,6 +76,9 @@
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
 ### RESUME-P3 系列
+- 🟡 **RESUME-P3 HEADING-HOTFIX-1 B軌標題層級遞迴深度修復（2026-06-06 文件 + Run）**
+  - `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_run_提示詞.md` — Run（落地：`pipelines/resume_pipeline.py` `_restore_sections_markdown` 傳 depth=0 + `_restore_one_section` 簽名加 depth、移除 `sec.get("level")` 恆=1 短路改 `level=min(2+depth,6)`、children 遞迴 depth+1；`tests/test_resume_pipeline.py` 追加 `test_p3_heading_level_by_recursion_depth`〔3 層巢狀全 level=1 仍還原 ##/###/####〕；`# === [RESUME-P3 HEADING-HOTFIX-1 START/END] ===` 包裹 + 2 .bak；grep+pytest+SOP；收官 mv hotfix.md+執行.md→hotfixes/；改 B軌輸出須重捕 resume golden）
+  - `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan 階段：B軌履歷標題塌成全 h1、無階層；真因＝`_restore_one_section:562` `sec.get("level") or sec.get("heading_level")` 因 level 欄恆=1 短路永取 1；baron 拍板「直接用遞迴深度 depth 推算」`level=min(2+depth,6)`〔頂層 h2、children +1、上限 h6、等價 heading_level 但不依賴資料欄〕；依 template_hotfix 產 `baton/2026-06-06_RESUME-P3_HEADING-HOTFIX-1_hotfix.md` 含詳細真因 + 完整 diff；不動 .py、Run 待 baron；改 B軌輸出須重捕 resume golden）
 - 🟡 **RESUME-P3 B軌履歷翻譯品質重構（2026-06-05 Tasks）**
   - `2026-06-06_RESUME-P3_Check_提示詞.md` — Check（C6 收官：Conformance 三維度驗收〔目標規格 plan §2 U1-U8 / tasks §6 pytest+grep / 不可動清單〕+ 提示詞稽核 + msg 完整性 → 全合規後建 C6 執行報告 + TODO 結案〔C1-C6 完成表 + hash 全量自癒〕+ 一次性 mv plan/tasks/C1-C6 報告 → plans//tasks//executions/ + git add；嚴禁自發 commit、msg 寫 /tmp；末尾提醒 baron 重捕 Golden Baseline；RESUME-P3 全案結案）
   - `2026-06-05_RESUME-P3_C5_run_提示詞.md` — C5 Run（Unit Tests：`tests/test_resume_pipeline.py` 修 C1 carryover `test_run_phase1_contract`（FakeMd 寫含 section JSON、對齊 C1 opt-out 直讀 processed）+ 追加 C1 opt-out（不呼叫 TilingProcessor）/ C3 逐 section 標題正文分流翻譯+無整行英文標題殘留 / 無 doubling / C4 退化 fallback（單一巨 section→整檔）/ 契約 BilingualMarkdownSpec 完備；`# === [RESUME-P3 C5 START/END] ===` 包裹 + .bak；全套件除 env flake 全綠）
@@ -219,6 +222,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_run_提示詞.md`
+- 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C4_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C3_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C2_run_提示詞.md`
@@ -231,6 +236,4 @@
 - 2026-06-05 — `2026-06-05_RESUME-P3_C2_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C1_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_Tasks_提示詞.md`
-- 2026-06-05 — `2026-06-05_MODEL-9-OPT_Check_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C3_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_MODEL-9-OPT_C2_run_提示詞.md`
