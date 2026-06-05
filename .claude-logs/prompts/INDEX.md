@@ -75,6 +75,11 @@
   - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
+### RESUME-P3 系列
+- 🟡 **RESUME-P3 B軌履歷翻譯品質重構（2026-06-05 Tasks）**
+  - `2026-06-05_RESUME-P3_C1_run_提示詞.md` — C1 Run（P1 履歷 Tiling Opt-out：重構 `resume_pipeline.py::_build_tiles`，履歷強制繞過 TilingProcessor 向量計算、直接把 JsonProcessor 的 processed JSON 當 tiled JSON 加載；保全 ### heading 結構、P1 不跑 TextTiling embedding、滅 429；`# === [RESUME-P3 C1 START/END] ===` 包裹 + .bak；grep + test_resume_pipeline 不退化 + SOP；報告暫存 baton 不入 Git）
+  - `2026-06-05_RESUME-P3_Tasks_提示詞.md` — Tasks（依 plan v3〔OQ Q1/Q2/Q3/Q4/Q9/Q10 核准〕拆 commit：P1 履歷 tiling bypass → P3 廢 100% Bypass 改逐 heading section 翻譯+還原〔pipelines/ 內重建、不耦合 A 軌 translate_processor〕+ resume 停用 translator U4 重切 + heading 退化 fallback → 單元測試 → Checkout；改 B軌輸出須與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3；含 §0.5 成果盤點 / §8 六維度 / 末尾 Checkout，中間報告留 baton）
+
 ### MODEL-9-OPT 系列
 - 🟡 **MODEL-9-OPT Embedding 連線與限流框架優化（2026-06-05 Tasks）**
   - `2026-06-05_MODEL-9-OPT_Check_提示詞.md` — Check（C4 收官：Conformance 三維度驗收〔目標規格 plan §2 / tasks §6 pytest+grep / 不可動清單 tasks §7〕+ 提示詞稽核 + msg 完整性 → 全合規後 TODO 結案〔C1-C4 完成表 + hash 全量自癒〕+ 一次性 mv plan→plans//tasks→tasks//C1-C3 報告→executions/ + git add；嚴禁自發 commit、msg 寫 /tmp；MODEL-9-OPT 全案結案）
@@ -201,6 +206,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_RESUME-P3_C1_run_提示詞.md`
+- 2026-06-05 — `2026-06-05_RESUME-P3_Tasks_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_Check_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C3_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C2_run_提示詞.md`
@@ -214,5 +221,3 @@
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C4_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C3_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C2_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_PIPE-RESUME_C1_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_PIPE-RESUME_Tasks_提示詞.md`

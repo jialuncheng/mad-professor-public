@@ -475,6 +475,17 @@
 
 ### 🔴 高優先
 
+- 🟡 **RESUME-P3 B軌履歷翻譯品質重構**（`.claude-logs/baton/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_plan_v1.md`）
+  - [x] ✅ C1 — P1 履歷 Tiling Opt-out（P1 切塊旁路）（待 baron 回填；1 測試 carryover 待 C5 修）
+  - [/] 🟡 WIP: C2 — Translator U4 resume 停用（行結構對齊容錯停用）
+  - [ ] ⬜ 未開始: C3 — P3 逐 heading section 翻譯與還原（廢 100% Bypass）
+  - [ ] ⬜ 未開始: C4 — heading 退化 Fallback（單一巨 section 降級防護）
+  - [ ] ⬜ 未開始: C5 — Unit Tests（逐 heading 契約與退化測試）
+  - [ ] ⬜ 未開始: C6 — Checkout（收官與 baton 檔案歸檔）
+  - 工時：6 個 commits（C1 P1 opt-out + C2 U4 停用 + C3 P3 核心 + C4 fallback + C5 測試 + C6 Checkout）
+  - 依賴：plan v3 OQ 已核准（Q1/Q2/Q3/Q4/Q9/Q10）；改 B軌輸出→須與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3
+  - 拆分依據：`.claude-logs/baton/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_tasks.md`
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）

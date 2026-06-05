@@ -232,24 +232,13 @@ class ResumePipeline(DocumentStrategy):
     def _build_tiles(
         self, md_path: Path, output_dir: Path, paper_name: str
     ) -> List[Dict[str, Any]]:
-        """md2json → json_process → (履歷 opt-out TextTiling)，回 heading section Tiles。
-
-        履歷 opt-out（RESUME-P3 C1、plan v3 Q3）：履歷只需 heading section（`###` 分組），
-        不需學術式語意切塊；P1 不跑 TextTiling embedding（保全 ### 結構、源頭滅 429）。
-        """
+        """md2json → json_process → tiling，回物理分組 Tiles（tiled JSON 的 sections）。"""
         structured = output_dir / f"{paper_name}_structured.json"
         MarkdownProcessor().process(str(md_path), str(structured))
         processed = output_dir / f"{paper_name}_processed.json"
         JsonProcessor().process(str(structured), str(processed))
         tiled = output_dir / f"{paper_name}_tiled.json"
-        # === [RESUME-P3 C1 START] ===
-        # 履歷 opt-out TextTiling（plan v3 Q3）：直接以 JsonProcessor 的 processed JSON 作為
-        # tiled（保全 ###/title/content/children heading 結構），**不呼叫 TilingProcessor 向量計算**。
-        # → P1 不跑 TextTiling embedding：源頭消滅履歷 429 配額隱患（TILING-HOTFIX-1 根源），
-        #   且 tiles 即乾淨 heading section、供 P3（C3）逐 section 翻譯。
-        #   （通用化動態 tiling 開關歸 INFRA-3；TilingProcessor 演算法本體不動。）
-        tiled.write_text(processed.read_text(encoding="utf-8"), encoding="utf-8")
-        # === [RESUME-P3 C1 END] ===
+        TilingProcessor().process(str(processed), str(tiled), doc_type="resume")
         return self._load_tiles(tiled)
 
     @staticmethod
