@@ -424,6 +424,19 @@
 
 ### 🔴 高優先
 
+- 🟡 **PIPE-RESUME v9 影子整合與規格同步**（`.claude-logs/baton/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md` §99.2 v11）
+  - [x] ✅ C1 — Sync System Specs（同步三份核心規格文件：plan_v1 + 母 plan v10 + PIPE-SPEC）（待 baron 回填）
+  - [/] 🟡 WIP: C2 — P1 + Context（raw_metadata 基建欄 + run_phase1 寫入 + 影子後綴）
+  - [ ] ⬜ 未開始: C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata）
+  - [ ] ⬜ 未開始: C4 — P3 Business Constraints（履歷業務規則注入）
+  - [ ] ⬜ 未開始: C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）
+  - [ ] ⬜ 未開始: C6 — Unit Tests（v9 契約單元測試）
+  - [ ] ⬜ 未開始: C7 — Checkout / 收官歸檔（mv plan_v1→plans/ + 報告歸檔、保留 _v1 與內部 v11）
+  - 工時：7 個 commits（C1 三文件同步 + C2-C5 實作 + C6 測試 + C7 Checkout）
+  - 依賴：plan §99.2 v11 已定稿；C1 同步上游 plan_v1+母 plan v10+PIPE-SPEC 後方可動 PipelineContext
+  - 拆分依據：`.claude-logs/baton/2026-06-05_PIPE-RESUME_ResumePipeline策略管線_tasks.md`（03:35 精修 v2）
+  - 註：本批次 C1-C7 為 v9 整合內部序，與原 PIPE-RESUME C1-C7（已收官）區別；P4 無 v9 變更不立 commit
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
