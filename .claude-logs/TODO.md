@@ -476,8 +476,9 @@
 ### 🔴 高優先
 
 - 🟡 **RESUME-P3 B軌履歷翻譯品質重構**（`.claude-logs/baton/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_plan_v1.md`）
-  - [x] ✅ C1 — P1 履歷 Tiling Opt-out（P1 切塊旁路）（待 baron 回填；1 測試 carryover 待 C5 修）
-  - [/] 🟡 WIP: C2 — Translator U4 resume 停用（行結構對齊容錯停用）
+  - [x] ✅ C1 — P1 履歷 Tiling Opt-out（P1 切塊旁路）（`aec1f6f`；1 測試 carryover 待 C5 修）
+  - [x] ✅ C2 — Translator U4 resume 停用（行結構對齊容錯停用）（待 baron 回填）
+  - [/] 🟡 WIP: C3 — P3 逐 heading section 翻譯與還原（廢 100% Bypass）
   - [ ] ⬜ 未開始: C3 — P3 逐 heading section 翻譯與還原（廢 100% Bypass）
   - [ ] ⬜ 未開始: C4 — heading 退化 Fallback（單一巨 section 降級防護）
   - [ ] ⬜ 未開始: C5 — Unit Tests（逐 heading 契約與退化測試）

@@ -77,6 +77,7 @@
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
 ### RESUME-P3 系列
 - 🟡 **RESUME-P3 B軌履歷翻譯品質重構（2026-06-05 Tasks）**
+  - `2026-06-05_RESUME-P3_C2_run_提示詞.md` — C2 Run（Translator U4 resume 停用：`processor/translator.py` translate U4 區塊加閘門 `if (ctx.doc_type or '') != 'resume':`、resume 停用 `。！？` 重切以保全條列/日期/地點原行結構；其他文體不變；`# === [RESUME-P3 C2 START/END] ===` 包裹 + .bak；grep + test_translator 不退化 + SOP；報告暫存 baton 不入 Git）
   - `2026-06-05_RESUME-P3_C1_run_提示詞.md` — C1 Run（P1 履歷 Tiling Opt-out：重構 `resume_pipeline.py::_build_tiles`，履歷強制繞過 TilingProcessor 向量計算、直接把 JsonProcessor 的 processed JSON 當 tiled JSON 加載；保全 ### heading 結構、P1 不跑 TextTiling embedding、滅 429；`# === [RESUME-P3 C1 START/END] ===` 包裹 + .bak；grep + test_resume_pipeline 不退化 + SOP；報告暫存 baton 不入 Git）
   - `2026-06-05_RESUME-P3_Tasks_提示詞.md` — Tasks（依 plan v3〔OQ Q1/Q2/Q3/Q4/Q9/Q10 核准〕拆 commit：P1 履歷 tiling bypass → P3 廢 100% Bypass 改逐 heading section 翻譯+還原〔pipelines/ 內重建、不耦合 A 軌 translate_processor〕+ resume 停用 translator U4 重切 + heading 退化 fallback → 單元測試 → Checkout；改 B軌輸出須與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3；含 §0.5 成果盤點 / §8 六維度 / 末尾 Checkout，中間報告留 baton）
 
@@ -206,6 +207,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_RESUME-P3_C2_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C1_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_Tasks_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_Check_提示詞.md`
@@ -220,4 +222,3 @@
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C5_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C4_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C3_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_PIPE-RESUME_C2_run_提示詞.md`

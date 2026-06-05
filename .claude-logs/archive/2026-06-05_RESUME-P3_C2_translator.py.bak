@@ -190,17 +190,11 @@ class Translator:
         ).strip()
         # === [TRANSLATOR C4 START] ===
         # U4 多行重分行容錯：原文多行但譯文行數較少時、按句末標點重分行（對齊既有 translate_text）。
-        # === [RESUME-P3 C2 START] ===
-        # resume 停用 U4（plan v3 Q4）：履歷為條列/日期/地點等短行結構、幾乎無 。！？，
-        # 按句末標點重切會壓縮並錯置行（地點行錯亂）。故 doc_type=='resume' 不執行 U4 重切、
-        # 保全原行結構；其他文體（academic/book…）維持原 U4 行為。
-        if (ctx.doc_type or "") != "resume":
-            original_lines = text.strip().split("\n")
-            if len(original_lines) > 1:
-                translated_lines = translated.split("\n")
-                if len(translated_lines) < len(original_lines):
-                    translated = re.sub(r"([。！？])\s*", r"\1\n", translated).strip()
-        # === [RESUME-P3 C2 END] ===
+        original_lines = text.strip().split("\n")
+        if len(original_lines) > 1:
+            translated_lines = translated.split("\n")
+            if len(translated_lines) < len(original_lines):
+                translated = re.sub(r"([。！？])\s*", r"\1\n", translated).strip()
         # === [TRANSLATOR C4 END] ===
         return translated
     # === [TRANSLATOR C3 END] ===
