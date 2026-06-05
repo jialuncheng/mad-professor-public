@@ -68,6 +68,22 @@
 > **⚠️ 行為變更 + 重捕**：B軌譯文內容改變 → 衝擊 D2/chunk；**Flip/結案前須與 TILING-HOTFIX-1 合併一次重捕 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`）。
 > **保留意見**：學歷地點行錯亂 / doubling 殘留（U4 + 100% Bypass 整檔單發）屬 B軌 P3 架構問題，已立 `RESUME-P3` plan 另開任務、不在本 hotfix 硬修。
 
+### BE-Refactor RESUME-P3 B軌履歷翻譯品質重構
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `resume_pipeline.py::_build_tiles` 履歷 opt-out TextTiling（直接以 JsonProcessor processed JSON 當 tiled、保全 `###` heading 結構、P1 不跑 embedding、源頭滅 429）| `aec1f6f` |
+| C2 | `processor/translator.py` translate U4 加 `(ctx.doc_type or '') != 'resume'` 閘門——resume 停用 `。！？` 重切、保條列/日期/地點原行結構；其他文體等價 | `0efa7e8` |
+| C3 | `run_phase3` 廢 100% Bypass → 逐 heading section 遞迴翻譯（標題/正文分流）+ pipelines/ 內私有還原（`_restore_sections_markdown`/`_restore_one_section`/`_translate_whole`/`_t`、**不耦合 A 軌**）+ source_lang zh* 不重譯；契約 BilingualMarkdownSpec 不變 | `52e0769` |
+| C4 | `run_phase3` heading 退化偵測（`_is_heading_degraded`：heading 數<2 或單一 section 自身文字佔比>85%）→ warning + 降級整檔 `_translate_whole` fallback、保證交付契約 | `6658b48` |
+| C5 | `tests/test_resume_pipeline.py` 修 C1 carryover（FakeMd 輸出含 section JSON 對齊 opt-out）+ 追加 5 測試（C1 opt-out / C3 逐 section 分流翻譯+無英文標題殘留 / 無 doubling / C4 單一巨 section fallback / 契約完備）；resume 26 passed、全套件 495 passed | `3a30394` |
+| C6 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U8〔U6 待重捕量測〕/ tasks §6 pytest+grep〔目標 54 passed〕/ 不可動清單 git 證據）+ SOP 核查 + 提示詞 7 份稽核 + baton 一次性歸檔（plan_v1/tasks/C1-C6 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_plan_v1.md`（§99.2 v3、OQ Q1/Q2/Q3/Q4/Q9/Q10 核准）
+> **PIPE 對齊**：B軌（影子）P3 翻譯品質重構——廢「100% Bypass 整檔單發」、改逐 `###` heading section 翻譯+結構還原；履歷 P1 opt-out TextTiling（戰術、源頭滅 429）；resume 停用 U4 保行結構；heading 退化 fallback 兜底。消費既有 Translator/InjectionContext，**不耦合即將棄用的 A 軌 translate_processor**。
+> **⚠️ 行為變更 + 重捕**：B軌履歷 Markdown 輸出改變（逐 section 重組）→ 衝擊 D2/chunk；**Flip/結案前須與 TILING-HOTFIX-1 / SHADOW-HOTFIX-2 合併一次重捕 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`）；U6 對齊度於重捕後 diff 裁決。
+> **後續**：通用化各路 chunking opt-in 機制歸 `INFRA-3`（五路收完 + A軌死後）。
+
 ### BE-Refactor MODEL-9-OPT Embedding連線與限流框架優化
 
 | Commit | 內容 | Hash |
@@ -475,19 +491,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RESUME-P3 B軌履歷翻譯品質重構**（`.claude-logs/baton/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_plan_v1.md`）
-  - [x] ✅ C1 — P1 履歷 Tiling Opt-out（P1 切塊旁路）（`aec1f6f`；1 測試 carryover 待 C5 修）
-  - [x] ✅ C2 — Translator U4 resume 停用（行結構對齊容錯停用）（`0efa7e8`）
-  - [x] ✅ C3 — P3 逐 heading section 翻譯與還原（廢 100% Bypass）（`52e0769`）
-  - [x] ✅ C4 — heading 退化 Fallback（單一巨 section 降級防護）（`6658b48`）
-  - [x] ✅ C5 — Unit Tests（逐 heading 契約與退化測試）（待 baron 回填）
-  - [/] 🟡 WIP: C6 — Checkout（收官與 baton 檔案歸檔）
-  - [ ] ⬜ 未開始: C5 — Unit Tests（逐 heading 契約與退化測試）
-  - [ ] ⬜ 未開始: C6 — Checkout（收官與 baton 檔案歸檔）
-  - 工時：6 個 commits（C1 P1 opt-out + C2 U4 停用 + C3 P3 核心 + C4 fallback + C5 測試 + C6 Checkout）
-  - 依賴：plan v3 OQ 已核准（Q1/Q2/Q3/Q4/Q9/Q10）；改 B軌輸出→須與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3
-  - 拆分依據：`.claude-logs/baton/2026-06-05_RESUME-P3_B軌履歷翻譯品質重構_tasks.md`
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -778,4 +781,5 @@
 - ✅ ~~PIPE-RESUME v9 影子整合與規格同步~~（已落地、C1 `b97958b` + C2 `e64417a` + C3 `f239721` + C4 `9bbad2d` + C5 `9291c5c` + C6 `4e15905` + C7 收官；raw_metadata 旁路穿線 + P1 影子標題後綴 (測試) + P2 摘要先行步序 + P3 翻譯策略隔離 constraints + C5 影子寫庫保真〔對齊 A 軌 upsert_paper〕+ 廢 self._raw_meta；resume 19 測試、全套件 483 passed；A 軌 byte 不動）
 - ✅ ~~TILING-HOTFIX-1 — 緊急熱修復：TextTiling Embedding 速率超限 (429) 批次化修復~~（已落地、`702347a`；`tiling_processor.py:425` 逐筆 embed_query→批次 embed_documents〔1/32 請求+線性退避+順序保證〕；根治 429 阻斷+test_tiling_paragraph 併發 flaky；全套件 484 passed；⚠️ task_type RETRIEVAL_QUERY→DOCUMENT 行為變更、Flip/結案前須重捕 Golden Baseline）
 - ✅ ~~SHADOW-HOTFIX-2 — B軌影子標題 (測試) 後綴與履歷公司名翻譯修復~~（已落地、`3d2778a`；3 處移除矛盾交回母提示詞：web_server translated_title 補 (測試) + translator.py:40 STYLE_HINTS 移除公司名 + resume_pipeline.py:109 constraints 改產品-only；全套件 486 passed；⚠️ B軌譯文改變、與 TILING-HOTFIX-1 合併重捕 Golden Baseline；學歷 doubling 殘留歸 RESUME-P3）
+- ✅ ~~RESUME-P3 B軌履歷翻譯品質重構~~（已落地、C1 `aec1f6f` + C2 `0efa7e8` + C3 `52e0769` + C4 `6658b48` + C5 `3a30394` + C6 收官；廢 100% Bypass→逐 heading section 翻譯+還原〔pipelines 內重建不耦合 A 軌〕+ 履歷 P1 opt-out TextTiling〔滅 429〕+ resume 停用 U4 + heading 退化 fallback；resume 26 測試、全套件 495 passed；⚠️ 改 B軌輸出、與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3）
 
