@@ -798,23 +798,4 @@ def test_p3_heading_level_by_recursion_depth(tmp_path, monkeypatch):
     assert "# TopExperience" not in zh.replace("## TopExperience", "")
     assert ("## " in zh) and ("### " in zh)
 # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
-
-
-# === [RESUME-P3 PARA-HOTFIX-1 START] ===
-def test_p3_text_paragraph_blank_line_normalized():
-    """PARA-HOTFIX-1：text 段落單 \\n 升級 \\n\\n（空行）、pipe table rows 保留單 \\n。
-
-    直接驗 helper `_normalize_paragraph_breaks`：
-    (a) 兩段以單一 \\n 分隔 → 升級為 \\n\\n（CommonMark 才會分段）。
-    (b) pipe table 兩 rows 以單 \\n 分隔 → 保留（table 結構不被拆散）。
-    """
-    raw = "第一段文字\n第二段文字\n\n| 欄位 | 值 |\n| 學歷 | 博士 |"
-    out = ResumePipeline._normalize_paragraph_breaks(raw)
-
-    # (a) 一般段落：單 \n 升級成 \n\n
-    assert "第一段文字\n\n第二段文字" in out
-    assert "第一段文字\n第二段文字" not in out      # 不應殘留單 \n（黏連）
-    # (b) pipe table rows：單 \n 保留、不被升級拆散
-    assert "| 欄位 | 值 |\n| 學歷 | 博士 |" in out
-# === [RESUME-P3 PARA-HOTFIX-1 END] ===
 # === [PIPE-RESUME C6 END] ===

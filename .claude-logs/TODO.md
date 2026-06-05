@@ -88,11 +88,21 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HEADING-HOTFIX-1 | `pipelines/resume_pipeline.py` `_restore_one_section` 標題層級改由**遞迴深度**推算：`_restore_sections_markdown` 傳起始 `depth=0`、簽名加 `depth:int=0`、廢除恆=1 的 `level` 扁平死欄短路改 `level=min(2+depth,6)`〔頂層 h2、children 遞迴 `depth+1`、上限 h6〕；根治 C3 `_restore_one_section` 因 `level 欄 or heading_level 欄` 短路永取 1 → 全標題塌成 h1、無階層；`# === [RESUME-P3 HEADING-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_heading_level_by_recursion_depth`〔3 層巢狀全 level=1 仍還原 ##/###/####〕；resume 27 passed、全套件 500 passed（僅 env flake） | `待 baron 回填` |
+| HEADING-HOTFIX-1 | `pipelines/resume_pipeline.py` `_restore_one_section` 標題層級改由**遞迴深度**推算：`_restore_sections_markdown` 傳起始 `depth=0`、簽名加 `depth:int=0`、廢除恆=1 的 `level` 扁平死欄短路改 `level=min(2+depth,6)`〔頂層 h2、children 遞迴 `depth+1`、上限 h6〕；根治 C3 `_restore_one_section` 因 `level 欄 or heading_level 欄` 短路永取 1 → 全標題塌成 h1、無階層；`# === [RESUME-P3 HEADING-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_heading_level_by_recursion_depth`〔3 層巢狀全 level=1 仍還原 ##/###/####〕；resume 27 passed、全套件 500 passed（僅 env flake） | `7c8a0da` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_HEADING-HOTFIX-1_hotfix.md`
 > **真因**：processed JSON `level` 欄恆=1（扁平死欄、真實深度在 children 樹與 `heading_level`＝2+樹深度）；C3 `_restore_one_section` 寫 `sec.get("level") or sec.get("heading_level")`，因 `or` 短路先取恆真的 1 → 每標題都 `#`(h1)。改遞迴深度推算後等價 `heading_level` 但不依賴資料欄位。
 > **⚠️ 行為變更 + 重捕**：改 B軌 `final_zh` 標題層級（`#`→`##`/`###`/`####`）→ 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3 同屬 B軌輸出變更類）。
+
+### BE-Hotfix RESUME-P3 PARA-HOTFIX-1 — B軌履歷正文段落黏連（無段落空行）修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| PARA-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_normalize_paragraph_breaks`（移植 A軌 pipe-table-safe 單 `\n`→`\n\n` 段落正規化邏輯、**不 import/不耦合 A軌 restore 處理器**）+ `_restore_one_section` text item〔含純字串 fallback〕套用、formula/figure/table 不套、pipe table rows 保留原 `\n`；根治 B軌只在 part 間放 `\n\n`、段內單 `\n` 不處理 → CommonMark soft break → 兩段黏一起（A軌靠 `_write_to_md` 補 `\n\n` + `_preserve_pipe_table` 升級單 `\n`、B軌兩者皆無 + C2 停用 U4）；`# === [RESUME-P3 PARA-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_text_paragraph_blank_line_normalized`〔兩段升 `\n\n` + pipe table rows 不拆散〕；resume 28 passed、全套件 501 passed（僅 env flake） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_PARA-HOTFIX-1_hotfix.md`
+> **真因**：CommonMark 單 `\n`=soft break（同段）、須 `\n\n`（空行）才分段；A軌有兩道機制（`_write_to_md` 每塊補 `\n\n` + `_preserve_pipe_table` 段內單 `\n`→`\n\n`），B軌 `_restore_one_section` 兩者皆無、且 C2 為 resume 停用 Translator U4 → 全鏈無換行升級 → 正文黏連。
+> **⚠️ 行為變更 + 重捕**：改 B軌 `final_zh` 段落空行結構 → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING-HOTFIX-1 同屬 B軌輸出變更類）。
 
 ### BE-Refactor MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次
 
