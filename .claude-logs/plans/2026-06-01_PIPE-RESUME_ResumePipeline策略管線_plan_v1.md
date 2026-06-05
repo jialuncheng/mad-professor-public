@@ -15,9 +15,9 @@
 ## §1 TL;DR（概要）
 
 - **挑戰**：PIPE 大改版要求 `doc_type` 分流由主幹 `if/elif`（`pipeline_core.py L542-568`）下放為五條高內聚策略插件。ResumePipeline 為縱向絞殺第一路，須將現行散落的履歷處理（Vision 轉錄 `ResumeProcessor`、metadata 抽欄、短文 tiling bypass、RAG ≥3 過濾）收斂為一條跨完整四 Phase（P1→P4）的策略管線，且交付物對齊 PIPE 四份凍結接口合約。
-- **解法**：以 `PipelineFactory.get_strategy('resume')` 取得 ResumePipeline 策略插件，於新核心 `pipelines/` 目錄落地（複用既有 `ResumeProcessor` Vision 忠實轉錄核心，不重寫其 Vision 哲學）。四 Phase 規格：**P1** 以 Vision LLM 整份解析且輸出 Markdown 並保留原本格式，透過提示詞去除 Hunter 或人力公司的重複浮水印，並抽姓名／電話／Email／領域等 Metadata；**P2**（4 步循序）①依據領域做 LLC (LCC) 分類（因不同領域同字可能有不同翻法）→ ②做整份履歷摘要（原文 `abstract`、置於 Glossary 前）→ ③針對全文提取 GLOSSARY 並與資料庫比對（無資料則翻譯、**將②原文摘要與①LCC 組入翻譯 prompt context**回寫資料庫，有資料則採級聯術語表，Glossary 此點凍結）→ ④以 `Translator.translate(…,DEEP_THINK)` 將②原文摘要翻為中文寫入 `translated_abstract` 交付；**P3** 翻譯全部內文（附上 `LCC` + `全文摘要` + `GLOSSARY`）且 100% Bypass（不切分 Section/不開 Sliding Window）；**P4** RAG 字元門檻 ≥3 + 技能詞與結構化資訊保護。
-- **影響**：新增 `pipelines/resume_pipeline.py`（策略插件）；`candidate_name` 映射 `IngestionMetadataSpec.title`、`phone`/`email`/`domain` 入 **`IngestionMetadataSpec.custom_metadata`**（自定義屬性容器、避免 Schema Bloat）；複用 `processor/resume_processor.py` / `processor/rag_processor.py` 既有過濾。影子期屬 B 軌，A 軌 `pipeline_core.py` resume branch 保留至 Flip。**Flip 前置**：`IngestionMetadataSpec.custom_metadata` 屬上游凍結合約變更，未全域擴充前本管線僅能於影子 B 軌驗證、不得正式 Flip 線上流量（見 §7 硬前置）。對既有 list/get/delete API、前端讀取路徑零改動。
-  > ⚠️ **上游合約硬前置（本計畫不自行落地）**：本路次依賴 `IngestionMetadataSpec` 補入 `custom_metadata: Dict[str, Any] = {}` 欄位（同步 PIPE-SPEC §1.1 ① + `pipelines/contracts.py`），以容納履歷專屬非標準欄位；此屬上游凍結合約擴充，須先授權落地後本路次方可整合（見 §7）。`GlossaryReadySpec.abstract`／`domain_name` 已於落地合約存在（TRANSLATOR C1）、本路次直接消費。
+- **解法**：以 `PipelineFactory.get_strategy('resume')` 取得 ResumePipeline 策略插件，於新核心 `pipelines/` 目錄落地（複用既有 `ResumeProcessor` Vision 忠實轉錄核心，不重寫其 Vision 哲學）。四 Phase 規格：**P1** 以 Vision LLM 整份解析且輸出 Markdown 並保留原本格式，透過提示詞去除 Hunter 或人力公司的重複浮水印，並抽姓名／電話／Email／領域等 Metadata；**P2**（4 步循序）①做整份履歷摘要（原文 `abstract`、置於最前）→ ②依據領域做 LLC (LCC) 分類（因不同領域同字可能有不同翻法）→ ③針對全文提取 GLOSSARY 並與資料庫比對（無資料則翻譯、**將①原文摘要與②LCC 組入翻譯 prompt context**回寫資料庫，有資料則採級聯術語表，Glossary 此點凍結）→ ④以 `Translator.translate(…,DEEP_THINK)` 將①原文摘要翻為中文寫入 `translated_abstract` 交付；**P3** 翻譯全部內文（附上 `LCC` + `全文摘要` + `GLOSSARY`）且 100% Bypass（不切分 Section/不開 Sliding Window）；**P4** RAG 字元門檻 ≥3 + 技能詞與結構化資訊保護。
+- **影響**：新增 `pipelines/resume_pipeline.py`（策略插件）；`candidate_name` 映射 `IngestionMetadataSpec.title`、**整包原始 metadata（含 `phone`/`email`/`domain`）走 `PipelineContext.raw_metadata` 穿線（v9 項4、取代 custom_metadata-in-Spec）**；複用 `processor/resume_processor.py` / `processor/rag_processor.py` 既有過濾。影子期屬 B 軌，A 軌 `pipeline_core.py` resume branch 保留至 Flip。**Flip 前置**：`PipelineContext.raw_metadata` 屬上游 PIPE-CORE 共用基建變更（轉 Task 第一個 commit 同步母 plan + PIPE-SPEC、見 §7.1），未落地前本管線僅能於影子 B 軌驗證、不得正式 Flip 線上流量。對既有 list/get/delete API、前端讀取路徑零改動。
+  > ⚠️ **上游基建（本計畫不自行落地、轉 Task 第一個 commit 落地）**：本路次依賴 `PipelineContext` 新增 `raw_metadata`（承整包原始 metadata 供 DB `metadata_json`、對齊 A 軌 `upsert_paper` 保真），同步母 plan `PIPE_…_plan_v10.md` 與 `PIPE-SPEC §1.1`。`GlossaryReadySpec.abstract`／`domain_name` 已於落地合約存在（TRANSLATOR C1）、本路次直接消費。
 
 ---
 
@@ -32,17 +32,20 @@
 
 ### U2. P1 Ingestion — Vision 整份解析 + 四欄抽取
 - 以 Vision LLM 整份渲染解析（**禁 MinerU／md_cleaner**），並讓 LLM 輸出 Markdown 並保留原本格式。
+- **表格保留硬約束（v11、對齊既有 `prompt/doc/resume_vision.txt` L19/L111/L118）**：若判斷履歷以**表格形式**列出（學歷／工作經歷等，如 YuLun_Wu 案例），**必須在 MD 中以 markdown table 或 HTML table 忠實呈現該表格結構、不得拆成 `###` 標題或攤平為條列**；條列／段落／table／image 一律按 PDF 原樣保留。此規則由既有 Vision 提示詞承載，本管線複用、不重寫。
 - 透過 LLM 轉錄提示詞直接去除 Hunter 或人力公司的重複浮水印，產出忠實且去噪的原文 Markdown 與物理分組 Tiles。
-- 抽取四個結構化欄位交付 `IngestionMetadataSpec`：**姓名（candidate_name）映射原生 `title` 欄；電話（phone）／Email（email）／專業領域（domain，例如行銷、程式設計、IC設計）入 `custom_metadata` 自定義容器**（保 `extra="forbid"` 嚴格性、避免全域合約塞入文體專屬欄；未來 Slides 等亦可複用）。
+- 抽取結構化欄位交付 `IngestionMetadataSpec`：**姓名（candidate_name）映射原生 `title` 欄**。
+- **完整原始 metadata 穿線（v9 項4、待落地、generic 五路通用）**：P1 解出的整包原始 metadata（含 title/authors/venue/doi + 履歷專屬 phone/email/domain，含 confidence/source）寫入 **`PipelineContext.raw_metadata`（新增可變欄、待落地）**，供下游（影子寫庫 / DB `metadata_json`）讀取，**對齊 A 軌 `pipeline_core.py:547` upsert_paper 傳 `self._metadata` 的保真度**。`IngestionMetadataSpec` 保持結構化凍結純淨（僅承 Phase 接力必要欄）。**取代** C2 落地的 `self._raw_meta` 實例暫存（`Orchestrator.run` 後撈不到的死路）與原 `custom_metadata`-in-Spec defer 方案；`PipelineContext.raw_metadata` 屬 PIPE-CORE 共用基建變更（同 C2 pdf_path/owner_id 先例）、**於轉 Task 第一個 commit 同步母 plan + PIPE-SPEC**。
+- **影子標題後綴（v9 項3、待落地）**：`run_phase1` 解出 `title` 後，若 `ctx.paper_id.endswith('_shadow')` 則加綴 `f"{title} (測試)"`，使影子 row 在前端列表（顯示 DB title）自帶 (測試) 辨識。title 不流入內容翻譯（P2 用 source_lang／P3 讀 `.md` full_text／P4 用 bilingual），故僅影響 DB 顯示與 Early Emit、**不污染影子內容與 Golden Diff**。註：此影子感知碼以 `# === [PIPE-RESUME …] ===` 包裹、**Flip 時隨 web_server 開關一併移除**（Cleanup 待辦見 §7）。
 - 主標題硬約束：必須為人名，違反黑名單（`Resume`／`CV`／`履歷` 等通用詞）即判失敗（複用既有 `ResumeProcessor` 黑名單）。
 - **硬約束（對齊 PIPE U3）**：P1 交付**零 Abstract／零 LCC／零 Glossary／零翻譯**——`domain` 為 raw 專業領域短句，非標準 LCC。
 - **Early Emit（SPEC R4.1）**：P1 產出的 `title`（即 `candidate_name`）經由 Orchestrator 的 `early_emit_hook` 快軌機制（`orchestrator.py:101-102`、P1 後觸發）優先渲染至前端；此為 orchestrator 基建掛點，策略只需正確交付 `IngestionMetadataSpec.title`。
 
-### U3. P2 Glossary & Context Prep — LCC 分類、摘要生成、術語自癒、摘要翻譯（4 步循序）
-- **步驟①依據領域做 LCC (LLC) 分類**：以 P1 的 `domain`（raw 專業領域）為 `raw_domain`，經共用真理源凍結雙參簽名 `DomainNormalizer.normalize_to_lcc(raw_domain: str, context_text: str | None = None) -> LCCCode` 收斂標準 LCC；**並傳入 `context_text=履歷全文/技能片段`**，發揮 DOMAIN-NORM 內容判定優勢（精準區分「行銷→HF」vs「程式設計→QA」、解同字不同譯歧義；對齊 DOMAIN-NORM U1「履歷按技能判定」）。命中本地快取則 0 API；domain 為空 fallback `general`。
-- **步驟②做整份履歷摘要**：在 P2 生成履歷原文摘要，填 `GlossaryReadySpec.abstract`（必填）。**此步置於 Glossary 之前**，使原文摘要可作為步驟③自癒翻譯的 prompt context（消解前向依賴）。
+### U3. P2 Glossary & Context Prep — 摘要生成、LCC 分類、術語自癒、摘要翻譯（4 步循序）
+- **步驟①做整份履歷摘要**：在 P2 生成履歷原文摘要，填 `GlossaryReadySpec.abstract`（必填）。**此步置於最前（v10 與其他路統一：各路 P2 皆摘要先行）**，使原文摘要可作為步驟③自癒翻譯的 prompt context（消解前向依賴）。
+- **步驟②依據領域做 LCC (LLC) 分類**：以 P1 的 `domain`（raw 專業領域）為 `raw_domain`，經共用真理源凍結雙參簽名 `DomainNormalizer.normalize_to_lcc(raw_domain: str, context_text: str | None = None) -> LCCCode` 收斂標準 LCC；**並傳入 `context_text=履歷全文/技能片段`**，發揮 DOMAIN-NORM 內容判定優勢（精準區分「行銷→HF」vs「程式設計→QA」、解同字不同譯歧義；對齊 DOMAIN-NORM U1「履歷按技能判定」）。命中本地快取則 0 API；domain 為空 fallback `general`。（與步驟①互不依賴——LCC 吃 raw_domain+全文、摘要吃全文，互換功能等價。）
 - **步驟③針對全文提取 GLOSSARY 並自癒（消費 GLOSSARY-CORE `GlossaryManager`）**：以 `query_cascade(source_lang, target_lang, domain=LCC)` 級聯拉取歷史術語並比對。**語系參數綁定**：`source_lang` 來自 P1 合約 `IngestionMetadataSpec.source_lang`（動態值、`contracts.py:34`）；`target_lang` 固定為系統目標語「繁體中文」（對應聯合鍵代碼 `"zh-tw"`、落地 prompt 硬寫繁體中文 `glossary_extractor.py:42/130`）。
-  - **無資料（缺詞）**：以 `extract_terms(source_text, translated_text, source_lang, target_lang, domain=LCC)` 提取並翻譯——**將步驟②原文摘要與步驟①LCC 組入 LLM 翻譯提示詞的 prompt context**（採 (a) 方案：注入 prompt context、**非** `extract_terms` 形參，零上游合約改動、對齊 GLOSSARY-CORE 落地簽名）；再經 `upsert_terms(...)` 冪等回寫 SQLite。
+  - **無資料（缺詞）**：以 `extract_terms(source_text, translated_text, source_lang, target_lang, domain=LCC)` 提取並翻譯——**將步驟①原文摘要與步驟②LCC 組入 LLM 翻譯提示詞的 prompt context**（採 (a) 方案：注入 prompt context、**非** `extract_terms` 形參，零上游合約改動、對齊 GLOSSARY-CORE 落地簽名）；再經 `upsert_terms(...)` 冪等回寫 SQLite。
   - **有資料**：直接採級聯術語表。
   - 自癒完成後 Glossary **一次凍結**。
 - **步驟④翻譯摘要 + 交付合約欄**：以 `Translator.translate(…,DEEP_THINK)` 將步驟②原文摘要翻為中文，填 `GlossaryReadySpec.translated_abstract`。**一次性 `lcc → Domains.name` 唯讀解析、將領域英文名寫入 `GlossaryReadySpec.domain_name`**（物理封存供 P3 Translator 直讀、免再查 DB）。**查詢機制**：以 LCC 碼為 PK 直接單表唯讀檢索 `Domains` 表（`models.py:244-245`、無共用 helper），須遵守 database SOP **唯讀免交易**（不開 `session.begin()` 寫交易、非阻塞讀）。
@@ -52,6 +55,7 @@
 - **翻譯全部內文**：正文 **100% Bypass**（不切 Section、不開 Sliding Window）。整份呼叫落地 API `Translator.translate(text, ctx: InjectionContext, mode=TranslateMode.NORMAL, text_type="content")` 一次性翻譯。`InjectionContext` 欄位映射：`lcc`（標準 LCC）+ `glossary`（凍結 Glossary）+ **`zh_summary` ← P2 的 `translated_abstract`（全文摘要中文版）** + `domain_name`（領域英文名，由 P2 GlossaryReadySpec 沿用）+ **`doc_type='resume'`**（使 Translator 套用「正式商務中文」風格、防退化 academic；對齊 `translator.py:71` `InjectionContext.doc_type` 與 `_STYLE_HINTS`）。產出乾淨雙語 Markdown，交付 `BilingualMarkdownSpec`：`final_zh_path` / `final_en_path`（落地欄名）+ **`translated_abstract`（必填、沿用自 P2 `GlossaryReadySpec.translated_abstract`，否則 P3→P4 觸 ValidationError；`contracts.py:68-70`）**。
   > 註：摘要翻譯（P2）走 `mode=DEEP_THINK`；其思考啟用前置＝`settings.TRANSLATE_MODEL` 為思考世代模型（如 `gemini-3.5-flash`）且 `LLM_THINKING_BUDGET > 0`，否則靜默退化 `NORMAL`（TRANSLATOR plan §2 U3 退化警告）。
 - `md_restore` 退化為純 Markdown 樣板渲染（廢除 `extra_info` 動態修補）。
+- **業務規則走 `constraints` 逐路注入（v9 項5、待落地、不推翻集中式）**：履歷專屬翻譯需求（公司／產品名保留原文、Email／電話／URL 原樣、技能詞保留英文、中英對照等）由 `run_phase3` 建 `InjectionContext(constraints=[...])` 逐路注入——`Translator._build_system_prompt` ⑤（`translator.py:134-137`）將其貼為「【額外譯文約束】」條列入系統提示詞、LLM 遵守。**規則由策略擁有、共用 `Translator` 引擎只執行**（同 P2 共用 GlossaryManager／P4 共用 RagProcessor）；不為各路另維護完整 prompt、不污染 Translator 核心（baron 拍板選 A）。
 - **硬約束**：BilingualMarkdownSpec 嚴禁含 AI Questions／章節 Summary 等非原著文字。
 
 ### U5. P4 Async RAG — 門檻 ≥3 + 技能詞保護
@@ -68,24 +72,24 @@
 │   ├─ 渲染 PDF 每頁為影像 → 單次 Vision 整份解析（輸出 Markdown 並保留原本格式，透過提示詞去除 Hunter 或人力公司浮水印，禁 md_cleaner）
 │   ├─ 判斷：Vision 回傳空 / 格式不合法 → FAIL（PDFParseError）
 │   ├─ 判斷：首行主標題 ∈ 黑名單通用詞（Resume/CV/履歷…）→ FAIL（須人名）
-│   ├─ 抽欄：candidate_name→title / phone,email,domain(raw 專業領域)→custom_metadata
+│   ├─ 抽欄：candidate_name→title（_shadow 加綴 (測試)、v9 項3）/ 整包原始 metadata→ctx.raw_metadata（含 phone/email/domain，v9 項4）
 │   ├─ 交付 IngestionMetadataSpec（零 Abstract/LCC/Glossary/翻譯）
 │   └─ Early Emit：title(=candidate_name) 經 Orchestrator early_emit_hook 快軌優先渲染前端（orchestrator.py:101-102）
 │
 ├─ P2 Glossary & Context Prep〔run_phase2(ctx)→GlossaryReadySpec〕（4 步循序）
-│   ├─ ①LCC 分類：normalize_to_lcc(raw_domain=domain, context_text=履歷全文/技能) 推導標準 LCC（內容判定解同字不同譯）
+│   ├─ ①做整份履歷摘要：生成原文摘要 → abstract（置於最前、供③當 prompt context；v10 與其他路統一）
+│   ├─ ②LCC 分類：normalize_to_lcc(raw_domain=domain, context_text=履歷全文/技能) 推導標準 LCC（內容判定解同字不同譯；與①互不依賴）
 │   │   └─ 判斷：cache 命中 → 0 API / miss → LLM 收斂 + 寫快取 / domain 為空 → fallback 'general' LCC
-│   ├─ ②做整份履歷摘要：生成原文摘要 → abstract（置於 Glossary 前、供③當 prompt context）
 │   ├─ ③Glossary（GlossaryManager）：query_cascade(source_lang=P1.source_lang, target_lang='zh-tw'(固定繁中), domain=LCC) 級聯比對
-│   │   ├─ 無資料（缺詞） → extract_terms（將②摘要+①LCC 組入翻譯 prompt context、非形參） → upsert_terms 回寫 SQLite
+│   │   ├─ 無資料（缺詞） → extract_terms（將①摘要+②LCC 組入翻譯 prompt context、非形參） → upsert_terms 回寫 SQLite
 │   │   ├─ 有資料 → 採級聯術語表
 │   │   └─ 自癒後 Glossary 一次凍結
-│   ├─ ④翻譯摘要：Translator.translate(…,DEEP_THINK) 翻②摘要 → translated_abstract；lcc → Domains 表 PK 唯讀檢索(無 helper、SOP 唯讀免交易) → name → domain_name
+│   ├─ ④翻譯摘要：Translator.translate(…,DEEP_THINK) 翻①摘要 → translated_abstract；lcc → Domains 表 PK 唯讀檢索(無 helper、SOP 唯讀免交易) → name → domain_name
 │   └─ 交付 GlossaryReadySpec（abstract + LCC + 凍結 Glossary + translated_abstract + domain_name）
 │
 ├─ P3 Translation & Restore〔run_phase3(ctx)→BilingualMarkdownSpec〕
 │   ├─ 判斷：doc_type='resume' → 100% Bypass（不切 Section / 不開 Sliding Window）
-│   ├─ 內文翻譯：Translator.translate(…,NORMAL) 整份翻（InjectionContext 注入 LCC + zh_summary(全文摘要) + GLOSSARY + doc_type='resume'）
+│   ├─ 內文翻譯：Translator.translate(…,NORMAL) 整份翻（InjectionContext 注入 LCC + zh_summary(全文摘要) + GLOSSARY + doc_type='resume' + constraints[業務規則:公司名/Email/技能詞…]（v9 項5））
 │   ├─ md_restore 純樣板渲染（無 extra_info）
 │   └─ 交付 BilingualMarkdownSpec（final_zh_path / final_en_path + translated_abstract〔沿用 P2、必填〕）
 │
@@ -104,8 +108,8 @@
 
 | 交接點 | 上游 Phase | 資料契約 | Resume 路關鍵欄位 | 硬約束 |
 |---|---|---|---|---|
-| ① | P1→P2 | `IngestionMetadataSpec` | 原文 JSON 樹 + Tiles + `title`(=candidate_name) + `custom_metadata`{`phone`/`email`/`domain`(raw)} | 不含 Abstract／LCC／Glossary，零翻譯，保留原始 Markdown 格式，去浮水印；履歷專屬欄走 `custom_metadata`（須上游補欄、見 §7） |
-| ② | P2→P3 | `GlossaryReadySpec` | `abstract`(原文履歷摘要,必填) + 標準 LCC + 凍結 `Glossary` + `translated_abstract`(已譯中文摘要) + `domain_name`(領域英文名) | P2 循序 **①LCC→②做摘要→③Glossary 自癒→④翻摘要**；Glossary 與已譯摘要此點凍結，P3 不得再提取／自癒；缺詞翻譯時將②原文摘要與①LCC 注入 LLM **prompt context**（採 (a)、非 `extract_terms` 形參、零上游改動）回寫 DB；`domain_name` 供 P3 Translator 直讀免查 DB |
+| ① | P1→P2 | `IngestionMetadataSpec`（+ `ctx.raw_metadata` 旁路） | 原文 JSON 樹 + Tiles + `title`(=candidate_name)；履歷專屬 `phone`/`email`/`domain` 與整包原始 metadata 走 **`ctx.raw_metadata`**（v9 項4、非結構化合約欄） | 不含 Abstract／LCC／Glossary，零翻譯，保留原始 Markdown 格式，去浮水印；`raw_metadata` 供 DB `metadata_json`（須上游加欄、見 §7.1） |
+| ② | P2→P3 | `GlossaryReadySpec` | `abstract`(原文履歷摘要,必填) + 標準 LCC + 凍結 `Glossary` + `translated_abstract`(已譯中文摘要) + `domain_name`(領域英文名) | P2 循序 **①做摘要→②LCC→③Glossary 自癒→④翻摘要**（v10 摘要先行、與其他路統一）；Glossary 與已譯摘要此點凍結，P3 不得再提取／自癒；缺詞翻譯時將①原文摘要與②LCC 注入 LLM **prompt context**（採 (a)、非 `extract_terms` 形參、零上游改動）回寫 DB；`domain_name` 供 P3 Translator 直讀免查 DB |
 | ③ | P3→P4 | `BilingualMarkdownSpec` | `final_zh_path` / `final_en_path` + `translated_abstract`(必填、沿用 P2) | 嚴禁含 AI Questions／Summary／非原著文字；`translated_abstract` 須沿用 P2 否則 ValidationError（`contracts.py:68-70`）|
 | ④ | P4→外部 | `RagDbSpec` | `vectors_path`(FAISS) + `paper_chunk_count` + `index_meta`（對應 `Paper`/`PaperChunk` 寫庫 + `index_meta.json`）| chunk ≥3 過濾後寫庫；Embedding 僅此一次（`contracts.py:82-84`）|
 
@@ -123,7 +127,7 @@
   - `class ResumeProcessor(PDFParser) L81`：PyMuPDF 渲染 + Vision LLM 忠實轉錄；`process L92` 渲染每頁 JPEG → 整份單次 Vision（`_analyze_resume L153` / `chat_with_images L157`）。
   - `_validate_vision_output L217-249`：首行須 `#` 人名、主標題黑名單檢查（落地符號 `RESUME_TITLE_BLACKLIST` frozenset，`resume_processor.py:59`，L240 使用；即設計手冊 §3.1 `TITLE_BLACKLIST_EXACT`）。**本管線 P1 複用此核心、不改其 Vision 哲學。**
 - **`processor/metadata_extractor.py`**：
-  - `_ALL_FIELDS L57-67`：已含 `candidate_name`(姓名)／`domain`(專業領域)／`source_platform`／`is_third_party`（resume 專用）。`phone` / `email` 為新增抽取欄。**契約落點**：`candidate_name`→`IngestionMetadataSpec.title`；`phone`/`email`/`domain`→`IngestionMetadataSpec.custom_metadata`（落地 Spec `extra="forbid"` 無履歷專屬欄、須先擴 Spec＋同步 PIPE-SPEC §1.1①，硬前置見 §7）。
+  - `_ALL_FIELDS L57-67`：已含 `candidate_name`(姓名)／`domain`(專業領域)／`source_platform`／`is_third_party`（resume 專用）。`phone` / `email` 為新增抽取欄。**契約落點（v9 改判）**：`candidate_name`→`IngestionMetadataSpec.title`；整包原始 metadata（含 `phone`/`email`/`domain`）→ `PipelineContext.raw_metadata`（取代 custom_metadata-in-Spec、保凍結合約純淨；上游加欄見 §7.1）。
 - **`processor/domain_detector.py`**：
   - `detect L39-76`：回傳 10-30 字 raw 領域短句（soft fallback 回空字串）；履歷 raw 領域亦可由 `metadata_resume.txt` 的 `domain` 欄提供。
 - **`processor/rag_processor.py`**：
@@ -202,7 +206,7 @@ grep -nE "MIN_CHUNK_RESUME_SLIDES|_is_chunk_meaningful|email|phone|url" processo
   ```
 - **預計新增的測試**：
   - 策略分派：`PipelineFactory.get_strategy('resume')` 回傳 ResumePipeline、主幹無 resume `if/elif`。
-  - P1 契約：交付 `IngestionMetadataSpec`，`candidate_name`→`title`、`phone`/`email`/`domain`→`custom_metadata`，**斷言不含 Abstract/LCC/Glossary**，且轉錄提示詞去浮水印效果正確；主標題黑名單觸發 FAIL。
+  - P1 契約：交付 `IngestionMetadataSpec`，`candidate_name`→`title`、整包原始 metadata（含 `phone`/`email`/`domain`）→ `ctx.raw_metadata`（v9 項4），**斷言不含 Abstract/LCC/Glossary**，且轉錄提示詞去浮水印效果正確；主標題黑名單觸發 FAIL；`_shadow` 時 title 帶 (測試)（v9 項3）。
   - P2 契約：`normalize_to_lcc(raw_domain, context_text=履歷全文/技能)` cache 命中 0 API；raw_domain 為空 fallback general；`GlossaryReadySpec` 必填 `abstract`、載 `translated_abstract`＋`domain_name`；摘要由 `Translator.translate(..., TranslateMode.DEEP_THINK)` 生成；Glossary 凍結後 P3 不再自癒之斷言。
   - P3 Bypass：resume 路 100% Bypass（不進 Section/Sliding Window）、內文翻譯確有注入 LCC + zh_summary(全文摘要) + Glossary + `doc_type='resume'`、交付 `BilingualMarkdownSpec`（`final_zh_path`/`final_en_path` + `translated_abstract` 必填沿用）。
   - P4 門檻：`_is_chunk_meaningful` resume `Python` 保留、`john@x.com` 保留、純數字過濾；RAG 失敗主鏈 `reading_ready` 不受影響。
@@ -222,12 +226,24 @@ grep -nE "MIN_CHUNK_RESUME_SLIDES|_is_chunk_meaningful|email|phone|url" processo
 
 | 開放問題 | 推薦方案 | 推薦理由 |
 |---|---|---|
-| **`phone`/`email`/`domain` 履歷專屬欄落點（vs 凍結 IngestionMetadataSpec `extra="forbid"`）** | **`candidate_name`→`title`；`phone`/`email`/`domain`→新增 `IngestionMetadataSpec.custom_metadata: Dict[str,Any]={}`**（自定義容器） | 落地 `IngestionMetadataSpec`＝`{title,authors,venue,doi,source_lang,tiles}`＋`extra="forbid"`，無履歷專屬欄、直塞會 ValidationError。以 `custom_metadata` 容器保型別安全與嚴格性、避免全域 Schema Bloat、未來文體可複用。**硬前置**：須先擴充 `IngestionMetadataSpec` + 同步 PIPE-SPEC §1.1①（上游凍結合約變更、待授權，本路次不自行落地）。**Flip 阻擋**：P1 合約未全域擴充前，ResumePipeline 可於影子 B 軌實作驗證，但**不得正式 Flip 線上流量**（否則 P1→P2 交接 `custom_metadata` 觸 `extra="forbid"` ValidationError）。 |
+| **~~`phone`/`email`/`domain` 履歷專屬欄落點~~（v9 項4 已改判）** | **改採 `PipelineContext.raw_metadata` 整包穿線**（取代 custom_metadata-in-Spec） | **v9 改判**：原 defer 的「擴 `IngestionMetadataSpec.custom_metadata`」會污染凍結結構化合約且仍只結構化子集。改以 `PipelineContext.raw_metadata`（可變欄）承整包原始 metadata（含履歷專屬欄 + 完整 confidence/source）供 DB `metadata_json`，**對齊 A 軌 `upsert_paper` 保真度**；`IngestionMetadataSpec` 保持凍結純淨。職責分離：結構化 Spec＝Phase 接力；`raw_metadata`＝DB 持久化。屬 PIPE-CORE 共用基建變更、**轉 Task 第一個 commit 同步母 plan + PIPE-SPEC 後落地**（見下「Cleanup / 待落地」）。 |
 | **P2 LCC 的 raw 領域與 context_text 來源** | **`raw_domain`＝P1 `domain` 欄；`context_text`＝履歷全文/技能片段**（雙參簽名） | 凍結簽名為雙參 `normalize_to_lcc(raw_domain, context_text=None)`；以履歷內容為 context_text 發揮 DOMAIN-NORM 內容判定（行銷 HF vs 程式設計 QA），比僅 raw domain 更精準。不另跑 `domain_detector.detect`（多一次 LLM 且語意更弱）。 |
 | **P2 交付 `GlossaryReadySpec` 必填/載體欄** | **`abstract`(原文履歷摘要)＋`translated_abstract`(中文)＋`domain_name`(lcc→Domains.name)** 一併交付 | 落地 `abstract` 為必填、缺則 ValidationError；`domain_name`(TRANSLATOR C1 載體)供 P3 Translator 直讀免查 DB。三欄於 P2 一次封存、P3 零 DB。 |
 | **履歷無學術 Abstract，`translated_abstract` 如何交付** | **做整份履歷摘要，並用 `Translator.translate(…,DEEP_THINK)` 翻譯後交付** | 已決議：履歷雖然無學術 Abstract 結構，但在 P2 會生成一份履歷整份摘要，並用 `Translator.translate(…,DEEP_THINK)` 翻譯後填入 `GlossaryReadySpec.translated_abstract`，以便下游 Phase 3 消費與展示。 |
-| **P2 四步順序與 Glossary 自癒的「全文摘要」注入方式** | **循序 ①LCC→②做摘要→③Glossary 自癒→④翻摘要；摘要採 (a) 注入 prompt context（非 `extract_terms` 形參）** | 已決議：②做摘要前置於③Glossary 之前，使原文摘要可作為③自癒翻譯的背景脈絡（消解前向依賴）。無資料分支翻譯時，將②原文摘要與①LCC **組入 LLM 翻譯提示詞的 prompt context**回寫 DB；採 (a) 而非擴 `extract_terms` 形參，**零上游合約改動**（落地簽名 `extract_terms(source_text, translated_text, source_lang, target_lang, domain)` 不變）。有資料則直採級聯術語表；Glossary 自癒後一次凍結。 |
+| **P2 四步順序與 Glossary 自癒的「全文摘要」注入方式** | **循序 ①做摘要→②LCC→③Glossary 自癒→④翻摘要（v10 摘要先行、與其他路統一）；摘要採 (a) 注入 prompt context（非 `extract_terms` 形參）** | 已決議：①做摘要置於最前（v10 跨路統一、且 LCC/摘要互不依賴、互換功能等價），使原文摘要可作為③自癒翻譯的背景脈絡（消解前向依賴）。無資料分支翻譯時，將①原文摘要與②LCC **組入 LLM 翻譯提示詞的 prompt context**回寫 DB；採 (a) 而非擴 `extract_terms` 形參，**零上游合約改動**（落地簽名 `extract_terms(source_text, translated_text, source_lang, target_lang, domain)` 不變）。有資料則直採級聯術語表；Glossary 自癒後一次凍結。 |
 | **既有 `ResumeProcessor` 複用 vs 重寫進 `pipelines/`** | **複用 Vision 轉錄核心、外包一層 ResumePipeline 策略殼** | 既有 `ResumeProcessor` Vision 忠實轉錄 + 黑名單已穩定（Phase 4.7e v2 落地），重寫風險高；策略殼只負責四 Phase 編排與 Spec 交付，核心轉錄複用即可。 |
+
+### §7.1 Cleanup / 待落地清單（v9）
+
+> 本節為 v9 新增的**待落地設計**與 **Flip Cleanup 待辦**；轉 Task 後依序落地。
+
+| 項 | 類別 | 內容 | 落地時機 |
+|---|---|---|---|
+| 上游同步 | ✅ **已於 v9 tasks C1 落地**（規格層） | 規格同步完成：**PIPE-SPEC v4**（§1.1.1 `raw_metadata` 旁路欄 + §1.2.3.1 翻譯隔離原則）+ **母 plan v11**（六項登記 + Flip Cleanup）；`PipelineContext.raw_metadata` **程式碼**新增屬 v9 tasks **C2**（context.py） | 規格＝C1 ✅／code＝C2 |
+| 項3 | 待落地 | `run_phase1` 影子 title 加綴 `(測試)`（`_shadow` 判定、`# === […] ===` 包裹） | 後續實作 commit |
+| 項4 | 待落地 | P1 寫 `ctx.raw_metadata` + 影子寫庫讀取傳 `upsert_paper` | 後續實作 commit |
+| 項5 | 待落地 | `run_phase3` 業務規則 `InjectionContext(constraints=[...])` | 後續實作 commit |
+| **Flip Cleanup** | **待辦** | **移除 P1 影子後綴邏輯**（`run_phase1` `_shadow` 加綴段）——Flip 時隨 `web_server.py` 影子開關與包裹註解一併移除；**此待辦於轉 Task 第一個 commit 同步登記至母 plan `PIPE_…_plan_v10.md`**（本 plan 不改母檔、僅登記指引） |
 
 ---
 
@@ -250,6 +266,15 @@ grep -nE "MIN_CHUNK_RESUME_SLIDES|_is_chunk_meaningful|email|phone|url" processo
 
 ### §99.2 Revision 歷程
 
+- v11 (2026-06-05)：U2 補**表格保留硬約束**明文——若履歷以表格形式列出（學歷／工作）須在 MD 以 markdown/HTML table 忠實呈現、不拆 `###`、不攤平條列；對齊既有 Vision 提示詞 `prompt/doc/resume_vision.txt` L19/L111/L118（本管線複用、不重寫）。純規格自我完備化、零行為改變（功能本已由提示詞涵蓋）。
+- v10 (2026-06-05)：P2 步序微調——**①②互換為「①做整份履歷摘要 → ②LCC 分類」**（原 ①LCC→②做摘要），baron 拍板「跨路統一：各路 P2 皆摘要先行」。**功能等價、零行為改變**：`normalize_to_lcc(raw_domain, context_text=履歷全文)` 與 `_make_summary(full_text)` 互不依賴（LCC 吃 raw_domain+全文、摘要吃全文），③Glossary／④翻摘要仍需兩者皆備、輸出不變。同步更新 §1 TL;DR P2／U3／§2.6 ASCII flow／§2.7②／§7 Open Questions。**code-drift 註記**：落地 `run_phase2`（原 C3 `48aa5df`）現為 LCC-first，與本 v10 文件 摘要-first 順序不一致**但輸出相同**（步驟獨立）；如需 code 與文件嚴格對齊，可於 v9 tasks C2 順帶交換兩行（功能無變、純順序）。
+- v9 (2026-06-05)：影子端到端整合後六項修訂（檔名沿用就地 bump、不改名；上游母 plan/PIPE-SPEC 同步留待轉 Task 第一個 commit、本 plan 不碰其他檔）：
+  - **項1（已落地）** C7-hotfix `d2e0af2`——`pipelines/__init__.py` 補 `from pipelines import resume_pipeline` 觸發 `@register('resume')`，修復 runtime 無人 import 策略致 `get_strategy('resume')` 回 NullStrategy、影子 P1 拋 NotImplementedError 阻斷。
+  - **項2（已落地）** C8-hotfix——`web_server.py` `run_pipeline_shadow` 補 `paper_manager.upsert_paper` 寫影子 Paper row，修復影子 P1-P4 全綠但無 DB 寫入致前端不顯示 (測試) 列。
+  - **項3（待落地）** P1 影子標題後綴——`run_phase1` 解出 title 後 `_shadow` 加綴 `(測試)`；title 不入內容、僅影響 DB 顯示與 Early Emit、不污染 Golden Diff；`# === […] ===` 包裹、Flip 隨開關移除（U2/§2.6 P1）。
+  - **項4（待落地、改判）** metadata 穿線——新增 `PipelineContext.raw_metadata` 整包穿線，取代 C2 `_raw_meta` 實例暫存（撈不到死路）與原 custom_metadata-in-Spec defer；對齊 A 軌 `upsert_paper` `metadata_json` 保真、generic 五路通用；`IngestionMetadataSpec` 保凍結純淨（U2/§2.6 P1/§7）。
+  - **項5（待落地、選 A）** P3 翻譯——履歷業務規則（公司/產品名、Email/電話/URL、技能詞、中英對照）走 `InjectionContext.constraints` 逐路注入共用 `Translator`（`translator.py:134-137` ⑤），不推翻集中式 doc_type 風格、不另維護完整 prompt（U4/§2.6 P3）。
+  - **項6（治理）** 本 Revision 登記 + §7.1 Cleanup/待落地清單；上游母 plan `PIPE_…_plan_v10.md` 與 `PIPE-SPEC_…_specification.md`（`raw_metadata`/`custom_metadata` 收斂 + Flip Cleanup 待辦登記）**於轉 Task 第一個 commit 同步**，本 plan 不改母檔。
 - v8 (2026-06-04)：第四輪跨 plan 對接稽核——cosmetic 符號精確化（檔名沿用就地 bump、不改名）：§3 主標題黑名單補真實落地符號 `RESUME_TITLE_BLACKLIST`（frozenset、`resume_processor.py:59`、L240 使用；原僅標設計手冊名 `TITLE_BLACKLIST_EXACT`），便於 tasks grep。已查核對齊無需動作：影子機制（`SHADOW_LAUNCH_ENABLED`/`ctx.shadow`/`_shadow`/「(測試)」標題 ↔ PIPE master U10）、複用模組方法名（`ResumeProcessor`/`_analyze_resume`/`_validate_vision_output`/`_is_chunk_meaningful` 全落地存在）。
 - v7 (2026-06-04)：第三輪跨 plan 對接稽核——spec 完備性補強（PIPE-SPEC R1.1–R5.1 全對齊確認、檔名沿用就地 bump、不改名）：① **小項1** U3 步驟③／§2.6 補 **語系參數綁定**：`source_lang`←P1 `IngestionMetadataSpec.source_lang`（`contracts.py:34`）、`target_lang` 固定繁體中文（`"zh-tw"`、`glossary_extractor.py:42/130`）；② **小項2** U3 步驟④／§2.6 補 **`lcc→Domains.name` 查詢機制**：以 LCC 為 PK 直接單表唯讀檢索 `Domains`（`models.py:244-245`、無共用 helper）、遵守 database SOP **唯讀免交易**。已查核對齊無需動作：R4.2 plan 採落地 `rag_status='failed'`（較 PIPE-SPEC prose `rag_failed` 嚴謹）、R1.1/R2.1/R2.2/R3.1/R4.1/R5.1 全符。
 - v6 (2026-06-04)：第二輪跨 plan 對接稽核（深掘 Orchestrator／PipelineContext 資料流；檔名沿用就地 bump、不改名）：① **發現1（必改）** 狀態 token 正名 `rag_failed`→`rag_status='failed'`（落地 `PipelineContext.rag_status: Literal["pending","ready","failed"]`、`context.py:24`），同步 U5／§2.6／§6.2 E2E 三處＋`ready` 加引號；② **發現2（補強）** U2／§2.6 P1 補 **Early Emit**：`title`(=candidate_name) 經 Orchestrator `early_emit_hook` 快軌前端（`orchestrator.py:101-102`、SPEC R4.1、屬 orchestrator 基建掛點）；③ **發現3（補強）** U5 補 **P4 非同步歸屬**：非同步由 Orchestrator 注入 `dispatch_p4`（RAG-ASYNC BackgroundTasks 版、`orchestrator.py:62`）達成，`run_phase4` 本體為同步分塊過濾＋批量 Embedding（預設 `_default_dispatch_p4` 同步、`orchestrator.py:137`）。已查核對齊無需動作：`query_cascade(source_lang,target_lang,domain)` 參數逐字符、`run_phase1..4`↔`_PHASES`、reading_ready 於 P3 後設定。

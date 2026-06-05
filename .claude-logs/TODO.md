@@ -30,6 +30,23 @@
 > **baron 拍板（AskUserQuestion）**：① C2 擴 `PipelineContext` 加 pdf_path/owner_id（首落地隨 PIPE-RESUME、五路共用基建）；② P1 全鏈編排（忠實 PIPE-SPEC §1.1①「Tiles 在 P1 產出」）。
 > **defer / Flip 阻擋**：`custom_metadata` 履歷專屬欄暫存 `_raw_meta` 穿線（tasks §9 硬前置）；P1 凍結合約未全域擴 `custom_metadata` 前僅影子 B 軌驗證、不得正式 Flip 線上流量。
 
+### BE-Refactor PIPE-RESUME v9 影子整合與規格同步（PIPE 縱向五路第 1 路·影子保真整合）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Sync System Specs：plan_v1 + 母 plan v10 + PIPE-SPEC 三文件就地同步（`raw_metadata` 旁路欄登記 / P3「翻譯策略隔離原則」/ Phase2 摘要先行步序 / C7-C8 hotfix 史 / P1 影子後綴規格 + Flip Cleanup 待辦）；嚴禁動 Python 業務代碼 | `b97958b` |
+| C2 | P1 + Context：`pipelines/context.py` 加 `raw_metadata: Dict[str,Any]={}` 狀態欄 + `run_phase1` 寫入整包原始 meta（含 regex phone/email）+ `_shadow` paper_id → title 加綴 `(測試)`（前端列表肉眼可辨、不入內容） | `e64417a` |
+| C3 | P2 步序與讀取對齊：`run_phase2` ①摘要先行→②LCC（跨路統一、功能等價）+ `raw_domain` 改讀 `ctx.raw_metadata`（經 `_meta_value`）+ 廢除 `self._raw_meta` 實例暫存（`ctx.raw_metadata` 為唯一穿線載體） | `f239721` |
+| C4 | P3 Business Constraints：模組常數 `_RESUME_CONSTRAINTS`〔公司/產品名保留・Email/電話/URL 原樣・技能詞英文・專利/期刊原文+對照〕+ `run_phase3` `InjectionContext(constraints=…)` 逐路注入共用 Translator（PIPE-SPEC §1.2.3.1 翻譯策略隔離） | `9bbad2d` |
+| C5 | Shadow DB Fidelity：`web_server.py` `run_pipeline_shadow` C8-hotfix 影子寫庫 `meta_dict` 改優先讀 `ctx.raw_metadata` 組整包 `metadata_json`（對齊 A 軌 `upsert_paper(self._metadata)` 保真）+ title 沿用 `ctx.ingestion.title`〔含 (測試)〕+ 空值防禦 fallback；無裸 commit、A 軌 byte 不動 | `9291c5c` |
+| C6 | Unit Tests：`tests/test_resume_pipeline.py` 修復 C3 遺留 2 個 `_raw_meta` 紅燈（改 `ctx.raw_metadata`）+ 追加 4 v9 契約測試（P1 影子後綴 / P2 摘要先行步序 / P3 constraints 注入 / C5 影子寫庫保真）；resume 19 passed、核心 pipelines 25 passed | `4e15905` |
+| C7 | Checkout：Conformance 三維度驗收全綠（目標規格 / tasks §6 pytest+grep〔resume 19 / 目標 44 / 全套件 483 passed〕/ 不可動清單 git 證據）+ SOP 核查 + 提示詞 8 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C7 報告 → plans//tasks//executions/，母 plan v10/PIPE-SPEC 就地 git add） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md`（§99.2 v11、六項 + v10 P2 步序 + v11 表格保留）
+> **PIPE 對齊**：原 PIPE-RESUME（C1-C7 已收官、四 Phase 落地）後的**影子保真整合批次**——將 raw_metadata 旁路穿線、P1 影子標題後綴、P2 摘要先行、P3 翻譯策略隔離、C5 影子寫庫保真五者整合；消費既有三大真理源 + PIPE-SCAFFOLD 影子。本批次 C1-C7 為 v9 內部序，與原 PIPE-RESUME C1-C7（上方表）區別。
+> **流程註**：C7 驗收時 baron 已逐一 commit C1-C6，依框架 §2.2 回填 git log 實證 hash（C7 自身待回填）。
+> **Flip 阻擋（延續）**：P1 影子後綴 + 影子寫庫僅供 B 軌驗證；正式 Flip（PIPE-FLIP）待五路全通 + Golden Diff 0% + custom_metadata 凍結合約全域擴充（母 plan v11 Cleanup 含「移除 P1 影子後綴」）。
+
 ### BE-Refactor TRANSLATOR 雙模式原子翻譯器（PIPE 大改版三大共用真理源之三）
 
 | Commit | 內容 | Hash |
@@ -424,19 +441,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-RESUME v9 影子整合與規格同步**（`.claude-logs/baton/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md` §99.2 v11）
-  - [x] ✅ C1 — Sync System Specs（同步三份核心規格文件：plan_v1 + 母 plan v10 + PIPE-SPEC）（待 baron 回填）
-  - [x] ✅ C2 — P1 + Context（raw_metadata 基建欄 + run_phase1 寫入 + 影子後綴）（待 baron 回填）
-  - [x] ✅ C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata；2 測試紅燈待 C6 修）（待 baron 回填）
-  - [x] ✅ C4 — P3 Business Constraints（履歷業務規則注入）（待 baron 回填）
-  - [x] ✅ C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）（待 baron 回填）
-  - [x] ✅ C6 — Unit Tests（v9 契約單元測試；修復 C3 的 2 紅燈）（待 baron 回填）
-  - [/] 🟡 WIP: C7 — Checkout / 收官歸檔（mv plan_v1→plans/ + 報告歸檔、保留 _v1 與內部 v11）
-  - 工時：7 個 commits（C1 三文件同步 + C2-C5 實作 + C6 測試 + C7 Checkout）
-  - 依賴：plan §99.2 v11 已定稿；C1 同步上游 plan_v1+母 plan v10+PIPE-SPEC 後方可動 PipelineContext
-  - 拆分依據：`.claude-logs/baton/2026-06-05_PIPE-RESUME_ResumePipeline策略管線_tasks.md`（03:35 精修 v2）
-  - 註：本批次 C1-C7 為 v9 整合內部序，與原 PIPE-RESUME C1-C7（已收官）區別；P4 無 v9 變更不立 commit
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -723,4 +727,5 @@
 
 ### PIPE-RESUME (✅ 已完成·PIPE 縱向五路絞殺第 1 路)
 - ✅ ~~PIPE-RESUME ResumePipeline策略管線~~（已落地、C1 `f3d4e41` + C2 `d7edcd9` + C3 `48aa5df` + C4 `8971a19` + C5 `e8a7429` + C6 `fabb114` + C7 收官；`pipelines/resume_pipeline.py` 四 Phase 策略〔P1 Vision 全鏈/P2 LCC+摘要+Glossary 自癒/P3 100% Bypass/P4 RAG ≥3〕+ tests/test_resume_pipeline.py 15 測試；消費 PIPE-CORE ABC/三大真理源/PIPE-SCAFFOLD 影子；baron 拍板擴 PipelineContext pdf_path/owner_id；custom_metadata 硬前置 defer 僅影子 B 軌、不 Flip）
+- ✅ ~~PIPE-RESUME v9 影子整合與規格同步~~（已落地、C1 `b97958b` + C2 `e64417a` + C3 `f239721` + C4 `9bbad2d` + C5 `9291c5c` + C6 `4e15905` + C7 收官；raw_metadata 旁路穿線 + P1 影子標題後綴 (測試) + P2 摘要先行步序 + P3 翻譯策略隔離 constraints + C5 影子寫庫保真〔對齊 A 軌 upsert_paper〕+ 廢 self._raw_meta；resume 19 測試、全套件 483 passed；A 軌 byte 不動）
 

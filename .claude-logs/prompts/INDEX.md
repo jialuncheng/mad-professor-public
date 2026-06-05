@@ -75,6 +75,7 @@
   - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
+  - `2026-06-05_PIPE-RESUME_C7_check_提示詞.md` — C7 Check（Conformance 三維度驗收〔目標規格 plan_v1 §2 / tasks §6 pytest+grep / 不可動清單 tasks §7〕+ 提示詞歸檔稽核 + msg 完整性 → 全合規後 TODO 結案〔C1-C7 完成表 + 移除 active + 索引 ✅〕+ 一次性 mv plan_v1〔保留 _v1〕→plans//tasks→tasks//C1-C7 報告→executions/ + 母 plan v10/PIPE-SPEC 就地 git add 不 mv；嚴禁自發 commit、msg 寫 /tmp；v9 影子整合批次全案結案）
   - `2026-06-05_PIPE-RESUME_C6_run_提示詞.md` — C6 Run（Unit Tests：tests/test_resume_pipeline.py 修復 C3 遺留 _raw_meta 紅燈〔test_run_phase1_contract/test_run_phase2_flag_off 改對 ctx.raw_metadata〕+ 追加 v9 契約測試〔P1 raw_metadata 寫入+影子後綴 (測試) / P2 摘要先行步序+LCC 讀 raw_metadata fallback general / P3 constraints 注入 / C5 影子寫庫 meta_dict 含完整 raw_metadata+繼承 (測試)〕，`# === [PIPE-RESUME v9 C6 START/END] ===` 包裹 + .bak；恢復核心 pipelines/resume 測試全綠；執行報告不入 Git）
   - `2026-06-05_PIPE-RESUME_C5_run_提示詞.md` — C5 Run（Shadow DB Fidelity：web_server.py run_pipeline_shadow C8-hotfix 影子寫庫改由 ctx.raw_metadata 組整包 metadata_json〔對齊 A 軌保真〕+ title 沿用 ctx.ingestion.title〔已自帶 (測試)〕+ ctx.raw_metadata 空時防禦性 fallback 最小 meta_dict；僅呼叫既有 upsert_paper〔無裸 commit〕，`# === [PIPE-RESUME v9 C5 START/END] ===` 包裹 + .bak；執行報告不入 Git）
   - `2026-06-05_PIPE-RESUME_C4_run_提示詞.md` — C4 Run（P3 Business Constraints：新增模組常數 _RESUME_CONSTRAINTS〔公司/產品名保留、Email/電話/URL 原樣、技能詞英文、專利/期刊原文+對照〕+ run_phase3 InjectionContext 加 constraints=_RESUME_CONSTRAINTS〔共用 Translator _build_system_prompt ⑤ 自動貼「【額外譯文約束】」〕，`# === [PIPE-RESUME v9 C4 START/END] ===` 包裹 + .bak；執行報告不入 Git）
@@ -189,6 +190,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_PIPE-RESUME_C7_check_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C6_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C5_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C4_run_提示詞.md`
@@ -203,4 +205,3 @@
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C5_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C4_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C3_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_PIPE-RESUME_C2_run_提示詞.md`
