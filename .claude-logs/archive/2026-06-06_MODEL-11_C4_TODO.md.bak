@@ -84,21 +84,6 @@
 > **⚠️ 行為變更 + 重捕**：B軌履歷 Markdown 輸出改變（逐 section 重組）→ 衝擊 D2/chunk；**Flip/結案前須與 TILING-HOTFIX-1 / SHADOW-HOTFIX-2 合併一次重捕 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`）；U6 對齊度於重捕後 diff 裁決。
 > **後續**：通用化各路 chunking opt-in 機制歸 `INFRA-3`（五路收完 + A軌死後）。
 
-### BE-Refactor MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次
-
-| Commit | 內容 | Hash |
-|---|---|---|
-| C1 | `settings.py` 換 `EMBEDDING_MODEL` 預設 `gemini-embedding-2`→`gemini-embedding-001`（文字 embedding GA、支援文字 list 真批次 + task_type）+ 追加 `EMBEDDING_BATCH_MAX_ITEMS`(100 段數軟上限)/`EMBEDDING_BATCH_MAX_TOKENS`(18000 請求 token 硬約束)/`EMBEDDING_MAX_TOKENS_PER_ITEM`(2048 單段上限) 三常數；C2 才消費、`# === [MODEL-11 C1] ===` 包裹 | `1f56547` |
-| C2 | `config.py` `embed_documents` 廢 `BATCH_SIZE=32` 固定切分 → **token-aware 貪婪封批**〔`est=max(1,len(text))` 字元上界估值、封批臨界 段數≥`EMBEDDING_BATCH_MAX_ITEMS` 或 累計 token>`EMBEDDING_BATCH_MAX_TOKENS`、殘留 flush、巢狀 `_flush` 保 `_embed_one` 真 fallback〕+ 單段超上限發 `embedding_oversized_item` warning 不截斷 + log 正名 `embedding_429`→`embedding_batch_fallback`+`reason`；`_embed_batch` 校驗/`_embed_one`/`embed_query`/`embed_image` 不動；MODEL-9-OPT C2 頂部過時註解更新〔換 -001 向量改變、須 regen_rag --all + Golden 重捕〕；`# === [MODEL-11 C2] ===` 包裹 | `d7f26be` |
-| C3 | `tests/test_embedding_retry.py` mock 實例 model 對齊 -001 + 追加 4 測試〔real_batch_no_fallback 真批次 N→N spy `_embed_one` 0 呼叫保序 / auto_split_preserves_order patch `config.EMBEDDING_BATCH_MAX_ITEMS=2` 拆 2 批保序 / task_type_document_vs_query DOCUMENT vs QUERY / embed_batch_429_falls_back_to_one patch `_embed_batch` 拋 429 退逐筆〕；該檔 8 passed、全套件 499 passed | `8c5a0eb` |
-| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U6 遷移/U7 Golden 屬 baron 運維〕/ tasks §6 grep+全套件 499 passed / 不可動清單 git 證據〔僅 settings.py+config.py+test_embedding_retry.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
-
-> **修法依據**：`.claude-logs/plans/2026-06-06_MODEL-11_Embedding模型換用gemini-embedding-001與真批次_plan_v1.md`（§99.2 v2、§7 OQ Q1-Q8 核准）
-> **根因**：`gemini-embedding-2` 為多模態交錯模型——SDK 特例 `t_contents()` 把 `contents=[N 段]` 併成 1 向量 → 批次永遠退逐筆（慢、log 誤標 429）；且不支援 task_type → query/doc 向量同質、RAG 召回非對稱性喪失（品質打折非僅效能）。Dev API 探針鋼證：`gemini-embedding-001 embeddings=3`（真批次）vs `gemini-embedding-2 embeddings=1`（融合）。
-> **PIPE 對齊**：基建 embedding 層——換文字 embedding GA 模型恢復真批次 + task_type 非對稱；承 MODEL-9-OPT 韌性框架（`_api_semaphore`/`retry_call`/`_l2_normalize`/768 MRL 不變）。
-> **⚠️ 行為變更 + 運維（baron 各環境手動、非 commit）**：① `.env` `EMBEDDING_MODEL=gemini-embedding-001`〔C1 預設換、但 runtime 受 .env override pin〕② `venv/bin/python tools/regen_rag.py --all` 全量重嵌〔向量值改變、新舊不可混庫〕③ `venv/bin/python tools/golden_baseline.py capture resume --force`〔僅 resume 單路重捕、其餘四路無 B 軌免捕〕。
-> **流程註**：C4 驗收時 baron 已逐一 commit C1-C3，依框架 §2.2 回填 git log 實證 hash；C4 自身待 baron 回填。
-
 ### BE-Refactor MODEL-9-OPT Embedding連線與限流框架優化
 
 | Commit | 內容 | Hash |
@@ -506,6 +491,14 @@
 
 ### 🔴 高優先
 
+- 🟡 **MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次**（`.claude-logs/baton/2026-06-06_MODEL-11_Embedding模型換用gemini-embedding-001與真批次_plan_v1.md`）
+  - [x] ✅ C1 — Settings Config（配置常數調整：settings.py 換 gemini-embedding-001 預設 + 批次段數/請求 token/單段 token 三常數）（`1f56547`）
+  - [x] ✅ C2 — EmbeddingModel 真批次與 task_type（批次語意重構：embed_documents token-aware 貪婪拆批 + log 正名 + 過時註解更新）（`d7f26be`）
+  - [x] ✅ C3 — Unit Tests（單元測試追加：真批次 N→N / 超量拆批保序 / task_type DOCUMENT+QUERY / 真 429 fallback）（待 baron 回填）
+  - [/] 🟡 WIP: C4 — Checkout（Conformance 三維度驗收 + SOP 核查 + baton 一次性歸檔）
+  - 工時：4 個 commits
+  - 依賴：無（向量值改變、各環境 regen_rag --all + resume 單路 Golden 重捕屬 baron 運維、非 commit）
+
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -730,8 +723,7 @@
 - CHAT-4 取消對話（低、留 4.7e 之後）
 - CHAT-5 dead code 清理（低）
 
-### MODEL（0 項中優先 / 2 項候選 / 6 項已落地）
-- ✅ ~~MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次~~（已落地、C1 `1f56547` + C2 `d7f26be` + C3 `8c5a0eb` + C4 收官；換文字 embedding GA 模型恢復真批次 + task_type 非對稱；config.py embed_documents token-aware 貪婪拆批 + log 正名 embedding_batch_fallback；⚠️ 向量值改變→各環境須 .env 換用 + regen_rag --all 重嵌 + resume 單路 Golden 重捕〔baron 運維〕）
+### MODEL（0 項中優先 / 2 項候選 / 5 項已落地）
 - ✅ ~~MODEL-8 SQLite paper_chunks 物理防線 + 增強型 backfill CLI~~（已落地、C1 + C2 + C3 三個 commit、hash 待 push 後回填、合併原 RAG-2）
 - ✅ ~~MODEL-1+2 Embedding 2 升級 + L2 正規化 + 短 chunk 過濾~~（已落地、B1 `f415218` + B2 `de649cc`）
 - ✅ ~~MODEL-3 短文 Bypass + 公式穿透 + 段落滑動~~（已落地、B1 + B2 + B3 三個 commit、hash 待 push 後回填）

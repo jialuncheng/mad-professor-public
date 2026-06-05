@@ -86,7 +86,8 @@
   - `2026-06-05_RESUME-P3_Tasks_提示詞.md` — Tasks（依 plan v3〔OQ Q1/Q2/Q3/Q4/Q9/Q10 核准〕拆 commit：P1 履歷 tiling bypass → P3 廢 100% Bypass 改逐 heading section 翻譯+還原〔pipelines/ 內重建、不耦合 A 軌 translate_processor〕+ resume 停用 translator U4 重切 + heading 退化 fallback → 單元測試 → Checkout；改 B軌輸出須與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3；含 §0.5 成果盤點 / §8 六維度 / 末尾 Checkout，中間報告留 baton）
 
 ### MODEL-11 系列
-- 🟡 **MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次（2026-06-06 Tasks + C3 WIP）**
+- ✅ **MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次（2026-06-06 收官）**
+  - `2026-06-06_MODEL-11_C4_run_提示詞.md` — C4 Checkout（收官驗收與一次性歸檔：三維度 Conformance〔目標規格 U1-U7、U6 遷移/U7 Golden 屬 baron 運維 / tasks §6 grep+全套件 499 passed / 不可動清單 git 證據〕+ TODO 結案〔C1-C4 完成表 + hash 回填 + 索引 ✅〕+ baton 一次性 mv 歸檔〔plan_v1→plans//tasks→tasks//C1-C4 報告→executions/〕；§7 運維命令 regen_rag --all + capture resume --force；無業務代碼變動、msg 寫 /tmp）
   - `2026-06-06_MODEL-11_C3_run_提示詞.md` — C3 Run（Unit Tests：`tests/test_embedding_retry.py` 既有 `_make_instance_with_mock_client` model 對齊 gemini-embedding-001 + 追加 4 mock 測試〔real_batch_no_fallback 真批次 N→N spy _embed_one 0 呼叫保序 / auto_split_preserves_order monkeypatch EMBEDDING_BATCH_MAX_ITEMS=2 拆批 embed_content 2 次保序 / task_type_document_vs_query 攔 config.task_type DOCUMENT vs QUERY / embed_batch_429_falls_back_to_one patch _embed_batch 拋 429 退 _embed_one 保序〕；完全 mock embed_content 不打真 API；`# === [MODEL-11 C3 START/END] ===` 包裹 + .bak；pytest 全綠 + 全套件不退化 + SOP grep）
   - `2026-06-06_MODEL-11_C2_run_提示詞.md` — C2 Run（EmbeddingModel 真批次與 task_type：`config.py` embed_documents 廢 BATCH_SIZE=32 固定切分 → token-aware 貪婪封批〔cur_batch/cur_tokens、est=max(1,len(text)) 字元上界、封批臨界 len≥EMBEDDING_BATCH_MAX_ITEMS 或 cur_tokens+est>EMBEDDING_BATCH_MAX_TOKENS、殘留 flush〕+ 單段超 EMBEDDING_MAX_TOKENS_PER_ITEM 發 embedding_oversized_item warning 不截斷 + log 正名 embedding_429→embedding_batch_fallback+reason；_embed_batch 校驗/`_embed_one`/embed_query/embed_image 不動；MODEL-9-OPT C2 頂部過時註解更新〔換 -001 向量改變須 regen_rag --all + Golden 重捕〕；`# === [MODEL-11 C2 START/END] ===` 包裹 + .bak；grep+pytest+SOP）
   - `2026-06-06_MODEL-11_C1_run_提示詞.md` — C1 Run（Settings Config：`settings.py` 將 `EMBEDDING_MODEL_NAME` 預設換用 `gemini-embedding-001` + 追加 `EMBEDDING_BATCH_MAX_ITEMS`(100)/`EMBEDDING_BATCH_MAX_TOKENS`(18000)/`EMBEDDING_MAX_TOKENS_PER_ITEM`(2048) 三批次/Token 約束常數；`# === [MODEL-11 C1 START/END] ===` 包裹 + .bak；純常數新增 C2 才消費、行為等價〔除預設模型名〕；grep+import 印值+pytest 不退化）
@@ -218,6 +219,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_MODEL-11_C4_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C3_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C2_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C1_run_提示詞.md`
@@ -232,4 +234,3 @@
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_Check_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C3_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C2_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_MODEL-9-OPT_C1_run_提示詞.md`
