@@ -16,14 +16,6 @@ from settings import TRANSLATE_MODEL, CHAT_MODEL, GEMINI_API_KEY, EMBEDDING_MODE
 from settings import EMBEDDING_MAX_CONCURRENT
 from llm.retry import retry_call
 # === [MODEL-9-OPT C2 END] ===
-# === [MODEL-11 C2 START] ===
-# token-aware 貪婪封批約束（gemini-embedding-001：≤250 段 / 20,000 token 每請求 / 2,048 token 每段）。
-from settings import (
-    EMBEDDING_BATCH_MAX_ITEMS,
-    EMBEDDING_BATCH_MAX_TOKENS,
-    EMBEDDING_MAX_TOKENS_PER_ITEM,
-)
-# === [MODEL-11 C2 END] ===
 
 
 # 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
@@ -96,10 +88,8 @@ class EmbeddingModel(Embeddings):
     # 重構：手動 linear 退避（固定秒數 sleep 15s/30s + '429' 字串比對）全面改為 llm/retry.py 的
     # @retry_call（Full Jitter 指數退避、_RETRYABLE_TOKENS 涵蓋 429/5xx/timeout/disconnect 等）；
     # API 呼叫以 with self._api_semaphore 包裹（重試 sleep 前先 release）。
-    # _l2_normalize 一律不變。
-    # ⚠️ MODEL-11 起：embed_documents 改 token-aware 拆批（廢固定 batch=32）；且 settings 預設模型
-    # 換 gemini-embedding-001（文字真批次 + task_type 生效）→ 向量值改變，**不再** byte 等價舊狀，
-    # 各環境須跑 regen_rag.py --all 全量重嵌 + 與相關改動合併重捕 Golden Baseline（plan §1）。
+    # embed_content 參數（model/task_type/output_dimensionality/batch=32）與 _l2_normalize 一律不變
+    # → 向量值逐一相同、不影響 Golden Baseline（plan §1）。
 
     @retry_call(retries=2, base=2.0)
     def _embed_one(self, text):
@@ -145,77 +135,37 @@ class EmbeddingModel(Embeddings):
 
         依索引順序拼接，保證回傳順序與輸入完全一致；每批由 _embed_batch（@retry_call
         Full Jitter 指數退避）處理，重試耗盡或數量不符則該批退回逐筆 _embed_one，保證可靠性。
-
-        # === [MODEL-11 C2] ===
-        gemini-embedding-001 支援文字 list 真批次（單一請求回 N 向量）但受 20,000 token/請求 +
-        250 段/請求 + 2,048 token/段約束。改 token-aware 貪婪封批（廢固定 BATCH_SIZE=32）：以
-        EMBEDDING_BATCH_MAX_ITEMS 為段數軟上限、EMBEDDING_BATCH_MAX_TOKENS 為 token 硬約束（字元
-        數作保守上界估值、不額外打 count_tokens），超限自動封批；單段超 EMBEDDING_MAX_TOKENS_PER_ITEM
-        記 warning 不截斷。flush 仍保留 _embed_batch 失敗 → 逐筆 _embed_one 真 fallback。
         """
-        # === [MODEL-11 C2 START] ===
+        BATCH_SIZE = 32
         embeddings = []
         total = len(texts)
-        state = {'batch_no': 0, 'done': 0}  # mutable 容器供 _flush closure 更新（避免 nonlocal）
-
-        def _flush(batch: list) -> None:
-            """封批送 _embed_batch；失敗退逐筆 _embed_one（真 fallback）。保序。"""
-            if not batch:
-                return
-            state['batch_no'] += 1
-            batch_no = state['batch_no']
+        for start in range(0, total, BATCH_SIZE):
+            batch = texts[start:start + BATCH_SIZE]
+            batch_no = start // BATCH_SIZE + 1
             try:
                 embeddings.extend(self._embed_batch(batch))
-                state['done'] += len(batch)
                 self.logger.info(
-                    f"批次 {batch_no} 完成（{len(batch)} 筆，{state['done']}/{total}）"
+                    f"批次 {batch_no} 完成（{len(batch)} 筆，"
+                    f"{start + len(batch)}/{total}）"
                 )
             except Exception as e:
-                # 批次重試耗盡（真 429/5xx/timeout）或數量不符 → 退回逐筆，保證可靠性。
-                # log 正名（MODEL-11）：embedding_batch_fallback（區分真 429/timeout/數量不符），
-                # 附 reason 供上線觀察、調 EMBEDDING_MAX_CONCURRENT / 批量常數。
+                # 批次重試耗盡（429/5xx/...）或數量不符 → 退回逐筆，保證可靠性。
+                # 429 可觀測點（plan §1）：結構化 extra_fields 供上線觀察命中率、調 EMBEDDING_MAX_CONCURRENT。
                 self.logger.warning(
                     f"批次 {batch_no} 失敗（{str(e)}），退回逐筆模式",
                     extra={'extra_fields': {
-                        'event': 'embedding_batch_fallback',
-                        'reason': str(e)[:200],
+                        'event': 'embedding_429',
                         'batch_no': batch_no,
                         'batch_size': len(batch),
                     }},
                 )
                 for text in batch:
                     embeddings.append(self._embed_one(text))
-                state['done'] += len(batch)
                 self.logger.info(
-                    f"批次 {batch_no} 逐筆完成（{len(batch)} 筆，{state['done']}/{total}）"
+                    f"批次 {batch_no} 逐筆完成（{len(batch)} 筆，"
+                    f"{start + len(batch)}/{total}）"
                 )
-
-        cur_batch = []
-        cur_tokens = 0
-        for text in texts:
-            est = max(1, len(text))  # 字元數作 token 上界保守估值（CJK 安全、不低估）
-            if est > EMBEDDING_MAX_TOKENS_PER_ITEM:
-                self.logger.warning(
-                    '單段 token 估值超上限',
-                    extra={'extra_fields': {
-                        'event': 'embedding_oversized_item',
-                        'est_tokens': est,
-                    }},
-                )
-            # 封批臨界：段數達軟上限 或 累計 token 將超硬約束（且當前批非空）→ 先 flush
-            if cur_batch and (
-                len(cur_batch) >= EMBEDDING_BATCH_MAX_ITEMS
-                or cur_tokens + est > EMBEDDING_BATCH_MAX_TOKENS
-            ):
-                _flush(cur_batch)
-                cur_batch = []
-                cur_tokens = 0
-            cur_batch.append(text)
-            cur_tokens += est
-        # 殘留不足一整批 → 收尾 flush
-        _flush(cur_batch)
         return embeddings
-        # === [MODEL-11 C2 END] ===
 
     @retry_call(retries=3, base=2.0)
     def embed_query(self, text: str) -> list:

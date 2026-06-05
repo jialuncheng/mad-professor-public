@@ -492,9 +492,9 @@
 ### 🔴 高優先
 
 - 🟡 **MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次**（`.claude-logs/baton/2026-06-06_MODEL-11_Embedding模型換用gemini-embedding-001與真批次_plan_v1.md`）
-  - [x] ✅ C1 — Settings Config（配置常數調整：settings.py 換 gemini-embedding-001 預設 + 批次段數/請求 token/單段 token 三常數）（待 baron 回填）
-  - [/] 🟡 WIP: C2 — EmbeddingModel 真批次與 task_type（批次語意重構：embed_documents token-aware 貪婪拆批 + log 正名 + 過時註解更新）
-  - [ ] ⬜ 未開始: C3 — Unit Tests（單元測試追加：真批次 N→N / 超量拆批保序 / task_type DOCUMENT+QUERY / 真 429 fallback）
+  - [x] ✅ C1 — Settings Config（配置常數調整：settings.py 換 gemini-embedding-001 預設 + 批次段數/請求 token/單段 token 三常數）（`1f56547`）
+  - [x] ✅ C2 — EmbeddingModel 真批次與 task_type（批次語意重構：embed_documents token-aware 貪婪拆批 + log 正名 + 過時註解更新）（待 baron 回填）
+  - [/] 🟡 WIP: C3 — Unit Tests（單元測試追加：真批次 N→N / 超量拆批保序 / task_type DOCUMENT+QUERY / 真 429 fallback）
   - [ ] ⬜ 未開始: C4 — Checkout（Conformance 三維度驗收 + SOP 核查 + baton 一次性歸檔）
   - 工時：4 個 commits
   - 依賴：無（向量值改變、各環境 regen_rag --all + resume 單路 Golden 重捕屬 baron 運維、非 commit）
