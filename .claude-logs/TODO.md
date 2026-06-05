@@ -47,6 +47,16 @@
 > **流程註**：C7 驗收時 baron 已逐一 commit C1-C6，依框架 §2.2 回填 git log 實證 hash（C7 自身待回填）。
 > **Flip 阻擋（延續）**：P1 影子後綴 + 影子寫庫僅供 B 軌驗證；正式 Flip（PIPE-FLIP）待五路全通 + Golden Diff 0% + custom_metadata 凍結合約全域擴充（母 plan v11 Cleanup 含「移除 P1 影子後綴」）。
 
+### BE-Hotfix PIPE-RESUME TILING-HOTFIX-1 — TextTiling Embedding 速率超限 (429) 批次化修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| TILING-HOTFIX-1 | `processor/tiling_processor.py:425` 分塊 embedding 由逐筆 `[embed_query(b) for b in blocks]` 改批次 `embed_documents(blocks)`〔請求 1/32 + 線性退避 15s/30s + 重試耗盡退回逐筆 + 順序保證〕，根治 TextTiling 長文/併發 429 RESOURCE_EXHAUSTED 阻斷與全套件 `test_tiling_paragraph` 併發 flaky；`# === [PIPE-RESUME TILING-HOTFIX-1 START/END] ===` 包裹僅此行；tiling 三套件 15 passed、全套件 484 passed（429 全綠、僅剩 env flake） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-05_PIPE-RESUME_TILING-HOTFIX-1_hotfix.md`
+> **⚠️ 行為變更**：`task_type` 由 `RETRIEVAL_QUERY`→`RETRIEVAL_DOCUMENT`（對 Document-Blocks 語意更正確），向量值略異 → TextTiling 分段邊界或微幅位移。**PIPE Flip/結案前 baron 須於 MinerU 重捕五路 Golden Baseline**（`venv/bin/python tools/golden_baseline.py capture --all`、容差 D2≥0.95/D3≥0.90），未重捕前既有基準 diff 會全面誤報。
+> **flaky 認定修正**：先前 PIPE-RESUME C5–C7 全套件 `test_tiling_paragraph` 偶發失敗的真因即此 429（非純環境性 flaky），本 hotfix 一併根治。
+
 ### BE-Refactor TRANSLATOR 雙模式原子翻譯器（PIPE 大改版三大共用真理源之三）
 
 | Commit | 內容 | Hash |
@@ -728,4 +738,5 @@
 ### PIPE-RESUME (✅ 已完成·PIPE 縱向五路絞殺第 1 路)
 - ✅ ~~PIPE-RESUME ResumePipeline策略管線~~（已落地、C1 `f3d4e41` + C2 `d7edcd9` + C3 `48aa5df` + C4 `8971a19` + C5 `e8a7429` + C6 `fabb114` + C7 收官；`pipelines/resume_pipeline.py` 四 Phase 策略〔P1 Vision 全鏈/P2 LCC+摘要+Glossary 自癒/P3 100% Bypass/P4 RAG ≥3〕+ tests/test_resume_pipeline.py 15 測試；消費 PIPE-CORE ABC/三大真理源/PIPE-SCAFFOLD 影子；baron 拍板擴 PipelineContext pdf_path/owner_id；custom_metadata 硬前置 defer 僅影子 B 軌、不 Flip）
 - ✅ ~~PIPE-RESUME v9 影子整合與規格同步~~（已落地、C1 `b97958b` + C2 `e64417a` + C3 `f239721` + C4 `9bbad2d` + C5 `9291c5c` + C6 `4e15905` + C7 收官；raw_metadata 旁路穿線 + P1 影子標題後綴 (測試) + P2 摘要先行步序 + P3 翻譯策略隔離 constraints + C5 影子寫庫保真〔對齊 A 軌 upsert_paper〕+ 廢 self._raw_meta；resume 19 測試、全套件 483 passed；A 軌 byte 不動）
+- ✅ ~~TILING-HOTFIX-1 — 緊急熱修復：TextTiling Embedding 速率超限 (429) 批次化修復~~（已落地、`待 baron 回填`；`tiling_processor.py:425` 逐筆 embed_query→批次 embed_documents〔1/32 請求+線性退避+順序保證〕；根治 429 阻斷+test_tiling_paragraph 併發 flaky；全套件 484 passed；⚠️ task_type RETRIEVAL_QUERY→DOCUMENT 行為變更、Flip/結案前須重捕 Golden Baseline）
 
