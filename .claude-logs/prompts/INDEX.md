@@ -77,6 +77,7 @@
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
 ### RESUME-P3 系列
 - 🟡 **RESUME-P3 B軌履歷翻譯品質重構（2026-06-05 Tasks）**
+  - `2026-06-05_RESUME-P3_C5_run_提示詞.md` — C5 Run（Unit Tests：`tests/test_resume_pipeline.py` 修 C1 carryover `test_run_phase1_contract`（FakeMd 寫含 section JSON、對齊 C1 opt-out 直讀 processed）+ 追加 C1 opt-out（不呼叫 TilingProcessor）/ C3 逐 section 標題正文分流翻譯+無整行英文標題殘留 / 無 doubling / C4 退化 fallback（單一巨 section→整檔）/ 契約 BilingualMarkdownSpec 完備；`# === [RESUME-P3 C5 START/END] ===` 包裹 + .bak；全套件除 env flake 全綠）
   - `2026-06-05_RESUME-P3_C4_run_提示詞.md` — C4 Run（heading 退化 Fallback：`run_phase3` 逐 section 前加退化偵測，section 數 < 2 或單一 section 文字佔比 > 85%（heading 抓取失敗）→ warning + 降級走 C3 的 `_translate_whole` 整檔翻譯 fallback、保證極限情況仍交付 BilingualMarkdownSpec；`# === [RESUME-P3 C4 START/END] ===` 包裹 + .bak；退化單元測試歸 C5）
   - `2026-06-05_RESUME-P3_C3_run_提示詞.md` — C3 Run（P3 逐 heading 重寫：重寫 `pipelines/resume_pipeline.py::run_phase3`，讀 tiles section 結構遞迴分流翻譯標題與正文並重組，替代 100% Bypass 整檔單發以解標題漏譯/原文中文重複；pipelines 內重建不耦合 A 軌 translate_processor；`# === [RESUME-P3 C3 START/END] ===` 包裹 + .bak；預期 `test_run_phase3_bypass_doctype_and_carryforward` 失敗待 C5 修）
   - `2026-06-05_RESUME-P3_C2_run_提示詞.md` — C2 Run（Translator U4 resume 停用：`processor/translator.py` translate U4 區塊加閘門 `if (ctx.doc_type or '') != 'resume':`、resume 停用 `。！？` 重切以保全條列/日期/地點原行結構；其他文體不變；`# === [RESUME-P3 C2 START/END] ===` 包裹 + .bak；grep + test_translator 不退化 + SOP；報告暫存 baton 不入 Git）
@@ -209,6 +210,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_RESUME-P3_C5_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C4_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C3_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C2_run_提示詞.md`
@@ -223,4 +225,3 @@
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_TILING-HOTFIX-1_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C7_check_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C6_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_PIPE-RESUME_C5_run_提示詞.md`

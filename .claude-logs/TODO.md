@@ -479,8 +479,9 @@
   - [x] ✅ C1 — P1 履歷 Tiling Opt-out（P1 切塊旁路）（`aec1f6f`；1 測試 carryover 待 C5 修）
   - [x] ✅ C2 — Translator U4 resume 停用（行結構對齊容錯停用）（`0efa7e8`）
   - [x] ✅ C3 — P3 逐 heading section 翻譯與還原（廢 100% Bypass）（`52e0769`）
-  - [x] ✅ C4 — heading 退化 Fallback（單一巨 section 降級防護）（待 baron 回填）
-  - [/] 🟡 WIP: C5 — Unit Tests（逐 heading 契約與退化測試）
+  - [x] ✅ C4 — heading 退化 Fallback（單一巨 section 降級防護）（`6658b48`）
+  - [x] ✅ C5 — Unit Tests（逐 heading 契約與退化測試）（待 baron 回填）
+  - [/] 🟡 WIP: C6 — Checkout（收官與 baton 檔案歸檔）
   - [ ] ⬜ 未開始: C5 — Unit Tests（逐 heading 契約與退化測試）
   - [ ] ⬜ 未開始: C6 — Checkout（收官與 baton 檔案歸檔）
   - 工時：6 個 commits（C1 P1 opt-out + C2 U4 停用 + C3 P3 核心 + C4 fallback + C5 測試 + C6 Checkout）
