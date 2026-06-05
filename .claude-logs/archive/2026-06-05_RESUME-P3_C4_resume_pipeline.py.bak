@@ -490,25 +490,10 @@ class ResumePipeline(DocumentStrategy):
         )
         tr = Translator()  # 單一實例、逐單元共用
 
-        # === [RESUME-P3 C4 START] ===
-        # heading 退化偵測（plan v3 Q9）：履歷無 # 標題時 md_processor 會塌成單一巨 section，
-        # 逐 section 翻譯將退化為接近整檔（doubling 風險）。偵測 heading 數 < 2 或單一 section
-        # 文字佔總字數 > 85% → 降級走整檔翻譯 fallback，保證極限情況仍完整交付。
-        degraded = (not is_zh) and bool(sections) and self._is_heading_degraded(sections)
-        if degraded:
-            logger.warning(
-                "[PIPE-RESUME P3] %s heading 退化（sections=%d / 單一巨 section 佔比過高）→ "
-                "降級整檔翻譯 fallback",
-                ctx.paper_id, len(sections),
-            )
-        # === [RESUME-P3 C4 END] ===
-
-        # ②③ final_zh：zh* 不重譯；有正常 section → 逐 heading 重組；無/退化 section → 整檔 fallback
+        # ②③ final_zh：zh* 不重譯；有 section → 逐 heading 重組；無 section → 整檔 fallback
         if is_zh:
             zh_text = full_text
-        # === [RESUME-P3 C4 START] ===
-        elif sections and not degraded:
-        # === [RESUME-P3 C4 END] ===
+        elif sections:
             zh_text = self._restore_sections_markdown(sections, inj, tr, translate=True)
         else:
             zh_text = self._translate_whole(full_text, inj, tr, translate=True)
@@ -599,50 +584,6 @@ class ResumePipeline(DocumentStrategy):
             return text
         return tr.translate(t, inj, TranslateMode.NORMAL, text_type)
     # === [RESUME-P3 C3 END] ===
-
-    # === [RESUME-P3 C4 START] heading 退化偵測（單一巨 section 降級防護）===
-    @staticmethod
-    def _is_heading_degraded(
-        sections: List[Dict[str, Any]],
-        ratio_threshold: float = 0.85,
-        min_sections: int = 2,
-    ) -> bool:
-        """heading 退化判定（plan v3 Q9）：
-
-        攤平所有 heading（top + children 遞迴），以每個 heading **自身** content 文字長度計：
-        - heading 總數 < min_sections（履歷幾乎無 # 標題、結構塌陷）→ 退化
-        - 單一 heading 自身文字佔全部文字 > ratio_threshold（全文塞進單一巨 section）→ 退化
-        """
-        flat: List[Dict[str, Any]] = []
-        ResumePipeline._flatten_sections(sections, flat)
-        if len(flat) < min_sections:
-            return True
-        sizes = [ResumePipeline._own_text_len(s) for s in flat]
-        total = sum(sizes)
-        if total <= 0:
-            return False
-        return (max(sizes) / total) > ratio_threshold
-
-    @staticmethod
-    def _flatten_sections(sections: List[Dict[str, Any]], out: List[Dict[str, Any]]) -> None:
-        """遞迴攤平 sections（含 children）至 out。"""
-        for sec in sections or []:
-            if isinstance(sec, dict):
-                out.append(sec)
-                ResumePipeline._flatten_sections(sec.get("children", []) or [], out)
-
-    @staticmethod
-    def _own_text_len(sec: Dict[str, Any]) -> int:
-        """單一 section **自身**（不含 children）的 text item 文字長度累加。"""
-        n = 0
-        for item in sec.get("content", []) or []:
-            if isinstance(item, dict):
-                if item.get("type") == "text":
-                    n += len(item.get("content", "") or "")
-            else:
-                n += len(str(item))
-        return n
-    # === [RESUME-P3 C4 END] ===
     # === [PIPE-RESUME C4 END] ===
 
     # === [PIPE-RESUME C5 START] P4 Async RAG（門檻 ≥3 技能詞保護）===
