@@ -11,6 +11,12 @@ from langchain_core.embeddings import Embeddings
 # import 已不需。EmbeddingModel 仍留此檔。
 from settings import TRANSLATE_MODEL, CHAT_MODEL, GEMINI_API_KEY, EMBEDDING_MODEL_NAME, EMBEDDING_OUTPUT_DIMENSIONS  # noqa: F401
 
+# === [MODEL-9-OPT C2 START] ===
+# 接入統一彈性防禦框架（與 LLMClient 一致）：retry_call Full Jitter 指數退避 + 併發鎖。
+from settings import EMBEDDING_MAX_CONCURRENT
+from llm.retry import retry_call
+# === [MODEL-9-OPT C2 END] ===
+
 
 # 嵌入模型（Gemini Embedding 2，符合 LangChain Embeddings 介面）
 class EmbeddingModel(Embeddings):
@@ -18,6 +24,13 @@ class EmbeddingModel(Embeddings):
 
     _instance: Optional['EmbeddingModel'] = None
     _lock = threading.Lock()
+
+    # === [MODEL-9-OPT C2 START] ===
+    # 全域併發鎖（class-level、單例共用）：限制 Embedding API 同時併發 ≤ EMBEDDING_MAX_CONCURRENT，
+    # 與 LLMClient._api_semaphore 各自獨立（避免跨模組死鎖）。@retry_call 包外層、with 包內層 →
+    # 重試 sleep 前先 release（不佔鎖）。註：限併發數非 RPM 限流，僅削平突發（plan §7 OQ3）。
+    _api_semaphore = threading.Semaphore(EMBEDDING_MAX_CONCURRENT)
+    # === [MODEL-9-OPT C2 END] ===
 
     def __init__(self):
         # Phase 4.7? MODEL-9: 注入共享 httpx.Client（與 LLMClient 共用底層 client）
@@ -71,101 +84,115 @@ class EmbeddingModel(Embeddings):
 
         return (arr / norm).tolist()
 
+    # === [MODEL-9-OPT C2 START] ===
+    # 重構：手動 linear 退避（固定秒數 sleep 15s/30s + '429' 字串比對）全面改為 llm/retry.py 的
+    # @retry_call（Full Jitter 指數退避、_RETRYABLE_TOKENS 涵蓋 429/5xx/timeout/disconnect 等）；
+    # API 呼叫以 with self._api_semaphore 包裹（重試 sleep 前先 release）。
+    # embed_content 參數（model/task_type/output_dimensionality/batch=32）與 _l2_normalize 一律不變
+    # → 向量值逐一相同、不影響 Golden Baseline（plan §1）。
+
+    @retry_call(retries=2, base=2.0)
     def _embed_one(self, text):
-        """逐筆 embed（fallback 用），保留原 429 retry 行為"""
-        import time
-        for attempt in range(3):
-            try:
-                result = self.client.models.embed_content(
-                    model=self.model,
-                    contents=[text],
-                    config=types.EmbedContentConfig(
-                        task_type="RETRIEVAL_DOCUMENT",
-                        output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
-                    )
+        """逐筆 embed（fallback 用）；@retry_call 統一退避。
+
+        fallback 路徑用 retries=2（非 3）：為 _embed_batch 重試耗盡後的逐筆降級，
+        避免「批次 3 次 → 每筆再 3 次」巢狀指數退避在持續 429 下尾巴過長（plan §2）。
+        """
+        with self._api_semaphore:
+            result = self.client.models.embed_content(
+                model=self.model,
+                contents=[text],
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
                 )
-                return self._l2_normalize(result.embeddings[0].values)
-            except Exception as e:
-                if '429' in str(e) and attempt < 2:
-                    wait = 15 * (attempt + 1)
-                    self.logger.warning(f"Rate limit，等待 {wait} 秒後重試...")
-                    time.sleep(wait)
-                else:
-                    raise
+            )
+        return self._l2_normalize(result.embeddings[0].values)
+
+    @retry_call(retries=3, base=2.0)
+    def _embed_batch(self, batch: list) -> list:
+        """批次 embed 單批（預設 32 筆）；@retry_call 統一退避。回 normalized values（保序）。
+
+        數量不符拋 RuntimeError（非 _RETRYABLE_TOKENS）→ 不重試、由 embed_documents 退回逐筆。
+        """
+        with self._api_semaphore:
+            result = self.client.models.embed_content(
+                model=self.model,
+                contents=batch,
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
+                )
+            )
+        if len(result.embeddings) != len(batch):
+            raise RuntimeError(
+                f"批次回傳數量不符: 期望 {len(batch)} 實得 {len(result.embeddings)}"
+            )
+        return [self._l2_normalize(e.values) for e in result.embeddings]
 
     def embed_documents(self, texts: list) -> list:
         """即時批次 embed 文字列表（用於建立向量庫）。
 
-        依索引順序拼接，保證回傳順序與輸入完全一致；
-        每批保留 429 retry；非 429（或數量不符）該批退回逐筆。
+        依索引順序拼接，保證回傳順序與輸入完全一致；每批由 _embed_batch（@retry_call
+        Full Jitter 指數退避）處理，重試耗盡或數量不符則該批退回逐筆 _embed_one，保證可靠性。
         """
-        import time
         BATCH_SIZE = 32
         embeddings = []
         total = len(texts)
         for start in range(0, total, BATCH_SIZE):
             batch = texts[start:start + BATCH_SIZE]
             batch_no = start // BATCH_SIZE + 1
-            for attempt in range(3):
-                try:
-                    result = self.client.models.embed_content(
-                        model=self.model,
-                        contents=batch,
-                        config=types.EmbedContentConfig(
-                            task_type="RETRIEVAL_DOCUMENT",
-                            output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
-                        )
-                    )
-                    if len(result.embeddings) != len(batch):
-                        raise RuntimeError(
-                            f"批次回傳數量不符: 期望 {len(batch)} 實得 {len(result.embeddings)}"
-                        )
-                    embeddings.extend(self._l2_normalize(e.values) for e in result.embeddings)
-                    self.logger.info(
-                        f"批次 {batch_no} 完成（{len(batch)} 筆，"
-                        f"{start + len(batch)}/{total}）"
-                    )
-                    break
-                except Exception as e:
-                    if '429' in str(e) and attempt < 2:
-                        wait = 15 * (attempt + 1)
-                        self.logger.warning(f"Rate limit，等待 {wait} 秒後重試...")
-                        time.sleep(wait)
-                        continue
-                    # 非 429（或重試耗盡）→ 該批退回逐筆，保證可靠性
-                    self.logger.warning(
-                        f"批次 {batch_no} 失敗（{str(e)}），退回逐筆模式"
-                    )
-                    for text in batch:
-                        embeddings.append(self._embed_one(text))
-                    self.logger.info(
-                        f"批次 {batch_no} 逐筆完成（{len(batch)} 筆，"
-                        f"{start + len(batch)}/{total}）"
-                    )
-                    break
+            try:
+                embeddings.extend(self._embed_batch(batch))
+                self.logger.info(
+                    f"批次 {batch_no} 完成（{len(batch)} 筆，"
+                    f"{start + len(batch)}/{total}）"
+                )
+            except Exception as e:
+                # 批次重試耗盡（429/5xx/...）或數量不符 → 退回逐筆，保證可靠性。
+                # 429 可觀測點（plan §1）：結構化 extra_fields 供上線觀察命中率、調 EMBEDDING_MAX_CONCURRENT。
+                self.logger.warning(
+                    f"批次 {batch_no} 失敗（{str(e)}），退回逐筆模式",
+                    extra={'extra_fields': {
+                        'event': 'embedding_429',
+                        'batch_no': batch_no,
+                        'batch_size': len(batch),
+                    }},
+                )
+                for text in batch:
+                    embeddings.append(self._embed_one(text))
+                self.logger.info(
+                    f"批次 {batch_no} 逐筆完成（{len(batch)} 筆，"
+                    f"{start + len(batch)}/{total}）"
+                )
         return embeddings
 
+    @retry_call(retries=3, base=2.0)
     def embed_query(self, text: str) -> list:
-        """embed 單一查詢字串（用於搜尋）"""
-        result = self.client.models.embed_content(
-            model=self.model,
-            contents=[text],
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_QUERY",
-                output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
+        """embed 單一查詢字串（用於搜尋）；@retry_call 統一退避。"""
+        with self._api_semaphore:
+            result = self.client.models.embed_content(
+                model=self.model,
+                contents=[text],
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_QUERY",
+                    output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
+                )
             )
-        )
         return self._l2_normalize(result.embeddings[0].values)
 
+    @retry_call(retries=3, base=2.0)
     def embed_image(self, image_data: bytes, mime_type: str = "image/jpeg") -> list:
-        """embed 圖片（用於圖片向量檢索）"""
+        """embed 圖片（用於圖片向量檢索）；@retry_call 統一退避。"""
         image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
-        result = self.client.models.embed_content(
-            model=self.model,
-            contents=[image_part],
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
+        with self._api_semaphore:
+            result = self.client.models.embed_content(
+                model=self.model,
+                contents=[image_part],
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=EMBEDDING_OUTPUT_DIMENSIONS
+                )
             )
-        )
         return self._l2_normalize(result.embeddings[0].values)
+    # === [MODEL-9-OPT C2 END] ===

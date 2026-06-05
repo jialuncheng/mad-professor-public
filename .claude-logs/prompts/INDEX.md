@@ -77,6 +77,7 @@
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
 ### MODEL-9-OPT 系列
 - 🟡 **MODEL-9-OPT Embedding 連線與限流框架優化（2026-06-05 Tasks）**
+  - `2026-06-05_MODEL-9-OPT_C2_run_提示詞.md` — C2 Run（Embedding Resilience Core：config.py EmbeddingModel 引入 `_api_semaphore=threading.Semaphore(EMBEDDING_MAX_CONCURRENT)` + embed_query/embed_image/_embed_batch〔新〕/_embed_one 套 `@retry_call`+`with semaphore` + embed_documents 改批次呼 _embed_batch 失敗降級 _embed_one 移除手動 time.sleep linear + 429 觀測 log；同步 tiling_processor.py 過時退避註解；`# === [MODEL-9-OPT C2 START/END] ===` 包裹 + 二檔 .bak；grep〔time.sleep/for attempt 0 命中〕+ test_embedding_normalize/llm_retry/tiling_paragraph + SOP；報告暫存 baton 不入 Git）
   - `2026-06-05_MODEL-9-OPT_C1_run_提示詞.md` — C1 Run（Settings Knob：settings.py 新增 `EMBEDDING_MAX_CONCURRENT=int(os.getenv(...,"5"))` 緊鄰 LLM_MAX_CONCURRENT、`# === [MODEL-9-OPT C1 START/END] ===` 包裹；純新增常數、C2 才消費、行為等價；改前 .bak、grep+test_embedding_normalize 驗收、SOP 無命中；執行報告暫存 baton 不入 Git）
   - `2026-06-05_MODEL-9-OPT_Tasks_提示詞.md` — Tasks（依 plan v3 拆 commit：config.py EmbeddingModel 引入 EMBEDDING_MAX_CONCURRENT Semaphore + embed_query/image/_embed_batch/_embed_one 套 @retry_call + 重構 embed_documents 降級 + 新建 test_embedding_retry.py；含 §0.5 成果盤點 / §8 六維度 / 末尾 Checkout commit；不改向量值不碰 Golden、可獨立先做；中間報告留 baton、唯 Checkout 一次性歸檔）
 
@@ -198,6 +199,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_MODEL-9-OPT_C2_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_C1_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_MODEL-9-OPT_Tasks_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_SHADOW-HOTFIX-2_run_提示詞.md`（🛑 HALTED→已依 hotfix.md 落地）
@@ -212,4 +214,3 @@
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_PIPE-RESUME_C7_check_提示詞.md`

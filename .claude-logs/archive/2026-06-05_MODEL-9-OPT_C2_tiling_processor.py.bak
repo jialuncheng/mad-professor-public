@@ -424,10 +424,7 @@ class TilingProcessor:
         embedding_model = self.embedder
         # === [PIPE-RESUME TILING-HOTFIX-1 START] ===
         # 逐筆 embed_query 列表推導 → 批次 embed_documents（每批 32 筆）：請求數降為 1/32，
-        # === [MODEL-9-OPT C2 START] ===
-        # 承接內部 429 退避（MODEL-9-OPT 後為 retry_call Full Jitter 指數退避 + Semaphore 併發鎖；
-        # 原 TILING-HOTFIX-1 時為線性退避 15s/30s）+ 重試耗盡退回逐筆；docstring 保證回傳順序與輸入一致，
-        # === [MODEL-9-OPT C2 END] ===
+        # 承接內部 429 線性退避（15s/30s）+ 重試耗盡退回逐筆；docstring 保證回傳順序與輸入一致，
         # 故 block_embeddings[i] 對齊不變、下方相鄰塊相似度計算正確。根治 TextTiling 429 阻斷與
         # 全套件 test_tiling_paragraph 併發 flaky（task_type 由 RETRIEVAL_QUERY→RETRIEVAL_DOCUMENT、
         # 語意更契合 Document-Blocks，分段邊界或微幅位移，Flip/結案前須重捕 Golden Baseline）。

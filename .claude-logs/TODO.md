@@ -463,8 +463,9 @@
 ### 🔴 高優先
 
 - 🟡 **MODEL-9-OPT Embedding連線與限流框架優化**（`.claude-logs/baton/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_plan.md`）
-  - [x] ✅ C1 — Settings Knob（限流參數初始化）（待 baron 回填）
-  - [/] 🟡 WIP: C2 — Embedding Resilience Core（限流與退避框架重構）
+  - [x] ✅ C1 — Settings Knob（限流參數初始化）（`8feaa12`）
+  - [x] ✅ C2 — Embedding Resilience Core（限流與退避框架重構）（待 baron 回填）
+  - [/] 🟡 WIP: C3 — Unit Tests（限流與重試契約測試）
   - [ ] ⬜ 未開始: C3 — Unit Tests（限流與重試契約測試）
   - [ ] ⬜ 未開始: C4 — Checkout（收官與 baton 檔案歸檔）
   - 工時：4 個 commits（C1 settings + C2 config 重構 + C3 測試 + C4 Checkout）
