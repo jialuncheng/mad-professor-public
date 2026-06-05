@@ -426,7 +426,8 @@
 
 - 🟡 **PIPE-RESUME v9 影子整合與規格同步**（`.claude-logs/baton/2026-06-01_PIPE-RESUME_ResumePipeline策略管線_plan_v1.md` §99.2 v11）
   - [x] ✅ C1 — Sync System Specs（同步三份核心規格文件：plan_v1 + 母 plan v10 + PIPE-SPEC）（待 baron 回填）
-  - [/] 🟡 WIP: C2 — P1 + Context（raw_metadata 基建欄 + run_phase1 寫入 + 影子後綴）
+  - [x] ✅ C2 — P1 + Context（raw_metadata 基建欄 + run_phase1 寫入 + 影子後綴）（待 baron 回填）
+  - [/] 🟡 WIP: C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata）
   - [ ] ⬜ 未開始: C3 — P2 步序與讀取對齊（①②互換 + 改讀 raw_metadata）
   - [ ] ⬜ 未開始: C4 — P3 Business Constraints（履歷業務規則注入）
   - [ ] ⬜ 未開始: C5 — Shadow DB Fidelity（影子寫庫讀 raw_metadata 保真）

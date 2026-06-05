@@ -75,6 +75,7 @@
   - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
+  - `2026-06-05_PIPE-RESUME_C2_run_提示詞.md` — C2 Run（P1 + Context：pipelines/context.py 加 `raw_metadata: Dict[str,Any]={}` 欄 + resume_pipeline.py run_phase1 寫 ctx.raw_metadata〔整包 meta〕+ 過渡期雙寫 self._raw_meta〔P2 仍可讀〕+ `_shadow` 時 title 加綴 (測試)，`# === [PIPE-RESUME v9 C2 START/END] ===` 包裹 + 二檔 .bak；執行報告不入 Git）
   - `2026-06-05_PIPE-RESUME_C1_run_提示詞.md` — C1 Run（Sync System Specs：就地同步 baton/ 三份 Markdown〔PIPE-RESUME plan_v1 + 母 plan v10 + PIPE-SPEC〕寫入 C7/C8-hotfix 史/raw_metadata 穿線/P3 翻譯隔離/P2 摘要先行/Revision+§7.1 Cleanup；純文件、baton/ 主文件不入 Git〔僅 .bak+報告+TODO+prompts git add〕、三份 .bak）
   - `2026-06-05_PIPE-RESUME_Tasks_提示詞.md` — Tasks（v9 整合、03:35 精修版取代 03:15：plan §99.2 v11 後拆分；C1 同步**三檔**〔PIPE-RESUME plan_v1 + 母 plan v10 + PIPE-SPEC〕寫入 raw_metadata 穿線/P3 翻譯隔離/Phase2 摘要先行/C7-C8 hotfix 史/Flip Cleanup → C2 P1+Context〔raw_metadata 欄+影子後綴〕→ C3 P2〔步序①②互換+讀 raw_metadata〕→ C4 P3 constraints → C5 影子寫庫保真 → C6 測試 → C7 Checkout；commit 代號本批次內部序、與原 C1-C7 區別）
 
@@ -184,6 +185,7 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-05 — `2026-06-05_PIPE-RESUME_C2_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_C1_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_PIPE-RESUME_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md`
@@ -198,4 +200,3 @@
 - 2026-06-04 — `2026-06-04_PIPE-RESUME_Tasks_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_Check_提示詞.md`
 - 2026-06-04 — `2026-06-04_TRANSLATOR_C4_run_提示詞.md`
-- 2026-06-04 — `2026-06-04_TRANSLATOR_C2_run_提示詞.md`

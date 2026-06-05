@@ -161,22 +161,8 @@ class ResumePipeline(DocumentStrategy):
         source_lang = self._detect_source_lang(markdown_text)
         phone, email = self._extract_contact(markdown_text)
         domain = self._meta_value(meta, "domain") or ""
-        # interim 穿線（過渡期雙寫、供尚未改的 P2 消費 domain；C3 切換 ctx.raw_metadata 後移除）
+        # interim 穿線（custom_metadata 硬前置）：供 P2 消費 domain
         self._raw_meta = {"phone": phone, "email": email, "domain": domain}
-
-        # === [PIPE-RESUME v9 C2 START] ===
-        # 影子標題後綴：_shadow 時 title 加綴 (測試)，使前端列表（顯示 DB title）肉眼可辨。
-        # title 不入內容翻譯（P2 用 source_lang / P3 讀 .md full_text），僅影響 DB 顯示與 Early Emit、
-        # 不污染影子內容與 Golden Diff。Flip 時隨 web_server 影子開關與本包裹一併移除（母 plan v11 Cleanup）。
-        if ctx.paper_id.endswith("_shadow"):
-            title = f"{title} (測試)"
-
-        # raw_metadata 旁路穿線（PIPE-SPEC §1.1.1）：整包原始 metadata（含 confidence/source）
-        # + regex 抽出的 phone/email，供影子/正式寫庫端組 Paper.metadata_json、對齊 A 軌保真。
-        ctx.raw_metadata = dict(meta)
-        ctx.raw_metadata["phone"] = {"value": phone, "source": "regex", "confidence": "high"}
-        ctx.raw_metadata["email"] = {"value": email, "source": "regex", "confidence": "high"}
-        # === [PIPE-RESUME v9 C2 END] ===
 
         spec = IngestionMetadataSpec(
             title=title,

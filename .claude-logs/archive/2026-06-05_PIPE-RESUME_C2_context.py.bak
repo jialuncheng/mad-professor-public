@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -53,14 +53,6 @@ class PipelineContext(BaseModel):
     pdf_path: Optional[str] = None   # 輸入 PDF 絕對/相對路徑（派發點寫入）
     owner_id: Optional[int] = None   # 擁有者 ID（per-owner 輸出目錄隔離）
     # === [PIPE-RESUME C2 END] ===
-
-    # === [PIPE-RESUME v9 C2 START] ===
-    # DB 持久化旁路欄（五路共用、PIPE-SPEC §1.1.1）：P1 寫入整包原始 metadata
-    # （論文 Title/Author/出處/DOI + 履歷 phone/email/domain，含 confidence/source），
-    # 供影子/正式寫庫端讀取組 `Paper.metadata_json`、對齊 A 軌 upsert_paper 保真。
-    # 非凍結合約欄、不污染 IngestionMetadataSpec；預設 {} 前向相容既有測試。
-    raw_metadata: Dict[str, Any] = {}
-    # === [PIPE-RESUME v9 C2 END] ===
 
     # ── 四份凍結合約產物（對應 Phase 寫入，寫入前為 None）──
     ingestion: Optional[IngestionMetadataSpec] = None      # 合約①（P1 寫入）
