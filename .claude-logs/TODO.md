@@ -120,7 +120,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| VISION-HOTFIX-1 | `settings.py` 新增 `LLM_VISION_TEMPERATURE`（預設 0.0、env 可調）+ `llm/client.py` `chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容、非 None 才注入 `GenerateContentConfig`〕+ `processor/resume_processor.py` `_analyze_resume` 傳 `temperature=settings.LLM_VISION_TEMPERATURE`(0) → 履歷 Vision 忠實轉錄走 greedy；根治 `chat_with_images` 原未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣致同份 PDF 每次輸出抖動（13126/13233/13281、golden 非固定靶）；`# === [VISION-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_vision_passes_temperature_zero` + `test_chat_with_images_wires_temperature`〔注入+None 向後相容〕；test_resume_processor 16 passed、全套件 504 passed（僅 env flake） | `待 baron 回填` |
+| VISION-HOTFIX-1 | `settings.py` 新增 `LLM_VISION_TEMPERATURE`（預設 0.0、env 可調）+ `llm/client.py` `chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容、非 None 才注入 `GenerateContentConfig`〕+ `processor/resume_processor.py` `_analyze_resume` 傳 `temperature=settings.LLM_VISION_TEMPERATURE`(0) → 履歷 Vision 忠實轉錄走 greedy；根治 `chat_with_images` 原未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣致同份 PDF 每次輸出抖動（13126/13233/13281、golden 非固定靶）；`# === [VISION-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_vision_passes_temperature_zero` + `test_chat_with_images_wires_temperature`〔注入+None 向後相容〕；test_resume_processor 16 passed、全套件 504 passed（僅 env flake） | `3d5be32` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-06_VISION-HOTFIX-1_Vision轉錄temperature確定化_hotfix.md`
 > **真因**：`llm/client.py:308` `chat_with_images` 組 `GenerateContentConfig` 未設 temperature → 吃 Gemini 預設 ~1.0（高溫採樣）；忠實轉錄任務卻在隨機採樣 → 同份 PDF 每次輸出不同。切頁救不了（temp 才是槓桿、且切頁砸跨頁結構）。
@@ -549,6 +549,15 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化**（`.claude-logs/baton/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`）
+  - [x] ✅ done: RESUME-PERF-1-Tasks — Tasks 拆分（任務拆分與 TODO.md 同步）
+  - [x] ✅ done: C1 — Collect/Assemble 重構（收集-組裝解耦、仍序列、行為等價）（待 baron 回填）
+  - [/] 🟡 WIP: C2 — ThreadPool 並行翻譯（序列→受限並行、受 LLMClient._api_semaphore 限流、單 unit 失敗退原文）
+  - [ ] ⬜ 未開始: C3 — Unit Tests（保序 byte 等拍 / 併發峰值 ≤ LLM_MAX_CONCURRENT / 異常隔離 / 退化單呼叫）
+  - [ ] ⬜ 未開始: C4 — Checkout（Conformance 三維度驗收 + baton 一次性歸檔）
+  - 工時：4 個 commits
+  - 依賴：無（自包於 resume_pipeline.py、不依賴其餘四路與 A 軌；baron 拍板「不必等五路、現在做」）
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表

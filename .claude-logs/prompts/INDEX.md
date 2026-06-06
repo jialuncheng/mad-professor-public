@@ -81,7 +81,9 @@
   - `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan：Vision pdf2md 每次輸出抖動 13126/13233/13281；真因＝`llm/client.py:308` `chat_with_images` `GenerateContentConfig` 未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣、忠實轉錄卻隨機；唯一呼叫者 `resume_processor.py:157`；修法＝settings 加 `LLM_VISION_TEMPERATURE`(0.0)+`chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容〕注入 config+ResumeProcessor 傳值；切頁救不了〔temp 才是槓桿〕；依 template_hotfix 產 `baton/2026-06-06_VISION-HOTFIX-1_..._hotfix.md` 含 3 檔 diff+測試+commit；⚠️ 共用 A軌 pdf2md+B軌 P1、Vision 輸出變→須重捕 resume golden〔自此可重現〕；不動 .py、Run 待 baron）
 
 ### RESUME-PERF 系列
-- 🔵 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（2026-06-06 plan）**
+- 🟡 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（2026-06-06 plan + Tasks + C1 WIP）**
+  - `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md` — C1 Run（Collect/Assemble 重構：`pipelines/resume_pipeline.py` 新增 `_collect_render_slots`〔遞迴鏡像走訪、不翻譯、append title/content/raw slot、title 記 level=min(2+depth,6)〕+ 重構 `_restore_sections_markdown`〔collect→**序列**翻譯→按序組裝：title→`#*level`+zh、content→`_normalize_paragraph_breaks`、raw→原文〕；**仍序列、輸出 byte 等價**〔既有 resume 測試全綠為基本盤〕；HEADING/PARA/META 邏輯原值搬移不改；`# === [RESUME-PERF-1 C1 START/END] ===` 包裹 + .bak；報告暫存 baton 不 git add）
+  - `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md` — Tasks（依 plan v2〔§7 OQ Q1-Q7 核准〕拆 4 commit：C1 Collect/Assemble 重構〔收集-組裝解耦、仍序列、行為等價〕→ C2 ThreadPool 並行翻譯〔序列→受限並行、受既有 `LLMClient._api_semaphore`/`LLM_MAX_CONCURRENT=6` 限流、單 unit 失敗退原文+warning〕→ C3 單元測試〔mock 確定化 byte 等拍/併發峰值≤上限/異常隔離/退化路徑〕→ C4 Checkout；baron 拍板「不必等五路、現在做」〔plan Q5 原 Flip 前屬優先序非依賴〕；含 §0.5 成果盤點/§8 六維度/末尾 Checkout 一次性歸檔，中間報告留 baton）
   - `2026-06-06_RESUME-PERF-1_plan_提示詞.md` — plan 撰寫（perf 候選：A軌 golden translate 序列 331.85s/77%、grep 確認 B軌 `_restore_one_section` 同樣序列 `_t`〔無 async/gather/ThreadPool〕；解法＝`run_phase3` 兩段式受限並行〔序列收集→ThreadPool 並行翻譯〔受既有 `LLMClient._api_semaphore`/`LLM_MAX_CONCURRENT=6` 限流〕→保序組裝〕、行為等價只改執行方式、HEADING/PARA/META/合約不動；依 template_plan 產 `baton/2026-06-06_RESUME-PERF-1_..._plan_v1.md`〔§2 U1-U7 / §3 grep / §4 不可動 / §6 驗證 / §7 OQ Q1-Q7〕；不含 commit 建議；實施時機＝resume 上線前、A軌不動）
 
 ### RESUME-P3 系列
@@ -237,6 +239,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md`
+- 2026-06-06 — `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md`
 - 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_plan_提示詞.md`
@@ -250,5 +254,3 @@
 - 2026-06-06 — `2026-06-06_MODEL-11_C3_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C2_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_MODEL-11_Tasks_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_Check_提示詞.md`

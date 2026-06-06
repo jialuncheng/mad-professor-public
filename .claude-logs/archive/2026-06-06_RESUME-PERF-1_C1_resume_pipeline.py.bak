@@ -546,75 +546,65 @@ class ResumePipeline(DocumentStrategy):
 
     # ── P3 私有逐單元翻譯與還原（pipelines 內重建、不耦合 A 軌即將棄用的逐段翻譯處理器）──
 
-    # === [RESUME-PERF-1 C1 START] 收集-組裝解耦（仍序列；C2 將「翻譯」改受限並行）===
     def _restore_sections_markdown(
         self, sections: List[Dict[str, Any]], inj: "InjectionContext",
         tr: "Translator", translate: bool,
     ) -> str:
-        """逐 section：收集有序 render slot → 翻譯 → 按序組裝，重組為單一字串。
-
-        RESUME-PERF-1 C1：將原「邊遞迴邊翻邊組」拆為三段——① `_collect_render_slots`
-        序列收集有序 slot（title/content/raw）；② 逐 slot 翻譯（C1 仍序列、C2 換 ThreadPool）；
-        ③ 按 slot 原序組裝（title 套 HEADING 層級、content 套 PARA 正規化、raw 原文）。
-        輸出與序列版 byte 等價（slot 順序 = 原 DFS pre-order；翻譯/後處理邏輯不變）。
-        """
-        slots: List[Dict[str, Any]] = []
-        self._collect_render_slots(sections, 0, slots)
-
-        # ② 逐 slot 翻譯（C1 序列；C2 將此段換為受限並行、保序回填）
-        rendered: List[str] = []
-        for slot in slots:
-            kind = slot["kind"]
-            if kind == "raw":
-                rendered.append(slot["text"])
-                continue
-            text_type = "title" if kind == "title" else "content"
-            zh = self._t(slot["text"], inj, tr, text_type) if translate else slot["text"]
-            # ③ 組裝：title → HEADING 層級前綴；content → PARA 段落正規化
-            if kind == "title":
-                rendered.append(f"{'#' * slot['level']} {zh}")
-            else:
-                rendered.append(self._normalize_paragraph_breaks(zh))
-        return ("\n\n".join(p for p in rendered if p)).strip() + "\n"
-
-    def _collect_render_slots(
-        self, sections: List[Dict[str, Any]], depth: int, out: List[Dict[str, Any]]
-    ) -> None:
-        """遞迴收集有序 render slot（不翻譯）。順序＝原 `_restore_one_section` 的 DFS pre-order。
-
-        slot 型態：
-        - title  ：{"kind":"title","text":標題,"level":HEADING 層級}（HEADING-HOTFIX-1 邏輯、值不變）
-        - content：{"kind":"content","text":待翻正文}（組裝時套 PARA-HOTFIX-1 正規化）
-        - raw    ：{"kind":"raw","text":原文}（formula/figure/table，不翻、passthrough）
-        """
+        """逐 section 遞迴：標題/正文分流翻譯 + 按 level 還原 Markdown，重組為單一字串。"""
+        parts: List[str] = []
         for sec in sections or []:
-            if not isinstance(sec, dict):
-                continue
-            title = (sec.get("title") or "").strip()
-            if title:
-                # HEADING-HOTFIX-1：頂層 h2、每下潛 children +1、上限 h6（值不變、僅由此處記錄）
-                out.append({"kind": "title", "text": title, "level": min(2 + depth, 6)})
+            if isinstance(sec, dict):
+                # === [RESUME-P3 HEADING-HOTFIX-1 START] 頂層 section 由 depth=0 起算（→ h2）===
+                self._restore_one_section(sec, inj, tr, translate, parts, depth=0)
+                # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+        return ("\n\n".join(p for p in parts if p)).strip() + "\n"
 
-            for item in sec.get("content", []) or []:
-                if isinstance(item, dict):
-                    itype = item.get("type")
-                    content = item.get("content", "") or ""
-                    if itype == "text":
-                        out.append({"kind": "content", "text": content})
-                    else:
-                        # formula / figure / table 等：保留原文結構、不翻
-                        if content:
-                            out.append({"kind": "raw", "text": content})
+    def _restore_one_section(
+        self, sec: Dict[str, Any], inj: "InjectionContext", tr: "Translator",
+        translate: bool, parts: List[str], depth: int = 0,
+    ) -> None:
+        """單一 section：還原標題（# * level）+ 逐 content item 分流，遞迴 children。"""
+        title = (sec.get("title") or "").strip()
+        if title:
+            # === [RESUME-P3 HEADING-HOTFIX-1 START] ===
+            # 標題層級改由「遞迴深度」推算，不再讀資料欄位。
+            # 真因：processed JSON 的 level 欄恆=1（扁平死欄），原本「level 欄 or heading_level 欄」
+            # 的取值因 or 短路永遠取到恆真的 1 → 全標題塌成 h1、無階層。
+            # 深度推算：頂層 section = h2（候選人名為 h1、另由 md_restore 樣板渲染），
+            # 每下潛一層 children +1、上限 h6；等價於資料正確時的 heading_level（= 2 + 深度），
+            # 但不依賴該欄位是否被正確填寫（結構保證階層）。
+            level = min(2 + depth, 6)
+            # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+            zh_title = self._t(title, inj, tr, "title") if translate else title
+            parts.append(f"{'#' * level} {zh_title}")
+
+        for item in sec.get("content", []) or []:
+            if isinstance(item, dict):
+                itype = item.get("type")
+                content = item.get("content", "") or ""
+                if itype == "text":
+                    # === [RESUME-P3 PARA-HOTFIX-1 START] text 套用段落邊界正規化（formula/figure/table 不套）===
+                    rendered = self._t(content, inj, tr, "content") if translate else content
+                    parts.append(self._normalize_paragraph_breaks(rendered))
+                    # === [RESUME-P3 PARA-HOTFIX-1 END] ===
                 else:
-                    # 容錯：content 為純字串 list（md_processor 原始型態）
-                    txt = str(item).strip()
-                    if txt:
-                        out.append({"kind": "content", "text": txt})
+                    # formula / figure / table 等：保留原文結構、不翻
+                    if content:
+                        parts.append(content)
+            else:
+                # 容錯：content 為純字串 list（md_processor 原始型態）
+                txt = str(item).strip()
+                if txt:
+                    # === [RESUME-P3 PARA-HOTFIX-1 START] 字串 fallback 亦為正文、同套正規化 ===
+                    rendered = self._t(txt, inj, tr, "content") if translate else txt
+                    parts.append(self._normalize_paragraph_breaks(rendered))
+                    # === [RESUME-P3 PARA-HOTFIX-1 END] ===
 
-            for child in sec.get("children", []) or []:
-                if isinstance(child, dict):
-                    self._collect_render_slots([child], depth + 1, out)
-    # === [RESUME-PERF-1 C1 END] ===
+        for child in sec.get("children", []) or []:
+            if isinstance(child, dict):
+                # === [RESUME-P3 HEADING-HOTFIX-1 START] children 下潛一層 depth+1 ===
+                self._restore_one_section(child, inj, tr, translate, parts, depth=depth + 1)
+                # === [RESUME-P3 HEADING-HOTFIX-1 END] ===
 
     def _translate_whole(
         self, full_text: str, inj: "InjectionContext", tr: "Translator", translate: bool,
