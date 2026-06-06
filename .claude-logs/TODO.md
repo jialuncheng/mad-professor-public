@@ -116,6 +116,21 @@
 > **⚠️ 行為變更 + 重捕**：在 B軌 `final_zh`/`final_en` 開頭新增 meta header → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING/PARA 同屬 B軌輸出變更類）。
 > **⚠️ domain 現況**：P1 抽出的 `domain` 為描述句（非乾淨標籤）、header 照實渲染；乾淨標籤須改 P1 domain prompt（另一任務）。
 
+### BE-Refactor RESUME-PERF-1 run_phase3 逐 section 翻譯並行化
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `pipelines/resume_pipeline.py` 收集-組裝解耦：新增 `_collect_render_slots`〔遞迴鏡像 DFS pre-order、不翻譯、append title/content/raw slot、title 記 `level=min(2+depth,6)`〕+ 重構 `_restore_sections_markdown`〔collect→**序列**翻譯→按序組裝〕+ 移除無外部引用 `_restore_one_section`；仍序列、輸出 byte 等價〔既有 29 resume 測試全綠為鐵證〕；HEADING/PARA/META 邏輯原值搬移不改；`# === [RESUME-PERF-1 C1] ===` 包裹 | `b110742` |
+| C2 | `resume_pipeline.py` 翻譯段序列→`ThreadPoolExecutor(max_workers=LLM_MAX_CONCURRENT)` 受限並行、`{future:index}` 保序回填〔實際 API 併發受**既有** `LLMClient._api_semaphore`(6) 限、不新增鎖〕+ 單 unit future 拋例外→退原文 `slot["text"]`+`logger.warning(event=resume_translate_unit_fallback)` 異常隔離保交付；組裝/退化/zh* 不動；resume 29 passed〔行為等價〕、全套件 504 passed | `d5abdf0` |
+| C3 | `tests/test_resume_pipeline.py` 追加 4 並行專屬測試〔`order_byte_equal` 多層 byte 等拍保序 / `concurrency_capped` patch `LLM_MAX_CONCURRENT=2` lock 計數驗峰值 ≤ 2 / `unit_error_isolated` 單 unit 拋例外退原文 spec 仍交付 / `degraded_single_call` 退化 `_translate_whole` calls==1 不並行〕；resume 33 passed、全套件 508 passed | `待 baron 回填` |
+| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U2 限流/U3 等價/U4 保序/U5 異常隔離/U6 退化不變 由 C3 測試自證；效能 wall-clock 屬 baron E2E〕/ tasks §6 grep+全套件 508 passed / 不可動清單 git 證據〔C1-C2 僅 resume_pipeline.py、C3 僅 test_resume_pipeline.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 6 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`（§99.2 v2、§7 OQ Q1-Q7 核准）
+> **根因**：B軌 `run_phase3` 逐 heading section 翻譯完全序列（`_restore_one_section` 同步 `_t` + 遞迴序列、無並行原語）；A軌等價結構實測 translate ~315-330s（佔單份 76%），B軌 resume 影子上傳承此瓶頸。
+> **解法（兩步降風險）**：C1 先「收集-組裝解耦」（仍序列、既有測試鎖死輸出等價）→ C2 才把中間翻譯段換 ThreadPool（保序靠 slot index、限流靠既有 semaphore、單 unit 失敗退原文）。把「結構是否壞」（C1）與「並行是否亂序」（C2）隔離成兩個獨立可驗證步驟。
+> **行為等價**：只改翻譯「執行方式」（序列→並行）、不改輸出內容/順序/層級/段落/header；既有 29 resume 測試全綠 + C3 並行 byte 等拍雙重保證。預估 wall-clock ~5x（~300s→~60-90s、屬 baron E2E 觀測）。
+> **時機**：plan Q5 原寫「Flip 前」屬優先序判斷；baron 拍板「不必等五路、現在做」（自包於 resume_pipeline.py、不依賴其餘四路與 A軌）。
+
 ### BE-Hotfix VISION-HOTFIX-1 — Vision 履歷轉錄非確定性（每次輸出抖動）修復
 
 | Commit | 內容 | Hash |
@@ -550,15 +565,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化**（`.claude-logs/baton/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`）
-  - [x] ✅ done: RESUME-PERF-1-Tasks — Tasks 拆分（任務拆分與 TODO.md 同步）
-  - [x] ✅ done: C1 — Collect/Assemble 重構（收集-組裝解耦、仍序列、行為等價）（`b110742`）
-  - [x] ✅ done: C2 — ThreadPool 並行翻譯（序列→受限並行、受 LLMClient._api_semaphore 限流、單 unit 失敗退原文）（待 baron 回填）
-  - [/] 🟡 WIP: C3 — Unit Tests（保序 byte 等拍 / 併發峰值 ≤ LLM_MAX_CONCURRENT / 異常隔離 / 退化單呼叫）
-  - [ ] ⬜ 未開始: C4 — Checkout（Conformance 三維度驗收 + baton 一次性歸檔）
-  - 工時：4 個 commits
-  - 依賴：無（自包於 resume_pipeline.py、不依賴其餘四路與 A 軌；baron 拍板「不必等五路、現在做」）
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -853,5 +859,5 @@
 - ✅ ~~RESUME-P3 B軌履歷翻譯品質重構~~（已落地、C1 `aec1f6f` + C2 `0efa7e8` + C3 `52e0769` + C4 `6658b48` + C5 `3a30394` + C6 收官；廢 100% Bypass→逐 heading section 翻譯+還原〔pipelines 內重建不耦合 A 軌〕+ 履歷 P1 opt-out TextTiling〔滅 429〕+ resume 停用 U4 + heading 退化 fallback；resume 26 測試、全套件 495 passed；⚠️ 改 B軌輸出、與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3）
 - ✅ ~~RESUME-P3 HEADING-HOTFIX-1 標題層級遞迴深度~~ `7c8a0da` / ~~PARA-HOTFIX-1 正文段落空行~~ `2772822` / ~~META-HOTFIX-1 P1 meta 進 final header~~ `2ba97fc`（B軌履歷三件套：標題層級/段落/文件 header）
 - ✅ VISION-HOTFIX-1 Vision 轉錄 temperature 確定化（高、`chat_with_images` 加 temperature + ResumeProcessor 傳 0；A軌 pdf2md + B軌 P1 共用、須重捕 resume golden）（hash 待回填）
-- 🔵 RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（perf 候選 plan v2、OQ 核准、parked 待 resume Flip 前；`baton/2026-06-06_RESUME-PERF-1_..._plan_v1.md`）
+- ✅ ~~RESUME-PERF-1 run_phase3 逐 section 翻譯並行化~~（已落地、C1 `b110742` + C2 `d5abdf0` + C3/C4 收官；序列→ThreadPool 受限並行〔保序靠 slot index、限流靠既有 `_api_semaphore`、單 unit 失敗退原文〕；C1 解耦先鎖等價、C2 並行、C3 4 並行測試；行為等價、預估 ~5x；baron 拍板不必等五路）
 

@@ -81,7 +81,9 @@
   - `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan：Vision pdf2md 每次輸出抖動 13126/13233/13281；真因＝`llm/client.py:308` `chat_with_images` `GenerateContentConfig` 未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣、忠實轉錄卻隨機；唯一呼叫者 `resume_processor.py:157`；修法＝settings 加 `LLM_VISION_TEMPERATURE`(0.0)+`chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容〕注入 config+ResumeProcessor 傳值；切頁救不了〔temp 才是槓桿〕；依 template_hotfix 產 `baton/2026-06-06_VISION-HOTFIX-1_..._hotfix.md` 含 3 檔 diff+測試+commit；⚠️ 共用 A軌 pdf2md+B軌 P1、Vision 輸出變→須重捕 resume golden〔自此可重現〕；不動 .py、Run 待 baron）
 
 ### RESUME-PERF 系列
-- 🟡 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（2026-06-06 plan + Tasks + C2 WIP）**
+- ✅ **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（2026-06-06 收官）**
+  - `2026-06-06_RESUME-PERF-1_Check_提示詞.md` — C4 Check（Conformance 三維度驗收〔plan §2 U1-U7 / tasks §6 grep+pytest〔含 C3 4 並行測試〕/ 不可動清單 git 證據〕+ SOP 核查 + 提示詞稽核 + msg 完整性 → 全合規後 TODO 結案〔C1-C4 完成表 + hash 自癒〕+ baton 一次性 mv 歸檔〔plan_v1→plans//tasks→tasks//C1-C4 報告→executions/〕；嚴禁自發 commit、msg 寫 /tmp；RESUME-PERF-1 全案結案）
+  - `2026-06-06_RESUME-PERF-1_C3_run_提示詞.md` — C3 Run（Unit Tests：`tests/test_resume_pipeline.py` 追加 4 並行專屬測試〔mock 確定化 `f"ZH::{text}"`〕——`test_p3_parallel_order_byte_equal`〔多層 section byte 等拍保序+層級+段落〕/ `test_p3_parallel_concurrency_capped`〔patch `LLM_MAX_CONCURRENT=2`+lock 計數驗峰值 ≤ 2〕/ `test_p3_parallel_unit_error_isolated`〔單 unit 拋例外退原文、其餘正常、spec 交付〕/ `test_p3_parallel_degraded_single_call`〔heading 退化→`_translate_whole` 單呼叫不並行〕；`# === [RESUME-PERF-1 C3 START/END] ===` 包裹 + .bak；grep+pytest 全綠；報告暫存 baton 不 git add）
   - `2026-06-06_RESUME-PERF-1_C2_run_提示詞.md` — C2 Run（ThreadPool 並行翻譯：`pipelines/resume_pipeline.py` 檔頭 import `concurrent.futures.ThreadPoolExecutor` + `settings.LLM_MAX_CONCURRENT`；`_restore_sections_markdown` 逐 slot 序列翻譯→`ThreadPoolExecutor(max_workers=LLM_MAX_CONCURRENT)` 並行、`{index:future}` 保序回填〔實際 API 併發受既有 `LLMClient._api_semaphore` 限〕；單 unit future 拋例外→退原文 `slot["text"]`+`logger.warning(event=resume_translate_unit_fallback)` 異常隔離保交付；組裝段/退化/zh* 不動；`# === [RESUME-PERF-1 C2 START/END] ===` 包裹 + .bak；grep+SOP+pytest 既有 29 全綠〔行為等價〕；報告暫存 baton 不 git add）
   - `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md` — C1 Run（Collect/Assemble 重構：`pipelines/resume_pipeline.py` 新增 `_collect_render_slots`〔遞迴鏡像走訪、不翻譯、append title/content/raw slot、title 記 level=min(2+depth,6)〕+ 重構 `_restore_sections_markdown`〔collect→**序列**翻譯→按序組裝：title→`#*level`+zh、content→`_normalize_paragraph_breaks`、raw→原文〕；**仍序列、輸出 byte 等價**〔既有 resume 測試全綠為基本盤〕；HEADING/PARA/META 邏輯原值搬移不改；`# === [RESUME-PERF-1 C1 START/END] ===` 包裹 + .bak；報告暫存 baton 不 git add）
   - `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md` — Tasks（依 plan v2〔§7 OQ Q1-Q7 核准〕拆 4 commit：C1 Collect/Assemble 重構〔收集-組裝解耦、仍序列、行為等價〕→ C2 ThreadPool 並行翻譯〔序列→受限並行、受既有 `LLMClient._api_semaphore`/`LLM_MAX_CONCURRENT=6` 限流、單 unit 失敗退原文+warning〕→ C3 單元測試〔mock 確定化 byte 等拍/併發峰值≤上限/異常隔離/退化路徑〕→ C4 Checkout；baron 拍板「不必等五路、現在做」〔plan Q5 原 Flip 前屬優先序非依賴〕；含 §0.5 成果盤點/§8 六維度/末尾 Checkout 一次性歸檔，中間報告留 baton）
@@ -240,6 +242,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_RESUME-PERF-1_Check_提示詞.md`
+- 2026-06-06 — `2026-06-06_RESUME-PERF-1_C3_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_C2_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md`
@@ -253,5 +257,3 @@
 - 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_C4_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_MODEL-11_C3_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_MODEL-11_C2_run_提示詞.md`
