@@ -158,9 +158,6 @@ class ResumeProcessor(PDFParser):
                 messages=[{"role": "user", "content": prompt}],
                 images=[(img, "image/jpeg") for img in page_images],
                 model=settings.LLM_VISION_MODEL,
-                # === [VISION-HOTFIX-1 START] 忠實轉錄走 greedy（temp=0、可重現）===
-                temperature=settings.LLM_VISION_TEMPERATURE,
-                # === [VISION-HOTFIX-1 END] ===
             )
         except Exception as e:
             self.logger.error(f"Vision 履歷解析失敗 {paper_name}: {e}")

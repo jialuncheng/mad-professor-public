@@ -19,12 +19,6 @@ LLM_DOMAIN_MODEL = os.getenv("LLM_DOMAIN_MODEL", CHAT_MODEL)
 LLM_DOC_MODEL = os.getenv("LLM_DOC_MODEL", CHAT_MODEL)
 # image_caption 與 slides 的 Vision 辨識
 LLM_VISION_MODEL = os.getenv("LLM_VISION_MODEL", CHAT_MODEL)
-# === [VISION-HOTFIX-1 START] ===
-# 履歷 Vision「忠實轉錄」temperature：預設 0.0（greedy、最大可重現）。
-# 根因：chat_with_images 原未設 temperature → 吃 Gemini 預設 ~1.0（高溫採樣），
-# 致同一份 PDF 每次輸出抖動（golden 非固定靶）。轉錄任務應 greedy。
-LLM_VISION_TEMPERATURE = float(os.getenv("LLM_VISION_TEMPERATURE", "0.0"))
-# === [VISION-HOTFIX-1 END] ===
 # extra_info 章節摘要 / 問題 / 公式解析
 LLM_EXTRA_INFO_MODEL = os.getenv("LLM_EXTRA_INFO_MODEL", CHAT_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

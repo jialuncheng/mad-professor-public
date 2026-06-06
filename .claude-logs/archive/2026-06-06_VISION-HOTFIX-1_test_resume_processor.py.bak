@@ -108,49 +108,6 @@ def test_vision_call_passes_images_and_model(fake_pdf, tmp_path, mock_llm, monke
     assert kwargs.get("model") == "fake-vision-model"
 
 
-# === [VISION-HOTFIX-1 START] ===
-def test_vision_passes_temperature_zero(fake_pdf, tmp_path, mock_llm):
-    """VISION-HOTFIX-1：ResumeProcessor 傳 temperature=LLM_VISION_TEMPERATURE(0.0) 給 chat_with_images。"""
-    import settings
-    proc = ResumeProcessor(llm=mock_llm)
-    proc.parse(str(fake_pdf), str(tmp_path / "out"))
-
-    _, kwargs = mock_llm.chat_with_images.call_args
-    assert kwargs.get("temperature") == settings.LLM_VISION_TEMPERATURE
-    assert kwargs.get("temperature") == 0.0          # 預設 greedy、忠實轉錄確定化
-
-
-def test_chat_with_images_wires_temperature():
-    """VISION-HOTFIX-1：chat_with_images 將 temperature 注入 GenerateContentConfig；
-    None（預設）→ 不設 temperature（向後相容、維持既有行為）。"""
-    import logging as _logging
-
-    from llm.client import LLMClient
-
-    inst = LLMClient.__new__(LLMClient)              # 繞單例 + httpx 初始化
-    inst.client = MagicMock()
-    inst.logger = _logging.getLogger("llm.client")
-
-    captured = {}
-
-    def _gen(**kwargs):
-        captured["config"] = kwargs.get("config")
-        return MagicMock(text="ok")
-
-    inst.client.models.generate_content.side_effect = _gen
-    imgs = [(b"\xff\xd8\xff", "image/jpeg")]
-    msgs = [{"role": "user", "content": "hi"}]
-
-    # 傳 0 → config.temperature == 0
-    inst.chat_with_images(messages=msgs, images=imgs, temperature=0)
-    assert captured["config"].temperature == 0
-
-    # 預設 None → config 不設 temperature（向後相容）
-    inst.chat_with_images(messages=msgs, images=imgs)
-    assert captured["config"].temperature is None
-# === [VISION-HOTFIX-1 END] ===
-
-
 def test_strip_code_fence_markdown(fake_pdf, tmp_path, mock_llm):
     """Vision 回 ```markdown\\n#...\\n``` → strip code fence。"""
     mock_llm.chat_with_images.return_value = (

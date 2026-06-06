@@ -75,6 +75,15 @@
   - `2026-06-04_PIPE-RESUME_C7_check_提示詞.md` — Check（C7 收官：Conformance 三維度驗收〔目標規格 U1-U5 / 測試 §6 / 不可動清單〕+ 提示詞歸檔稽核 + msg 草稿完整性 → 全合規後一次性 mv plan_v1〔保留 _v1〕/tasks/C1-C7 報告至正式目錄 + TODO 結案〔C1-C7 完成表 + 索引 ✅〕+ 歷史全量 Hash 自癒；不自發 commit、msg 寫 /tmp；PIPE 縱向五路第 1 路全案結案）
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
+### VISION-HOTFIX 系列
+- 🟡 **VISION-HOTFIX-1 Vision 轉錄 temperature 確定化（2026-06-06 文件 + Run）**
+  - `2026-06-06_VISION-HOTFIX-1_run_提示詞.md` — Run（落地：`settings.py` 加 `LLM_VISION_TEMPERATURE`(0.0) + `llm/client.py` `chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容、非 None 才注入 GenerateContentConfig〕+ `processor/resume_processor.py` `_analyze_resume` 傳 `temperature=settings.LLM_VISION_TEMPERATURE`；`tests/test_resume_processor.py` 追加 test_vision_passes_temperature_zero + test_chat_with_images_wires_temperature；`# === [VISION-HOTFIX-1 START/END] ===` 包裹 + 4 .bak；pytest+grep+SOP；收官 mv hotfix.md+執行.md→hotfixes/；⚠️ 共用 A軌 pdf2md+B軌 P1、Vision 輸出變→清 _capture_work 後重捕 resume golden）
+  - `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan：Vision pdf2md 每次輸出抖動 13126/13233/13281；真因＝`llm/client.py:308` `chat_with_images` `GenerateContentConfig` 未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣、忠實轉錄卻隨機；唯一呼叫者 `resume_processor.py:157`；修法＝settings 加 `LLM_VISION_TEMPERATURE`(0.0)+`chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容〕注入 config+ResumeProcessor 傳值；切頁救不了〔temp 才是槓桿〕；依 template_hotfix 產 `baton/2026-06-06_VISION-HOTFIX-1_..._hotfix.md` 含 3 檔 diff+測試+commit；⚠️ 共用 A軌 pdf2md+B軌 P1、Vision 輸出變→須重捕 resume golden〔自此可重現〕；不動 .py、Run 待 baron）
+
+### RESUME-PERF 系列
+- 🔵 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（2026-06-06 plan）**
+  - `2026-06-06_RESUME-PERF-1_plan_提示詞.md` — plan 撰寫（perf 候選：A軌 golden translate 序列 331.85s/77%、grep 確認 B軌 `_restore_one_section` 同樣序列 `_t`〔無 async/gather/ThreadPool〕；解法＝`run_phase3` 兩段式受限並行〔序列收集→ThreadPool 並行翻譯〔受既有 `LLMClient._api_semaphore`/`LLM_MAX_CONCURRENT=6` 限流〕→保序組裝〕、行為等價只改執行方式、HEADING/PARA/META/合約不動；依 template_plan 產 `baton/2026-06-06_RESUME-PERF-1_..._plan_v1.md`〔§2 U1-U7 / §3 grep / §4 不可動 / §6 驗證 / §7 OQ Q1-Q7〕；不含 commit 建議；實施時機＝resume 上線前、A軌不動）
+
 ### RESUME-P3 系列
 - 🟡 **RESUME-P3 META-HOTFIX-1 P1 Meta 渲染進文件 header（2026-06-06 文件 + Run）**
   - `2026-06-06_RESUME-P3_META-HOTFIX-1_run_提示詞.md` — Run（落地：`pipelines/resume_pipeline.py` 新增 `_render_meta_header`〔讀 ctx.raw_metadata domain/organization/phone/email + ctx.ingestion.title 姓名含 (測試) + en domain 優先 gspec.domain_name、組 `# 姓名`+領域/機構/電話/Email **無序列表**、缺項省略、整包空回 ''〕+ `run_phase3` 寫出前 prepend zh/en；`tests/test_resume_pipeline.py` 追加 `test_p3_meta_header_rendered`〔# 王小明 (測試) 開頭 + 四欄值 + 各欄獨立 list item〕；`# === [RESUME-P3 META-HOTFIX-1 START/END] ===` 包裹 + 2 .bak；grep+pytest+SOP；收官 mv hotfix.md+執行.md→hotfixes/；改 B軌輸出須重捕 resume golden）
@@ -228,6 +237,9 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_run_提示詞.md`
+- 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md`
+- 2026-06-06 — `2026-06-06_RESUME-PERF-1_plan_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_PARA-HOTFIX-1_run_提示詞.md`
@@ -240,6 +252,3 @@
 - 2026-06-06 — `2026-06-06_MODEL-11_C1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_MODEL-11_Tasks_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_Check_提示詞.md`
-- 2026-06-05 — `2026-06-05_RESUME-P3_C5_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_RESUME-P3_C4_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_RESUME-P3_C3_run_提示詞.md`

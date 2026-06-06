@@ -271,10 +271,7 @@ class LLMClient:
     @retry_call(retries=3, base=2.0)
     def chat_with_images(self, messages: List[Dict[str, Any]],
                          images: List[tuple], model: str = None,
-                         timeout: float = None,
-                         # === [VISION-HOTFIX-1 START] 可選 temperature（預設 None 向後相容）===
-                         temperature: float = None) -> str:
-                         # === [VISION-HOTFIX-1 END] ===
+                         timeout: float = None) -> str:
         """帶多張圖片的對話（Vision，Phase 4.7e v2）。
 
         images: list of (image_bytes, mime_type) tuples，順序保留。
@@ -306,14 +303,9 @@ class LLMClient:
                     parts=image_parts
                 ))
 
-            # === [VISION-HOTFIX-1 START] ===
-            # temperature 為 None 時不設（維持既有行為、向後相容）；
-            # 傳入時注入 config（履歷轉錄傳 0 → greedy 確定化）。
-            _cfg_kwargs = {"system_instruction": system_instruction}
-            if temperature is not None:
-                _cfg_kwargs["temperature"] = temperature
-            config = types.GenerateContentConfig(**_cfg_kwargs)
-            # === [VISION-HOTFIX-1 END] ===
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction
+            )
 
             response = self.client.models.generate_content(
                 model=model, contents=contents, config=config

@@ -108,13 +108,25 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| META-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_render_meta_header(ctx, gspec, *, lang)`（讀現有 `ctx.raw_metadata` 旁路 domain/organization/phone/email + `ctx.ingestion.title` 姓名〔含 (測試)〕+ en domain 優先 `gspec.domain_name`，組 `# 姓名` + 領域/機構/電話/Email **無序列表**〔缺項省略、整包空回 ''、list 規範保證一欄一行防 RAG-10 軟換行〕）+ `run_phase3` 寫出前 prepend final_zh〔中文 label〕/final_en〔英文 label〕；根治 P1 抽的 meta 只到 DB（raw_metadata 旁路終點＝web_server 寫庫）、`run_phase3` 渲染端從不讀 → final 無 header 的渲染缺口；不動凍結合約（走現有旁路、轉正屬 INFRA-4 遠期）；`# === [RESUME-P3 META-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_meta_header_rendered`〔# 王小明 (測試) 開頭 + 四欄值 + 各欄獨立 list item〕+ 對齊 2 既有 run_phase3 測試（header prepend carryover）；resume 29 passed、全套件 502 passed（僅 env flake） | `待 baron 回填` |
+| META-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_render_meta_header(ctx, gspec, *, lang)`（讀現有 `ctx.raw_metadata` 旁路 domain/organization/phone/email + `ctx.ingestion.title` 姓名〔含 (測試)〕+ en domain 優先 `gspec.domain_name`，組 `# 姓名` + 領域/機構/電話/Email **無序列表**〔缺項省略、整包空回 ''、list 規範保證一欄一行防 RAG-10 軟換行〕）+ `run_phase3` 寫出前 prepend final_zh〔中文 label〕/final_en〔英文 label〕；根治 P1 抽的 meta 只到 DB（raw_metadata 旁路終點＝web_server 寫庫）、`run_phase3` 渲染端從不讀 → final 無 header 的渲染缺口；不動凍結合約（走現有旁路、轉正屬 INFRA-4 遠期）；`# === [RESUME-P3 META-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_meta_header_rendered`〔# 王小明 (測試) 開頭 + 四欄值 + 各欄獨立 list item〕+ 對齊 2 既有 run_phase3 測試（header prepend carryover）；resume 29 passed、全套件 502 passed（僅 env flake） | `2ba97fc` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_META-HOTFIX-1_hotfix.md`
 > **真因**：P1 抽的 meta（姓名→`IngestionMetadataSpec.title`；domain/phone/email→`ctx.raw_metadata` 旁路）唯一出海口是 DB（P2 讀 domain→LCC、web_server 寫 `metadata_json`）；`run_phase3`（唯一產 final 處）只渲染 section body、從不讀 raw_metadata、無 header 組裝 → P1 meta 對最終文件零貢獻。治標＝render 端讀同一條旁路組 header；治本（旁路轉正 spec.meta）屬 INFRA-4。
 > **代號**：原 HEADER-HOTFIX-1 改名 META-HOTFIX-1（避免與 HEADING-HOTFIX-1 視覺混淆）。
 > **⚠️ 行為變更 + 重捕**：在 B軌 `final_zh`/`final_en` 開頭新增 meta header → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING/PARA 同屬 B軌輸出變更類）。
 > **⚠️ domain 現況**：P1 抽出的 `domain` 為描述句（非乾淨標籤）、header 照實渲染；乾淨標籤須改 P1 domain prompt（另一任務）。
+
+### BE-Hotfix VISION-HOTFIX-1 — Vision 履歷轉錄非確定性（每次輸出抖動）修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| VISION-HOTFIX-1 | `settings.py` 新增 `LLM_VISION_TEMPERATURE`（預設 0.0、env 可調）+ `llm/client.py` `chat_with_images` 加可選 `temperature` 參數〔預設 None 向後相容、非 None 才注入 `GenerateContentConfig`〕+ `processor/resume_processor.py` `_analyze_resume` 傳 `temperature=settings.LLM_VISION_TEMPERATURE`(0) → 履歷 Vision 忠實轉錄走 greedy；根治 `chat_with_images` 原未設 temperature→吃 Gemini 預設 ~1.0 高溫採樣致同份 PDF 每次輸出抖動（13126/13233/13281、golden 非固定靶）；`# === [VISION-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_vision_passes_temperature_zero` + `test_chat_with_images_wires_temperature`〔注入+None 向後相容〕；test_resume_processor 16 passed、全套件 504 passed（僅 env flake） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-06_VISION-HOTFIX-1_Vision轉錄temperature確定化_hotfix.md`
+> **真因**：`llm/client.py:308` `chat_with_images` 組 `GenerateContentConfig` 未設 temperature → 吃 Gemini 預設 ~1.0（高溫採樣）；忠實轉錄任務卻在隨機採樣 → 同份 PDF 每次輸出不同。切頁救不了（temp 才是槓桿、且切頁砸跨頁結構）。
+> **⚠️ 共用 + 重捕**：`ResumeProcessor.parse` = A軌 pdf2md + B軌 P1 共用 → Vision 輸出改變、**A軌 golden + B軌 P1/final 都受影響**；須先 `rm -rf _capture_work/.../golden_resume` 再重捕 resume golden（`--force` 不清中間快取）、自此可重現。
+> **⚠️ 誠實限制**：temp=0 不保證 byte 完全相同（Google 後端 batching/浮點/MoE 殘餘非確定）、僅壓抖動。
+> **既存 SOP 註**：`resume_processor.py:166` `logger.error` 無 `exc_info=True` 為**前置既存**（非本 hotfix 引入、本 hotfix 只加 temperature 參數未碰錯誤處理）；屬獨立 cleanup 候選。
 
 ### BE-Refactor MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次
 
@@ -830,4 +842,7 @@
 - ✅ ~~TILING-HOTFIX-1 — 緊急熱修復：TextTiling Embedding 速率超限 (429) 批次化修復~~（已落地、`702347a`；`tiling_processor.py:425` 逐筆 embed_query→批次 embed_documents〔1/32 請求+線性退避+順序保證〕；根治 429 阻斷+test_tiling_paragraph 併發 flaky；全套件 484 passed；⚠️ task_type RETRIEVAL_QUERY→DOCUMENT 行為變更、Flip/結案前須重捕 Golden Baseline）
 - ✅ ~~SHADOW-HOTFIX-2 — B軌影子標題 (測試) 後綴與履歷公司名翻譯修復~~（已落地、`3d2778a`；3 處移除矛盾交回母提示詞：web_server translated_title 補 (測試) + translator.py:40 STYLE_HINTS 移除公司名 + resume_pipeline.py:109 constraints 改產品-only；全套件 486 passed；⚠️ B軌譯文改變、與 TILING-HOTFIX-1 合併重捕 Golden Baseline；學歷 doubling 殘留歸 RESUME-P3）
 - ✅ ~~RESUME-P3 B軌履歷翻譯品質重構~~（已落地、C1 `aec1f6f` + C2 `0efa7e8` + C3 `52e0769` + C4 `6658b48` + C5 `3a30394` + C6 收官；廢 100% Bypass→逐 heading section 翻譯+還原〔pipelines 內重建不耦合 A 軌〕+ 履歷 P1 opt-out TextTiling〔滅 429〕+ resume 停用 U4 + heading 退化 fallback；resume 26 測試、全套件 495 passed；⚠️ 改 B軌輸出、與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3）
+- ✅ ~~RESUME-P3 HEADING-HOTFIX-1 標題層級遞迴深度~~ `7c8a0da` / ~~PARA-HOTFIX-1 正文段落空行~~ `2772822` / ~~META-HOTFIX-1 P1 meta 進 final header~~ `2ba97fc`（B軌履歷三件套：標題層級/段落/文件 header）
+- ✅ VISION-HOTFIX-1 Vision 轉錄 temperature 確定化（高、`chat_with_images` 加 temperature + ResumeProcessor 傳 0；A軌 pdf2md + B軌 P1 共用、須重捕 resume golden）（hash 待回填）
+- 🔵 RESUME-PERF-1 run_phase3 逐 section 翻譯並行化（perf 候選 plan v2、OQ 核准、parked 待 resume Flip 前；`baton/2026-06-06_RESUME-PERF-1_..._plan_v1.md`）
 
