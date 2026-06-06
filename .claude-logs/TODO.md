@@ -552,9 +552,9 @@
 
 - 🟡 **RESUME-PERF-1 run_phase3 逐 section 翻譯並行化**（`.claude-logs/baton/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`）
   - [x] ✅ done: RESUME-PERF-1-Tasks — Tasks 拆分（任務拆分與 TODO.md 同步）
-  - [x] ✅ done: C1 — Collect/Assemble 重構（收集-組裝解耦、仍序列、行為等價）（待 baron 回填）
-  - [/] 🟡 WIP: C2 — ThreadPool 並行翻譯（序列→受限並行、受 LLMClient._api_semaphore 限流、單 unit 失敗退原文）
-  - [ ] ⬜ 未開始: C3 — Unit Tests（保序 byte 等拍 / 併發峰值 ≤ LLM_MAX_CONCURRENT / 異常隔離 / 退化單呼叫）
+  - [x] ✅ done: C1 — Collect/Assemble 重構（收集-組裝解耦、仍序列、行為等價）（`b110742`）
+  - [x] ✅ done: C2 — ThreadPool 並行翻譯（序列→受限並行、受 LLMClient._api_semaphore 限流、單 unit 失敗退原文）（待 baron 回填）
+  - [/] 🟡 WIP: C3 — Unit Tests（保序 byte 等拍 / 併發峰值 ≤ LLM_MAX_CONCURRENT / 異常隔離 / 退化單呼叫）
   - [ ] ⬜ 未開始: C4 — Checkout（Conformance 三維度驗收 + baton 一次性歸檔）
   - 工時：4 個 commits
   - 依賴：無（自包於 resume_pipeline.py、不依賴其餘四路與 A 軌；baron 拍板「不必等五路、現在做」）

@@ -72,10 +72,6 @@ from processor.translator import InjectionContext, TranslateMode, Translator
 # === [PIPE-RESUME C5 START] P4 RAG 向量化（複用既有 RagProcessor、零改動）===
 from processor.rag_processor import RagProcessor
 # === [PIPE-RESUME C5 END] ===
-# === [RESUME-PERF-1 C2 START] 逐 section 翻譯受限並行（受既有 LLMClient._api_semaphore 限流）===
-from concurrent.futures import ThreadPoolExecutor
-from settings import LLM_MAX_CONCURRENT
-# === [RESUME-PERF-1 C2 END] ===
 
 logger = logging.getLogger(__name__)
 
@@ -565,49 +561,21 @@ class ResumePipeline(DocumentStrategy):
         slots: List[Dict[str, Any]] = []
         self._collect_render_slots(sections, 0, slots)
 
-        # === [RESUME-PERF-1 C2 START] ② 並行翻譯（受限並行、保序回填、單 unit 異常隔離）===
-        # 對 title/content slot 提交 _t 至執行緒池（max_workers=LLM_MAX_CONCURRENT）；實際 API
-        # 併發再受既有 LLMClient._api_semaphore 限流（不新增鎖）。結果以 slot index 保序回填（raw 不翻）。
-        # 單 slot future 拋例外 → 退回原文 slot["text"] + warning，不污染其餘、保 BilingualMarkdownSpec 交付。
-        zh_by_index: Dict[int, str] = {}
-        if translate:
-            todo = [
-                (i, slot, "title" if slot["kind"] == "title" else "content")
-                for i, slot in enumerate(slots)
-                if slot["kind"] in ("title", "content")
-            ]
-            if todo:
-                with ThreadPoolExecutor(max_workers=max(1, LLM_MAX_CONCURRENT)) as ex:
-                    fut_to_idx = {
-                        ex.submit(self._t, slot["text"], inj, tr, ttype): i
-                        for i, slot, ttype in todo
-                    }
-                    for fut, i in fut_to_idx.items():
-                        try:
-                            zh_by_index[i] = fut.result()
-                        except Exception as exc:  # noqa: BLE001 — 單 unit 隔離、退原文保交付
-                            zh_by_index[i] = slots[i]["text"]
-                            logger.warning(
-                                "[RESUME-PERF-1] 單元翻譯失敗、退回原文",
-                                extra={'extra_fields': {
-                                    'event': 'resume_translate_unit_fallback',
-                                    'reason': str(exc)[:200],
-                                }},
-                            )
-        # ③ 按 slot 原序組裝（title → HEADING 層級前綴；content → PARA 正規化；raw → 原文）
+        # ② 逐 slot 翻譯（C1 序列；C2 將此段換為受限並行、保序回填）
         rendered: List[str] = []
-        for i, slot in enumerate(slots):
+        for slot in slots:
             kind = slot["kind"]
             if kind == "raw":
                 rendered.append(slot["text"])
                 continue
-            zh = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
+            text_type = "title" if kind == "title" else "content"
+            zh = self._t(slot["text"], inj, tr, text_type) if translate else slot["text"]
+            # ③ 組裝：title → HEADING 層級前綴；content → PARA 段落正規化
             if kind == "title":
                 rendered.append(f"{'#' * slot['level']} {zh}")
             else:
                 rendered.append(self._normalize_paragraph_breaks(zh))
         return ("\n\n".join(p for p in rendered if p)).strip() + "\n"
-        # === [RESUME-PERF-1 C2 END] ===
 
     def _collect_render_slots(
         self, sections: List[Dict[str, Any]], depth: int, out: List[Dict[str, Any]]
