@@ -514,11 +514,6 @@ class ResumePipeline(DocumentStrategy):
             zh_text = self._translate_whole(full_text, inj, tr, translate=True)
         en_text = full_text
 
-        # === [RESUME-P3 META-HOTFIX-1 START] prepend 文件 meta header（render 缺口治標、走旁路）===
-        zh_text = self._render_meta_header(ctx, gspec, lang="zh") + zh_text
-        en_text = self._render_meta_header(ctx, gspec, lang="en") + en_text
-        # === [RESUME-P3 META-HOTFIX-1 END] ===
-
         zh_path = paper_manager.article_zh_path(
             settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
         )
@@ -621,52 +616,6 @@ class ResumePipeline(DocumentStrategy):
         if not t:
             return text
         return tr.translate(t, inj, TranslateMode.NORMAL, text_type)
-
-    # === [RESUME-P3 META-HOTFIX-1 START] ===
-    @staticmethod
-    def _render_meta_header(
-        ctx: PipelineContext, gspec: "GlossaryReadySpec", *, lang: str
-    ) -> str:
-        """組文件開頭 meta header：`# 姓名` + 領域/機構/電話/Email 無序列表。
-
-        render 缺口治標（META-HOTFIX-1）：P1 抽的 meta 原本只到 DB（raw_metadata 旁路終點），
-        本 helper 在 P3 渲染端**讀同一條現有旁路 ctx.raw_metadata + ctx.ingestion.title**，
-        組出文件 header 讓 final 立刻有 meta（不動凍結合約；合約轉正屬 INFRA-4 遠期）。
-
-        - lang='zh'|'en' 控制 label 語言與分隔符；缺項靜默省略；整包空 → 回 ''。
-        - meta 採**無序列表（`- `）**：每欄為獨立 list item、CommonMark 規範保證各自一行，
-          不依賴行尾空格 / 不怕 strip、根治 RAG-10 類軟換行（取代脆弱的 blockquote+尾隨空格）。
-        - 姓名沿用 ctx.ingestion.title 原值（含影子 ' (測試)' 後綴、便於觀察、不另去除）。
-        - 讀取源未來由 INFRA-4 從 ctx.raw_metadata 轉為 spec 擴展欄（本 helper 唯一改動點）。
-        """
-        raw = ctx.raw_metadata or {}
-        title = ((ctx.ingestion.title if ctx.ingestion else "") or "").strip()
-        domain = ResumePipeline._meta_value(raw, "domain") or ""
-        if lang == "en":
-            domain = (gspec.domain_name if gspec else "") or domain   # en 優先用 LCC 英文領域名
-        org = ResumePipeline._meta_value(raw, "organization") or ""
-        phone = ResumePipeline._meta_value(raw, "phone") or ""
-        email = ResumePipeline._meta_value(raw, "email") or ""
-        label = {
-            "zh": {"domain": "領域", "org": "機構", "phone": "電話", "email": "Email"},
-            "en": {"domain": "Domain", "org": "Organization", "phone": "Phone", "email": "Email"},
-        }[lang]
-        sep = "：" if lang == "zh" else ": "
-        lines: List[str] = []
-        if title:
-            lines.append(f"# {title}")
-            lines.append("")
-        items: List[str] = []
-        for key, val in (("domain", domain), ("org", org), ("phone", phone), ("email", email)):
-            if str(val).strip():
-                items.append(f"- **{label[key]}**{sep}{val}")   # 無序列表：規範保證每欄獨立一行
-        if items:
-            lines.extend(items)
-            lines.append("")
-        if not lines:
-            return ""
-        return "\n".join(lines).rstrip("\n") + "\n\n"
-    # === [RESUME-P3 META-HOTFIX-1 END] ===
 
     # === [RESUME-P3 PARA-HOTFIX-1 START] ===
     @staticmethod

@@ -336,11 +336,8 @@ def test_run_phase3_bypass_doctype_and_carryforward(tmp_path, monkeypatch):
     assert captured["ctx"].doc_type == "resume"       # 正式商務中文風格
     assert captured["ctx"].zh_summary == "中文摘要"    # zh_summary←translated_abstract
     assert spec.translated_abstract == "中文摘要"      # 沿用 P2（必填）
-    # === [RESUME-P3 META-HOTFIX-1] run_phase3 prepend meta header（title='x' h1、本例無 raw_metadata 故無 meta 列）===
-    _zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-    _en = Path(spec.final_en_path).read_text(encoding="utf-8")
-    assert _zh.startswith("# x") and _zh.rstrip().endswith("中文譯文")        # header + body
-    assert _en.startswith("# x") and _en.rstrip().endswith("English resume Python")
+    assert Path(spec.final_zh_path).read_text(encoding="utf-8") == "中文譯文"
+    assert Path(spec.final_en_path).read_text(encoding="utf-8") == "English resume Python"
 
 
 # ─────────────────── 6. P4 Async RAG ───────────────────
@@ -477,8 +474,7 @@ def test_run_phase3_injects_resume_constraints(tmp_path, monkeypatch):
     assert inj.constraints                                # 非空
     assert inj.constraints == rp._RESUME_CONSTRAINTS      # 與模組常數一致
     assert any("Email" in c for c in inj.constraints)     # 含履歷專屬規則
-    # === [RESUME-P3 META-HOTFIX-1] (測試) 後綴現出現在 meta header h1（baron 拍板保留、便於觀察）===
-    assert "# 王小明 (測試)" in Path(spec.final_zh_path).read_text(encoding="utf-8")
+    assert "(測試)" not in Path(spec.final_zh_path).read_text(encoding="utf-8")  # 內容無 (測試)
 
 
 def test_c5_shadow_write_uses_raw_metadata(tmp_path, monkeypatch):
@@ -821,53 +817,4 @@ def test_p3_text_paragraph_blank_line_normalized():
     # (b) pipe table rows：單 \n 保留、不被升級拆散
     assert "| 欄位 | 值 |\n| 學歷 | 博士 |" in out
 # === [RESUME-P3 PARA-HOTFIX-1 END] ===
-
-
-# === [RESUME-P3 META-HOTFIX-1 START] ===
-def test_p3_meta_header_rendered(tmp_path, monkeypatch):
-    """META-HOTFIX-1：P1 meta 經 run_phase3 組無序列表 header 進 final。
-
-    # 姓名（沿用 title 含 (測試)）+ 領域/機構/電話/Email 各為獨立 list item（一欄一行、
-    規範保證、不軟換行）；走現有 ctx.raw_metadata 旁路 + ctx.ingestion.title。
-    """
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
-
-    class FakeTr:
-        def __init__(self, *a, **k):
-            pass
-
-        def translate(self, text, ctx, mode, text_type="content"):
-            return "中文譯文"
-
-    monkeypatch.setattr(rp, "Translator", FakeTr)
-    sections = [
-        {"title": "工作經歷", "level": 1,
-         "content": [{"type": "text", "content": "alpha text"}], "children": []},
-        {"title": "學歷", "level": 1,
-         "content": [{"type": "text", "content": "beta text"}], "children": []},
-    ]
-    ctx = _p3_ctx_with_sections(sections)
-    ctx.ingestion = IngestionMetadataSpec(title="王小明 (測試)", source_lang="en", tiles=sections)
-    ctx.raw_metadata = {
-        "domain": {"value": "IC 設計", "source": "llm", "confidence": "high"},
-        "organization": {"value": "聯詠科技", "source": "llm", "confidence": "high"},
-        "phone": {"value": "0912-345-678", "source": "regex", "confidence": "high"},
-        "email": {"value": "wang@example.com", "source": "regex", "confidence": "high"},
-    }
-    s = ResumePipeline()
-    spec = s.run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-
-    # (a) 以 # 王小明 (測試) 開頭（沿用 title 原值、後綴保留）
-    assert zh.startswith("# 王小明 (測試)")
-    # (b) 四欄標籤與值都進 final
-    assert "IC 設計" in zh and "聯詠科技" in zh
-    assert "0912-345-678" in zh and "wang@example.com" in zh
-    # (c) 各欄為獨立無序列表行（一欄一行、防 CommonMark 軟換行）
-    assert "\n- **領域**：IC 設計" in zh
-    assert "\n- **機構**：聯詠科技" in zh
-    assert "\n- **電話**：0912-345-678" in zh
-    assert "\n- **Email**：wang@example.com" in zh
-# === [RESUME-P3 META-HOTFIX-1 END] ===
 # === [PIPE-RESUME C6 END] ===

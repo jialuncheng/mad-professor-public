@@ -76,6 +76,9 @@
   - `2026-06-04_PIPE-RESUME_C7-hotfix_run_提示詞.md` — C7-hotfix Run（BE-Hotfix 策略註冊缺失：影子測試上傳履歷觸發 NullStrategy→P1 NotImplementedError 阻斷；根因 runtime 路徑無人 import resume_pipeline→@register('resume') 不觸發；修法 pipelines/__init__.py 補 `from pipelines import resume_pipeline`〔`# === [PIPE-RESUME C7-hotfix START/END] ===` 包裹〕+ .bak 備份 + factory._registry 驗證；移出 baton→hotfixes/）
   - `2026-06-04_PIPE-RESUME_C8-hotfix_run_提示詞.md` — C8-hotfix Run（BE-Hotfix 影子論文 DB 寫入缺失：影子 P1-P4 全綠+生實體檔但前端不顯示；根因 run_pipeline_shadow 漏 paper_manager.upsert_paper→Paper row 未建→list_papers 讀 DB 撈不到；修法 web_server.py 影子派發尾端補 upsert_paper〔校正版 str 絕對路徑+ctx.bilingual 守衛+'high'+doc_type-agnostic 五路通用，`# === [PIPE-RESUME C8-hotfix START/END] ===` 包裹〕+ web_server .bak；移出 baton→hotfixes/；Run 提示詞 §2 為校正前舊版、以規劃文件校正版為準）
 ### RESUME-P3 系列
+- 🟡 **RESUME-P3 META-HOTFIX-1 P1 Meta 渲染進文件 header（2026-06-06 文件 + Run）**
+  - `2026-06-06_RESUME-P3_META-HOTFIX-1_run_提示詞.md` — Run（落地：`pipelines/resume_pipeline.py` 新增 `_render_meta_header`〔讀 ctx.raw_metadata domain/organization/phone/email + ctx.ingestion.title 姓名含 (測試) + en domain 優先 gspec.domain_name、組 `# 姓名`+領域/機構/電話/Email **無序列表**、缺項省略、整包空回 ''〕+ `run_phase3` 寫出前 prepend zh/en；`tests/test_resume_pipeline.py` 追加 `test_p3_meta_header_rendered`〔# 王小明 (測試) 開頭 + 四欄值 + 各欄獨立 list item〕；`# === [RESUME-P3 META-HOTFIX-1 START/END] ===` 包裹 + 2 .bak；grep+pytest+SOP；收官 mv hotfix.md+執行.md→hotfixes/；改 B軌輸出須重捕 resume golden）
+  - `2026-06-06_RESUME-P3_META-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan 階段：P1 抽的 meta〔姓名/電話/email/領域/機構〕只到 DB〔raw_metadata 旁路終點＝web_server 寫庫〕、`run_phase3` 渲染端從不讀 → final 無 header；治標＝在 run_phase3 加 pipelines/ 私有 `_render_meta_header` 讀現有 `ctx.raw_metadata` 旁路 + `ctx.ingestion.title` 組 `# 姓名`+領域/機構/電話/Email **無序列表**〔缺項省略、list 規範保證一欄一行防 RAG-10 軟換行、(測試) 保留〕prepend final_zh/en；不動凍結合約〔轉正屬 INFRA-4 遠期〕；依 template_hotfix 產 `baton/2026-06-06_RESUME-P3_META-HOTFIX-1_hotfix.md` 含詳細真因 + 完整 helper + diff + commit msg + 設計待確認表；代號由 HEADER 改 META 避免與 HEADING 混淆；不動 .py、Run 待 baron；改 B軌輸出須重捕 resume golden）
 - 🟡 **RESUME-P3 PARA-HOTFIX-1 B軌正文段落邊界正規化（2026-06-06 文件 + Run）**
   - `2026-06-06_RESUME-P3_PARA-HOTFIX-1_run_提示詞.md` — Run（落地：`pipelines/resume_pipeline.py` 新增 `_normalize_paragraph_breaks`〔移植 A軌 `_preserve_pipe_table` pipe-table-safe 單 `\n`→`\n\n`、不耦合 A軌 class〕+ `_restore_one_section` text item/字串 fallback 套用；`tests/test_resume_pipeline.py` 追加 `test_p3_text_paragraph_blank_line_normalized`〔兩段升 `\n\n` + pipe table rows 保單 `\n`〕；`# === [RESUME-P3 PARA-HOTFIX-1 START/END] ===` 包裹 + 2 .bak；grep+pytest+SOP；收官 mv hotfix.md+執行.md→hotfixes/；改 B軌輸出須重捕 resume golden）
   - `2026-06-06_RESUME-P3_PARA-HOTFIX-1_doc_提示詞.md` — Hotfix 文件撰寫（BE-Hotfix plan 階段：B軌正文兩段黏一起、A軌有留白；真因＝CommonMark 單 `\n`=soft break，A軌靠 `_write_to_md` 補 `\n\n` + `_preserve_pipe_table:629` 單 `\n`→`\n\n`，B軌 `_restore_one_section` 兩者皆無 + C2 停用 U4；baron 拍板「移植 `_preserve_pipe_table` 邏輯進 pipelines/、不耦合 A軌 class」；依 template_hotfix 產 `baton/2026-06-06_RESUME-P3_PARA-HOTFIX-1_hotfix.md` 含詳細真因 + 完整 helper `_normalize_paragraph_breaks` + diff + commit msg；不動 .py、Run 待 baron；改 B軌輸出須重捕 resume golden）
@@ -225,6 +228,8 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_run_提示詞.md`
+- 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_PARA-HOTFIX-1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_PARA-HOTFIX-1_doc_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_run_提示詞.md`
@@ -238,5 +243,3 @@
 - 2026-06-05 — `2026-06-05_RESUME-P3_C5_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C4_run_提示詞.md`
 - 2026-06-05 — `2026-06-05_RESUME-P3_C3_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_RESUME-P3_C2_run_提示詞.md`
-- 2026-06-05 — `2026-06-05_RESUME-P3_C1_run_提示詞.md`

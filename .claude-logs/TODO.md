@@ -98,11 +98,23 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| PARA-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_normalize_paragraph_breaks`（移植 A軌 pipe-table-safe 單 `\n`→`\n\n` 段落正規化邏輯、**不 import/不耦合 A軌 restore 處理器**）+ `_restore_one_section` text item〔含純字串 fallback〕套用、formula/figure/table 不套、pipe table rows 保留原 `\n`；根治 B軌只在 part 間放 `\n\n`、段內單 `\n` 不處理 → CommonMark soft break → 兩段黏一起（A軌靠 `_write_to_md` 補 `\n\n` + `_preserve_pipe_table` 升級單 `\n`、B軌兩者皆無 + C2 停用 U4）；`# === [RESUME-P3 PARA-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_text_paragraph_blank_line_normalized`〔兩段升 `\n\n` + pipe table rows 不拆散〕；resume 28 passed、全套件 501 passed（僅 env flake） | `待 baron 回填` |
+| PARA-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_normalize_paragraph_breaks`（移植 A軌 pipe-table-safe 單 `\n`→`\n\n` 段落正規化邏輯、**不 import/不耦合 A軌 restore 處理器**）+ `_restore_one_section` text item〔含純字串 fallback〕套用、formula/figure/table 不套、pipe table rows 保留原 `\n`；根治 B軌只在 part 間放 `\n\n`、段內單 `\n` 不處理 → CommonMark soft break → 兩段黏一起（A軌靠 `_write_to_md` 補 `\n\n` + `_preserve_pipe_table` 升級單 `\n`、B軌兩者皆無 + C2 停用 U4）；`# === [RESUME-P3 PARA-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_text_paragraph_blank_line_normalized`〔兩段升 `\n\n` + pipe table rows 不拆散〕；resume 28 passed、全套件 501 passed（僅 env flake） | `2772822` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_PARA-HOTFIX-1_hotfix.md`
 > **真因**：CommonMark 單 `\n`=soft break（同段）、須 `\n\n`（空行）才分段；A軌有兩道機制（`_write_to_md` 每塊補 `\n\n` + `_preserve_pipe_table` 段內單 `\n`→`\n\n`），B軌 `_restore_one_section` 兩者皆無、且 C2 為 resume 停用 Translator U4 → 全鏈無換行升級 → 正文黏連。
 > **⚠️ 行為變更 + 重捕**：改 B軌 `final_zh` 段落空行結構 → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING-HOTFIX-1 同屬 B軌輸出變更類）。
+
+### BE-Hotfix RESUME-P3 META-HOTFIX-1 — B軌履歷 final 缺文件 header（P1 Meta 未渲染）修復
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| META-HOTFIX-1 | `pipelines/resume_pipeline.py` 新增 pipelines/ 私有 `_render_meta_header(ctx, gspec, *, lang)`（讀現有 `ctx.raw_metadata` 旁路 domain/organization/phone/email + `ctx.ingestion.title` 姓名〔含 (測試)〕+ en domain 優先 `gspec.domain_name`，組 `# 姓名` + 領域/機構/電話/Email **無序列表**〔缺項省略、整包空回 ''、list 規範保證一欄一行防 RAG-10 軟換行〕）+ `run_phase3` 寫出前 prepend final_zh〔中文 label〕/final_en〔英文 label〕；根治 P1 抽的 meta 只到 DB（raw_metadata 旁路終點＝web_server 寫庫）、`run_phase3` 渲染端從不讀 → final 無 header 的渲染缺口；不動凍結合約（走現有旁路、轉正屬 INFRA-4 遠期）；`# === [RESUME-P3 META-HOTFIX-1 START/END] ===` 包裹 + 追加 `test_p3_meta_header_rendered`〔# 王小明 (測試) 開頭 + 四欄值 + 各欄獨立 list item〕+ 對齊 2 既有 run_phase3 測試（header prepend carryover）；resume 29 passed、全套件 502 passed（僅 env flake） | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-06_RESUME-P3_META-HOTFIX-1_hotfix.md`
+> **真因**：P1 抽的 meta（姓名→`IngestionMetadataSpec.title`；domain/phone/email→`ctx.raw_metadata` 旁路）唯一出海口是 DB（P2 讀 domain→LCC、web_server 寫 `metadata_json`）；`run_phase3`（唯一產 final 處）只渲染 section body、從不讀 raw_metadata、無 header 組裝 → P1 meta 對最終文件零貢獻。治標＝render 端讀同一條旁路組 header；治本（旁路轉正 spec.meta）屬 INFRA-4。
+> **代號**：原 HEADER-HOTFIX-1 改名 META-HOTFIX-1（避免與 HEADING-HOTFIX-1 視覺混淆）。
+> **⚠️ 行為變更 + 重捕**：在 B軌 `final_zh`/`final_en` 開頭新增 meta header → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING/PARA 同屬 B軌輸出變更類）。
+> **⚠️ domain 現況**：P1 抽出的 `domain` 為描述句（非乾淨標籤）、header 照實渲染；乾淨標籤須改 P1 domain prompt（另一任務）。
 
 ### BE-Refactor MODEL-11 Embedding 模型換用 gemini-embedding-001 與真批次
 
