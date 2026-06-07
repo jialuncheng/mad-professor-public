@@ -98,18 +98,6 @@ _CJK_RATIO = 0.2
 _TARGET_LANG = "zh-tw"          # 系統固定目標語（繁體中文；GlobalGlossary 聯合鍵）
 _ABSTRACT_MAX_CHARS = 8000      # 摘要輸入截斷（防 token 爆）
 _ABSTRACT_FALLBACK_CHARS = 600  # 摘要 LLM 失敗時的原文截斷兜底
-# === [RAG-ASYNC C5 START] 統一 P2 六步 section_summaries 常數 ===
-_SECTION_SUMMARY_INPUT_CHARS = 1500   # 每節點送摘要的內文截斷（控批次 token）
-_SECTION_SUMMARY_SYSTEM_PROMPT = (
-    "你是文件分析助手。下面是一份文件的多個區塊，每個區塊以「[編號] 標題」開頭、其後為內文。"
-    "請為每個區塊產生一句精簡的「原文語言」摘要（捕捉該區塊核心、約 30-60 字）。"
-    "嚴格逐行輸出，每行格式為「[編號] 摘要」，編號與輸入對應，不要任何額外說明或前後綴。"
-)
-_SECTION_SUMMARY_TRANSLATE_SYSTEM_PROMPT = (
-    "你是專業翻譯。將下列各區塊摘要翻譯為流暢的繁體中文，專有名詞與術語沿用慣例、風格與所給全文摘要一致。"
-    "嚴格逐行輸出，每行格式為「[編號] 繁體中文摘要」，編號與輸入對應，不要任何額外說明或前後綴。"
-)
-# === [RAG-ASYNC C5 END] ===
 _SUMMARY_SYSTEM_PROMPT = (
     "你是專業履歷摘要器。請將以下履歷濃縮為一段精簡摘要，"
     "保留原文語言、涵蓋姓名／專業領域／核心技能與資歷重點；"
@@ -371,29 +359,22 @@ class ResumePipeline(DocumentStrategy):
         # ④ lcc → Domains.name（PK 唯讀免交易）
         domain_name = self._resolve_domain_name(lcc)
 
-        # === [RAG-ASYNC C5 START] 統一 P2 六步：⑤產各節點摘要 + ⑥批次翻 → section_summaries ===
-        # ⑤ 產各節點原文摘要（resume 非 book → 1 次批次 LLM、非 N 次）→ ⑥ 以全文摘要 abstract
-        # 引導、1 次批次翻為繁中 → section_summaries（key 對位巢狀樹）。三安全鎖：批次（②⑥ 各 1 次）/
-        # 非致命（失敗該節點留空、不阻 reading_ready、不拋）/ 可量測（performance_metric phase=P2）。
-        # LLM 全在 DB 交易外（與 ①②③④ 一致）。
-        section_summaries = self._build_section_summaries(ctx, abstract, source_lang)
-        # === [RAG-ASYNC C5 END] ===
-
         spec = GlossaryReadySpec(
             abstract=abstract,
             lcc=lcc,
             glossary=glossary,
             translated_abstract=translated_abstract,
-            # === [RAG-ASYNC C5 START] section_summaries 由統一六步實落（C2 更名、C5 產出）===
-            section_summaries=section_summaries or None,
-            # === [RAG-ASYNC C5 END] ===
+            # === [RAG-ASYNC C2 START] 合約欄位更名：chapter_summaries → section_summaries ===
+            # C2 僅對齊欄位名（仍 None）；section_summaries 之實際產出於 C5 P2 統一六步落地。
+            section_summaries=None,
+            # === [RAG-ASYNC C2 END] ===
             domain_name=domain_name,
         )
         logger.info(
             "[PIPE-RESUME P2] %s lcc=%r glossary=%d domain_name=%r "
-            "abstract=%dchars translated=%dchars section_summaries=%d",
+            "abstract=%dchars translated=%dchars",
             ctx.paper_id, lcc, len(glossary), domain_name,
-            len(abstract), len(translated_abstract or ""), len(section_summaries or {}),
+            len(abstract), len(translated_abstract or ""),
         )
         return spec
 
@@ -443,150 +424,6 @@ class ResumePipeline(DocumentStrategy):
                 "[PIPE-RESUME P2] 履歷摘要生成失敗（兜底原文截斷）: %s", exc, exc_info=True
             )
             return ""
-
-    # === [RAG-ASYNC C5 START] section_summaries 批次產出與翻譯（三安全鎖）===
-    def _build_section_summaries(
-        self, ctx: PipelineContext, abstract: str, source_lang: str
-    ) -> Dict[str, str]:
-        """⑤ 產 + ⑥ 批次翻 section_summaries（繁中、key 對位巢狀樹）。
-
-        三安全鎖：批次（⑤⑥ 各 1 次 LLM、非 N 次）/ 非致命（失敗留空、不阻 reading_ready、不拋）/
-        可量測（performance_metric phase=P2 stage=section_summary）。LLM 全在 DB 交易外。
-        回 {node_key: 繁中摘要}（空節點/失敗則該 key 不入、降級為缺）。
-        """
-        import time
-
-        t0 = time.perf_counter()
-        sections = (ctx.ingestion.tiles if ctx.ingestion else []) or []
-        targets: List[Tuple[str, str, str]] = []
-        self._collect_summary_targets(sections, "", targets)
-        raw_by_idx = self._generate_section_summaries(targets) if targets else {}
-        zh_by_key = self._translate_section_summaries(raw_by_idx, targets, abstract, source_lang)
-        logger.info(
-            "[PIPE-RESUME P2] section_summaries 完成 sections=%d produced=%d translated=%d",
-            len(targets), len(raw_by_idx), len(zh_by_key),
-            extra={"extra_fields": {
-                "event": "performance_metric",
-                "phase": "P2",
-                "stage": "section_summary",
-                "paper_id": ctx.paper_id,
-                "duration_seconds": round(time.perf_counter() - t0, 4),
-                "sections": len(targets),
-                "translated": len(zh_by_key),
-            }},
-        )
-        return zh_by_key
-
-    def _collect_summary_targets(
-        self, sections: List[Dict[str, Any]], path_prefix: str,
-        out: List[Tuple[str, str, str]],
-    ) -> None:
-        """DFS 收集有實質內文之節點 (node_key, title, content)；key 對位巢狀樹。"""
-        for sec in sections or []:
-            if not isinstance(sec, dict):
-                continue
-            title = (sec.get("title") or "").strip()
-            node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
-            content = self._node_content_text(sec)
-            if title and content.strip():
-                out.append((node_key, title, content))
-            self._collect_summary_targets(sec.get("children", []) or [], node_key, out)
-
-    @staticmethod
-    def _node_content_text(sec: Dict[str, Any]) -> str:
-        parts: List[str] = []
-        for item in sec.get("content", []) or []:
-            if isinstance(item, dict):
-                c = item.get("content", "") or ""
-                if c:
-                    parts.append(c)
-            elif isinstance(item, str) and item.strip():
-                parts.append(item)
-        return "\n\n".join(parts)
-
-    def _generate_section_summaries(self, targets: List[Tuple[str, str, str]]) -> Dict[int, str]:
-        """⑤ 1 次批次 LLM 產各節點原文摘要 → {index: 摘要}；失敗→{} 非致命（不阻 reading_ready）。"""
-        from llm.client import LLMClient
-
-        blocks = [
-            f"[{i}] {title}\n{content[:_SECTION_SUMMARY_INPUT_CHARS]}"
-            for i, (_k, title, content) in enumerate(targets)
-        ]
-        messages = [
-            {"role": "system", "content": _SECTION_SUMMARY_SYSTEM_PROMPT},
-            {"role": "user", "content": "\n\n".join(blocks)[:_ABSTRACT_MAX_CHARS]},
-        ]
-        try:
-            out = LLMClient.get_instance().chat(
-                messages=messages, temperature=0.2, stream=False,
-                model=settings.LLM_DOMAIN_MODEL,
-            )
-            return self._parse_indexed(out, len(targets))
-        except Exception as exc:  # noqa: BLE001 — 非致命：留空、不阻 reading_ready
-            logger.warning(
-                "[PIPE-RESUME P2] section 摘要批次生成失敗（非致命、留空）: %s", exc,
-                exc_info=True,
-                extra={"extra_fields": {"event": "section_summary_fallback", "stage": "generate"}},
-            )
-            return {}
-
-    def _translate_section_summaries(
-        self, raw_by_idx: Dict[int, str], targets: List[Tuple[str, str, str]],
-        abstract: str, source_lang: str,
-    ) -> Dict[str, str]:
-        """⑥ 1 次批次翻各節點摘要為繁中（全文摘要引導）→ {node_key: 繁中}；失敗→{} 非致命。
-
-        source_lang zh* → 原文即繁中、不重譯。
-        """
-        items = [(i, s) for i, s in raw_by_idx.items() if (s or "").strip()]
-        if not items:
-            return {}
-        if (source_lang or "").startswith("zh"):
-            return {
-                targets[i][0]: s.strip()
-                for i, s in items if 0 <= i < len(targets)
-            }
-        from llm.client import LLMClient
-
-        user = (
-            "全文摘要（翻譯風格與術語引導）：\n" + (abstract or "")[:500]
-            + "\n\n待譯各區塊摘要（逐行保留 [編號]）：\n"
-            + "\n".join(f"[{i}] {s}" for i, s in items)
-        )
-        messages = [
-            {"role": "system", "content": _SECTION_SUMMARY_TRANSLATE_SYSTEM_PROMPT},
-            {"role": "user", "content": user[:_ABSTRACT_MAX_CHARS]},
-        ]
-        try:
-            out = LLMClient.get_instance().chat(
-                messages=messages, temperature=0.2, stream=False,
-                model=settings.TRANSLATE_MODEL,
-            )
-            parsed = self._parse_indexed(out, len(targets))
-            return {
-                targets[i][0]: t.strip()
-                for i, t in parsed.items() if (t or "").strip() and 0 <= i < len(targets)
-            }
-        except Exception as exc:  # noqa: BLE001 — 非致命：留空、不阻 reading_ready
-            logger.warning(
-                "[PIPE-RESUME P2] section 摘要批次翻譯失敗（非致命、留空）: %s", exc,
-                exc_info=True,
-                extra={"extra_fields": {"event": "section_summary_fallback", "stage": "translate"}},
-            )
-            return {}
-
-    @staticmethod
-    def _parse_indexed(out: Optional[str], n: int) -> Dict[int, str]:
-        """解析 LLM 批次輸出 `[i] 文字` 逐行 → {i: 文字}（容錯：缺漏項自然留空、越界丟棄）。"""
-        result: Dict[int, str] = {}
-        for line in (out or "").splitlines():
-            m = re.match(r"^\s*\[(\d+)\]\s*(.+?)\s*$", line)
-            if m:
-                idx = int(m.group(1))
-                if 0 <= idx < n:
-                    result[idx] = m.group(2)
-        return result
-    # === [RAG-ASYNC C5 END] ===
 
     def _heal_glossary(
         self, source_lang: str, target_lang: str, lcc: str,
