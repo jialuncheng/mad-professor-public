@@ -48,12 +48,7 @@ class GlossaryReadySpec(BaseModel):
     lcc: str  # 標準 LCC 一級分類碼（由 DomainNormalizer 收斂）
     glossary: Dict[str, str]  # 凍結最終 Glossary（融合去重後）
     translated_abstract: str  # 目標語摘要（一次到位、R2.2）
-    # === [RAG-ASYNC C2 START] section≡chapter 同為文件樹節點 → 收斂為單一通用節點摘要欄 ===
-    # 五路通用節點摘要：key=section_key/path（對位巢狀樹）、value=繁中摘要；P2 產出，供 P4 Strategy B
-    # 分塊之 Chapter Summary 增強。取代原 Book 專用 chapter_summaries（List）；Book 滾動章節摘要亦填此欄。
-    # 向後相容預設 None（缺失時 P4 chunk 略 Chapter Summary 行降級）。
-    section_summaries: Optional[Dict[str, str]] = None
-    # === [RAG-ASYNC C2 END] ===
+    chapter_summaries: Optional[List[str]] = None  # Book 滾動章節摘要（非 Book 為 None）
     # === [TRANSLATOR C1 START] ===
     # P2→P3 凍結載體：P2 一次性 lcc→Domains.name 唯讀解析的領域英文名（例 "Mathematics"），
     # 供 P3 建構 InjectionContext.domain_name 免再查 DB（對齊 PIPE-SPEC §1.1 ② v3 / TRANSLATOR plan §7 Q1）。

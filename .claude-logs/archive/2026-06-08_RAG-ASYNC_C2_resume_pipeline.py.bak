@@ -364,10 +364,7 @@ class ResumePipeline(DocumentStrategy):
             lcc=lcc,
             glossary=glossary,
             translated_abstract=translated_abstract,
-            # === [RAG-ASYNC C2 START] 合約欄位更名：chapter_summaries → section_summaries ===
-            # C2 僅對齊欄位名（仍 None）；section_summaries 之實際產出於 C5 P2 統一六步落地。
-            section_summaries=None,
-            # === [RAG-ASYNC C2 END] ===
+            chapter_summaries=None,
             domain_name=domain_name,
         )
         logger.info(

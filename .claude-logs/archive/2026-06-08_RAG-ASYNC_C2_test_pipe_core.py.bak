@@ -50,9 +50,7 @@ def test_glossary_ready_valid():
         translated_abstract="譯文摘要",
     )
     assert spec.translated_abstract == "譯文摘要"
-    # === [RAG-ASYNC C2 START] 合約欄位更名 chapter_summaries → section_summaries ===
-    assert spec.section_summaries is None
-    # === [RAG-ASYNC C2 END] ===
+    assert spec.chapter_summaries is None
 
 
 # ── 合約凍結（frozen）斷言 ──
