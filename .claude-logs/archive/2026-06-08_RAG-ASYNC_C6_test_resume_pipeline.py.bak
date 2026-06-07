@@ -432,17 +432,19 @@ def test_is_chunk_meaningful_resume_threshold():
     assert _is_chunk_meaningful(_doc("Python"), "academic") is False          # academic ≥10
 
 
-# === [RAG-ASYNC C6 START] P4 改呼 rag_indexer（不再 mock RagProcessor）===
 def test_run_phase4_failure_isolation(tmp_path, monkeypatch):
-    """⑭ P4 失敗隔離：rag_indexer.index 拋出（交 Orchestrator 標 failed）、不動 reading_ready。"""
+    """⑭ P4 失敗隔離：拋出（交 Orchestrator 標 failed）、不動 reading_ready。"""
     monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: None)
-    import processor.rag_indexer as ri
 
-    def _boom(*a, **k):
-        raise RuntimeError("embed fail")
+    class FakeRag:
+        def __init__(self, *a, **k):
+            pass
 
-    monkeypatch.setattr(ri, "index", _boom)
+        def _create_vector_store(self, *a, **k):
+            raise RuntimeError("embed fail")
+
+    monkeypatch.setattr(rp, "RagProcessor", FakeRag)
     s = ResumePipeline()
     ctx = _ctx()
     ctx.bilingual = BilingualMarkdownSpec(
@@ -455,71 +457,32 @@ def test_run_phase4_failure_isolation(tmp_path, monkeypatch):
     assert ctx.reading_ready is True  # P4 失敗不影響主鏈
 
 
-def test_run_phase4_calls_rag_indexer_with_pathway(tmp_path, monkeypatch):
-    """⑮ P4 成功：改呼 rag_indexer.index、傳 ctx.rag_sections + P2 section_summaries（非 final_zh）、交付 RagDbSpec。"""
+def test_run_phase4_success(tmp_path, monkeypatch):
+    """⑮ P4 成功：讀 index_meta.json（chunks_total）交付 RagDbSpec。"""
     monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: 42)
-    import processor.rag_indexer as ri
-    captured = {}
 
-    def _fake_index(sections, summaries, doc_type, vectors_dir, paper_db_id=None, **k):
-        captured.update(sections=sections, summaries=summaries, doc_type=doc_type,
-                        paper_db_id=paper_db_id)
-        return RagDbSpec(
-            vectors_path=str(vectors_dir), paper_chunk_count=24,
-            index_meta={"chunks_total": 24},
-        )
+    class FakeRag:
+        def __init__(self, *a, **k):
+            pass
 
-    monkeypatch.setattr(ri, "index", _fake_index)
+        def _create_vector_store(self, md, vpath, doc_type="", paper_db_id=None):
+            Path(vpath).mkdir(parents=True, exist_ok=True)
+            (Path(vpath) / "index_meta.json").write_text(
+                json.dumps({"chunks_total": 5}), encoding="utf-8"
+            )
+            return vpath
+
+    monkeypatch.setattr(rp, "RagProcessor", FakeRag)
     s = ResumePipeline()
     ctx = _ctx()
     ctx.bilingual = BilingualMarkdownSpec(
         final_zh_path=str(tmp_path / "zh.md"), final_en_path="x", translated_abstract="x",
     )
-    ctx.rag_sections = [{"title": "技能", "content": [{"type": "text", "content": "Python"}], "children": []}]
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract="a", lcc="QA", glossary={}, translated_abstract="x",
-        section_summaries={"技能": "核心技能"},
-    )
     spec = s.run_phase4(ctx)
     assert isinstance(spec, RagDbSpec)
-    assert spec.paper_chunk_count == 24                      # chunks 量級回升（非 1）
-    assert captured["doc_type"] == "resume"
-    assert captured["sections"] == ctx.rag_sections           # 餵 P3 旁路結構、非 final_zh.md
-    assert captured["summaries"] == {"技能": "核心技能"}       # 消費 P2 section_summaries
-    assert captured["paper_db_id"] == 42
-
-
-def test_run_phase3_populates_rag_sections_pathway(tmp_path, monkeypatch):
-    """⑮b P3 旁路：run_phase3 逐 section 翻譯後封存譯後結構於 ctx.rag_sections（供 P4）。"""
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
-
-    class FakeTr:
-        def __init__(self, *a, **k):
-            pass
-
-        def translate(self, text, ctx, mode, text_type="content"):
-            return f"ZH::{text}"
-
-    monkeypatch.setattr(rp, "Translator", FakeTr)
-    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "src")
-    s = ResumePipeline()
-    ctx = _ctx()
-    tiles = [
-        {"title": "技能", "content": [{"type": "text", "content": "Python C++"}], "children": []},
-        {"title": "學歷", "content": [{"type": "text", "content": "台大博士"}], "children": []},
-    ]
-    ctx.ingestion = IngestionMetadataSpec(title="王小明", source_lang="en", tiles=tiles)
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract="a", lcc="QA", glossary={}, translated_abstract="摘要", domain_name="CS",
-    )
-    s.run_phase3(ctx)
-    keys = [sec["title"] for sec in ctx.rag_sections]
-    assert keys == ["ZH::技能", "ZH::學歷"]                    # 譯後標題封存
-    # 內文為譯後（ZH:: 前綴）
-    bodies = [sec["content"][0]["content"] for sec in ctx.rag_sections]
-    assert all(b.startswith("ZH::") for b in bodies)
-# === [RAG-ASYNC C6 END] ===
+    assert spec.paper_chunk_count == 5
+    assert spec.index_meta["chunks_total"] == 5
 
 
 # === [PIPE-RESUME v9 C6 START] v9 整合契約測試（影子後綴 / P2 摘要先行 / P3 constraints / C5 寫庫）===

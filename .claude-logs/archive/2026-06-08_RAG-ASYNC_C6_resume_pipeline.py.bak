@@ -69,9 +69,9 @@ from processor.glossary_extractor import GlossaryManager
 from processor.translator import InjectionContext, TranslateMode, Translator
 # === [PIPE-RESUME C3 END] ===
 
-# === [RAG-ASYNC C6 START] 砍 A 軌耦合：P4 改呼 B 軌自有 processor.rag_indexer（惰性 import 於 run_phase4）===
-# （原 PIPE-RESUME C5 `from processor.rag_processor import RagProcessor` 已移除；B 軌全鏈零依賴 A 軌）
-# === [RAG-ASYNC C6 END] ===
+# === [PIPE-RESUME C5 START] P4 RAG 向量化（複用既有 RagProcessor、零改動）===
+from processor.rag_processor import RagProcessor
+# === [PIPE-RESUME C5 END] ===
 # === [RESUME-PERF-1 C2 START] 逐 section 翻譯受限並行（受既有 LLMClient._api_semaphore 限流）===
 from concurrent.futures import ThreadPoolExecutor
 from settings import LLM_MAX_CONCURRENT
@@ -674,31 +674,15 @@ class ResumePipeline(DocumentStrategy):
         # === [RESUME-P3 C4 END] ===
 
         # ②③ final_zh：zh* 不重譯；有正常 section → 逐 heading 重組；無/退化 section → 整檔 fallback
-        # === [RAG-ASYNC C6 START] 旁路封存譯後 section 結構供 P4 rag_indexer（不改既有 final_zh/en 輸出）===
-        rag_sections: List[Dict[str, Any]] = []
-        # === [RAG-ASYNC C6 END] ===
         if is_zh:
             zh_text = full_text
-            # === [RAG-ASYNC C6 START] zh*：整檔為單一容器（size-cap 由 rag_indexer 子切）===
-            rag_sections = self._single_container_sections(full_text, ctx)
-            # === [RAG-ASYNC C6 END] ===
         # === [RESUME-P3 C4 START] ===
         elif sections and not degraded:
         # === [RESUME-P3 C4 END] ===
-            # === [RAG-ASYNC C6 START] rag_sink 旁路捕捉譯後結構（rendered/return byte 不變）===
-            zh_text = self._restore_sections_markdown(
-                sections, inj, tr, translate=True, rag_sink=rag_sections
-            )
-            # === [RAG-ASYNC C6 END] ===
+            zh_text = self._restore_sections_markdown(sections, inj, tr, translate=True)
         else:
             zh_text = self._translate_whole(full_text, inj, tr, translate=True)
-            # === [RAG-ASYNC C6 START] 退化 fallback：整檔單一容器 ===
-            rag_sections = self._single_container_sections(zh_text, ctx)
-            # === [RAG-ASYNC C6 END] ===
         en_text = full_text
-        # === [RAG-ASYNC C6 START] 封存供 P4（P3→P4 ctx 旁路；不入凍結合約）===
-        ctx.rag_sections = rag_sections
-        # === [RAG-ASYNC C6 END] ===
 
         # === [RESUME-P3 META-HOTFIX-1 START] prepend 文件 meta header（render 缺口治標、走旁路）===
         zh_text = self._render_meta_header(ctx, gspec, lang="zh") + zh_text
@@ -736,7 +720,6 @@ class ResumePipeline(DocumentStrategy):
     def _restore_sections_markdown(
         self, sections: List[Dict[str, Any]], inj: "InjectionContext",
         tr: "Translator", translate: bool,
-        rag_sink: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """逐 section：收集有序 render slot → 翻譯 → 按序組裝，重組為單一字串。
 
@@ -789,45 +772,8 @@ class ResumePipeline(DocumentStrategy):
                 rendered.append(f"{'#' * slot['level']} {zh}")
             else:
                 rendered.append(self._normalize_paragraph_breaks(zh))
-        # === [RAG-ASYNC C6 START] 旁路封存譯後 section 結構（用同一 slots+zh_by_index；不改 return）===
-        if rag_sink is not None:
-            self._collect_rag_sections(slots, zh_by_index, translate, rag_sink)
-        # === [RAG-ASYNC C6 END] ===
         return ("\n\n".join(p for p in rendered if p)).strip() + "\n"
         # === [RESUME-PERF-1 C2 END] ===
-
-    # === [RAG-ASYNC C6 START] P3→P4 旁路：譯後 section 結構建構 ===
-    @staticmethod
-    def _collect_rag_sections(
-        slots: List[Dict[str, Any]], zh_by_index: Dict[int, str],
-        translate: bool, sink: List[Dict[str, Any]],
-    ) -> None:
-        """由（已翻譯）slots 重組扁平譯後 section 清單供 rag_indexer：title slot 起新 section，
-        其後 content/raw slot 歸入該 section.content（type=text/raw）。不重譯、複用 zh_by_index。"""
-        cur: Optional[Dict[str, Any]] = None
-        for i, slot in enumerate(slots):
-            kind = slot["kind"]
-            text = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
-            if kind == "title":
-                cur = {"title": text, "level": slot.get("level", 2), "content": [], "children": []}
-                sink.append(cur)
-            else:
-                if cur is None:  # 容錯：標題前的內容 → 匿名容器
-                    cur = {"title": "", "level": 2, "content": [], "children": []}
-                    sink.append(cur)
-                cur["content"].append(
-                    {"type": ("raw" if kind == "raw" else "text"), "content": text}
-                )
-
-    @staticmethod
-    def _single_container_sections(text: str, ctx: PipelineContext) -> List[Dict[str, Any]]:
-        """is_zh / 退化 fallback：整檔為單一容器 section（size-cap 由 rag_indexer 子切）。"""
-        title = (ctx.ingestion.title if ctx.ingestion else "") or "履歷全文"
-        return [{
-            "title": title, "level": 2,
-            "content": [{"type": "text", "content": text or ""}], "children": [],
-        }]
-    # === [RAG-ASYNC C6 END] ===
 
     def _collect_render_slots(
         self, sections: List[Dict[str, Any]], depth: int, out: List[Dict[str, Any]]
@@ -1019,35 +965,28 @@ class ResumePipeline(DocumentStrategy):
     def run_phase4(self, ctx: PipelineContext) -> RagDbSpec:
         """P4 Async RAG：向量化落庫、門檻 ≥3 技能詞保護（合約④，非阻塞）。
 
-        流程（plan v2 §2 U4/U5、RAG-ASYNC C6 改呼 B 軌自有 rag_indexer、零依賴 A 軌）：
-          ① 輸入＝P3 旁路封存之譯後 section 結構 `ctx.rag_sections` + P2 交付之
-             `ctx.glossary_ready.section_summaries`（**不再餵 reading-view final_zh.md**）。
-          ② `rag_indexer.index(rag_sections, section_summaries, 'resume', vectors_dir, paper_db_id)`
-             一站式：Strategy B 摘要增強分塊 + size-cap 子切 → `is_chunk_meaningful`(≥3、保
-             email/phone/url) 過濾 → Embedding → FAISS save_local → paper_chunks 批量 → index_meta。
-          ③ 交付 `RagDbSpec`（vectors_path / paper_chunk_count / index_meta）。
+        流程（plan §2 U5、複用既有 RagProcessor 零改動）：
+          ① 唯一輸入＝P3 中文 Markdown 路徑 `ctx.bilingual.final_zh_path`。
+          ② RagProcessor()._create_vector_store(final_zh_path, vectors_path,
+             doc_type='resume', paper_db_id) 一站式：MarkdownHeader 分割 →
+             `_is_chunk_meaningful`(doc_type='resume'、門檻 ≥3、保 email/phone/url、
+             不改演算法) 過濾 → FAISS save_local → paper_chunks 批量寫庫 → index_meta.json。
+          ③ 讀 vectors/index_meta.json（chunks_total）→ 交付 RagDbSpec。
 
-        DB 交易邊界（database SOP）：Embedding 於 `FAISS.from_documents`（DB 交易外）；
-        `paper_chunks` 寫庫委由 `paper_manager.replace_paper_chunks`（內部極短交易）。
-        paper_db_id 為 None → rag_indexer 內部優雅降級（僅 FAISS + index_meta）。
+        DB 交易邊界（database SOP）：Embedding 計算在 FAISS.from_documents 階段（DB 交易外）；
+        `replace_paper_chunks` 批量寫入不含 LLM/Embedding。paper_db_id 為 None → 優雅降級
+        （_create_vector_store 內部 log warning、跳過 SQL、僅 FAISS + index_meta）。
 
         錯誤隔離（plan U5 / SPEC R4.2）：P4 異常僅 logger.warning(exc_info=True) 後**拋出**，
         交 Orchestrator `_default_dispatch_p4` 設 rag_status='failed'，**絕不阻塞 reading_ready**。
         """
         if ctx.bilingual is None:
             raise ValueError("PIPE-RESUME P4：ctx.bilingual 缺失（P3 未交付）")
-        # === [RAG-ASYNC C6 START] 改呼 B 軌自有 rag_indexer（輸入＝P3 旁路譯後結構 + P2 section_summaries；
-        # 不再餵 reading-view final_zh.md；零依賴 A 軌 rag_processor）===
-        from processor import rag_indexer  # 惰性 import（B 軌自有、零 rag_processor）
-
-        rag_sections = ctx.rag_sections or []
-        section_summaries = (
-            ctx.glossary_ready.section_summaries if ctx.glossary_ready else None
-        ) or {}
+        final_zh_path = ctx.bilingual.final_zh_path
         vectors_dir = paper_manager.vectors_path(
             settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
         )
-        # paper_db_id：None → rag_indexer.index 內部優雅降級（僅 FAISS、跳過 paper_chunks）
+        # paper_db_id：None → _create_vector_store 內部優雅降級（僅 FAISS、跳過 paper_chunks）
         paper_db_id = paper_manager.get_paper_db_id(ctx.owner_id, ctx.paper_id)
         if paper_db_id is None:
             logger.warning(
@@ -1056,16 +995,22 @@ class ResumePipeline(DocumentStrategy):
             )
 
         try:
-            # ② B 軌一站式：Strategy B 分塊 + size-cap → 過濾 → Embedding → FAISS → paper_chunks
-            #    → index_meta → RagDbSpec（Embedding 於 DB 交易外、paper_db_id None 降級）
-            spec = rag_indexer.index(
-                rag_sections, section_summaries, "resume", vectors_dir,
-                paper_db_id=paper_db_id,
+            # ② 一站式向量化（過濾 + FAISS + paper_chunks + index_meta；Embedding 於交易外）
+            RagProcessor()._create_vector_store(
+                str(final_zh_path), str(vectors_dir),
+                doc_type="resume", paper_db_id=paper_db_id,
+            )
+            # ③ 讀 index_meta.json → chunks_total / 完整 dict
+            index_meta = self._load_index_meta(vectors_dir)
+            chunk_count = int(index_meta.get("chunks_total", 0))
+            spec = RagDbSpec(
+                vectors_path=str(vectors_dir),
+                paper_chunk_count=chunk_count,
+                index_meta=index_meta,
             )
             logger.info(
-                "[PIPE-RESUME P4] %s RAG 完成 chunks=%d paper_chunks=%d vectors=%s",
-                ctx.paper_id, int(spec.index_meta.get("chunks_total", 0)),
-                spec.paper_chunk_count, vectors_dir.name,
+                "[PIPE-RESUME P4] %s RAG 完成 chunks=%d vectors=%s",
+                ctx.paper_id, chunk_count, vectors_dir.name,
             )
             return spec
         except Exception as exc:  # noqa: BLE001 — 拋出由 Orchestrator 標 rag_status='failed'
@@ -1075,7 +1020,6 @@ class ResumePipeline(DocumentStrategy):
                 ctx.paper_id, exc, exc_info=True,
             )
             raise
-        # === [RAG-ASYNC C6 END] ===
 
     @staticmethod
     def _load_index_meta(vectors_dir: "Path") -> Dict[str, Any]:

@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -61,13 +61,6 @@ class PipelineContext(BaseModel):
     # 非凍結合約欄、不污染 IngestionMetadataSpec；預設 {} 前向相容既有測試。
     raw_metadata: Dict[str, Any] = {}
     # === [PIPE-RESUME v9 C2 END] ===
-
-    # === [RAG-ASYNC C6 START] P3→P4 旁路：譯後 section 結構（供 rag_indexer 自生 Strategy B 分塊）===
-    # P3（run_phase3）封存逐 section 譯後結構（title/level/content/children），P4（rag_indexer.index）
-    # 消費以生 chunk markdown；不餵 reading-view final_zh.md（對齊 plan v2 D4/R4.3）。
-    # 非凍結合約欄、預設 [] 前向相容；大文件可改走磁碟（D4，本路次 resume 用記憶體旁路）。
-    rag_sections: List[Dict[str, Any]] = []
-    # === [RAG-ASYNC C6 END] ===
 
     # ── 四份凍結合約產物（對應 Phase 寫入，寫入前為 None）──
     ingestion: Optional[IngestionMetadataSpec] = None      # 合約①（P1 寫入）
