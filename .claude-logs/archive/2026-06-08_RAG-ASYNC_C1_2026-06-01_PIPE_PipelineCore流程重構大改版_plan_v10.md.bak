@@ -1,0 +1,319 @@
+# PIPE PipelineCore 流程重構大改版 plan
+
+> 將 `PipelineCore` 由 11-stage God Class 單體重構為「三層解耦 + 物理四 Phase 生命週期 + 五條策略管線 + 三大共用真理源」架構，並以影子並行的縱向五路絞殺漸進落地。本 plan 為純規格定義，完整設計脈絡與流程圖見 §5 所列架減整理版。
+
+---
+
+## §0 改版規則
+
+- 改版觸發：§1–§8 任一規格規格變動
+- 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
+- 完整治理規格 → §99
+
+---
+
+## §1 TL;DR（概要）
+
+- **挑戰**：現行 `pipeline_core.py` 為 11-stage 線性 God Class（`STAGE_NAMES` L40-43），存在四大病灶：① RAG 與 `extra_info` 綁在主同步鏈尾端，任一失敗即整篇 `FAILED`、前台無法閱讀；② `doc_type` 分流靠主幹 `if/elif` 硬編碼（L542-568），新增類型須改主幹；③ Abstract / 領域分類 / 術語提取散落各 stage、五種 doc_type 交付不一致，造成譯名漂移與摘要時序 Bug；④ Embedding 在 Tiling 階段同步呼叫，拖慢主鏈。
+- **解法**：重構為四層次規格——(1) **三層解耦**（Orchestrator／Pydantic Context／Atomic Stages）；(2) **物理四 Phase 生命週期**（Ingestion／Glossary&Context Prep／Translation&Restore／Async RAG），以四份凍結 JSON Schema 接口合約鎖死交接點；(3) **五條策略管線**（Academic／Book／Slides／Resume／LiteDoc）下放 `doc_type` 專屬 how、主幹 100% 不碰；(4) **三大共用真理源**（GLOSSARY-CORE 自癒演算法／DomainNormalizer／Translator 雙模式）收斂跨管線重複邏輯。Phase 1 對五路交付絕對均勻的原文資料（無 Abstract/LCC/Glossary、零翻譯），所有衍生語境內聚 Phase 2，RAG 移為非同步旁支。
+- **影響**：重寫 `pipeline_core.py` 調度核心；新增 `pipelines/` 五路策略模組與 `processor/domain_normalizer.py` / `processor/glossary_extractor.py`；廢除主鏈 `extra_info` stage、`rag` 改背景任務；`web_server.py` 上傳入口加影子期雙軌 scaffolding（Flip 後移除）；`models.py` 新增 RAG/Glossary 相關表。落地策略為影子並行（A 軌舊單體 / B 軌新核心，`_shadow` ID 隔離），既有 list/get/delete API 與前端讀取路徑零改動，Golden Baseline Diff 0% 退化前不下線舊單體。
+
+---
+
+## §2 目標規格
+
+> 以下為重構必須達到的「最終狀態」規格（What it should be），可量化檢驗。實作細節（如何寫）屬 tasks 階段。
+
+### U1. 三層解耦架構（Decoupled 3-Layer）
+- `PipelineCore` 廢除 God Class，劃分為三層：**① 調度層 Orchestrator**（宣告式 DAG 順序控制／Checkpoint／線程並行，零業務細節）、**② 狀態層 Pipeline Context**（Pydantic 類型安全載體，跨 Stage 唯一狀態通道，禁止 mutable dict 隱式修改）、**③ 原子階段層 Atomic Stages**（無狀態 Class 插件）。
+- `PipelineCore` 唯一職責為「保證每個 Stage 按 DAG 順序、依 Context schema 契約正確交付」，**不得內含任何 `doc_type` 專屬解析／提取／翻譯邏輯**。
+
+### U2. 物理四 Phase 與四份凍結接口合約
+- 主鏈劃分為四個物理 Phase：**P1 Ingestion → P2 Glossary & Context Prep → P3 Translation & Restore → P4 Async RAG**。
+- 四交接點各以一份凍結 JSON Schema 合約鎖死，上下游內部邏輯可獨立改版：
+  - **① `IngestionMetadataSpec`**（P1→P2）：原文結構化 JSON 樹 + 三軸融合 Resolved 原文 Metadata（Title／Author／出處／DOI）+ 已物理分組 Tiles；**硬約束：不含 Abstract／LCC／Glossary、零翻譯**。
+  - **② `GlossaryReadySpec`**（P2→P3）：原文摘要 + 標準 LCC + 凍結最終 Glossary + `translated_abstract`（目標語，一次到位）；**硬約束：Glossary 於此點一次凍結，P3 不得再提取／自癒**。
+  - **③ `BilingualMarkdownSpec`**（P3→P4）：`final_zh.md` / `final_en.md` 乾記雙語 Markdown；**硬約束：嚴禁含 AI Questions／章節 Summary／公式解析等非原著文字**。
+  - **④ RAG/DB 合約**（P4→外部）：`vectors/` FAISS 物理庫 + SQLite `Paper`/`PaperChunk` 表 + `index_meta.json` 簽章。
+
+### U3. Phase 1 五路完美一致交付
+- P1 對五種 `doc_type` 交付**絕對均勻**的產物：原文 JSON 樹 + 原文 Metadata + 物理分組 Tiles，**零 Abstract／零 LCC／零 Glossary／零翻譯**。
+- 所有「需讀全文才能算」的衍生語境一律延後至 P2，使交接點 ① 成為五路共用的單一乾淨契約。
+
+### U4. Phase 2 Glossary & Context Prep 內聚
+- P2 集中產出四件衍生語境並凍結交付：**原文總摘要、標準 LCC、最終 Glossary、`translated_abstract`**。
+- 時序：① 生成原文摘要 + 領域判定 → `DomainNormalizer` 收斂 LCC；② `GlossaryExtractor` 掃**全文 Markdown**（非摘要）提取 `doc_glossary`，不設數量上限；③ GLOSSARY-CORE 標準自癒（歷史拉取→比對→缺詞翻譯 Backfill→雙層融合）凍結最終 Glossary；④ `Translator(DEEP_THINK)` 翻摘要得 `translated_abstract`。
+- **Book 滾動物理例外完整內聚於 P2**：章節滾動摘要與術語提取共用同一次 LLM 呼叫，不外溢 P1／P3 交接點。
+
+### U5. Phase 3 Translation & Restore
+- P3 純消費 P2 凍結產物，**不得再做任何術語提取或自癒**。正文以 `Translator(NORMAL)` 引導翻譯（注入 LCC + 已譯摘要 + 凍結 Glossary）。
+- References 節點標記 `skip_translation=true`，翻譯 Worker 0ms 物理跳過、0 API。
+- `md_restore` 退化為純 Markdown 樣板渲染（廢除 `extra_info` 與動態修補）；slides 圖片 alt 強制對齊 native alt text，物理根除雙重 Caption Bug。
+
+### U6. Phase 4 Async RAG 解耦
+- RAG 向量化移出主鏈為非同步背景任務（FastAPI BackgroundTasks），**唯一輸入為 P3 產出的乾淨 translate JSON**。
+- 主鏈 `md_restore` 完成即宣告 `reading_ready`，閱讀與 Print PDF 立即解鎖；RAG 完成後才將 `rag_status=ready` 解鎖 AI Chat。
+- **單點故障完全隔離**：Embedding／FAISS／DB 寫入失敗僅 log warning 並標 `rag_failed`，主鏈 `reading_ready` 100% 不受影響。
+- Embedding 從 Ingestion 徹底驅逐：**P1/P2/P3 三階段 0 次 Embedding 呼叫**，僅 P4 批量一次。
+
+### U7. 五條策略管線（DocumentStrategy）
+- `doc_type` 分流收斂為五條高內聚策略插件，主幹只呼叫 `PipelineFactory.get_strategy(doc_type)`，**新增 doc_type 主幹 100% 不動**：
+  - 🎓 **AcademicPipeline**（academic）：MinerU+md_cleaner；P2 Abstract 提取+LCC+全文術語雙層融合；P3 Section 引導翻 + References 跳過；P4 門檻 ≥10。
+  - 📖 **BookPipeline**（book）：MinerU；P1 ISBN/Title/Author；P2 滾動例外（ChainedSummarizer 章節大綱＋術語同呼叫→全書聚合→API LCC→自癒→Deep Think 摘要翻）；P3 雙速章節翻 + 三層 Sliding Window；P4 ≥10。
+  - 🖼️ **SlidePipeline**（slides）：Vision 每頁解析（禁 MinerU/cleaner）+ 統計去重 + 封面判斷；P3 100% Bypass + 圖片 alt 強制對齊；P4 ≥3（短 Chunk 合併）。
+  - 📄 **ResumePipeline**（resume）：Vision 整份解析；P1 抽姓名/電話/Email/專業領域；P2 LCC 由專業領域推導；P3 100% Bypass；P4 ≥3（技能詞保護）。
+  - 📰 **LiteDocPipeline**（news/web/technical/未知 fallback）：MinerU+md_cleaner + URL publisher 解碼；P2 含 15k 安全閥門評估；P3 <15k 一鍵 / ≥15k 降級 Section 分組；P4 ≥10。
+
+### U8. 三大共用真理源（跨五路 100% 共用）
+- **GLOSSARY-CORE 標準自癒演算法**：輸入 `(doc_glossary, context, domain=LCC)`；步驟＝歷史軌道拉取（P2 起點、取代舊 P1 預載）→逐術語比對 SQLite→命中讀取／缺失附 `(context,LCC)` LLM 翻譯 Backfill→雙層融合（本文術語優先）凍結。五路演算法邏輯零分歧，差異僅在 `context` 來源與掃全文方式。
+- **DomainNormalizer**：單一入口 `normalize_to_lcc(raw_domain: str, context_text: str | None = None) -> LCCCode`；基於內容實質判定 LCC + SQLite `Domains` 動態註冊（此時無單字）+ `DomainMapping` 本地快取自癒防重。各管線共用尾段，支援複合文檔（如履歷）按實質技能判定。
+- **Translator 雙模式**：單一入口 `translate(text, ctx: InjectionContext, mode, text_type="content") -> str`；`InjectionContext.lcc` 必填（來自 DomainNormalizer）、`glossary` 必填（來自 GLOSSARY-CORE），另含 `zh_summary`/`preceding`/`constraints`/`domain_name`/`doc_type`。`DEEP_THINK` 用於摘要類（品質優先），`NORMAL` 用於正文（降本提速）。五路共用原子翻譯，差異僅切分調度與模式選擇。
+
+### U9. Early-Emit 雙軌並行
+- P1 採「快元數據軌（前 2 頁 fitz/llm_page1）」與「全文本文軌（整份 MinerU/Vision）」雙軌並行，Barrier 同步後合流。
+- 快軌 15 秒內 Early Emit 寫庫，前端搶跑渲染**扉頁標頭（僅 Title／Author）**；**Abstract 不在 Early Emit、改於 P2 一次到位即譯文呈現**，永不顯示未翻譯原文。
+
+### U10. 影子並行 + 縱向五路絞殺落地戰略
+- **影子並行（Shadow Launch）**：B 軌新核心與 A 軌舊單體共用同一 SQLite 與 output 目錄，靠 `_shadow` ID 後綴（物理隔離寫庫與目錄）+ ` (測試)` 標題後綴（前端肉眼區分）達成隔離；以 `SHADOW_LAUNCH_ENABLED` 環境變數一鍵開關，線上 0 風險。
+- **命名紀律**：新五路從第一天即用最終正式命名（class/檔名零影子標記），靠模組物理隔離 + 執行期旗標區分，Flip 後零改名、零 import 連鎖 regression。
+- **縱向五路絞殺**：以策略管線為縱向單元，一次打通一路、每路跨完整四 Phase，順序 **Resume → Visual → Academic → LiteDoc → Book**；每路打通即與 Golden Baseline 自動 Diff。
+- **Golden Baseline**：動工第一微秒挑代表性文檔（論文／簡報／短文或履歷）在舊系統存盤為基準，每路打通後比對，要求排版 0% 退化、譯文 0% Regression。
+- **Flip the Switch**：五路全通且 Diff 0% 退化後，下線舊單體 + 11 stages，移除 `web_server.py` dual-dispatch 與影子旗標，流量 100% 切新核心。
+
+### U11. 既有計畫對齊
+- **API-PERF**（輕度修改）：流式上傳／SQLite `busy_timeout` 連接池／FAISS LRU 快取／`PIPELINE_SEMAPHORE` 並發排隊，作為基建前置先行；監控埋點改對四 Phase 及內部原子子階段計時。
+- **GLOSSARY-CORE**（中度修改）：LCC 收斂與術語提取自癒全數內聚 P2，落地為 U8 共用真理源。
+- **TRANSLATE-BOOK**（中度修改）：Chained 滾動摘要引導內聚 BookPipeline P2、故事板正文翻譯內聚 P3，廢除插入舊 stages 迴圈的設計。
+- **QUEUE-1**（重構性廢除）：Early Emit + RAG 異步化 + API-PERF Semaphore 已覆蓋其職能，收官時清除其 Thread-level 避讓機制。
+
+---
+
+## §3 現況與證據
+
+詳細盤點與本重構相關的現有程式碼邏輯與關鍵調用鏈：
+
+- **`pipeline_core.py`**：
+  - `STAGE_NAMES L40-43`：11-stage 線性單體（`pdf2md, analyze, detect_domain, md2json, json_process, tiling, translate, image_caption, md_restore, extra_info, rag`）。
+  - `_stage_extra_info L708-721` / `_stage_rag L724-`：`extra_info` 與 `rag` 綁在主同步鏈尾端（病灶①）。
+  - doc_type 硬編碼分流 `L539-568`：`if doc_type == 'slides' / elif resume / elif KNOWN_DOC_TYPES / else fallback`，新增類型須改主幹（病灶②）。
+  - `KNOWN_DOC_TYPES L36`：`{academic, book, technical, slides, news, web, resume}`。
+- **`processor/rag_processor.py`**：
+  - `process L167-189`：`_extract_abstract_summary` → `_restructure_tree` → `_create_vector_store`，RAG 依賴 section `summary` 欄位（病灶③耦合）。
+  - `_write_paper_chunks_to_db L305` / `_create_vector_store L201`：保留為 P4 核心。
+- **`processor/domain_detector.py`**：
+  - `detect L39-76`：回傳 10-30 字高自由度 raw 領域短句，是 `DomainNormalizer` 標準化的輸入源。
+- **`web_server.py`**：
+  - `run_pipeline L487-519`：同步等 `PipelineCore` 跑完全部 stages → `load_paper_resources` → `status='done'`（L516-519）；rag 失敗即整篇卡死（病灶①前台症狀）。
+
+### §3.1 grep 鋼鐵證據
+
+```bash
+grep -nE "STAGE_NAMES|extra_info|'rag'" pipeline_core.py | head
+# 40:STAGE_NAMES = [
+# 41:    "pdf2md", "analyze", "detect_domain", "md2json", "json_process", "tiling",
+# 42:    "translate", "image_caption", "md_restore", "extra_info", "rag"
+# 708:    def _stage_extra_info(self, pdf_path, paper_dir, paper_name, output_paths):
+ 
+grep -nE "doc_type ==|KNOWN_DOC_TYPES" pipeline_core.py | head
+# 36:    'academic', 'book', 'technical', 'slides', 'news', 'web', 'resume'
+# 542:        if doc_type == 'slides':
+# 546:        elif doc_type == 'resume':
+# 553:        elif doc_type in KNOWN_DOC_TYPES:
+ 
+grep -nE "_extract_abstract_summary|_restructure_tree|_create_vector_store" processor/rag_processor.py | head
+# 168:    abstract_content = self._extract_abstract_summary(...)
+# 178:    paper_data = self._restructure_tree(paper_data)
+# 189:    self._create_vector_store(...)
+ 
+grep -nE "run_pipeline|status.*'done'|load_paper_resources" web_server.py | head
+# 487:async def run_pipeline(owner_id: int, paper_id: str, ...):
+# 516:    paper_manager.load_paper_resources(...)
+# 519:    processing_tasks[task_key]['status'] = 'done'
+```
+
+---
+
+## §4 不可動清單
+
+明確劃定修改邊界，防止修改邏輯溢出造成 Regression。**以下檔案與邏輯在本重構中嚴禁改動：**
+
+- [ ] **A 軌舊單體 Pipeline（`pipeline_core.py` 既有 11-stage 邏輯）**：影子期內全程保持可運行，嚴禁在 Flip the Switch 前刪除或更動，確保線上 0 風險。
+- [ ] **既有 list / get / delete API**：`list_papers` / `get_paper` / `delete_paper` 嚴禁改動——影子 row 為同庫獨立 row，必須靠既有 API 零改動自動帶出與清理。
+- [ ] **前端 `static/index.html` 讀取與列表渲染路徑**：影子產物靠 ` (測試)` 標題後綴肉眼區分，前端零改動。
+- [ ] **`models.py` `Paper` 表既有主欄位與關係屬性**：僅可新增表/欄位，既有 schema 嚴禁破壞性變更（防 DB 不相容）。
+- [ ] **`processor/domain_detector.py` `detect` 多模態核心邏輯**：只取其 raw 輸出餵 `DomainNormalizer`，不得改其偵測邏輯。
+- [ ] **既有 RAG 檢索 `rag_retriever.py` 與 SQLite `paper_chunks` 表結構**：P4 僅複用既有寫庫/檢索，不在本重構內改動檢索演算法（屬後續 RAG 進階）。
+
+---
+
+## §5 規格依據
+
+| 依據名稱 | 來源位置 |
+|---|---|
+| 架構整理版（完整設計脈絡、流程圖、五路時序、共用模組契約） | `.claude-logs/baton/PipelineCore_流程重構_整理版.md` |
+| plan 結構契約與治理規格 | `.claude-logs/templates/template_plan.md` |
+| 六階段觸發鏈／命名規則／SOP 核查 | `.claude-logs/ref/WORKFLOW_SOP.md §3 §5 §6` |
+| 專案進度治理框架（雙軌制／不可動清單／plan 結構） | `.claude-logs/ref/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md §1 §4` |
+| logging / database 程式碼級 SOP（BE-Refactor 強制） | `.claude-logs/sop/2026-05-23_logging_SOP_手冊.md` / `database_SOP_手冊.md` |
+| GLOSSARY-CORE 術語庫規格 | `.claude-logs/baton/2026-05-28_GLOSSARY-CORE_*_plan_v2.md` |
+| TRANSLATE-BOOK 書籍並行翻譯規格 | `.claude-logs/baton/2026-06-01_TRANSLATE-BOOK_書籍並行翻譯與雙語故事板引導_plan_v7.md` |
+| 現況 ORM／調度核心 | `pipeline_core.py L36-92`／`models.py L87-157`／`processor/rag_processor.py` |
+
+---
+
+## §6 驗證計畫
+
+### §6.1 自動化單元測試
+
+- **既有測試執行**（防 Regression 底線）：
+  ```bash
+  pytest tests/ -v
+  ```
+- **預計新增的測試**（隨各路落地分批新增於 `tests/`）：
+  - 三層解耦：`PipelineContext` Pydantic schema 驗證、Orchestrator DAG 順序與 Checkpoint 讀寫。
+  - 四 Phase 合約：四份 Spec JSON Schema 的 contract test（P1 交付不含 Abstract/LCC/Glossary 之斷言）。
+  - 共用真理源：`DomainNormalizer.normalize_to_lcc`（raw→LCC 收斂 + cache 命中 0 API）、GLOSSARY-CORE 自癒（雙層融合本文優先 + Backfill）、Translator 雙模式參數路由。
+  - 五路策略：`PipelineFactory.get_strategy(doc_type)` 分派、各路 P1–P4 交付物斷言、RAG 字元門檻（Academic/Book/LiteDoc ≥10、Slides/Resume ≥3）。
+  - P4 解耦：RAG 失敗時主鏈 `reading_ready` 不受影響、`rag_status=rag_failed` 標記。
+
+### §6.2 手動端到端（E2E）驗證流程
+
+1. **基建前置驗證**：開 `SHADOW_LAUNCH_ENABLED=false`，確認線上僅跑 A 軌、行為 100% 同舊版。
+2. **影子雙軌驗證**：開 `SHADOW_LAUNCH_ENABLED=true`，上傳測試文件，前端列表同時出現「原著」與「原著 (測試)」兩列，物理產物落於 `output/*_shadow/`。
+3. **縱向逐路 Golden Baseline Diff**（依 Resume→Visual→Academic→LiteDoc→Book 順序）：每打通一路即比對排版還原度、雙語對照品質、AI Chat 召回，要求 0% 退化。
+4. **Academic 時序驗證**：上傳 PDF 論文，前台 15 秒內渲染原文扉頁標頭（Title／Author）；P2 完成後摘要直接以中文譯文一次到位（無英文 Fallback 時序 Bug）；References 未被誤翻。
+5. **P4 容錯驗證**：模擬 Embedding/DB 失敗，確認主閱讀與 Print PDF 100% 可用、僅 AI Chat 顯示 `rag_failed`。
+6. **零殘留清理**：影子測試文件經前端 `delete_paper` 一鍵刪除，SQLite 關聯欄位與 `output/*_shadow/` 目錄 100% 清空。
+
+---
+
+## §7 Open Questions
+
+| 開放問題 | 方案 | 理由 |
+|---|---|---|
+| **子任務 PIPE 編號是否重新編列** | **重新編列、不沿用整理版附錄舊 PIPE-1~11** | baron 已拍板「新開 PIPE 系列、舊的放棄手動刪除」。本 plan 進入 tasks 階段時依縱向五路絞殺重新編列子代號，避免與舊附錄混淆。 |
+| **GLOSSARY-CORE 是否拆出 DomainNormalizer 獨立 plan** | **建議拆**（DomainNormalizer 升格為 GLOSSARY-CORE 與 Translator 共同上游真理源） | 整理版 `normalize_to_lcc` 為獨立契約、且 `InjectionContext.lcc` 必填來自它；不再是 glossary 子功能。惟兩者同於 Resume 路 P2 首落地，DomainNormalizer plan 須標為 GLOSSARY-CORE 新增前置。 |
+| **影子期 `web_server.py` dual-dispatch 臨時改動是否可接受越界** | **可接受、列為影子期專用 scaffolding** | 屬最小幅度臨時改動（多拋一個帶 `shadow=True` 旗標的背景任務），第 6 步 Flip 強制移除、不留技術債；影子業務細節全封裝於 `PipelineCore` 內部。 |
+| **新核心是否與舊 `pipeline_core.py` 同檔重寫或新目錄共存** | **新目錄 `pipelines/` 共存**（物理隔離、非同檔覆寫） | 影子期 A/B 兩軌須同時可運行，同檔重寫會使舊單體無法保留；新目錄共存符合 U10 命名紀律、Flip 後僅刪舊檔零改名。 |
+
+---
+
+## §8 完整改版 plan 路線圖與所需 plan 清單
+
+> 本章節盤點「將本 plan §2 全部目標規格落地」所需的**全部子文件**（17 份＝1 份 spec＋16 份 plan），依黃金實施路線圖五階段組織。
+> **文件類型**欄：**spec**＝規格書（凍結介面合約／真理源簽章，走 template_specification，唯一 PIPE-SPEC）／**plan**＝執行計畫（走 template_plan，引用 spec 落地）。
+> **狀態**欄：**✅ 已存在**（baton/ 已有檔案，可能仍待 review）／**⬜ 待建立**（尚無對應檔案，須新撰）。
+> **產出**欄：該文件最終要交付的實體成果（文件本身一律有 `.md`，此欄聚焦其導向的程式碼／資料／工具產物）。
+> 本清單僅定義「需要哪些文件與其依賴」，不含 commit 拆分（屬各 plan 的 tasks 階段）。
+
+### §8.1 路線圖五階段總覽
+
+```
+階段 0 基建前置 ──► 階段 1 定規與骨架 ──► 階段 2 三大共用真理源
+                                                    │
+                                                    ▼
+階段 4 收官與進階 ◄── 階段 3 縱向五路絞殺（Resume→Visual→Academic→LiteDoc→Book）
+```
+
+- 五路絞殺（階段 3）必須在「定規骨架（階段 1）＋三大真理源（階段 2）」全數備妥後才啟動。
+- 三個橫跨共用模組 plan（RAG-ASYNC／MD-RESTORE／RESOLVED-SUMMARY）首落地綁定特定路次（見 §8.5 備註），但規格本身跨五路共用。
+
+### §8.2 階段 0 — 基建前置
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 依賴 |
+|---|---|---|---|---|---|---|
+| **API-PERF** | plan | 流式上傳／SQLite `busy_timeout` 連接池／FAISS LRU 快取／`PIPELINE_SEMAPHORE` 並發排隊；監控埋點對齊四 Phase。落地後即為 §2 U11 QUEUE-1 重構性廢除的並發底座。 | ✅ 已存在 | `baton/2026-06-01_API-PERF_API技術審計與效能優化_plan_v2.md` | `web_server.py`/`settings.py` 並發與連接池改動＋FAISS LRU 快取層＋四 Phase 計時埋點 | 無（最先行） |
+
+### §8.3 階段 1 — 定規與骨架
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 依賴 |
+|---|---|---|---|---|---|---|
+| **PIPE-SPEC** | **spec** | 四份凍結接口合約 + 三大真理源簽章 + 五路管線契約 + RAG Schema 的權威規格書，所有下游 plan 的引用真理源。 | ✅ 已存在 | `baton/2026-06-01_PIPE-SPEC_PipelineCore流程重構架構_specification.md` | 規格書本身（凍結合約定義，無程式碼）；被全部 plan 引用 | 無 |
+| **GOLDEN-BASELINE** | plan | 動工第一微秒挑五路代表性文檔在舊系統存盤為 Golden Baseline，定義三維度 Diff 比對方法與 0% 退化紅綠燈判準（含改善豁免）。 | ✅ 已存在 | `baton/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v2.md` | 五路實體基準產物（D1 排版雙語 md／D2 翻譯 JSON／D3 RAG 召回）凍結＋`tools/golden_baseline.py` capture/diff 雙子命令＋三維度退化判準＋`tests/test_golden_baseline.py` | 無（須早於任一路落地） |
+| **PIPE-CORE** | plan | 三層解耦調度骨架：`Orchestrator`（宣告式 DAG）＋ Pydantic `PipelineContext`＋ `PipelineFactory.get_strategy` 抽象基類與 `DocumentStrategy` 介面；新目錄 `pipelines/` 落地。 | ✅ 已存在 | `baton/2026-06-01_PIPE-CORE_三層解耦調度骨架_plan_v2.md` | `pipelines/` 新目錄 base 空骨架（orchestrator／context／contracts／factory／base_strategy／__init__）＋對齊 PIPE-SPEC 四合約的 Pydantic schema＋`tests/test_pipe_core.py` contract test | PIPE-SPEC |
+| **PIPE-SCAFFOLD** | plan | `web_server.py` 影子期雙軌派發 scaffolding（`SHADOW_LAUNCH_ENABLED` 旗標／`_shadow` ID／` (測試)` 標題後綴／背景任務分流），Flip 後移除。 | ✅ 已存在 | `baton/2026-06-01_PIPE-SCAFFOLD_web_server雙軌派發scaffolding生命週期_plan_v3.md` | `web_server.py` 上傳入口雙軌派發臨時程式碼（Flip 後刪除） | PIPE-CORE |
+
+### §8.4 階段 2 — 三大共用真理源（§2 U8）
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 依賴 |
+|---|---|---|---|---|---|---|
+| **DOMAIN-NORM** | plan | `DomainNormalizer.normalize_to_lcc(raw_domain, context_text)->LCCCode`；實質內容 LCC 判定、`Domains` 領域註冊與 `DomainMapping` 快取。GLOSSARY-CORE 與 Translator 共同上游。 | ✅ 已存在 | `baton/2026-06-01_DOMAIN-NORM_領域標準化對齊器_plan_v2.md` | `processor/domain_normalizer.py`＋`Domains`/`DomainMapping` 表/快取＋單元測試 | PIPE-SPEC |
+| **GLOSSARY-CORE** | plan | 5 步自癒演算法（歷史拉取→比對 SQLite→缺詞 `(context,LCC)` LLM Backfill→雙層融合本文優先→凍結）內聚 P2。 | ✅ 已存在 | `baton/2026-05-28_GLOSSARY-CORE_*_plan_v2.md` | `processor/glossary_extractor.py` 自癒模組＋術語庫 ORM 表＋兩 Hook 接點＋單元測試 | DOMAIN-NORM |
+| **TRANSLATOR** | plan | `Translator.translate(text, ctx:InjectionContext, mode, text_type="content")->str` 雙模式原子翻譯（`NORMAL`／`DEEP_THINK`）；`InjectionContext`{lcc 必填／glossary 必填／zh_summary／preceding／constraints／domain_name／doc_type}。目前僅於 TRANSLATE-BOOK 被引用，須升格為獨立第三真理源 plan。 | ⬜ 待建立 | —（散見 TRANSLATE-BOOK 引用） | `Translator` 原子翻譯模組＋`InjectionContext` Pydantic＋`TranslateMode` enum＋雙模式參數路由測試 | DOMAIN-NORM、GLOSSARY-CORE |
+
+### §8.5 階段 3 — 縱向五路絞殺（§2 U7、U10）＋ 橫跨共用模組
+
+> 絞殺順序固定 **Resume → Visual → Academic → LiteDoc → Book**；每路跨完整四 Phase，打通即與 Golden Baseline 自動 Diff。
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 依賴 |
+|---|---|---|---|---|---|---|
+| **PIPE-RESUME**（第 1 步） | plan | ResumePipeline：Vision 整份解析／P1 姓名電話 Email 專業領域／P2 LCC 由專業領域推導／P3 100% Bypass／P4 ≥3 技能詞保護。首路同時驗收三大真理源 + RAG 非同步剝離。 | ✅ 已存在 | `baton/2026-06-01_PIPE-RESUME_*_plan_v1.md` | `pipelines/resume_pipeline.py` 完整四 Phase 策略＋首路 Golden Diff 通過 | PIPE-CORE、三大真理源、RAG-ASYNC |
+| **PIPE-VISUAL**（第 2 步） | plan | SlidePipeline：Vision 每頁解析（禁 MinerU/cleaner）＋統計去重＋封面判斷／P3 100% Bypass＋圖片 alt 強制對齊根除雙 Caption／P4 ≥3。首路驗收 MD-RESTORE 純樣板化。 | ⬜ 待建立 | — | `pipelines/slide_pipeline.py` 完整四 Phase 策略＋Golden Diff 通過 | PIPE-RESUME 完成、MD-RESTORE |
+| **PIPE-ACADEMIC**（第 3 步） | plan | AcademicPipeline：MinerU+md_cleaner／P2 Abstract+LCC+全文術語雙層融合／P3 Section 引導翻＋References 跳過／P4 ≥10。 | ⬜ 待建立 | — | `pipelines/academic_pipeline.py` 完整四 Phase 策略＋Golden Diff 通過 | PIPE-VISUAL 完成 |
+| **PIPE-LITEDOC**（第 4 步） | plan | LiteDocPipeline：MinerU+md_cleaner＋URL publisher 解碼／P2 15k 安全閥門／P3 <15k 一鍵 vs ≥15k 降級 Section／P4 ≥10。news/web/technical/未知 fallback。 | ⬜ 待建立 | — | `pipelines/litedoc_pipeline.py` 完整四 Phase 策略＋Golden Diff 通過 | PIPE-ACADEMIC 完成 |
+| **TRANSLATE-BOOK**（第 5 步） | plan | BookPipeline：滾動例外 ChainedSummarizer（章節大綱＋術語同呼叫→全書聚合→API LCC→自癒→Deep Think 摘要翻）內聚 P2／三層 Sliding Window 雙速章節翻內聚 P3／P4 ≥10。 | ✅ 已存在 | `baton/2026-06-01_TRANSLATE-BOOK_書籍並行翻譯與雙語故事板引導_plan_v7.md` | `pipelines/book_pipeline.py`（內聚 `ChainedSummarizer`／`ParallelChapterTranslator`／三層 Sliding Window／`StructureAssembler`）＋雙語產物＋4 支 pytest＋Golden Diff 通過；消費 DOMAIN-NORM／GLOSSARY-CORE／TRANSLATOR，零 Schema／零新環境變數 | PIPE-LITEDOC 完成、TRANSLATOR |
+
+**橫跨共用模組 plan**（規格跨五路共用，首落地綁定特定路次）：
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 首落地路次／依賴 |
+|---|---|---|---|---|---|---|
+| **RAG-ASYNC** | plan | Phase 4 RAG 向量化移出主鏈為 FastAPI BackgroundTasks；廢除主鏈 `extra_info` stage；`reading_ready` 與 `rag_status` 雙解鎖；單點故障隔離。 | ⬜ 待建立 | — | P4 背景任務模組＋`reading_ready`/`rag_status` 雙狀態欄位＋故障隔離 log＋失敗不阻主鏈測試 | 首落地隨 PIPE-RESUME |
+| **MD-RESTORE** | plan | `md_restore` 退化為純 Markdown 樣板渲染（廢除 `extra_info` 與動態修補）；slides 圖片 alt 對齊 native alt text。 | ⬜ 待建立 | — | 純樣板化 `md_restore` 模組（移除動態修補）＋slides alt 對齊邏輯＋雙 Caption 根除測試 | 首落地隨 PIPE-VISUAL |
+| **RESOLVED-SUMMARY** | plan | 統一摘要欄位 `resolved_summary` + 前端 Toolbar 呈現 + RAG Strategy A/B 切換（整理版附錄 PIPE-9）。 | ⬜ 待建立 | — | `resolved_summary` 統一欄位＋前端 Toolbar 呈現＋RAG Strategy A/B 切換開關 | 五路 P2 凍結 Glossary 後 |
+
+### §8.6 階段 4 — 收官與進階
+
+| 代號 | 文件類型 | 描述 | 狀態 | 對應檔案 | 產出 | 依賴 |
+|---|---|---|---|---|---|---|
+| **PIPE-FLIP** | plan | Flip the Switch：五路全通且 Diff 0% 退化後下線舊單體 + 11 stages，移除 `web_server.py` dual-dispatch 與影子旗標，流量 100% 切新核心；同步清除 QUEUE-1 Thread-level 避讓（§2 U11 收官點，整理版附錄 PIPE-10）。 | ⬜ 待建立 | — | 刪除舊 `pipeline_core.py` 11-stage 單體＋移除 scaffolding 與影子旗標＋QUEUE-1 避讓清除＋流量全切 | 五路全通 + GOLDEN-BASELINE Diff 0% |
+| **RAG-ADVANCED** | plan | Phase 4 RAG 進階：父子分塊＋BM25/RRF 混合檢索＋Query Expansion Hook②＋Gemini Flash Re-rank（整理版附錄 PIPE-11）。屬 Flip 後獨立進階，非本大改版必要路徑。 | ⬜ 待建立 | — | 父子分塊器＋BM25/RRF 混合檢索＋Query Expansion Hook②＋Gemini Flash Re-rank 模組 | PIPE-FLIP 完成 |
+
+### §8.7 清單彙總與缺口
+
+- **總計 18 份文件＝1 份 spec（PIPE-SPEC）＋17 份 plan**：✅ 已存在 9 份（API-PERF／PIPE-SPEC／PIPE-SCAFFOLD／PIPE-CORE／DOMAIN-NORM／GLOSSARY-CORE／TRANSLATE-BOOK／PIPE-RESUME／GOLDEN-BASELINE）；⬜ 待建立 9 份（TRANSLATOR／PIPE-VISUAL／PIPE-ACADEMIC／PIPE-LITEDOC／RAG-ASYNC／MD-RESTORE／RESOLVED-SUMMARY／PIPE-FLIP／RAG-ADVANCED）。spec 只 1 份（凍結合約唯一真理源），其餘 17 份皆走 template_plan 引用 spec 落地。
+- **三大真理源缺 TRANSLATOR plan**：DomainNormalizer 與 GLOSSARY-CORE 皆已獨立成 plan，唯 Translator 仍散見於 TRANSLATE-BOOK 引用，須升格獨立 plan 方能於 Resume 首路 P2/P3 共用（見 §7「DomainNormalizer 拆分」同源邏輯）。
+- **QUEUE-1 殘留決議**（承 PIPE-SPEC §3.6 裁決）：`baton/2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`（Thread-level `sleep(2)` 避讓）已被 Early-Emit + RAG-ASYNC + API-PERF Semaphore 溶解，於 PIPE-FLIP 收官時作廢；惟 MinerU 推理層 head-of-line 阻塞由 `baton/2026-05-29_QUEUE-1_雙實例CFS物理分流與協同避讓調度_plan.md`（雙 Docker 實例 CFS 分流）承接，與本大改版正交、不在絞殺路徑內。
+- **§5 規格依據檔名待修**：§5 表格 L153 與 §99.2 仍指向舊整理版檔名 `baton/PipelineCore_流程重構_整理版.md`，該檔已於 PIPE-SPEC 建立時重新命名歸檔至 `archive/2026-06-01_PIPE-SPEC_PipelineCore流程重構_整理版_原始設計脈絡存底.md`；待 baron 拍板是否一併改指 PIPE-SPEC 規格書（見 §7 候補）。
+
+---
+
+## §99 治理規格與 Revision
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| **目的** | 定義 PIPE PipelineCore 流程重構大改版的目標規格，作為後續 tasks 拆分與原子執行的唯一基準 |
+| **用途** | 供 baron 審查並在 tasks.md 拆分時引用；Antigravity 階段 3 驗證時引用 |
+| **權威源** | 本檔 §1–§8 |
+| **引用方** | 後續 PIPE tasks / 執行報告 |
+| **被引用方** | <由 Antigravity 自動掃描注入> |
+| **約束事項** | 嚴禁含設計脈絡 / 演進歷史 / 拍板過程 / 為何要做的理由（已收斂至整理版）；嚴禁含 commit 拆分（屬 tasks 階段） |
+| **改版觸發條件** | §1–§8 任一規格規格變動 |
+| **改版規則** | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
+| **刪除條件** | 任務全部完成，經 baron 同意且歸檔至 archive/ |
+| **重複防護** | 僅定義技術規格；完整流程圖與設計脈絡唯一源在整理版；工作目錄與流程規格一律引用 CLAUDE.md / WORKFLOW_SOP.md |
+
+### §99.2 Revision 歷程
+
+- v11 (2026-06-05)：PIPE-RESUME（第 1 路）影子端到端整合後同步——登記六項並對齊 PIPE-SPEC v4 / PIPE-RESUME plan §99.2 v9-v11：
+  - **Hotfix 史**：C7-hotfix（`pipelines/__init__.py` 補 `from pipelines import resume_pipeline` 觸發 `@register('resume')`、修 runtime 策略註冊缺失 NullStrategy 阻斷）；C8-hotfix（`web_server.py` `run_pipeline_shadow` 補 `paper_manager.upsert_paper`、修影子 P1-P4 全綠但無 DB 寫入致前端不顯示）。**successor pipelines（VISUAL/ACADEMIC/LITEDOC/BOOK）落地時須各補 `__init__.py` import**（或收斂集中註冊區）；影子完成期寫庫已 doc_type-agnostic 通用。
+  - **`raw_metadata` 穿線（五路共用基建）**：`PipelineContext` 新增 `raw_metadata: Dict[str,Any]={}` 旁路欄承完整原始 metadata（供 `Paper.metadata_json`、對齊 A 軌 `upsert_paper` 保真），取代 custom_metadata-in-Spec、凍結合約 `contracts.py` 不污染（規格見 PIPE-SPEC §1.1.1）。
+  - **P3 翻譯策略隔離**：共用 `Translator` 引擎 + 各路 `run_phase3` 自建 `InjectionContext.constraints` 逐路注入業務規則（規格見 PIPE-SPEC §1.2.3.1）。
+  - **Phase 2 流程異動**：P2 步序定為 **①做整份原文摘要（前置消除前向依賴）→ ②依領域 LCC 雙參分類 → ③術語自癒 → ④DEEP_THINK 翻摘要**（跨路統一：各路 P2 摘要先行；摘要/LCC 互不依賴、功能等價）。
+  - **Flip Cleanup 待辦**：Flip 時除移除 `web_server.py` 影子開關與包裹註解外，**一併移除 ResumePipeline `run_phase1` 的 `_shadow` 影子標題 (測試) 後綴邏輯**（`# === [PIPE-RESUME …] ===` 包裹、與開關同批清除）。
+  - 純規格同步、不變動 §1-§8 既有條款；§8.5 RAG-ASYNC「首落地隨 PIPE-RESUME」經 C5/影子 P4 驗證。
+- v10 (2026-06-03)：同步更新 DomainNormalizer 規格，將 DOMAIN-NORM 計劃從 v1 升級為 v2（支援動態註冊與內容分類），對齊 PIPE-SPEC v2。
+  - v10 補註 (2026-06-04)：純下游指標同步——TRANSLATE-BOOK plan 升版 v4→v5（對齊已落地真理源簽名）後，§5 規格依據（L159）與 §8.5 階段 2 五路絞殺表（L254）2 處檔名指標 `plan_v4.md`→`plan_v5.md`，消除懸掛引用；本補註不變動 PIPE master 任何規格條款、不 bump 主版本（避免 PIPE-SPEC／DOMAIN-NORM／GLOSSARY-CORE 等下游指標級聯漂移）。
+  - v10 補註² (2026-06-04)：TRANSLATE-BOOK plan 第二輪 review 再升版 v5→v6（對齊落地 `pipelines/contracts.py` 凍結合約逐欄位名：`GlossaryReadySpec.glossary`/`chapter_summaries`、`IngestionMetadataSpec.tiles`、`raw_domain` 衍生自 `title`），同上 2 處指標 `plan_v5.md`→`plan_v6.md`；同屬純下游指標同步、不 bump 主版本。
+  - v10 補註³ (2026-06-04)：TRANSLATE-BOOK plan 第三輪 review 再升版 v6→v7（§3 現況行號對齊 GLOSSARY-CORE C1-C7 落地後代碼庫偏移，純行號校正），同上 2 處指標 `plan_v6.md`→`plan_v7.md`；同屬純下游指標同步、不 bump 主版本。
+  - v10 補註⁴ (2026-06-04)：對齊 TRANSLATOR plan 與 PIPE-SPEC §1.2.3，§2 U8（L70）與 §8.4 TRANSLATOR 列（L242）的 `translate()` snippet 簽名補 `text_type="content"`、`InjectionContext` 欄位列舉補 `domain_name`/`doc_type`（原僅列 5 欄）；純摘要 snippet 對齊權威源、不變動 PIPE master 規格條款、不 bump 主版本。
+- v9 (2026-06-01)：PIPE-SCAFFOLD plan 升版 v2→v3（補 §2 U7 程式流程與判斷＋U8 資料流程＋U9 產出物明確定義；§5 PIPE 依據同步至本檔 v8、新增 PIPE-SPEC §3.5／PIPE-CORE v2 兩列依據），§8.3 對應檔名指標同步更新 `_plan_v2.md` → `_plan_v3.md`（一併補全萬用字元檔名），消除懸掛引用。
+- v8 (2026-06-01)：PIPE-CORE plan 升版 v1→v2（補 §2 U7 產出物明確定義三表＋§5 依據檔名同步至本檔 v7），§8.3 對應檔名指標同步更新 `_plan_v1.md` → `_plan_v2.md`、產出欄補列 `contracts` 模組，消除懸掛引用。
+- v7 (2026-06-01)：GOLDEN-BASELINE plan 升版 v1→v2（補 §2 U7 產出物明確定義三表＋§5 依據檔名同步至本檔 v6），§8.3 對應檔名指標同步更新 `_plan_v1.md` → `_plan_v2.md`，消除懸掛引用。
+- v6 (2026-06-01)：TRANSLATE-BOOK plan 再改寫升版 v3→v4（對齊 DOMAIN-NORM v1／GLOSSARY-CORE v2 上游簽章：級聯查詢明寫、融合優先權更正為歷史真理優先、補 Backfill 知識飛輪；新增 §2 U10 產出物明確定義），§8.5 與 §5 對應檔名同步更新 v3→v4，§8.5 產出欄補列內聚元件＋消費上游＋零 Schema/零環境變數宣告。
+- v5 (2026-06-01)：TRANSLATE-BOOK plan 改寫升版 v2→v3（補 §2 U8 程式流程與判斷＋U9 資料流程），§8.5 與 §5 對應檔名同步更新（`2026-05-28_*_plan_v2` → `2026-06-01_TRANSLATE-BOOK_書籍並行翻譯與雙語故事板引導_plan_v3.md`），§8.5 產出補列 `StructureAssembler`。
+- v4 (2026-06-01)：PIPE-CORE plan 落地建立（`baton/2026-06-01_PIPE-CORE_三層解耦調度骨架_plan_v1.md`），§8.3 狀態 ⬜→✅ 並回填檔名與產出（`pipelines/` 空骨架 orchestrator／context／factory／base_strategy／__init__＋對齊四合約 Pydantic schema＋`tests/test_pipe_core.py` contract test）；同步勘誤 §8.5 已 ✅ 之 PIPE-RESUME 漏計入 §8.7，總計 17→18（1 spec＋17 plan）、已存在 7→9（補 PIPE-CORE＋PIPE-RESUME）／待建立 10→9。
+- v3 (2026-06-01)：GOLDEN-BASELINE plan 落地建立（`baton/2026-06-01_GOLDEN-BASELINE_黃金基準存盤與退化比對_plan_v1.md`），§8.3 狀態 ⬜→✅ 並回填檔名與產出（含三維度存盤 D1/D2/D3＋`tools/golden_baseline.py` capture/diff＋紅綠燈判準）；§8.7 彙總計數同步（已存在 6→7／待建立 11→10）。
+- v2 (2026-06-01)：新增 §8「完整改版 plan 路線圖與所需 plan 清單」——依路線圖五階段（基建前置／定規骨架／三大真理源／縱向五路絞殺＋橫跨共用模組／收官進階）盤點全部 17 份子文件（1 spec + 16 plan；✅ 已存在 6／⬜ 待建立 11），五張表各含「文件類型（spec/plan）／描述／狀態／對應檔案／產出／依賴」六欄；§8.7 補缺口（TRANSLATOR 須升格獨立真理源 plan／QUEUE-1 雙版本殘留決議／§5 整理版檔名待修）。同步 §0、§99.1 改版觸發範圍 §1–§7 → §1–§8。
+- v1 (2026-06-01)：初版建立，由 `PipelineCore_流程重構_整理版.md` 蒸餾為標準 plan 格式；定義三層解耦／物理四 Phase 四份合約／五條策略管線／三大共用真理源／Early-Emit 雙軌／影子並行縱向五路絞殺／既有計畫對齊七大規格軸。
