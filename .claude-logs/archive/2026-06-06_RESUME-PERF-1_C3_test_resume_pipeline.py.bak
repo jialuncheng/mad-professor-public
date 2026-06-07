@@ -1,0 +1,873 @@
+# === [PIPE-RESUME C6 START] ===
+"""PIPE-RESUME C6：ResumePipeline 策略分派與四 Phase 契約單元測試。
+
+依據：plan §6.1 + tasks §8 C6。全程 mock LLM/Embedding（不實打 API）；
+以 monkeypatch 隔離既有 processor 與真理源，驗證四 Phase 合約交付與關鍵行為。
+"""
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import paper_manager  # noqa: E402
+import settings  # noqa: E402
+import pipelines.resume_pipeline as rp  # noqa: E402
+from pipelines.context import PipelineContext  # noqa: E402
+from pipelines.contracts import (  # noqa: E402
+    BilingualMarkdownSpec,
+    GlossaryReadySpec,
+    IngestionMetadataSpec,
+    RagDbSpec,
+)
+from pipelines.factory import PipelineFactory  # noqa: E402
+from pipelines.resume_pipeline import ResumePipeline  # noqa: E402
+from processor.rag_processor import _is_chunk_meaningful  # noqa: E402
+
+
+def _doc(text: str):
+    """最小 LangChain Document 替身（_is_chunk_meaningful 只讀 page_content）。"""
+    return types.SimpleNamespace(page_content=text, metadata={})
+
+
+def _ctx(**kw) -> PipelineContext:
+    base = dict(doc_type="resume", paper_id="p1", pdf_path="/tmp/p1.pdf", owner_id=7)
+    base.update(kw)
+    return PipelineContext(**base)
+
+
+# ─────────────────── 1. 策略分派 ───────────────────
+
+
+def test_factory_dispatch_resume():
+    """① get_strategy('resume') 回 ResumePipeline 實例、門檻 ≥3。"""
+    s = PipelineFactory.get_strategy("resume")
+    assert type(s).__name__ == "ResumePipeline"
+    assert isinstance(s, ResumePipeline)
+    assert s.rag_char_threshold == 3
+
+
+def test_no_doctype_branch_in_strategy():
+    """② 策略內無 doc_type 硬編碼路由分支（doc_type 僅作參數/風格傳遞）。"""
+    import inspect
+
+    src = inspect.getsource(rp)
+    assert "doc_type ==" not in src
+    assert "doc_type==" not in src
+
+
+# ─────────────────── 2. P1 私有輔助（純邏輯）───────────────────
+
+
+def test_detect_source_lang():
+    """③ source_lang 啟發式：CJK 顯著 → zh、ASCII → en。"""
+    assert ResumePipeline._detect_source_lang("這是一份中文履歷內容範例" * 3) == "zh"
+    assert ResumePipeline._detect_source_lang("John Doe Software Engineer Python") == "en"
+
+
+def test_extract_contact():
+    """④ phone/email regex 抽取（既有 metadata_extractor 無此二欄）。"""
+    s = ResumePipeline()
+    phone, email = s._extract_contact("Email: john@example.com Tel: 0912-345-678")
+    assert email == "john@example.com"
+    assert "912" in phone
+
+
+def test_resolve_title_priority():
+    """⑤ title：candidate_name（最可信）→ 首個 # 行 → paper_name。"""
+    s = ResumePipeline()
+    assert s._resolve_title({"candidate_name": {"value": "王小明"}}, "# 別人\n", "stem") == "王小明"
+    assert s._resolve_title({}, "# 李大華\n內容", "stem") == "李大華"
+    assert s._resolve_title({}, "no heading line", "stem") == "stem"
+
+
+def test_load_tiles(tmp_path):
+    """⑥ tiled JSON：dict→取 sections list、list→直接用。"""
+    f = tmp_path / "t.json"
+    f.write_text(json.dumps({"sections": [{"a": 1}]}), encoding="utf-8")
+    assert ResumePipeline._load_tiles(f) == [{"a": 1}]
+    f.write_text(json.dumps([{"x": 2}]), encoding="utf-8")
+    assert ResumePipeline._load_tiles(f) == [{"x": 2}]
+
+
+# ─────────────────── 3. P1 Ingestion 契約 ───────────────────
+
+
+def _mock_p1_processors(monkeypatch):
+    class FakeRP:
+        def __init__(self, *a, **k):
+            pass
+
+        def parse(self, pdf, outdir):
+            md = Path(outdir) / "p1.md"
+            md.write_text("# 王小明\nPython Docker 工程師\njohn@x.com", encoding="utf-8")
+            return str(md)
+
+    class FakeDA:
+        def __init__(self, *a, **k):
+            pass
+
+        def analyze(self, p, dt):
+            return p
+
+    class FakeMd:
+        def __init__(self, *a, **k):
+            pass
+
+        def process(self, i, o):
+            # === [RESUME-P3 C5 START] ===
+            # C1 opt-out 後 _build_tiles 直接複製 JsonProcessor 的 processed JSON 為 tiled
+            #（不再經 TilingProcessor）；故 mock 須輸出含有效 heading section 的 JSON，
+            # tiles 才反映真實 opt-out 行為（取代舊 {"sections": []}）。
+            Path(o).write_text(
+                json.dumps({"sections": [
+                    {"type": "text", "level": 1, "title": "王小明", "content": []}
+                ]}),
+                encoding="utf-8",
+            )
+            # === [RESUME-P3 C5 END] ===
+            return o
+
+    class FakeTiling:
+        def __init__(self, *a, **k):
+            pass
+
+        def process(self, i, o, doc_type=""):
+            Path(o).write_text(
+                json.dumps({"sections": [{"type": "text"}]}), encoding="utf-8"
+            )
+            return o
+
+    monkeypatch.setattr(rp, "ResumeProcessor", FakeRP)
+    monkeypatch.setattr(rp, "DocAnalyzer", FakeDA)
+    monkeypatch.setattr(rp, "MarkdownProcessor", FakeMd)
+    monkeypatch.setattr(rp, "JsonProcessor", FakeMd)
+    monkeypatch.setattr(rp, "TilingProcessor", FakeTiling)
+    monkeypatch.setattr(
+        ResumePipeline, "_extract_metadata",
+        lambda self, p: {
+            "candidate_name": {"value": "王小明"},
+            "domain": {"value": "程式設計"},
+        },
+    )
+
+
+def test_run_phase1_contract(tmp_path, monkeypatch):
+    """⑦ P1 交付 IngestionMetadataSpec：title=candidate_name、不含 Abstract/LCC/Glossary、raw_metadata 穿線。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    _mock_p1_processors(monkeypatch)
+    pdf = tmp_path / "p1.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+
+    s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] 穿線載體 self._raw_meta → ctx.raw_metadata（C2/C3）===
+    ctx = _ctx(pdf_path=str(pdf))
+    spec = s.run_phase1(ctx)
+    # === [PIPE-RESUME v9 C6 END] ===
+
+    assert isinstance(spec, IngestionMetadataSpec)
+    assert spec.title == "王小明"
+    # 不含 Abstract/LCC/Glossary：凍結合約結構保證（extra='forbid'）
+    for forbidden in ("abstract", "lcc", "glossary", "translated_abstract", "domain_name"):
+        assert not hasattr(spec, forbidden)
+    assert len(spec.tiles) == 1
+    # === [PIPE-RESUME v9 C6 START] raw_metadata 整包穿線（domain 三軸結構 + regex phone/email）===
+    assert s._meta_value(ctx.raw_metadata, "domain") == "程式設計"
+    assert ctx.raw_metadata["email"]["value"] == "john@x.com"
+    assert "phone" in ctx.raw_metadata          # regex 抽取欄（值可空）
+    # === [PIPE-RESUME v9 C6 END] ===
+
+
+# ─────────────────── 4. P2 Glossary & Context Prep 契約 ───────────────────
+
+
+def _mock_p2_common(monkeypatch, summary="原文摘要", translated="中文摘要", domain_name="Computer Science"):
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            return translated
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "履歷全文 Python")
+    monkeypatch.setattr(ResumePipeline, "_make_summary", lambda self, t: summary)
+    monkeypatch.setattr(ResumePipeline, "_resolve_domain_name", lambda self, lcc: domain_name)
+
+
+def _ctx_with_ingestion(source_lang="en", raw_metadata=None):
+    ctx = _ctx()
+    ctx.ingestion = IngestionMetadataSpec(title="王小明", source_lang=source_lang, tiles=[])
+    # === [PIPE-RESUME v9 C6 START] raw_metadata 為 v9 P2 唯一 domain 載體（廢 self._raw_meta）===
+    ctx.raw_metadata = raw_metadata if raw_metadata is not None else {}
+    # === [PIPE-RESUME v9 C6 END] ===
+    return ctx
+
+
+def test_run_phase2_flag_off(monkeypatch):
+    """⑧ 旗標 OFF：glossary={}、lcc=raw（normalize 直回）、abstract/translated/domain_name 交付。"""
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)
+    monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: raw or "general")
+    _mock_p2_common(monkeypatch)
+    s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] domain 改由 ctx.raw_metadata 穿線（廢 self._raw_meta）===
+    spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
+    # === [PIPE-RESUME v9 C6 END] ===
+    assert isinstance(spec, GlossaryReadySpec)
+    assert spec.abstract == "原文摘要"
+    assert spec.translated_abstract == "中文摘要"
+    assert spec.domain_name == "Computer Science"
+    assert spec.glossary == {}
+    assert spec.lcc == "程式設計"
+
+
+def test_run_phase2_lcc_fallback_general(monkeypatch):
+    """⑨ raw_domain 為空 → lcc fallback 'general'。"""
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)
+    monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: raw or "")
+    _mock_p2_common(monkeypatch)
+    s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] ===
+    spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": ""}}))
+    # === [PIPE-RESUME v9 C6 END] ===
+    assert spec.lcc == "general"
+
+
+def test_run_phase2_glossary_selfheal_injects_summary_and_lcc(monkeypatch):
+    """⑩ 旗標 ON 缺詞自癒：extract_terms 注入原文摘要(source_text)與 LCC(domain)、upsert 冪等。"""
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", True)
+    monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: "QA")
+    _mock_p2_common(monkeypatch)
+    captured = {}
+
+    class FakeGM:
+        def __init__(self, *a, **k):
+            pass
+
+        def query_cascade(self, s, t, domain):
+            return {}  # 缺詞
+
+        def extract_terms(self, src, tgt, s, t, domain):
+            captured.update(src=src, tgt=tgt, domain=domain)
+            return [("Python", "派森")]
+
+        def upsert_terms(self, pairs, s, t, domain):
+            captured["upsert"] = len(pairs)
+            return len(pairs)
+
+    monkeypatch.setattr(rp, "GlossaryManager", FakeGM)
+    s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] ===
+    spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
+    # === [PIPE-RESUME v9 C6 END] ===
+    assert captured["src"] == "原文摘要"     # 原文摘要注入抽詞 source
+    assert captured["tgt"] == "中文摘要"     # 譯文摘要為 translated（雙用）
+    assert captured["domain"] == "QA"        # LCC 注入 domain
+    assert captured["upsert"] == 1
+    assert spec.glossary == {"Python": "派森"}
+
+
+def test_run_phase2_cache_hit_zero_extract(monkeypatch):
+    """⑪ query_cascade 命中（cache hit）→ 不呼 extract_terms（0 抽詞 LLM）。"""
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", True)
+    monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: "QA")
+    _mock_p2_common(monkeypatch)
+
+    class FakeGM:
+        def __init__(self, *a, **k):
+            pass
+
+        def query_cascade(self, s, t, domain):
+            return {"AI": "人工智慧"}  # 命中
+
+        def extract_terms(self, *a, **k):
+            raise AssertionError("cache hit 不應呼叫 extract_terms")
+
+        def upsert_terms(self, *a, **k):
+            raise AssertionError("cache hit 不應呼叫 upsert_terms")
+
+    monkeypatch.setattr(rp, "GlossaryManager", FakeGM)
+    s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] ===
+    spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
+    # === [PIPE-RESUME v9 C6 END] ===
+    assert spec.glossary == {"AI": "人工智慧"}
+
+
+# ─────────────────── 5. P3 Translation & Restore 契約 ───────────────────
+
+
+def test_run_phase3_bypass_doctype_and_carryforward(tmp_path, monkeypatch):
+    """⑫ P3：100% Bypass（整份 1 次 content 翻譯）、InjectionContext.doc_type='resume'、translated_abstract 沿用 P2。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            captured["ctx"] = ctx
+            captured["text_type"] = text_type
+            captured["calls"] = captured.get("calls", 0) + 1
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    monkeypatch.setattr(
+        ResumePipeline, "_read_source_text", lambda self, ctx: "English resume Python"
+    )
+    s = ResumePipeline()
+    ctx = _ctx()
+    ctx.ingestion = IngestionMetadataSpec(title="x", source_lang="en", tiles=[])
+    ctx.glossary_ready = GlossaryReadySpec(
+        abstract="a", lcc="QA", glossary={"Python": "派森"},
+        translated_abstract="中文摘要", domain_name="CS",
+    )
+    spec = s.run_phase3(ctx)
+
+    assert isinstance(spec, BilingualMarkdownSpec)
+    assert captured["calls"] == 1                     # 100% Bypass：整份一次
+    assert captured["text_type"] == "content"
+    assert captured["ctx"].doc_type == "resume"       # 正式商務中文風格
+    assert captured["ctx"].zh_summary == "中文摘要"    # zh_summary←translated_abstract
+    assert spec.translated_abstract == "中文摘要"      # 沿用 P2（必填）
+    # === [RESUME-P3 META-HOTFIX-1] run_phase3 prepend meta header（title='x' h1、本例無 raw_metadata 故無 meta 列）===
+    _zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+    _en = Path(spec.final_en_path).read_text(encoding="utf-8")
+    assert _zh.startswith("# x") and _zh.rstrip().endswith("中文譯文")        # header + body
+    assert _en.startswith("# x") and _en.rstrip().endswith("English resume Python")
+
+
+# ─────────────────── 6. P4 Async RAG ───────────────────
+
+
+def test_is_chunk_meaningful_resume_threshold():
+    """⑬ P4 過濾：resume ≥3 保技能詞、email/phone/url 保留、純數字/空過濾、academic ≥10。"""
+    assert _is_chunk_meaningful(_doc("Python"), "resume") is True
+    assert _is_chunk_meaningful(_doc("Docker"), "resume") is True
+    assert _is_chunk_meaningful(_doc("john@example.com"), "resume") is True   # email
+    assert _is_chunk_meaningful(_doc("0912-345-678"), "resume") is True       # phone
+    assert _is_chunk_meaningful(_doc("https://github.com/x"), "resume") is True  # url
+    assert _is_chunk_meaningful(_doc("2024"), "resume") is False              # 純數字
+    assert _is_chunk_meaningful(_doc(""), "resume") is False                  # 空
+    assert _is_chunk_meaningful(_doc("Python"), "academic") is False          # academic ≥10
+
+
+def test_run_phase4_failure_isolation(tmp_path, monkeypatch):
+    """⑭ P4 失敗隔離：拋出（交 Orchestrator 標 failed）、不動 reading_ready。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: None)
+
+    class FakeRag:
+        def __init__(self, *a, **k):
+            pass
+
+        def _create_vector_store(self, *a, **k):
+            raise RuntimeError("embed fail")
+
+    monkeypatch.setattr(rp, "RagProcessor", FakeRag)
+    s = ResumePipeline()
+    ctx = _ctx()
+    ctx.bilingual = BilingualMarkdownSpec(
+        final_zh_path=str(tmp_path / "zh.md"), final_en_path=str(tmp_path / "en.md"),
+        translated_abstract="x",
+    )
+    ctx.reading_ready = True  # 主鏈已解鎖
+    with pytest.raises(RuntimeError):
+        s.run_phase4(ctx)
+    assert ctx.reading_ready is True  # P4 失敗不影響主鏈
+
+
+def test_run_phase4_success(tmp_path, monkeypatch):
+    """⑮ P4 成功：讀 index_meta.json（chunks_total）交付 RagDbSpec。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: 42)
+
+    class FakeRag:
+        def __init__(self, *a, **k):
+            pass
+
+        def _create_vector_store(self, md, vpath, doc_type="", paper_db_id=None):
+            Path(vpath).mkdir(parents=True, exist_ok=True)
+            (Path(vpath) / "index_meta.json").write_text(
+                json.dumps({"chunks_total": 5}), encoding="utf-8"
+            )
+            return vpath
+
+    monkeypatch.setattr(rp, "RagProcessor", FakeRag)
+    s = ResumePipeline()
+    ctx = _ctx()
+    ctx.bilingual = BilingualMarkdownSpec(
+        final_zh_path=str(tmp_path / "zh.md"), final_en_path="x", translated_abstract="x",
+    )
+    spec = s.run_phase4(ctx)
+    assert isinstance(spec, RagDbSpec)
+    assert spec.paper_chunk_count == 5
+    assert spec.index_meta["chunks_total"] == 5
+
+
+# === [PIPE-RESUME v9 C6 START] v9 整合契約測試（影子後綴 / P2 摘要先行 / P3 constraints / C5 寫庫）===
+# ─────────────────── 7. v9 整合（raw_metadata 穿線 / 影子 / 步序 / constraints）───────────────────
+
+
+def test_p1_shadow_title_suffix(tmp_path, monkeypatch):
+    """v9-①：_shadow paper_id → title 帶 (測試)；非 shadow → 乾淨標題（前端列表肉眼可辨）。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    _mock_p1_processors(monkeypatch)
+    pdf = tmp_path / "p1.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+
+    s = ResumePipeline()
+    clean = s.run_phase1(_ctx(paper_id="p1", pdf_path=str(pdf)))
+    assert clean.title == "王小明"                       # 非 shadow：乾淨標題
+    shadow = s.run_phase1(_ctx(paper_id="p1_shadow", pdf_path=str(pdf)))
+    assert shadow.title == "王小明 (測試)"                # shadow：加綴 (測試)
+
+
+def test_run_phase2_summary_before_lcc(monkeypatch):
+    """v9-②：P2 步序「摘要先行」——_make_summary 早於 normalize_to_lcc 被呼叫（跨路統一）。"""
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)
+    order = []
+    monkeypatch.setattr(
+        rp, "normalize_to_lcc",
+        lambda raw, context_text=None: (order.append("lcc"), "QA")[1],
+    )
+    _mock_p2_common(monkeypatch)
+    monkeypatch.setattr(
+        ResumePipeline, "_make_summary",
+        lambda self, t: (order.append("summary"), "原文摘要")[1],
+    )
+    s = ResumePipeline()
+    s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
+    assert order == ["summary", "lcc"]                   # ①摘要先行 → ②LCC
+
+
+def test_run_phase3_injects_resume_constraints(tmp_path, monkeypatch):
+    """v9-③：P3 InjectionContext.constraints 非空、與 _RESUME_CONSTRAINTS 一致、含履歷規則；
+    且影子標題後綴不污染內容（final_zh 純譯文、無 (測試)）。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            captured["ctx"] = ctx
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    monkeypatch.setattr(
+        ResumePipeline, "_read_source_text", lambda self, ctx: "English resume Python"
+    )
+    s = ResumePipeline()
+    ctx = _ctx(paper_id="p1_shadow")                     # 影子情境
+    ctx.ingestion = IngestionMetadataSpec(title="王小明 (測試)", source_lang="en", tiles=[])
+    ctx.glossary_ready = GlossaryReadySpec(
+        abstract="a", lcc="QA", glossary={}, translated_abstract="中文摘要", domain_name="CS",
+    )
+    spec = s.run_phase3(ctx)
+
+    inj = captured["ctx"]
+    assert inj.constraints                                # 非空
+    assert inj.constraints == rp._RESUME_CONSTRAINTS      # 與模組常數一致
+    assert any("Email" in c for c in inj.constraints)     # 含履歷專屬規則
+    # === [RESUME-P3 META-HOTFIX-1] (測試) 後綴現出現在 meta header h1（baron 拍板保留、便於觀察）===
+    assert "# 王小明 (測試)" in Path(spec.final_zh_path).read_text(encoding="utf-8")
+
+
+def test_c5_shadow_write_uses_raw_metadata(tmp_path, monkeypatch):
+    """v9-④：C5 影子寫庫——upsert_paper 收到的 meta_dict 沿用 ctx.raw_metadata 整包 +
+    title 繼承 (測試)；domain_name 傳入。模擬 run_pipeline_shadow（mock Orchestrator/upsert）。"""
+    import asyncio
+
+    import pipelines  # noqa: F401
+    import web_server
+
+    monkeypatch.setattr(web_server, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    def fake_upsert(base, owner, pid, paths, metadata=None, **kw):
+        captured["metadata"] = metadata
+        captured["domain"] = kw.get("domain")
+        captured["original_filename"] = kw.get("original_filename")
+        return 1
+
+    monkeypatch.setattr(web_server.paper_manager, "upsert_paper", fake_upsert)
+
+    class FakeOrch:
+        def run(self, ctx):
+            ctx.raw_metadata = {
+                "candidate_name": {"value": "王小明"},
+                "domain": {"value": "程式設計"},
+                "email": {"value": "john@x.com", "source": "regex"},
+            }
+            ctx.ingestion = IngestionMetadataSpec(
+                title="王小明 (測試)", source_lang="en", tiles=[]
+            )
+            ctx.glossary_ready = GlossaryReadySpec(
+                abstract="a", lcc="QA", glossary={},
+                translated_abstract="中文摘要", domain_name="CS",
+            )
+            ctx.bilingual = BilingualMarkdownSpec(
+                final_zh_path=str(tmp_path / "zh.md"),
+                final_en_path=str(tmp_path / "en.md"),
+                translated_abstract="中文摘要",
+            )
+            return ctx
+
+    monkeypatch.setattr(pipelines, "Orchestrator", FakeOrch)
+
+    owner, pid = 777002, "pC5"
+    try:
+        asyncio.run(
+            web_server.run_pipeline_shadow(owner, pid, "/tmp/x.pdf", "resume", "x.pdf")
+        )
+    finally:
+        with web_server.tasks_lock:
+            web_server.processing_tasks.pop((owner, f"{pid}_shadow"), None)
+
+    meta = captured["metadata"]
+    assert meta is not None
+    # 整包 raw_metadata 保真（對齊 A 軌 upsert_paper(self._metadata)）
+    assert "candidate_name" in meta and "domain" in meta and "email" in meta
+    assert meta["title"]["value"] == "王小明 (測試)"      # title 繼承 P1 (測試) 後綴
+    assert meta["translated_abstract"]["value"] == "中文摘要"
+    assert captured["domain"] == "CS"                      # domain_name 傳入
+# === [PIPE-RESUME v9 C6 END] ===
+
+
+# === [PIPE-RESUME SHADOW-HOTFIX-2 START] ===
+def test_shadow_write_appends_translated_title_suffix(tmp_path, monkeypatch):
+    """SHADOW-HOTFIX-2：raw_metadata 帶 translated_title（乾淨）→ 影子寫庫補綴 (測試)。
+    （C6 test_c5_shadow_write_uses_raw_metadata 的 FakeOrch 未帶 translated_title、走 guard=False，
+    不覆蓋本行為，故獨立補測。）"""
+    import asyncio
+
+    import pipelines  # noqa: F401
+    import web_server
+
+    monkeypatch.setattr(web_server, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    def fake_upsert(base, owner, pid, paths, metadata=None, **kw):
+        captured["metadata"] = metadata
+        return 1
+
+    monkeypatch.setattr(web_server.paper_manager, "upsert_paper", fake_upsert)
+
+    class FakeOrch:
+        def run(self, ctx):
+            ctx.raw_metadata = {
+                "candidate_name": {"value": "王小明"},
+                "translated_title": {"value": "王小明 (李小明)"},  # 乾淨、無 (測試)
+            }
+            ctx.ingestion = IngestionMetadataSpec(
+                title="王小明 (測試)", source_lang="en", tiles=[]
+            )
+            ctx.glossary_ready = GlossaryReadySpec(
+                abstract="a", lcc="QA", glossary={},
+                translated_abstract="中文摘要", domain_name="CS",
+            )
+            ctx.bilingual = BilingualMarkdownSpec(
+                final_zh_path=str(tmp_path / "zh.md"),
+                final_en_path=str(tmp_path / "en.md"),
+                translated_abstract="中文摘要",
+            )
+            return ctx
+
+    monkeypatch.setattr(pipelines, "Orchestrator", FakeOrch)
+
+    owner, pid = 777003, "pHF2"
+    try:
+        asyncio.run(
+            web_server.run_pipeline_shadow(owner, pid, "/tmp/x.pdf", "resume", "x.pdf")
+        )
+    finally:
+        with web_server.tasks_lock:
+            web_server.processing_tasks.pop((owner, f"{pid}_shadow"), None)
+
+    meta = captured["metadata"]
+    assert meta["translated_title"]["value"] == "王小明 (李小明) (測試)"  # 補綴 (測試)
+
+
+def test_shadow_hotfix2_company_conflict_removed():
+    """SHADOW-HOTFIX-2：B 軌兩處「公司保留原文」矛盾已移除（交回母提示詞 L5）。"""
+    import processor.translator as tr
+
+    # ⑤ constraints：不再保留公司原文（只留產品）
+    joined = "".join(rp._RESUME_CONSTRAINTS)
+    assert "公司" not in joined
+    assert "產品名稱保留原文" in rp._RESUME_CONSTRAINTS[0]
+    # ② STYLE_HINTS：resume 不再含「公司名」
+    assert "公司" not in tr._STYLE_HINTS["resume"]
+# === [PIPE-RESUME SHADOW-HOTFIX-2 END] ===
+
+
+# === [RESUME-P3 C5 START] RESUME-P3 逐 heading 契約與退化測試 ===
+def _p3_ctx_with_sections(sections, source_lang="en", translated_abstract="中文摘要"):
+    """建 P3 ctx：ingestion(tiles=sections) + glossary_ready。"""
+    ctx = _ctx()
+    ctx.ingestion = IngestionMetadataSpec(title="x", source_lang=source_lang, tiles=sections)
+    ctx.glossary_ready = GlossaryReadySpec(
+        abstract="a", lcc="QA", glossary={},
+        translated_abstract=translated_abstract, domain_name="CS",
+    )
+    return ctx
+
+
+def test_p1_optout_no_tiling_call(tmp_path, monkeypatch):
+    """C1 opt-out：履歷 P1 _build_tiles 不呼叫 TilingProcessor（消滅 TextTiling 429 根源）。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    _mock_p1_processors(monkeypatch)
+
+    class TripTiling:
+        def __init__(self, *a, **k):
+            pass
+
+        def process(self, *a, **k):
+            raise AssertionError("C1 opt-out：履歷不應呼叫 TilingProcessor")
+
+    monkeypatch.setattr(rp, "TilingProcessor", TripTiling)  # 觸線：被呼叫即失敗
+    pdf = tmp_path / "p1.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+
+    s = ResumePipeline()
+    spec = s.run_phase1(_ctx(pdf_path=str(pdf)))  # 未拋 = opt-out ✓
+    assert len(spec.tiles) == 1                    # tiles 來自 JsonProcessor processed（非 Tiling）
+
+
+def test_p3_per_section_title_and_text_translated(tmp_path, monkeypatch):
+    """C3：逐 section 標題/正文分流翻譯；標題已翻、無整行英文標題殘留。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
+    captured = {"title": 0, "content": 0}
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            captured[text_type] = captured.get(text_type, 0) + 1
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    sections = [
+        {"title": "Experience", "level": 2,
+         "content": [{"type": "text", "content": "Senior Engineer at ACME (2020-2024)"}],
+         "children": []},
+        {"title": "Education", "level": 2,
+         "content": [{"type": "text", "content": "PhD in Computer Science, MIT 2016"}],
+         "children": []},
+    ]
+    s = ResumePipeline()
+    spec = s.run_phase3(_p3_ctx_with_sections(sections))
+
+    assert captured["title"] == 2                   # 兩標題分流翻譯（text_type="title"）
+    assert captured["content"] == 2                 # 兩正文分流翻譯（text_type="content"）
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+    assert "## Experience" not in zh and "## Education" not in zh  # 無整行英文標題殘留
+    assert "中文譯文" in zh
+
+
+def test_p3_no_doubling(tmp_path, monkeypatch):
+    """C3：final_zh 為純譯文、無英文原文回顯（doubling 歸零）。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    sections = [
+        {"title": "Experience", "level": 2,
+         "content": [{"type": "text", "content": "Senior Engineer at ACME"}], "children": []},
+        {"title": "Education", "level": 2,
+         "content": [{"type": "text", "content": "PhD Computer Science"}], "children": []},
+    ]
+    s = ResumePipeline()
+    spec = s.run_phase3(_p3_ctx_with_sections(sections))
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+    # 原文英文不應回顯於中文版（無 doubling）
+    assert "Senior Engineer at ACME" not in zh
+    assert "PhD Computer Science" not in zh
+
+
+def test_p3_degraded_single_giant_section_fallback(tmp_path, monkeypatch):
+    """C4：單一巨 section（heading 退化）→ 降級整檔翻譯 fallback、仍交付契約。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "WHOLE EN RESUME")
+    captured = {"calls": 0, "types": []}
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            captured["calls"] += 1
+            captured["types"].append(text_type)
+            return "中文整檔"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    # 單一巨 section（heading 數 < 2 + 佔比 100%）→ 退化
+    sections = [{"title": "All", "level": 1,
+                 "content": [{"type": "text", "content": "x" * 500}], "children": []}]
+    s = ResumePipeline()
+    spec = s.run_phase3(_p3_ctx_with_sections(sections))
+
+    assert captured["calls"] == 1                   # 整檔一次翻譯（非逐 section）
+    assert captured["types"] == ["content"]         # fallback 走 content 整檔
+    assert isinstance(spec, BilingualMarkdownSpec)
+    assert spec.translated_abstract == "中文摘要"     # 契約沿用 P2
+
+
+def test_p3_contract_fields_complete(tmp_path, monkeypatch):
+    """C3/C4：run_phase3 交付 BilingualMarkdownSpec 欄位齊備、translated_abstract 沿用 P2。"""
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    sections = [
+        {"title": "A", "level": 2, "content": [{"type": "text", "content": "alpha text one"}], "children": []},
+        {"title": "B", "level": 2, "content": [{"type": "text", "content": "beta text two"}], "children": []},
+    ]
+    s = ResumePipeline()
+    spec = s.run_phase3(_p3_ctx_with_sections(sections, translated_abstract="沿用摘要"))
+    assert isinstance(spec, BilingualMarkdownSpec)
+    assert spec.final_zh_path and Path(spec.final_zh_path).exists()
+    assert spec.final_en_path and Path(spec.final_en_path).exists()
+    assert spec.translated_abstract == "沿用摘要"
+    assert spec.rag_tree_json is None
+# === [RESUME-P3 C5 END] ===
+
+
+# === [RESUME-P3 HEADING-HOTFIX-1 START] ===
+def test_p3_heading_level_by_recursion_depth(tmp_path, monkeypatch):
+    """HEADING-HOTFIX-1：標題層級來自遞迴深度（非資料 level 欄）。
+
+    3 層巢狀 section、所有節點 level 欄故意全填 1（複現原短路陷阱）：
+    頂層→h2(##)、子層→h3(###)、孫層→h4(####)，證明階層由 children 深度推算、
+    不再塌成單一 h1。translate 回顯原文以便定位標題行。
+    """
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            return text                                   # 回顯：便於定位標題與層級
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    # 全節點 level=1（恆=1 扁平死欄陷阱）；文字長度均衡避免觸 C4 退化 fallback
+    sections = [
+        {"title": "TopExperience", "level": 1,
+         "content": [{"type": "text", "content": "alpha content text here"}],
+         "children": [
+             {"title": "MidCompany", "level": 1,
+              "content": [{"type": "text", "content": "beta content text here"}],
+              "children": [
+                  {"title": "LeafRole", "level": 1,
+                   "content": [{"type": "text", "content": "gamma content text here"}],
+                   "children": []},
+              ]},
+         ]},
+    ]
+    s = ResumePipeline()
+    spec = s.run_phase3(_p3_ctx_with_sections(sections))
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+
+    # 三層各自的層級由遞迴深度推算（depth 0/1/2 → h2/h3/h4）
+    assert "## TopExperience" in zh
+    assert "### MidCompany" in zh
+    assert "#### LeafRole" in zh
+    # 防塌陷：頂層非 h1（不得退回單一層級），且至少存在兩個不同層級
+    assert "# TopExperience" not in zh.replace("## TopExperience", "")
+    assert ("## " in zh) and ("### " in zh)
+# === [RESUME-P3 HEADING-HOTFIX-1 END] ===
+
+
+# === [RESUME-P3 PARA-HOTFIX-1 START] ===
+def test_p3_text_paragraph_blank_line_normalized():
+    """PARA-HOTFIX-1：text 段落單 \\n 升級 \\n\\n（空行）、pipe table rows 保留單 \\n。
+
+    直接驗 helper `_normalize_paragraph_breaks`：
+    (a) 兩段以單一 \\n 分隔 → 升級為 \\n\\n（CommonMark 才會分段）。
+    (b) pipe table 兩 rows 以單 \\n 分隔 → 保留（table 結構不被拆散）。
+    """
+    raw = "第一段文字\n第二段文字\n\n| 欄位 | 值 |\n| 學歷 | 博士 |"
+    out = ResumePipeline._normalize_paragraph_breaks(raw)
+
+    # (a) 一般段落：單 \n 升級成 \n\n
+    assert "第一段文字\n\n第二段文字" in out
+    assert "第一段文字\n第二段文字" not in out      # 不應殘留單 \n（黏連）
+    # (b) pipe table rows：單 \n 保留、不被升級拆散
+    assert "| 欄位 | 值 |\n| 學歷 | 博士 |" in out
+# === [RESUME-P3 PARA-HOTFIX-1 END] ===
+
+
+# === [RESUME-P3 META-HOTFIX-1 START] ===
+def test_p3_meta_header_rendered(tmp_path, monkeypatch):
+    """META-HOTFIX-1：P1 meta 經 run_phase3 組無序列表 header 進 final。
+
+    # 姓名（沿用 title 含 (測試)）+ 領域/機構/電話/Email 各為獨立 list item（一欄一行、
+    規範保證、不軟換行）；走現有 ctx.raw_metadata 旁路 + ctx.ingestion.title。
+    """
+    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
+
+    class FakeTr:
+        def __init__(self, *a, **k):
+            pass
+
+        def translate(self, text, ctx, mode, text_type="content"):
+            return "中文譯文"
+
+    monkeypatch.setattr(rp, "Translator", FakeTr)
+    sections = [
+        {"title": "工作經歷", "level": 1,
+         "content": [{"type": "text", "content": "alpha text"}], "children": []},
+        {"title": "學歷", "level": 1,
+         "content": [{"type": "text", "content": "beta text"}], "children": []},
+    ]
+    ctx = _p3_ctx_with_sections(sections)
+    ctx.ingestion = IngestionMetadataSpec(title="王小明 (測試)", source_lang="en", tiles=sections)
+    ctx.raw_metadata = {
+        "domain": {"value": "IC 設計", "source": "llm", "confidence": "high"},
+        "organization": {"value": "聯詠科技", "source": "llm", "confidence": "high"},
+        "phone": {"value": "0912-345-678", "source": "regex", "confidence": "high"},
+        "email": {"value": "wang@example.com", "source": "regex", "confidence": "high"},
+    }
+    s = ResumePipeline()
+    spec = s.run_phase3(ctx)
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+
+    # (a) 以 # 王小明 (測試) 開頭（沿用 title 原值、後綴保留）
+    assert zh.startswith("# 王小明 (測試)")
+    # (b) 四欄標籤與值都進 final
+    assert "IC 設計" in zh and "聯詠科技" in zh
+    assert "0912-345-678" in zh and "wang@example.com" in zh
+    # (c) 各欄為獨立無序列表行（一欄一行、防 CommonMark 軟換行）
+    assert "\n- **領域**：IC 設計" in zh
+    assert "\n- **機構**：聯詠科技" in zh
+    assert "\n- **電話**：0912-345-678" in zh
+    assert "\n- **Email**：wang@example.com" in zh
+# === [RESUME-P3 META-HOTFIX-1 END] ===
+# === [PIPE-RESUME C6 END] ===
