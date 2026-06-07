@@ -1,0 +1,185 @@
+# === [RAG-ASYNC] ===
+"""B 軌自有 RAG 索引引擎（RAG-ASYNC，PIPE Phase 4 共用真理源）。
+
+設計原則（plan v2 §2 U1-U2 / D3 / D5）：
+- **零依賴 A 軌** `processor/rag_processor`：本模組自含 chunk-md 生成、size-cap 子切、
+  chunk 門檻過濾；通用基建（`config.EmbeddingModel` / FAISS / `models.PaperChunk` ORM）
+  於 C4 落庫階段接入，屬框架而非 A 軌業務邏輯。
+- **Strategy B 摘要增強型分塊**（PIPE-SPEC §1.4 / §1.4.1）：每節點一個 `#`，掛
+  `Context:` 與 `Chapter Summary:` 前綴，使 `MarkdownHeaderTextSplitter([("#",...)])`
+  切得開（修 B 軌 chunks=1 退化）。
+- **size-cap 二段子切**（D5）：節點內文超 `EMBEDDING_MAX_TOKENS_PER_ITEM` 時遞迴子切，
+  每子塊重貼同一前綴（修 A 軌 header-only 無 size-cap、書籍大章塌超大 chunk 弱點）。
+
+C3 範圍：chunk-md 生成 + size-cap + 自實作門檻過濾（產 chunk 文件清單、不嵌入）。
+C4 範圍（後續）：split → filter → Embedding → FAISS → paper_chunks → index_meta → RagDbSpec。
+"""
+
+import logging
+import re
+from typing import Any, Dict, List, Optional
+
+from settings import EMBEDDING_MAX_TOKENS_PER_ITEM
+
+logger = logging.getLogger(__name__)
+
+
+# ── 自實作 chunk 門檻（語意等價 A 軌 _is_chunk_meaningful；不 import rag_processor）──
+# 對齊 MODEL-1+2 B2 過濾規則：空→過濾 / 含 email|phone|url→保留 / 純數字→過濾 /
+# resume,slides ≥3 實質字元、其餘 ≥10（實質字元＝去 markdown 噪聲後）。
+_MIN_CHUNK_CONTENT_CHARS = 10
+_MIN_CHUNK_RESUME_SLIDES = 3
+_MD_NOISE_RE = re.compile(r"[#*_~`\-+>|\[\]\s]")
+_PURE_DIGIT_RE = re.compile(r"^\d+$")
+_CRITICAL_INFO_RE = re.compile(
+    r"([\w.+-]+@[\w-]+\.[\w.-]+"      # email
+    r"|\+?\d[\d\s\-]{6,}\d"            # phone（國際電話格式）
+    r"|https?://\S+)"                 # url
+)
+
+# ── size-cap（D5；§7.2 待調實作參數）──
+# token 估值採 char-based 保守上界（對齊 MODEL-11 config.embed_documents 的 len() 估法）。
+_SIZE_CAP_TOKENS = EMBEDDING_MAX_TOKENS_PER_ITEM
+_SUBCHUNK_OVERLAP_CHARS = 50  # 小重疊保跨子塊語意連續、利召回
+_PARA_SPLIT_RE = re.compile(r"\n\n+")
+
+
+def estimate_tokens(text: str) -> int:
+    """char-based token 上界估（保守；對齊 MODEL-11 embed_documents 的 len() 估法）。"""
+    return len(text or "")
+
+
+def is_chunk_meaningful(text: str, doc_type: str = "") -> bool:
+    """chunk 內文是否值得入向量庫（語意等價 A 軌 `_is_chunk_meaningful`、接受字串）。
+
+    優先序：空→False / 含結構化資訊(email|phone|url)→True / 純數字→False /
+    resume,slides ≥3、其餘 ≥10（去 markdown 噪聲後實質字元）。
+    """
+    t = (text or "").strip()
+    if not t:
+        return False
+    if _CRITICAL_INFO_RE.search(t):
+        return True
+    if _PURE_DIGIT_RE.match(t):
+        return False
+    clean = _MD_NOISE_RE.sub("", t)
+    if doc_type in ("resume", "slides"):
+        return len(clean) >= _MIN_CHUNK_RESUME_SLIDES
+    return len(clean) >= _MIN_CHUNK_CONTENT_CHARS
+
+
+# ── Strategy B chunk-md 生成 ──
+def build_chunk_markdown(
+    sections: List[Dict[str, Any]],
+    section_summaries: Optional[Dict[str, str]] = None,
+    doc_type: str = "",
+    size_cap_tokens: int = _SIZE_CAP_TOKENS,
+) -> List[str]:
+    """依 P3 section 樹自生 Strategy B 摘要增強型分塊 markdown 清單（每元素＝一 chunk）。
+
+    每節點 DFS（pre-order）：
+      Stage 1 header augment：`# {chunk_key}` + `Context: {doc_type} > {section_title}`
+                              + `Chapter Summary: {summary}`（summary 缺則略此行降級）+ 內文。
+      Stage 2 size-cap：內文 token 估值超 `size_cap_tokens` → 遞迴子切，每子塊重貼同一前綴。
+    內文無實質意義（`is_chunk_meaningful`=False）之容器/噪聲節點不產 chunk（children 仍遞迴）。
+
+    Args:
+        sections: P3 譯後 section 樹節點清單，每節點 `{title, content:[{type,content}], children:[...]}`。
+        section_summaries: `{node_key|title: 繁中摘要}`（GlossaryReadySpec.section_summaries）。
+        doc_type: 'resume' / 'academic' / ...（影響門檻 + Context 標註）。
+        size_cap_tokens: size-cap 觸發門檻（預設 EMBEDDING_MAX_TOKENS_PER_ITEM）。
+
+    Returns:
+        chunk markdown 字串清單（保 DFS 順序）。
+    """
+    summaries = section_summaries or {}
+    out: List[str] = []
+    _walk(sections, summaries, doc_type, size_cap_tokens, out, path_prefix="")
+    logger.info(
+        "[RAG-ASYNC] build_chunk_markdown 完成 doc_type=%s sections_in=%d chunks_out=%d",
+        doc_type, len(sections or []), len(out),
+    )
+    return out
+
+
+def _walk(
+    sections: List[Dict[str, Any]],
+    summaries: Dict[str, str],
+    doc_type: str,
+    cap: int,
+    out: List[str],
+    path_prefix: str,
+) -> None:
+    for sec in sections or []:
+        if not isinstance(sec, dict):
+            continue
+        title = (sec.get("title") or "").strip()
+        node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
+        content = _node_content_text(sec)
+        if title and is_chunk_meaningful(content, doc_type):
+            summary = (summaries.get(node_key) or summaries.get(title) or "").strip()
+            for body in _size_cap_split(content, cap):
+                out.append(_render_chunk(node_key, title, summary, doc_type, body))
+        for child in sec.get("children", []) or []:
+            _walk([child], summaries, doc_type, cap, out, node_key)
+
+
+def _node_content_text(sec: Dict[str, Any]) -> str:
+    """彙整節點 content 為單一字串（text/raw item 內文；容器節點回空）。"""
+    parts: List[str] = []
+    for item in sec.get("content", []) or []:
+        if isinstance(item, dict):
+            c = item.get("content", "") or ""
+            if c:
+                parts.append(c)
+        elif isinstance(item, str) and item.strip():
+            parts.append(item)
+    return "\n\n".join(parts)
+
+
+def _render_chunk(chunk_key: str, section_title: str, summary: str, doc_type: str, body: str) -> str:
+    """Stage 1 header augment：組單一 Strategy B chunk markdown。"""
+    lines = [f"# {chunk_key}", f"Context: {doc_type} > {section_title}"]
+    if summary:
+        lines.append(f"Chapter Summary: {summary}")
+    return "\n".join(lines) + "\n\n" + body
+
+
+def _size_cap_split(content: str, cap: int) -> List[str]:
+    """Stage 2 size-cap：內文 token 估值 ≤ cap → 單塊；否則遞迴子切（段落貪婪 + 過長硬切）。"""
+    content = content or ""
+    if estimate_tokens(content) <= cap:
+        return [content]
+    pieces: List[str] = []
+    buf = ""
+    for para in _PARA_SPLIT_RE.split(content):
+        para = para.strip()
+        if not para:
+            continue
+        if estimate_tokens(para) > cap:
+            if buf:
+                pieces.append(buf)
+                buf = ""
+            pieces.extend(_hard_slice(para, cap))
+            continue
+        cand = (buf + "\n\n" + para) if buf else para
+        if estimate_tokens(cand) > cap:
+            if buf:
+                pieces.append(buf)
+            buf = para
+        else:
+            buf = cand
+    if buf:
+        pieces.append(buf)
+    return pieces or [content]
+
+
+def _hard_slice(text: str, cap: int) -> List[str]:
+    """單段超 cap → 定窗硬切 + 小 overlap（保跨子塊語意連續）。"""
+    out: List[str] = []
+    step = max(1, cap - _SUBCHUNK_OVERLAP_CHARS)
+    i = 0
+    while i < len(text):
+        out.append(text[i:i + cap])
+        i += step
+    return out

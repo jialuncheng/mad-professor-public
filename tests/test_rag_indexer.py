@@ -1,0 +1,131 @@
+# === [RAG-ASYNC] ===
+"""RAG-ASYNC C3 單元測試：processor/rag_indexer.py chunk-md 生成 + size-cap + 門檻過濾。
+
+覆蓋：① 多塊切分 ② Strategy B 格式 ③ summary 缺失降級 ④ size-cap 子切（子塊重貼前綴 /
+小節點不觸發）⑤ 門檻 ≥3 + 結構化資訊保留 ⑥ 零依賴 A 軌（無 import rag_processor）。
+"""
+
+import re
+
+from processor.rag_indexer import (
+    build_chunk_markdown,
+    is_chunk_meaningful,
+    estimate_tokens,
+)
+
+
+def _sec(title, text, children=None):
+    return {
+        "title": title,
+        "content": [{"type": "text", "content": text}] if text else [],
+        "children": children or [],
+    }
+
+
+# ── ① 多塊切分：N section → ≈N chunk（每 chunk 一個 #）──
+def test_build_multi_chunk_one_hash_each():
+    sections = [
+        _sec("Summary", "資深技術主管，十年晶片演算法經驗。"),
+        _sec("Skills", "Python、C++、深度學習模型壓縮。"),
+        _sec("Education", "國立台灣大學 電機工程 博士。"),
+    ]
+    chunks = build_chunk_markdown(sections, doc_type="resume")
+    assert len(chunks) == 3
+    for c in chunks:
+        # 每 chunk 恰一個 h1（# 開頭單井號）
+        assert c.startswith("# ")
+        assert len(re.findall(r"(?m)^# ", c)) == 1
+
+
+# ── ② Strategy B 格式：# + Context + Chapter Summary + 內文 ──
+def test_strategy_b_format_with_summary():
+    sections = [_sec("Skills", "Python、C++、AI。")]
+    summaries = {"Skills": "候選人核心技術技能。"}
+    chunks = build_chunk_markdown(sections, summaries, doc_type="resume")
+    assert len(chunks) == 1
+    c = chunks[0]
+    assert c.startswith("# Skills\n")
+    assert "Context: resume > Skills" in c
+    assert "Chapter Summary: 候選人核心技術技能。" in c
+    assert "Python、C++、AI。" in c
+    # 順序：# → Context → Chapter Summary → 空行 → 內文
+    assert c.index("Context:") < c.index("Chapter Summary:") < c.index("Python")
+
+
+# ── ③ summary 缺失 → 降級（無 Chapter Summary 行、仍有效）──
+def test_summary_missing_degrades_no_chapter_line():
+    sections = [_sec("Skills", "Python、C++、AI。")]
+    chunks = build_chunk_markdown(sections, section_summaries={}, doc_type="resume")
+    assert len(chunks) == 1
+    c = chunks[0]
+    assert "Chapter Summary:" not in c          # 降級：無摘要行
+    assert c.startswith("# Skills\n")
+    assert "Context: resume > Skills" in c
+    assert "Python、C++、AI。" in c
+
+
+# ── ④ size-cap：大節點子切多塊、每子塊重貼前綴；小節點不觸發 ──
+def test_size_cap_subsplits_and_reprefixes():
+    # 三段、每段 ~30 字，cap=40 → 必觸發子切（總長 > 40）
+    big = "\n\n".join(["甲" * 30, "乙" * 30, "丙" * 30])
+    sections = [_sec("BigChapter", big)]
+    summaries = {"BigChapter": "本章摘要。"}
+    chunks = build_chunk_markdown(sections, summaries, doc_type="book", size_cap_tokens=40)
+    assert len(chunks) >= 2  # 已子切
+    for c in chunks:
+        # 每子塊都重貼同一 augmentation 前綴
+        assert c.startswith("# BigChapter\n")
+        assert "Context: book > BigChapter" in c
+        assert "Chapter Summary: 本章摘要。" in c
+    # 子塊內文合計涵蓋原三段（去前綴後）
+    merged = "".join(c.split("\n\n", 1)[1] for c in chunks)
+    assert "甲" in merged and "乙" in merged and "丙" in merged
+
+
+def test_size_cap_small_node_single_chunk():
+    sections = [_sec("Tiny", "短內文一段。")]
+    chunks = build_chunk_markdown(sections, doc_type="resume", size_cap_tokens=2048)
+    assert len(chunks) == 1  # 小節點不觸發子切
+
+
+# ── ⑤ 門檻：純數字過濾 / resume 短技能保留 / 結構化資訊保留 ──
+def test_filter_pure_number_dropped():
+    assert is_chunk_meaningful("2024", "resume") is False
+    # 純數字節點不產 chunk
+    chunks = build_chunk_markdown([_sec("Year", "2024")], doc_type="resume")
+    assert chunks == []
+
+
+def test_filter_resume_short_skill_kept():
+    # resume/slides 門檻 ≥3 實質字元（去 markdown 噪聲後）——與 A 軌等價：
+    assert is_chunk_meaningful("Go", "resume") is False       # clean "Go"=2 < 3 → 過濾
+    assert is_chunk_meaningful("AWS", "resume") is True        # 3 字元技能詞 → 保留
+    assert is_chunk_meaningful("Python", "resume") is True
+    assert is_chunk_meaningful("PhD", "academic") is False     # 3 字元但非 resume/slides、< 10
+
+
+def test_filter_structured_info_kept_regardless_length():
+    assert is_chunk_meaningful("a@b.com", "academic") is True       # email
+    assert is_chunk_meaningful("https://x.io", "academic") is True  # url
+    assert is_chunk_meaningful("+886 912 345 678", "academic") is True  # phone
+
+
+# ── ⑥ 容器節點（無內文、有 children）不產自身 chunk、children 遞迴 ──
+def test_container_node_no_self_chunk_children_recursed():
+    sections = [
+        _sec("Working Experience", "", children=[
+            _sec("Company A", "OLED 演算法研發主管。"),
+            _sec("Company B", "SoC 多媒體晶片設計。"),
+        ]),
+    ]
+    chunks = build_chunk_markdown(sections, doc_type="resume")
+    # 容器 "Working Experience"（無內文）不產 chunk；兩子節點各一
+    assert len(chunks) == 2
+    keys = [c.splitlines()[0] for c in chunks]
+    assert "# Working Experience/Company A" in keys
+    assert "# Working Experience/Company B" in keys
+
+
+def test_estimate_tokens_charbased():
+    assert estimate_tokens("") == 0
+    assert estimate_tokens("abcd") == 4
