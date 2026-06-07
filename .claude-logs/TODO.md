@@ -116,6 +116,26 @@
 > **⚠️ 行為變更 + 重捕**：在 B軌 `final_zh`/`final_en` 開頭新增 meta header → 衝擊 golden D1/D2；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`，與 TILING/SHADOW/RESUME-P3/HEADING/PARA 同屬 B軌輸出變更類）。
 > **⚠️ domain 現況**：P1 抽出的 `domain` 為描述句（非乾淨標籤）、header 照實渲染；乾淨標籤須改 P1 domain prompt（另一任務）。
 
+### BE-Refactor RAG-ASYNC P4 RAG 索引共用真理源與全 P2 摘要
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Spec Sync：母 plan v10 §U4/§U6 + PIPE-SPEC §1.1②/§1.4.1/§1.3 同步（含修 resume P3「100% Bypass」doc-drift）+ 兩檔 §99.2 Revision；零 Python | `195e12b` |
+| C2 | Contract：`contracts.py` GlossaryReadySpec `section_summaries:Dict` 取代 Book 專用 `chapter_summaries:List`（五路通用節點摘要、key 對位巢狀樹）+ 對齊 resume_pipeline/test_pipe_core | `8c76274` |
+| C3 | Chunk Build：新建 `processor/rag_indexer.py`（**零 import rag_processor**）Strategy B header augment〔# + Context + Chapter Summary〕+ size-cap 二段子切〔超 EMBEDDING_MAX_TOKENS_PER_ITEM 遞迴子切、子塊重貼前綴〕+ 自實作 is_chunk_meaningful；+`tests/test_rag_indexer.py` 10 測試 | `53755c4` |
+| C4 | Vector Persist：`rag_indexer.index()` split→filter→Embedding→FAISS(MAX_INNER_PRODUCT) save_local→paper_chunks〔embedding 交易外、paper_db_id None 降級〕→自寫 index_meta→RagDbSpec；+3 ④ conformance〔B 軌 vector store→rag_retriever.load_vector_store 讀回召回〕 | `a09128e` |
+| C5 | P2 Six-Step：`run_phase2` 四步→統一六步：⑤批次產原文 section 摘要〔1 次 LLM〕+ ⑥全文摘要引導批次翻繁中〔1 次〕→ section_summaries；三安全鎖〔批次非 N / 非致命 logger.warning exc_info+extra_fields 不阻 reading_ready / 可量測 performance_metric phase=P2〕；LLM 交易外；+3 測試 | `d9b03f4` |
+| C6 | Wire P4：**砍 `from processor.rag_processor import RagProcessor`**；run_phase3 附加封存譯後 section 結構至旁路 `ctx.rag_sections`〔context.py 加旁路欄、不改 final_zh/en 輸出〕；run_phase4 改呼 `rag_indexer.index(rag_sections + section_summaries)` 不再餵 final_zh.md；P4 測試改 mock rag_indexer + run_phase3 旁路測試 | `13abdfa` |
+| C7 | Checkout：Conformance 五維度驗收全綠（目標規格 U1-U6 / tasks §6 grep+全套件 525 passed / 不可動清單 git diff 空〔rag_processor/rag_retriever/pipeline_core 零改〕/ 提示詞 9 份 / msg 完整）+ baton 一次性歸檔（plan_v2/tasks/C1-C7 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-07_RAG-ASYNC_P4_RAG索引共用真理源與全P2摘要_plan_v2.md`（§99.2 v2、§7 定案紀錄 D1-D7、七輪設計討論收斂）
+> **PIPE 對齊**：P4 升格為與 P2（DomainNormalizer/GlossaryManager）、P3（Translator）對稱之**共用真理源**——新建 B 軌自有 `rag_indexer`（全重寫、零依賴 A 軌 `rag_processor`）依 P3 結構自生 Strategy B 摘要增強分塊 + size-cap 二段子切；section_summaries 收斂為**統一 P2 六步流程**（全五路通用、單一節點摘要欄、繁中、批次）。
+> **根因/修復**：B 軌 P4（PIPE-RESUME C5 暫行首落地）餵 reading-view `final_zh.md`（section 皆 `##`、唯一 `#`＝META header）給只切 `#` 之切塊器 → **chunks=1**（13358 字元塌成 1 塊、RAG 召回崩潰）；C6 改餵 P3 旁路結構化譯後 section（每節點 `#`）→ **chunks 量級回升**。順手修 A 軌 header-only 無 size-cap、書籍大章塌超大 chunk 之潛在弱點。
+> **七定案（D1-D7）**：D1 單一 `section_summaries` 欄（section≡chapter 同為文件樹節點）/ D2 繁中·P2 六步 / D3 全重寫零 import·A 軌整檔不碰·通用基建照用 / D4 ctx 旁路（小）·磁碟（book 大）/ D5 size-cap 二段子切 / D6 production 僅 resume 首落地·合約+模組五路通用 / D7 修 §1.3 P3 doc-drift。
+> **⚠️ C6 動 context.py（第 3 改檔）**：plan D4 ctx 旁路所需（`arbitrary_types_allowed` 不允許動態屬性）、已 .bak、屬 plan sanctioned 新增旁路欄（同 raw_metadata 先例）。
+> **⚠️ baron 運維（非 commit）+ 重捕**：影子上傳履歷驗 chunks 1→≥20 + retrieve 分數分布 + reading_ready 延遲（performance_metric 已埋點）；B 軌輸出變更 → resume 重捕 Golden Baseline。
+> **後續（plan §7.2 待調實作參數）**：size-cap token 門檻/overlap、⑥ 批次翻譯拆批門檻；其餘四路 section_summaries production 隨各自 PIPE-N pipeline 跟上。
+
 ### BE-Refactor RESUME-PERF-1 run_phase3 逐 section 翻譯並行化
 
 | Commit | 內容 | Hash |
@@ -123,7 +143,7 @@
 | C1 | `pipelines/resume_pipeline.py` 收集-組裝解耦：新增 `_collect_render_slots`〔遞迴鏡像 DFS pre-order、不翻譯、append title/content/raw slot、title 記 `level=min(2+depth,6)`〕+ 重構 `_restore_sections_markdown`〔collect→**序列**翻譯→按序組裝〕+ 移除無外部引用 `_restore_one_section`；仍序列、輸出 byte 等價〔既有 29 resume 測試全綠為鐵證〕；HEADING/PARA/META 邏輯原值搬移不改；`# === [RESUME-PERF-1 C1] ===` 包裹 | `b110742` |
 | C2 | `resume_pipeline.py` 翻譯段序列→`ThreadPoolExecutor(max_workers=LLM_MAX_CONCURRENT)` 受限並行、`{future:index}` 保序回填〔實際 API 併發受**既有** `LLMClient._api_semaphore`(6) 限、不新增鎖〕+ 單 unit future 拋例外→退原文 `slot["text"]`+`logger.warning(event=resume_translate_unit_fallback)` 異常隔離保交付；組裝/退化/zh* 不動；resume 29 passed〔行為等價〕、全套件 504 passed | `d5abdf0` |
 | C3 | `tests/test_resume_pipeline.py` 追加 4 並行專屬測試〔`order_byte_equal` 多層 byte 等拍保序 / `concurrency_capped` patch `LLM_MAX_CONCURRENT=2` lock 計數驗峰值 ≤ 2 / `unit_error_isolated` 單 unit 拋例外退原文 spec 仍交付 / `degraded_single_call` 退化 `_translate_whole` calls==1 不並行〕；resume 33 passed、全套件 508 passed | `待 baron 回填` |
-| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U2 限流/U3 等價/U4 保序/U5 異常隔離/U6 退化不變 由 C3 測試自證；效能 wall-clock 屬 baron E2E〕/ tasks §6 grep+全套件 508 passed / 不可動清單 git 證據〔C1-C2 僅 resume_pipeline.py、C3 僅 test_resume_pipeline.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 6 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U2 限流/U3 等價/U4 保序/U5 異常隔離/U6 退化不變 由 C3 測試自證；效能 wall-clock 屬 baron E2E〕/ tasks §6 grep+全套件 508 passed / 不可動清單 git 證據〔C1-C2 僅 resume_pipeline.py、C3 僅 test_resume_pipeline.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 6 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `be49abe` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`（§99.2 v2、§7 OQ Q1-Q7 核准）
 > **根因**：B軌 `run_phase3` 逐 heading section 翻譯完全序列（`_restore_one_section` 同步 `_t` + 遞迴序列、無並行原語）；A軌等價結構實測 translate ~315-330s（佔單份 76%），B軌 resume 影子上傳承此瓶頸。
@@ -858,6 +878,9 @@
 - ✅ ~~SHADOW-HOTFIX-2 — B軌影子標題 (測試) 後綴與履歷公司名翻譯修復~~（已落地、`3d2778a`；3 處移除矛盾交回母提示詞：web_server translated_title 補 (測試) + translator.py:40 STYLE_HINTS 移除公司名 + resume_pipeline.py:109 constraints 改產品-only；全套件 486 passed；⚠️ B軌譯文改變、與 TILING-HOTFIX-1 合併重捕 Golden Baseline；學歷 doubling 殘留歸 RESUME-P3）
 - ✅ ~~RESUME-P3 B軌履歷翻譯品質重構~~（已落地、C1 `aec1f6f` + C2 `0efa7e8` + C3 `52e0769` + C4 `6658b48` + C5 `3a30394` + C6 收官；廢 100% Bypass→逐 heading section 翻譯+還原〔pipelines 內重建不耦合 A 軌〕+ 履歷 P1 opt-out TextTiling〔滅 429〕+ resume 停用 U4 + heading 退化 fallback；resume 26 測試、全套件 495 passed；⚠️ 改 B軌輸出、與 TILING/SHADOW 合併重捕 Golden；通用化 chunking 歸 INFRA-3）
 - ✅ ~~RESUME-P3 HEADING-HOTFIX-1 標題層級遞迴深度~~ `7c8a0da` / ~~PARA-HOTFIX-1 正文段落空行~~ `2772822` / ~~META-HOTFIX-1 P1 meta 進 final header~~ `2ba97fc`（B軌履歷三件套：標題層級/段落/文件 header）
-- ✅ VISION-HOTFIX-1 Vision 轉錄 temperature 確定化（高、`chat_with_images` 加 temperature + ResumeProcessor 傳 0；A軌 pdf2md + B軌 P1 共用、須重捕 resume golden）（hash 待回填）
+- ✅ ~~VISION-HOTFIX-1 Vision 轉錄 temperature 確定化~~（已落地 `3d5be32`、`chat_with_images` 加 temperature + ResumeProcessor 傳 0；A軌 pdf2md + B軌 P1 共用、須重捕 resume golden）
 - ✅ ~~RESUME-PERF-1 run_phase3 逐 section 翻譯並行化~~（已落地、C1 `b110742` + C2 `d5abdf0` + C3/C4 收官；序列→ThreadPool 受限並行〔保序靠 slot index、限流靠既有 `_api_semaphore`、單 unit 失敗退原文〕；C1 解耦先鎖等價、C2 並行、C3 4 並行測試；行為等價、預估 ~5x；baron 拍板不必等五路）
+
+### RAG-ASYNC (✅ 已完成·PIPE Phase 4 共用真理源)
+- ✅ ~~RAG-ASYNC P4 RAG 索引共用真理源與全 P2 摘要~~（已落地、C1 `195e12b` + C2 `8c76274` + C3 `53755c4` + C4 `a09128e` + C5 `d9b03f4` + C6 `13abdfa` + C7 收官；新建 `processor/rag_indexer.py` B 軌自有索引引擎〔全重寫零 import rag_processor、Strategy B header augment + size-cap 二段子切 + 自實作 is_chunk_meaningful、index() 落庫 byte 相容 ④ 合約〕+ GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步〔批次產+翻 section_summaries、三安全鎖〕+ run_phase3 旁路封存 ctx.rag_sections + run_phase4 改呼 rag_indexer〔砍 rag_processor 耦合〕+ 母 plan v10/PIPE-SPEC 同步〔含修 §1.3 P3 doc-drift〕；全套件 525 passed；**chunks=1 退化修復、B 軌全鏈零 A 軌依賴**；⚠️ baron 須影子 E2E 驗 chunks 量級 + resume 重捕 Golden；其餘四路 production 隨各自 PIPE-N 跟上）
 

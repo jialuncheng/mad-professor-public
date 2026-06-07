@@ -45,6 +45,18 @@
   - `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md` — C6 Run（Unit Tests：新建 tests/test_glossary_core.py 5 測試——聯合唯一約束/級聯優先覆寫/書籍融合優先/Chat 注入/CLI 回填；mock LLM 不實打 API + file-based SQLite FK ON fixture）
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
+### RAG-ASYNC 系列（P4 共用真理源）
+- ✅ **RAG-ASYNC P4 RAG 索引共用真理源（2026-06-07 plan → 2026-06-08 Tasks → C1-C6 + C7 收官）**
+  - `2026-06-08_RAG-ASYNC_Check_提示詞.md` — C7 Check（Conformance 五維度驗收〔plan_v2 §2 U1-U6 / tasks §6 grep+pytest / 不可動清單 git 證據 / 提示詞稽核 / msg 完整性〕→ 全合規後 TODO 結案〔C1-C7 完成表 + hash 全量自癒〕+ baton 一次性 mv 歸檔〔plan_v2→plans//tasks→tasks//C1-C7 報告→executions/〕+ baton 乾淨度；嚴禁自發 commit、msg 寫 /tmp；RAG-ASYNC 全案結案、chunks=1 修復、B 軌零 A 軌依賴）
+  - `2026-06-08_RAG-ASYNC_C6_run_提示詞.md` — C6 Run（BE-Refactor Wire P4：`run_phase3` 附加封存譯後 section 結構〔title/level/content/children〕至旁路 `ctx.rag_sections`〔is_zh/degraded 容器降級、不改 final_zh/en 輸出〕；`run_phase4` 移除 `from processor.rag_processor import RagProcessor`〔L73〕改呼 `rag_indexer.index(譯後結構 + section_summaries + doc_type)`、不再餵 final_zh_path；交付 RagDbSpec 不變、paper_db_id None 降級；test P4 改 mock 驗 indexer 呼叫/chunks 量級/零 LLM；`# === [RAG-ASYNC C6 START/END] ===` + 改前 .bak；B 軌全鏈零 rag_processor 依賴、chunks=1 退化修復）
+  - `2026-06-08_RAG-ASYNC_C5_run_提示詞.md` — C5 Run（BE-Refactor P2 統一六步：`resume_pipeline.run_phase2` 四步→六步——② 產章節摘要〔原文、非 book 1 次批次、可併①〕+ ⑥ 以全文摘要引導一次性批次翻全部章節摘要→繁中 section_summaries〔超 token 拆批〕；三安全鎖〔批次非 N / 非致命 logger.warning exc_info+extra_fields 不阻 reading_ready / 可量測 performance_metric phase=P2〕；交付 GlossaryReadySpec.section_summaries；test 加 3 測試〔key 對位/批次次數/異常 fallback〕；`# === [RAG-ASYNC C5 START/END] ===` + 改前 .bak）
+  - `2026-06-08_RAG-ASYNC_C4_run_提示詞.md` — C4 Run（BE-Refactor 向量落庫 + ④ conformance：`rag_indexer.py` 加 `index()`——build_chunk_markdown → MarkdownHeaderTextSplitter 切 # → is_chunk_meaningful 過濾 → EmbeddingModel 批量 → FAISS.from_documents(MAX_INNER_PRODUCT) save_local → paper_chunks 批量〔embedding 交易外、極短交易、paper_db_id None 降級僅 FAISS+meta〕→ 自寫 index_meta.json → RagDbSpec；禁 import rag_processor〔write_index_meta_json 自實作〕；test 加 conformance〔B 軌 vector store → rag_retriever.load_vector_store 讀回召回〕；`# === [RAG-ASYNC C4 START/END] ===` + 改前 .bak）
+  - `2026-06-08_RAG-ASYNC_C3_run_提示詞.md` — C3 Run（BE-Refactor 新模組：新建 `processor/rag_indexer.py`〔禁 import rag_processor〕——`build_chunk_markdown` DFS 走訪 section 樹 Stage 1 Strategy B header augment〔# + Context + Chapter Summary〔缺則略降級〕+ 內文〕+ Stage 2 size-cap 遞迴子切〔超 EMBEDDING_MAX_TOKENS_PER_ITEM、子塊重貼前綴〕+ 自實作 _is_chunk_meaningful〔≥3 + email/phone/url 保留〕；本 commit 僅產 chunk 文件清單不嵌入；新增 `tests/test_rag_indexer.py`〔多塊/格式降級/size-cap/門檻〕；檔頂 `# === [RAG-ASYNC] ===`）
+  - `2026-06-08_RAG-ASYNC_C2_run_提示詞.md` — C2 Run（BE-Refactor 合約欄位：`contracts.py` GlossaryReadySpec 移除 Book 專用 chapter_summaries、新增 `section_summaries: Optional[Dict[str,str]]=None`〔五路通用節點摘要、key 對位巢狀樹、繁中、frozen/extra=forbid 不破〕+ 全庫對齊引用〔resume_pipeline/test_pipe_core〕+ pytest 全綠；`# === [RAG-ASYNC C2 START/END] ===` 包裹 + 改前 .bak）
+  - `2026-06-08_RAG-ASYNC_C1_run_提示詞.md` — C1 Run（DOC-Refactor 規格文件同步：母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔含修 resume P3「100% Bypass」doc-drift〕+ 兩檔 §99.2 Revision；HTML 註解包裹 + 改前 .bak；零 Python；baton 暫存不 git add、僅 .bak 入庫）
+  - `2026-06-08_RAG-ASYNC_Tasks_提示詞.md` — Tasks（BE-Refactor 依 plan_v2 七定案 D1-D7 拆 commit；C1 規格同步〔母 plan v10 + PIPE-SPEC、含修 §1.3 P3 doc-drift〕不含 Python；代碼段 processor/rag_indexer.py 全重寫零 import rag_processor + GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步 section_summaries + run_phase4 改呼自有模組 + Strategy B/size-cap 子切 + ④ conformance 測試；最後 Checkout 一次性 baton 歸檔；§0.5 成果盤點 + §8 六維度表）
+  - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
+
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
   - `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不給 commit；OP-1 Checkout plan baton→plans 保留 _v2、OP-2 五路黃金基準物理存盤、OP-3 自動化 Regression Diff 比對腳本 + 同步 TODO.md）
@@ -242,18 +254,18 @@
 
 ## 依時間排序（最新 15 筆）
 
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_Check_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C6_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C5_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C4_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C3_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C2_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_C1_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC_Tasks_提示詞.md`
+- 2026-06-07 — `2026-06-07_RAG-ASYNC_plan_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_Check_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_C3_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_C2_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md`
 - 2026-06-06 — `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md`
 - 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_doc_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_plan_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_META-HOTFIX-1_doc_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_PARA-HOTFIX-1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_PARA-HOTFIX-1_doc_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-P3_HEADING-HOTFIX-1_doc_提示詞.md`
-- 2026-06-06 — `2026-06-06_MODEL-11_C4_run_提示詞.md`
