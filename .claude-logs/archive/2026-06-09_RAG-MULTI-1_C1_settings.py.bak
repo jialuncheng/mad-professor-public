@@ -58,12 +58,6 @@ RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 # 預設 7 兼顧 prompt 不爆與多源 grounding；可 env override。
 RAG_MULTI_TOP_K = int(os.getenv("RAG_MULTI_TOP_K", "7"))
 
-# === [RAG-MULTI-1 C1 START] ===
-# 跨文件多篇檢索改「每篇保底覆蓋」（廢全域 top-k 飢餓；C2 消費、C2 後廢 RAG_MULTI_TOP_K）。
-RAG_MULTI_FLOOR_K = int(os.getenv("RAG_MULTI_FLOOR_K", "2"))         # 每篇保底 chunk 數（cross-doc 覆蓋下限）
-RAG_MULTI_MAX_CHUNKS = int(os.getenv("RAG_MULTI_MAX_CHUNKS", "15"))  # cross-doc context 總 chunk 上限（防 prompt 爆炸）
-# === [RAG-MULTI-1 C1 END] ===
-
 # === [API-PERF C3 START] U3 向量庫 / RAG cache LRU 上限 ===
 # 記憶體中同時駐留的活躍 FAISS 向量庫（rag_retriever.vector_stores）與 RAG cache
 # （ai_core._paper_cache）各自上限；超限時自動 LRU 淘汰最久未使用者（按需 Lazy Load）。
