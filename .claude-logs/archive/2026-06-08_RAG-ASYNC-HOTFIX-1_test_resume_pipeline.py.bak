@@ -490,40 +490,6 @@ def test_run_phase4_calls_rag_indexer_with_pathway(tmp_path, monkeypatch):
     assert captured["paper_db_id"] == 42
 
 
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] #2-B run_phase4 傳 rag_tree 寫入路徑 + 標題 ===
-def test_run_phase4_writes_rag_tree(tmp_path, monkeypatch):
-    """run_phase4 傳入 rag_tree_path（= paper_manager.rag_tree_path）+ title（= ingestion.title）給 index。"""
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: 42)
-    import processor.rag_indexer as ri
-    captured = {}
-
-    def _fake_index(sections, summaries, doc_type, vectors_dir, paper_db_id=None, **k):
-        captured.update(k)                                    # rag_tree_path / title / translated_title
-        return RagDbSpec(vectors_path=str(vectors_dir), paper_chunk_count=7,
-                         index_meta={"chunks_total": 7})
-
-    monkeypatch.setattr(ri, "index", _fake_index)
-    s = ResumePipeline()
-    ctx = _ctx(paper_id="p9")
-    ctx.ingestion = IngestionMetadataSpec(title="王小明", source_lang="en", tiles=[])
-    ctx.bilingual = BilingualMarkdownSpec(
-        final_zh_path=str(tmp_path / "zh.md"), final_en_path="x", translated_abstract="x",
-    )
-    ctx.rag_sections = [{"title": "技能", "content": [{"type": "text", "content": "Python"}], "children": []}]
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract="a", lcc="QA", glossary={}, translated_abstract="x", section_summaries={},
-    )
-    s.run_phase4(ctx)
-    # rag_tree_path 必為 paper_manager.rag_tree_path（final_{paper}_rag_tree.json）
-    expected = str(rp.paper_manager.rag_tree_path(tmp_path, ctx.owner_id, "p9"))
-    assert captured["rag_tree_path"] == expected
-    assert captured["rag_tree_path"].endswith("final_p9_rag_tree.json")
-    assert captured["title"] == "王小明"                       # ingestion.title 傳遞
-    assert captured["translated_title"] == "王小明"
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
-
-
 def test_run_phase3_populates_rag_sections_pathway(tmp_path, monkeypatch):
     """⑮b P3 旁路：run_phase3 逐 section 翻譯後封存譯後結構於 ctx.rag_sections（供 P4）。"""
     monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
@@ -554,66 +520,6 @@ def test_run_phase3_populates_rag_sections_pathway(tmp_path, monkeypatch):
     bodies = [sec["content"][0]["content"] for sec in ctx.rag_sections]
     assert all(b.startswith("ZH::") for b in bodies)
 # === [RAG-ASYNC C6 END] ===
-
-
-# === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] #1 P3→P4 跨 Phase 接縫整合測試 ===
-def test_seam_p3_to_p4_section_summary_attaches(tmp_path, monkeypatch):
-    """跨 Phase 接縫（先前缺的整合測試）：run_phase3（真翻譯使譯文≠原文 key）封存
-    ctx.rag_sections 帶 summary_key＝原文標題 path → 以 P2 原文 key 之 section_summaries
-    餵 P4 build_chunk_markdown → Chapter Summary **真的貼上**（含巢狀子節點 path）。
-
-    無 #1 修復時 P4 以譯後 node_key（ZH::…）查原文 key summaries → 全 MISS、無 Chapter Summary。
-    """
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
-
-    class FakeTr:
-        def __init__(self, *a, **k):
-            pass
-
-        def translate(self, text, ctx, mode, text_type="content"):
-            return f"ZH::{text}"      # 真翻譯：譯文≠原文 → key 基準必須穿線才對得上
-
-    monkeypatch.setattr(rp, "Translator", FakeTr)
-    monkeypatch.setattr(ResumePipeline, "_read_source_text", lambda self, ctx: "src")
-
-    s = ResumePipeline()
-    ctx = _ctx()
-    tiles = [{
-        "title": "Working Experience",
-        "content": [{"type": "text", "content": "Led OLED algorithm team."}],
-        "children": [
-            {"title": "Company A",
-             "content": [{"type": "text", "content": "Chip algorithm R&D lead."}],
-             "children": []},
-        ],
-    }]
-    ctx.ingestion = IngestionMetadataSpec(title="王小明", source_lang="en", tiles=tiles)
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract="a", lcc="QA", glossary={}, translated_abstract="摘要", domain_name="CS",
-    )
-
-    # P3：逐 section 翻譯 + 封存譯後結構（含 summary_key）
-    s.run_phase3(ctx)
-
-    # 接縫驗證①：rag_sections 每個 title slot 帶原文 path summary_key（譯後 title 另存）
-    skeys = [sec.get("summary_key") for sec in ctx.rag_sections]
-    assert "Working Experience" in skeys                       # 頂層原文 path
-    assert "Working Experience/Company A" in skeys             # 巢狀原文 path
-    assert all(sec["title"].startswith("ZH::") for sec in ctx.rag_sections)  # title 已譯
-
-    # P4：以 P2 原文 key 之 section_summaries 餵 build_chunk_markdown
-    from processor.rag_indexer import build_chunk_markdown
-    summaries = {
-        "Working Experience": "工作經歷摘要",
-        "Working Experience/Company A": "公司A經歷摘要",
-    }
-    chunks = build_chunk_markdown(ctx.rag_sections, summaries, doc_type="resume")
-    joined = "\n---\n".join(chunks)
-
-    # 接縫驗證②：跨譯 key 命中 → Chapter Summary 真的進 chunk（含巢狀子節點）
-    assert "Chapter Summary: 工作經歷摘要" in joined
-    assert "Chapter Summary: 公司A經歷摘要" in joined
-# === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
 
 
 # === [PIPE-RESUME v9 C6 START] v9 整合契約測試（影子後綴 / P2 摘要先行 / P3 constraints / C5 寫庫）===

@@ -1070,13 +1070,6 @@ class ResumePipeline(DocumentStrategy):
         vectors_dir = paper_manager.vectors_path(
             settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
         )
-        # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] rag_tree 寫入路徑（A 軌同位 final_{paper}_rag_tree.json）+ 標題 ===
-        rag_tree_path = paper_manager.rag_tree_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
-        )
-        # 履歷以姓名為標題、無雙語標題 → title/translated_title 暫同取 ingestion.title
-        _title = (ctx.ingestion.title if ctx.ingestion else None) or ctx.paper_id
-        # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
         # paper_db_id：None → rag_indexer.index 內部優雅降級（僅 FAISS、跳過 paper_chunks）
         paper_db_id = paper_manager.get_paper_db_id(ctx.owner_id, ctx.paper_id)
         if paper_db_id is None:
@@ -1091,10 +1084,6 @@ class ResumePipeline(DocumentStrategy):
             spec = rag_indexer.index(
                 rag_sections, section_summaries, "resume", vectors_dir,
                 paper_db_id=paper_db_id,
-                # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] === 補產 rag_tree.json（章節引用對等 A 軌）
-                rag_tree_path=str(rag_tree_path),
-                title=_title, translated_title=_title,
-                # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
             )
             logger.info(
                 "[PIPE-RESUME P4] %s RAG 完成 chunks=%d paper_chunks=%d vectors=%s",

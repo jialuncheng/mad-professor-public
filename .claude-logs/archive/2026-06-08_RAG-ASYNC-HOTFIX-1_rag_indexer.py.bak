@@ -17,9 +17,6 @@ C4 範圍（後續）：split → filter → Embedding → FAISS → paper_chunk
 
 import logging
 import re
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] === rag_tree.json 序列化
-import json
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
 from typing import Any, Dict, List, Optional
 
 from settings import EMBEDDING_MAX_TOKENS_PER_ITEM
@@ -120,12 +117,7 @@ def _walk(
         node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
         content = _node_content_text(sec)
         if title and is_chunk_meaningful(content, doc_type):
-            # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
-            # #1 跨譯 key 對位：P3 於譯後 section 存 summary_key=原文標題 path（與 P2 同基準），
-            # 首選以 summary_key 查 section_summaries；無（C3/C4 既有單元呼叫）則退回 node_key/title 向後相容。
-            skey = sec.get("summary_key") or ""
-            summary = (summaries.get(skey) or summaries.get(node_key) or summaries.get(title) or "").strip()
-            # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
+            summary = (summaries.get(node_key) or summaries.get(title) or "").strip()
             for body in _size_cap_split(content, cap):
                 out.append(_render_chunk(node_key, title, summary, doc_type, body))
         for child in sec.get("children", []) or []:
@@ -193,69 +185,6 @@ def _hard_slice(text: str, cap: int) -> List[str]:
     return out
 
 
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] #2-B 完整 rag_tree（key_map + 巢狀 + translated_title）===
-def build_rag_tree(
-    sections: List[Dict[str, Any]],
-    doc_type: str,
-    title: str = "",
-    translated_title: str = "",
-) -> Dict[str, Any]:
-    """依 P3 譯後 rag_sections 自建完整 rag_tree（對等 A 軌、供 rag_retriever 章節引用）。
-
-    key_map 之 key＝B 軌 chunk Header（= node_key，與 `build_chunk_markdown`/`_walk` 同式），
-    value＝該節點 text content 的 json_path（`/sections/{i}/content/0`），使
-    retriever `doc.metadata['Header'] → key_map → _get_node_from_path` 對得上。
-    """
-    tree_sections: List[Dict[str, Any]] = []
-    key_map: Dict[str, str] = {}
-    _walk_tree(sections or [], doc_type, "", tree_sections, key_map, "/sections")
-    return {
-        "title": title or "",
-        "translated_title": translated_title or title or "",
-        "summary": "",
-        "abstract": {"content": "", "translated_content": ""},
-        "sections": tree_sections,
-        "key_map": key_map,
-    }
-
-
-def _walk_tree(
-    sections: List[Dict[str, Any]],
-    doc_type: str,
-    path_prefix: str,
-    out_sections: List[Dict[str, Any]],
-    key_map: Dict[str, str],
-    json_base: str,
-) -> None:
-    """遞迴建 rag_tree 節點 + key_map（node_key↔chunk Header 不變式、與 `_walk` 同 node_key 算式）。"""
-    for i, sec in enumerate(sections or []):
-        if not isinstance(sec, dict):
-            continue
-        title = (sec.get("title") or "").strip()
-        node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
-        body = _node_content_text(sec)
-        json_path = f"{json_base}/{i}"
-        node: Dict[str, Any] = {
-            "title": title,
-            "translated_title": title,           # rag_sections title 即譯後（顯示用）
-            "level": sec.get("level", 1),
-            "summary": "",
-            # 內文收斂為單一 text content node（譯後內文＝chunk body、index 0）
-            "content": ([{"type": "text", "index": 0, "content": body,
-                          "translated_content": body}] if body.strip() else []),
-            "children": [],
-        }
-        # key_map：chunk Header(node_key) → 該 text content node（對應 build_chunk_markdown 之 # {node_key}）
-        if title and is_chunk_meaningful(body, doc_type) and body.strip():
-            key_map[node_key] = f"{json_path}/content/0"
-        # 巢狀子節點（resume rag_sections 多為扁平、children 空；保留遞迴供 academic/book）
-        if sec.get("children"):
-            _walk_tree(sec["children"], doc_type, node_key, node["children"], key_map,
-                       f"{json_path}/children")
-        out_sections.append(node)
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
-
-
 # === [RAG-ASYNC C4 START] 向量落庫（split → filter → embed → FAISS → paper_chunks → index_meta）===
 # chunk filter 版本錨點：與 A 軌 CHUNK_FILTER_VERSION 同值，使 index_meta 簽章與 regen_rag --check
 # 相容（自定義常數、零 import rag_processor）。
@@ -270,11 +199,6 @@ def index(
     vectors_dir: Any,
     paper_db_id: Optional[int] = None,
     size_cap_tokens: int = _SIZE_CAP_TOKENS,
-    # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] === rag_tree 寫入路徑 + 標題（缺則略、不阻斷交付）
-    rag_tree_path: Optional[str] = None,
-    title: str = "",
-    translated_title: str = "",
-    # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
 ) -> "RagDbSpec":  # type: ignore  # noqa: F821
     """P4 完整索引落庫：Strategy B 分塊 → 切 # → 過濾 → Embedding → FAISS → paper_chunks → index_meta。
 
@@ -343,21 +267,6 @@ def index(
 
     # 6. index_meta.json（永遠寫、簽章與 A 軌相容）
     meta = _write_index_meta(vectors_dir, len(meaningful))
-
-    # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] 7. rag_tree.json（章節引用對等 A 軌；缺路徑則略、不阻斷交付）===
-    if rag_tree_path:
-        try:
-            tree = build_rag_tree(sections, doc_type, title, translated_title)
-            _Path(rag_tree_path).parent.mkdir(parents=True, exist_ok=True)
-            _Path(rag_tree_path).write_text(
-                json.dumps(tree, ensure_ascii=False, indent=2), encoding="utf-8")
-            logger.info(
-                "[RAG-ASYNC] rag_tree 已寫入 %s（sections=%d key_map=%d）",
-                rag_tree_path, len(tree["sections"]), len(tree["key_map"]),
-            )
-        except Exception as e:
-            logger.error("[RAG-ASYNC] rag_tree 寫入失敗（不阻斷）: %s", e, exc_info=True)
-    # === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
 
     logger.info("[RAG-ASYNC] 向量庫建立完成: %s（chunks=%d）", vectors_dir, len(meaningful))
     return RagDbSpec(

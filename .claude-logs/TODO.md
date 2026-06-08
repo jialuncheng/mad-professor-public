@@ -628,13 +628,6 @@
   - 狀態：**doc-only（程式碼 diff 在文件、實檔未動、待 Run）**
   - 依賴：**#1**（slot key/summary_key 由 #1 引入）→ 建議 #1+#4 合併或 #1 先；⚠️ zh 來源 golden 須重捕（en 不需）
 
-- 🔵 **RAG-ASYNC-HOTFIX-2 — B 軌補產 rag_tree.json（#2·選 B 完整版）**（hotfix 計畫已產、**doc-only 待 Run**；`.claude-logs/baton/2026-06-08_RAG-ASYNC-HOTFIX-2_hotfix.md`）
-  - #2：RAG-ASYNC C4 B 軌 rag_indexer 未產 rag_tree.json → rag_retriever load_rag_tree 回 {} → 章節引用/paper_title/公式相鄰降級（A 軌有、B 軌無）
-  - 修法（選 B 完整）：rag_indexer 新增 `build_rag_tree`（依 ctx.rag_sections 自建 key_map〔key=chunk Header=node_key→/sections/{i}/content/0〕+ 巢狀節點帶 translated_content + translated_title）+ index() 加 rag_tree_path 寫 `final_{paper}_rag_tree.json` + run_phase4 傳 `paper_manager.rag_tree_path` + 標題；零改 rag_retriever/ai_core
-  - 狀態：**doc-only（程式碼 diff 在文件、實檔未動、待 baron 過目後下 Run）**
-  - 依賴/邊界：與 #1（node_key 一致性同源）建議合併或先後；重複葉標題邊界（根治需 chunk_key 改路徑）；公式相鄰對履歷 inert（academic/book 才生效）
-  - 真因：plan v2 §U5 ④ 輸出漏列 rag_tree（SPEC §1.4 有）；C4 conformance 只驗 similarity_search 沒照出
-
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
   - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
@@ -932,5 +925,7 @@
 - ✅ ~~RESUME-PERF-1 run_phase3 逐 section 翻譯並行化~~（已落地、C1 `b110742` + C2 `d5abdf0` + C3/C4 收官；序列→ThreadPool 受限並行〔保序靠 slot index、限流靠既有 `_api_semaphore`、單 unit 失敗退原文〕；C1 解耦先鎖等價、C2 並行、C3 4 並行測試；行為等價、預估 ~5x；baron 拍板不必等五路）
 
 ### RAG-ASYNC (✅ 已完成·PIPE Phase 4 共用真理源)
+- ✅ ~~RAG-ASYNC-HOTFIX-1 section_summaries 跨譯 key 對位失效 + dead code~~（已落地、`待 baron 回填`；#1 P2 原文 key vs P3 譯文 title vs P4 譯後 node_key 三方不一致 → Chapter Summary 永不進 chunk、Strategy B 靜默退化成 A；穿原文標題 path key 貫穿 P2/P3/P4 + 移除 dead `_load_index_meta`〔#3〕+ 補 P3→P4 接縫整合測試；全套件 528 passed）
+- ✅ ~~RAG-ASYNC-HOTFIX-2 B 軌補產 rag_tree.json（#2·選 B 完整版）~~（已落地、`待 baron 回填`；rag_indexer 新增 `build_rag_tree`+`_walk_tree`〔key_map key=chunk Header=node_key→`/sections/{i}/content/0` + 巢狀 translated_content〕+ `index()` 寫 `final_{paper}_rag_tree.json` + run_phase4 傳路徑/標題；根治 C4 漏產 rag_tree → 章節引用/paper_title/公式相鄰降級；零改 rag_retriever/ai_core；全套件 532 passed；不衝擊 golden）
 - ✅ ~~RAG-ASYNC P4 RAG 索引共用真理源與全 P2 摘要~~（已落地、C1 `195e12b` + C2 `8c76274` + C3 `53755c4` + C4 `a09128e` + C5 `d9b03f4` + C6 `13abdfa` + C7 收官；新建 `processor/rag_indexer.py` B 軌自有索引引擎〔全重寫零 import rag_processor、Strategy B header augment + size-cap 二段子切 + 自實作 is_chunk_meaningful、index() 落庫 byte 相容 ④ 合約〕+ GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步〔批次產+翻 section_summaries、三安全鎖〕+ run_phase3 旁路封存 ctx.rag_sections + run_phase4 改呼 rag_indexer〔砍 rag_processor 耦合〕+ 母 plan v10/PIPE-SPEC 同步〔含修 §1.3 P3 doc-drift〕；全套件 525 passed；**chunks=1 退化修復、B 軌全鏈零 A 軌依賴**；⚠️ baron 須影子 E2E 驗 chunks 量級 + resume 重捕 Golden；其餘四路 production 隨各自 PIPE-N 跟上）
 

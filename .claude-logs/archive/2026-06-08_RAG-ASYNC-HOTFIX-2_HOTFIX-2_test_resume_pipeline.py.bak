@@ -490,40 +490,6 @@ def test_run_phase4_calls_rag_indexer_with_pathway(tmp_path, monkeypatch):
     assert captured["paper_db_id"] == 42
 
 
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START] #2-B run_phase4 傳 rag_tree 寫入路徑 + 標題 ===
-def test_run_phase4_writes_rag_tree(tmp_path, monkeypatch):
-    """run_phase4 傳入 rag_tree_path（= paper_manager.rag_tree_path）+ title（= ingestion.title）給 index。"""
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(rp.paper_manager, "get_paper_db_id", lambda o, p: 42)
-    import processor.rag_indexer as ri
-    captured = {}
-
-    def _fake_index(sections, summaries, doc_type, vectors_dir, paper_db_id=None, **k):
-        captured.update(k)                                    # rag_tree_path / title / translated_title
-        return RagDbSpec(vectors_path=str(vectors_dir), paper_chunk_count=7,
-                         index_meta={"chunks_total": 7})
-
-    monkeypatch.setattr(ri, "index", _fake_index)
-    s = ResumePipeline()
-    ctx = _ctx(paper_id="p9")
-    ctx.ingestion = IngestionMetadataSpec(title="王小明", source_lang="en", tiles=[])
-    ctx.bilingual = BilingualMarkdownSpec(
-        final_zh_path=str(tmp_path / "zh.md"), final_en_path="x", translated_abstract="x",
-    )
-    ctx.rag_sections = [{"title": "技能", "content": [{"type": "text", "content": "Python"}], "children": []}]
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract="a", lcc="QA", glossary={}, translated_abstract="x", section_summaries={},
-    )
-    s.run_phase4(ctx)
-    # rag_tree_path 必為 paper_manager.rag_tree_path（final_{paper}_rag_tree.json）
-    expected = str(rp.paper_manager.rag_tree_path(tmp_path, ctx.owner_id, "p9"))
-    assert captured["rag_tree_path"] == expected
-    assert captured["rag_tree_path"].endswith("final_p9_rag_tree.json")
-    assert captured["title"] == "王小明"                       # ingestion.title 傳遞
-    assert captured["translated_title"] == "王小明"
-# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 END] ===
-
-
 def test_run_phase3_populates_rag_sections_pathway(tmp_path, monkeypatch):
     """⑮b P3 旁路：run_phase3 逐 section 翻譯後封存譯後結構於 ctx.rag_sections（供 P4）。"""
     monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path)
