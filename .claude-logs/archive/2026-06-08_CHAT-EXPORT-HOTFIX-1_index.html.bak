@@ -2799,7 +2799,7 @@ function removeReadingReadyMessage() {
   if (m) m.remove();
 }
 
-document.getElementById('export-btn').onclick = async () => {  // CHAT-EXPORT-HOTFIX-1: fetch 需 async
+document.getElementById('export-btn').onclick = () => {
   if (!currentPaperId) return;
   // 對話為空時擋下載（避免後端回空檔 / 錯誤）
   const realMessages = document.querySelectorAll(
@@ -2809,31 +2809,7 @@ document.getElementById('export-btn').onclick = async () => {  // CHAT-EXPORT-HO
     customAlert({ title: '目前沒有對話內容可下載', body: '請先進行對話後再下載' });
     return;
   }
-  // === [CHAT-EXPORT-HOTFIX-1 START] ===
-  // Dia 等瀏覽器對「主框架導覽去 attachment URL」收尾異常（download chip 卡 8/8 不關）；
-  // 改 fetch→blob→<a download> 不依賴導覽語意、瀏覽器無關（Safari/Chrome/Dia 全收尾）。
-  try {
-    const res = await fetch(`/api/papers/${currentPaperId}/chat/export`);
-    if (!res.ok) {
-      customAlert({
-        title: '下載失敗',
-        body: res.status === 404 ? '沒有對話紀錄' : `伺服器錯誤（${res.status}）`,
-      });
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentPaperId}_chat.md`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    customAlert({ title: '下載失敗', body: '網路或瀏覽器錯誤，請重試' });
-  }
-  // === [CHAT-EXPORT-HOTFIX-1 END] ===
+  window.location.href = `/api/papers/${currentPaperId}/chat/export`;
 };
 
 // BUG-F4 A3.2（ui-fixes-batch A3.2）：chat-input focus listener 整段移除

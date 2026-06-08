@@ -168,6 +168,11 @@
   - `2026-06-05_PIPE-RESUME_C1_run_提示詞.md` — C1 Run（Sync System Specs：就地同步 baton/ 三份 Markdown〔PIPE-RESUME plan_v1 + 母 plan v10 + PIPE-SPEC〕寫入 C7/C8-hotfix 史/raw_metadata 穿線/P3 翻譯隔離/P2 摘要先行/Revision+§7.1 Cleanup；純文件、baton/ 主文件不入 Git〔僅 .bak+報告+TODO+prompts git add〕、三份 .bak）
   - `2026-06-05_PIPE-RESUME_Tasks_提示詞.md` — Tasks（v9 整合、03:35 精修版取代 03:15：plan §99.2 v11 後拆分；C1 同步**三檔**〔PIPE-RESUME plan_v1 + 母 plan v10 + PIPE-SPEC〕寫入 raw_metadata 穿線/P3 翻譯隔離/Phase2 摘要先行/C7-C8 hotfix 史/Flip Cleanup → C2 P1+Context〔raw_metadata 欄+影子後綴〕→ C3 P2〔步序①②互換+讀 raw_metadata〕→ C4 P3 constraints → C5 影子寫庫保真 → C6 測試 → C7 Checkout；commit 代號本批次內部序、與原 C1-C7 區別）
 
+### CHAT-EXPORT 系列（前端對話下載）
+- 🟡 **CHAT-EXPORT-HOTFIX-1（2026-06-09 FE-Hotfix·Run 落地）**
+  - `2026-06-08_CHAT-EXPORT-HOTFIX-1_run_提示詞.md` — HOTFIX-1 Run（落地：`static/index.html` `export-btn` handler `onclick=()=>`→`async()=>` + 移除 `window.location.href` 導覽式下載 → fetch→blob→`<a download>`〔含 !res.ok/404/catch 錯誤處理、`a.download={paper_id}_chat.md`〕、`// === [CHAT-EXPORT-HOTFIX-1 START/END] ===` 包裹、保留空對話防護；改前 .bak + 三條靜態 grep〔location.href.*chat/export 無命中 / createObjectURL 命中 / START/END 各 1〕；FE-Hotfix 一次性歸檔 mv hotfix.md→hotfixes/ + 執行報告直寫 executions/；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
+  - `2026-06-08_CHAT-EXPORT-HOTFIX-1_doc_提示詞.md` — Hotfix doc（對話下載在 Dia 瀏覽器卡 8/8 不結束、Safari 正常；真因＝`static/index.html:2812` `window.location.href` 導覽式下載去 attachment URL，Dia 對「主框架導覽去 attachment」收尾異常〔配常駐 SSE〕；後端已證正確〔真 uvicorn+curl content-length 8004/無 chunked/Safari 正常〕；修法＝fetch→blob→`<a download>` 不依賴導覽語意、瀏覽器無關；doc-only 程式碼 diff 寫文件、實檔未動、含 commit 草稿、存 baton 待 Run）
+
 ### 一般 / 工具
 - `2026-05-23_general_建立提示詞資料庫.md` — 建立 prompts/ 資料庫骨架 + 規範
 
@@ -273,6 +278,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-09 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_doc_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_Check_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C3_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C2_run_提示詞.md`
@@ -286,6 +293,3 @@
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-3_doc_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_doc_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-1_提示詞.md`
-
-- 2026-06-08 — `2026-06-08_RAG-ASYNC_Check_提示詞.md`
-- 2026-06-08 — `2026-06-08_RAG-ASYNC_C6_run_提示詞.md`
