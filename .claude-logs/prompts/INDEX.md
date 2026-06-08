@@ -46,7 +46,8 @@
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### WORKFLOW 系列（流程治理）
-- 🟡 **WORKFLOW-3（2026-06-08 plan v3 → Tasks → C1 → C2 WIP·DOC-Refactor·補流程治本）**
+- 🟡 **WORKFLOW-3（2026-06-08 plan v3 → Tasks → C1 → C2 → C3 WIP·DOC-Refactor·補流程治本）**
+  - `2026-06-08_WORKFLOW-3_C3_run_提示詞.md` — C3 Run（framework §4.1 計畫檔結構契約 自列八章節 → 改引用 template_plan.md 為 plan 結構 SSOT〔保留「不寫程式碼純分析」哲學句 + 模板含哪些章 + 跨 Phase 接縫契約唯一源引用 WORKFLOW_SOP §7〕；不刪 §4.2 執行報告契約及其他章；§99.2 v4；改前 .bak + 兩條 grep 驗收；執行報告暫存 baton 嚴禁 mv、C4 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；C3=最後內容 commit、下一步 C4 Checkout）
   - `2026-06-08_WORKFLOW-3_C2_run_提示詞.md` — C2 Run（template_plan.md 升 plan 結構 SSOT：§3 後插兩新章〔§4 跨 Phase 接縫契約 三欄式範本 + 交叉引用 WORKFLOW_SOP §7 / §5 變動風險與相容性評估 三欄式範本 + 對齊 framework §4.1 #5〕+ 重編號原 §4-§7→§6-§9 + §0 改版觸發 §1–§7→§1–§9 + §99 同步 + Revision；改前 .bak + 四條 grep 驗收〔含 grep -c '^## §' 章節數 +2〕；執行報告暫存 baton 嚴禁 mv、C4 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；C3 依賴本 C2 SSOT 先確立）
   - `2026-06-08_WORKFLOW-3_C1_run_提示詞.md` — C1 Run（WORKFLOW_SOP.md 新增 §7 跨 Phase 接縫契約〔§7.1 producer/consumer/key 同基準 + worked example 修正版 #1 + 反例 / §7.2 收官前整合測試 + key-changing transform + Checkout 必驗 + 顯式豁免〕+ §3 強制規則整合測試前置一行 + §4.2 A6〔6 項〕+ §99.1 重複防護 + §99.2 v4；改前 .bak + 六條 grep 驗收〔含 A5 無動態內容〕；執行報告暫存 baton 嚴禁 mv、C4 才歸檔；msg 寫 /tmp〔Opus 4.8 1M 署名〕、不自發 commit）
   - `2026-06-08_WORKFLOW-3_Tasks_提示詞.md` — Tasks（依 plan v3〔§8 Q6/Q8 定案〕拆 DOC-Refactor commit：WORKFLOW_SOP §7 跨 Phase 接縫契約〔producer/consumer/key 同基準 + worked example 修正版 #1〕+ 收官前跨 Phase 整合測試〔含 key-changing transform、Checkout Conformance 必驗〕+ §4.2 A6 + template_plan 升 plan 結構 SSOT〔接縫契約 + 變動風險章〕+ framework §4.1 改引用 template〔根治 drift〕；各 Commit 各產執行報告暫存 baton、最後 Checkout 一次性歸檔；純文件 grep 驗收無 pytest；不預設 commit 數/名、自行規劃；含 §0.5 成果盤點 + §8 六維度表）
@@ -271,6 +272,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-08 — `2026-06-08_WORKFLOW-3_C3_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C2_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_Tasks_提示詞.md`
@@ -286,4 +288,3 @@
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_Check_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C6_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C5_run_提示詞.md`
-- 2026-06-08 — `2026-06-08_RAG-ASYNC_C4_run_提示詞.md`
