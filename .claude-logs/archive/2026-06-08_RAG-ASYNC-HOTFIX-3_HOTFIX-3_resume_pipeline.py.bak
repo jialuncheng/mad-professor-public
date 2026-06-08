@@ -679,19 +679,9 @@ class ResumePipeline(DocumentStrategy):
         # === [RAG-ASYNC C6 END] ===
         if is_zh:
             zh_text = full_text
-            # === [RAG-ASYNC-HOTFIX-3 HOTFIX-3 START] ===
-            # #4-B：zh 來源（原文即繁中）走 tiles 不翻譯、建 per-section rag_sections。
-            # 複用 en 路收集器：_collect_render_slots 收原文 slots（含 #1 的 key=原文標題 path），
-            # _collect_rag_sections(translate=False) → text=原文 zh、summary_key=原文 path。
-            # zh「原文＝譯文」故 summary_key 與 P2 section_summaries key、#1 chunk node_key 天然對齊（無跨譯落差）。
-            # 不改 zh_text=full_text（final_zh 閱讀視圖 byte 不變）；無 section（罕見無 # 標題）退單一容器兜底。
-            if sections:
-                _slots: List[Dict[str, Any]] = []
-                self._collect_render_slots(sections, 0, _slots)
-                self._collect_rag_sections(_slots, {}, False, rag_sections)
-            else:
-                rag_sections = self._single_container_sections(full_text, ctx)
-            # === [RAG-ASYNC-HOTFIX-3 HOTFIX-3 END] ===
+            # === [RAG-ASYNC C6 START] zh*：整檔為單一容器（size-cap 由 rag_indexer 子切）===
+            rag_sections = self._single_container_sections(full_text, ctx)
+            # === [RAG-ASYNC C6 END] ===
         # === [RESUME-P3 C4 START] ===
         elif sections and not degraded:
         # === [RESUME-P3 C4 END] ===

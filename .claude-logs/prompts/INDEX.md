@@ -52,7 +52,8 @@
 ### RAG-ASYNC 系列（P4 共用真理源）
 - 🔵 **CHAT-STRUCT-1（2026-06-08 plan·#5 選 C·結構化欄位確定性回答·待 baron 過目）**
   - `2026-06-08_CHAT-STRUCT-1_plan_提示詞.md` — plan（#5 履歷聯絡資訊 name/phone/email 不入向量、RAG 撈不到；選 C：chat router 偵測結構化意圖→DB metadata 確定性回答、繞過 RAG；純規格含 Open Questions、不給 commit、存 baton 待 tasks）
-- 🔵 **RAG-ASYNC-HOTFIX-3（2026-06-08 BE-Hotfix·#4 zh 履歷 per-section·選 B·doc-only 待 Run）**
+- 🟡 **RAG-ASYNC-HOTFIX-3（2026-06-08 BE-Hotfix·#4 zh 履歷 per-section·選 B·Run 落地）**
+  - `2026-06-08_RAG-ASYNC-HOTFIX-3_HOTFIX-3_run_提示詞.md` — HOTFIX-3 Run（落地：`pipelines/resume_pipeline.py` `run_phase3` is_zh 分支 `_single_container_sections`→有 section 時走 `ctx.ingestion.tiles` 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section rag_sections〔summary_key=原文 zh path、與 P2/#1 chunk node_key 天然對齊、無跨譯落差〕、無 section 退單一容器兜底；不改 zh_text=full_text〔final_zh byte 不變〕/en 主路/degraded；`# === [RAG-ASYNC-HOTFIX-3 HOTFIX-3 START/END] ===` 包裹 + 2 .bak + 補 3 測試〔zh per-section / zh 無 section 兜底 / 接 #1 摘要對位〕；單一 commit 一次性歸檔；msg 寫 /tmp、嚴禁自發 commit；⚠️ zh 來源 golden 須重捕、en 不需）
   - `2026-06-08_RAG-ASYNC-HOTFIX-3_doc_提示詞.md` — Hotfix doc（#4 is_zh 路單一容器→zh 履歷無 per-section chunk、size-cap 切任意窗；選 B：is_zh 有 section 走 ctx.ingestion.tiles 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section rag_sections〔summary_key=原文 zh path、與 P2/#1 天然對齊〕；依賴 #1 slot key；doc-only 程式碼 diff 寫文件、實檔未動、含 commit 草稿、存 baton 待 Run）
 - 🟡 **RAG-ASYNC-HOTFIX-2（2026-06-08 BE-Hotfix·#2 補產 rag_tree·選 B 完整版·Run 落地）**
   - `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md` — HOTFIX-2 Run（落地：`processor/rag_indexer.py` 新增 `build_rag_tree`〔依 ctx.rag_sections 自建完整 rag_tree：key_map key=B 軌 chunk Header(=node_key)→`/sections/{i}/content/0` + 巢狀節點帶 translated_content/translated_title〕+ `index()` 加 `rag_tree_path` 參數寫 `final_{paper}_rag_tree.json`〔IO 失敗優雅降級〕；`pipelines/resume_pipeline.py` `run_phase4` 傳 `paper_manager.rag_tree_path` + ingestion title；零改 rag_retriever/ai_core；`# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START/END] ===` 包裹 + 4 .bak + 補 4 測試〔key_map 對位 chunk Header / 節點含 translated_content / run_phase4 寫 rag_tree / retriever 章節引用整合〕；單一 commit 一次性歸檔；msg 寫 /tmp、嚴禁自發 commit）
@@ -267,6 +268,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-3_HOTFIX-3_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-1_HOTFIX-1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_plan_提示詞.md`
@@ -282,4 +284,3 @@
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C3_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C2_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C1_run_提示詞.md`
-- 2026-06-08 — `2026-06-08_RAG-ASYNC_Tasks_提示詞.md`
