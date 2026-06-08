@@ -622,9 +622,9 @@
 ### 🔴 高優先
 
 - 🟡 **WORKFLOW-3 跨Phase接縫契約與收官前整合測試**（`.claude-logs/baton/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`；tasks 已產 `..._tasks.md`）
-  - [x] ✅ C1 — WORKFLOW_SOP 接縫契約與整合測試條款（接縫契約強制條款）`待 baron 回填`
-  - [/] 🟡 WIP: C2 — template_plan SSOT 化（plan 結構真理源升格）
-  - [ ] ⬜ 未開始: C3 — framework §4.1 改引用 template（消滅 doc-drift）
+  - [x] ✅ C1 — WORKFLOW_SOP 接縫契約與整合測試條款（接縫契約強制條款）`2e4d4c9`
+  - [x] ✅ C2 — template_plan SSOT 化（plan 結構真理源升格）`待 baron 回填`
+  - [/] 🟡 WIP: C3 — framework §4.1 改引用 template（消滅 doc-drift）
   - [ ] ⬜ 未開始: C4 — Checkout 收官（一次性歸檔結案）
   - 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + 全程無整合測試 → 6 commit + Conformance 全綠仍漏（C5 白做）；另 template_plan↔framework §4.1 doc-drift
   - 工時：4 個 commits（3 doc + Checkout）
