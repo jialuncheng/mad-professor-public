@@ -11,6 +11,21 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `WORKFLOW_SOP.md` 新增 §7 跨 Phase 接縫契約〔§7.1 producer/consumer/key 同基準 + **worked example 三欄表（修正版 RAG-ASYNC #1）** + 反例 / §7.2 收官前整合測試〔含 key-changing transform、純 mock 同 key 不認、Checkout 必驗、顯式豁免〕〕+ §3 強制規則整合測試前置一行 + §4.2 A6〔6 項〕+ §99.1 重複防護 + §0/§99 改版觸發 §1–§7 + §99.2 v4 | `2e4d4c9` |
+| C2 | `template_plan.md` 升格 plan 結構 SSOT：新增 §4 跨 Phase 接縫契約〔三欄式範本 + 交叉引用 §7〕+ §5 變動風險與相容性評估〔對齊 framework §4.1 #5〕+ 重編號原 §4-§7→§6-§9 + §0/§99 §1–§9 + §99.2 v2；保留 §2「不寫實作」精煉哲學 | `386c1ce` |
+| C3 | `framework §4.1` 計畫檔結構契約 自列八章節 → 改引用 `template_plan.md` 為 plan 結構 SSOT〔保留「不寫程式碼純分析」哲學句 + 接縫契約唯一源引用 §7〕、不刪 §4.2 執行報告契約 + §99.2 v4 | `f14dcd9` |
+| C4 | Checkout 收官：Conformance 五維度驗收全綠〔目標規格 U1-U5 / tasks §6 grep / 不可動 / 提示詞稽核 / **整合測試豁免聲明**〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C3 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`（§8 Q6/Q8 定案、v1/v2/v3 三版保留作 §1.9 軌跡）
+> **動因/治本**：RAG-ASYNC #1 接縫缺陷——plan 未凍結跨 Phase key 契約 + plan→tasks→6 run→Conformance 全是單元/grep 尺度、無整合測試 → 6 commit + Conformance 五維度全綠仍漏（C5 白做）；另 template_plan↔framework §4.1 長期 doc-drift。
+> **三大條款生效**：① WORKFLOW_SOP §7 跨 Phase 接縫契約（plan 必凍結 handoff producer/consumer/key 同基準、附 worked example）② 收官前跨 Phase 整合測試（含 key-changing transform、Checkout Conformance 必驗、顯式豁免）③ template_plan 為 plan 結構唯一 SSOT、framework 改引用（消滅 drift）。
+> **整合測試豁免**：WORKFLOW-3 自身 DOC-Refactor + 無 code handoff，依 §7.2 + plan Q2-Q3 顯式豁免、C4 報告明載（立規者自身不適用該規）。
+> **v3 重評（「對專案有幫助就做、不拖延」）**：template↔framework drift 升級為 SSOT 根治（非只補佔位、刪 WORKFLOW-4 候選）+ 認知負荷補 worked example；進行中分支以下一 Checkout 為界、硬 gate 顯式豁免維持。
+
 ### BE-Hotfix RAG-ASYNC-HOTFIX-3 — zh 來源履歷 P3 改建 per-section rag_sections（#4·選 B）
 
 | Commit | 內容 | Hash |
@@ -621,16 +636,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **WORKFLOW-3 跨Phase接縫契約與收官前整合測試**（`.claude-logs/baton/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`；tasks 已產 `..._tasks.md`）
-  - [x] ✅ C1 — WORKFLOW_SOP 接縫契約與整合測試條款（接縫契約強制條款）`2e4d4c9`
-  - [x] ✅ C2 — template_plan SSOT 化（plan 結構真理源升格）`386c1ce`
-  - [x] ✅ C3 — framework §4.1 改引用 template（消滅 doc-drift）`待 baron 回填`
-  - [/] 🟡 WIP: C4 — Checkout 收官（一次性歸檔結案）
-  - 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + 全程無整合測試 → 6 commit + Conformance 全綠仍漏（C5 白做）；另 template_plan↔framework §4.1 doc-drift
-  - 工時：4 個 commits（3 doc + Checkout）
-  - 依賴：無（C3 依賴 C2、C4 依賴全部；純治理文件、不依賴任何 hotfix）
-  - 註：v1/v2/v3 三版留 baton 作 §1.9 多輪 review 軌跡，Checkout 一併歸檔 plans/
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -881,6 +886,7 @@
 ### WORKFLOW（✅ 已完成）
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
+- ✅ ~~WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試~~（已落地、C1 `2e4d4c9` + C2 `386c1ce` + C3 `f14dcd9` + C4 收官；DOC-Refactor 治本 RAG-ASYNC #1 接縫缺陷——WORKFLOW_SOP §7 跨 Phase 接縫契約〔含 worked example〕+ 收官前整合測試〔key-changing transform、Checkout 必驗、顯式豁免〕+ §4.2 A6 / template_plan 升 plan 結構 SSOT / framework §4.1 改引用 template〔消滅 doc-drift〕；自身 DOC 無 handoff 整合測試豁免；plan v1/v2/v3 三版保留作 §1.9 軌跡）
 
 ### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
