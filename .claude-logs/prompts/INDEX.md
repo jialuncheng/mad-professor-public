@@ -45,7 +45,21 @@
   - `2026-06-03_GLOSSARY-CORE_C6_run_提示詞.md` — C6 Run（Unit Tests：新建 tests/test_glossary_core.py 5 測試——聯合唯一約束/級聯優先覆寫/書籍融合優先/Chat 注入/CLI 回填；mock LLM 不實打 API + file-based SQLite FK ON fixture）
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
+### WORKFLOW 系列（流程治理）
+- 🔵 **WORKFLOW-3（2026-06-08 plan·DOC-Refactor·補流程治本·待 baron 過目）**
+  - `2026-06-08_WORKFLOW-3_plan_提示詞.md` — plan（RAG-ASYNC #1 接縫缺陷治本：WORKFLOW_SOP 加「跨 Phase 接縫契約」〔plan 必凍結 handoff producer/consumer/key 同基準〕+「收官前跨 Phase 整合測試」強制條款〔真 transform、Checkout Conformance 必驗〕+ §4.2 A6 + framework §4.1 同步；純規格含 Open Questions、不給 commit、存 baton）
+
 ### RAG-ASYNC 系列（P4 共用真理源）
+- 🔵 **CHAT-STRUCT-1（2026-06-08 plan·#5 選 C·結構化欄位確定性回答·待 baron 過目）**
+  - `2026-06-08_CHAT-STRUCT-1_plan_提示詞.md` — plan（#5 履歷聯絡資訊 name/phone/email 不入向量、RAG 撈不到；選 C：chat router 偵測結構化意圖→DB metadata 確定性回答、繞過 RAG；純規格含 Open Questions、不給 commit、存 baton 待 tasks）
+- 🔵 **RAG-ASYNC-HOTFIX-3（2026-06-08 BE-Hotfix·#4 zh 履歷 per-section·選 B·doc-only 待 Run）**
+  - `2026-06-08_RAG-ASYNC-HOTFIX-3_doc_提示詞.md` — Hotfix doc（#4 is_zh 路單一容器→zh 履歷無 per-section chunk、size-cap 切任意窗；選 B：is_zh 有 section 走 ctx.ingestion.tiles 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section rag_sections〔summary_key=原文 zh path、與 P2/#1 天然對齊〕；依賴 #1 slot key；doc-only 程式碼 diff 寫文件、實檔未動、含 commit 草稿、存 baton 待 Run）
+- 🟡 **RAG-ASYNC-HOTFIX-2（2026-06-08 BE-Hotfix·#2 補產 rag_tree·選 B 完整版·Run 落地）**
+  - `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md` — HOTFIX-2 Run（落地：`processor/rag_indexer.py` 新增 `build_rag_tree`〔依 ctx.rag_sections 自建完整 rag_tree：key_map key=B 軌 chunk Header(=node_key)→`/sections/{i}/content/0` + 巢狀節點帶 translated_content/translated_title〕+ `index()` 加 `rag_tree_path` 參數寫 `final_{paper}_rag_tree.json`〔IO 失敗優雅降級〕；`pipelines/resume_pipeline.py` `run_phase4` 傳 `paper_manager.rag_tree_path` + ingestion title；零改 rag_retriever/ai_core；`# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START/END] ===` 包裹 + 4 .bak + 補 4 測試〔key_map 對位 chunk Header / 節點含 translated_content / run_phase4 寫 rag_tree / retriever 章節引用整合〕；單一 commit 一次性歸檔；msg 寫 /tmp、嚴禁自發 commit）
+  - `2026-06-08_RAG-ASYNC-HOTFIX-2_doc_提示詞.md` — Hotfix doc（#2 B 軌不產 rag_tree.json→檢索端章節引用/paper_title/公式相鄰降級；baron 選 B 完整產：rag_indexer 依 ctx.rag_sections 自建完整 rag_tree〔key_map+巢狀+translated_title+公式〕對等 A 軌；doc-only：程式碼 diff 寫進文件、不動實檔、含 commit 草稿、存 baton 待 Run）
+- 🟡 **RAG-ASYNC-HOTFIX-1（2026-06-08 BE-Hotfix·#1 key 穿線 + #3 dead code·Run 落地）**
+  - `2026-06-08_RAG-ASYNC-HOTFIX-1_HOTFIX-1_run_提示詞.md` — HOTFIX-1 Run（落地：`pipelines/resume_pipeline.py` `_collect_render_slots` title slot 帶原文標題 path `key` 穿線 + `_collect_rag_sections` 存 `summary_key`〔原文 path〕；`processor/rag_indexer.py` `_walk` 以 `summary_key` 首選查節點摘要〔無則 fallback node_key/title 向後相容〕；移除 dead `_load_index_meta`〔#3〕；`# === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START/END] ===` 包裹 + 4 .bak；補 3 測試〔`test_summary_key_lookup_crosslang`/`test_summary_key_absent_falls_back`/`test_seam_p3_to_p4_section_summary_attaches`〕；單一 commit 一次性歸檔 mv hotfix.md→hotfixes/+執行.md→executions/；msg 寫 /tmp、嚴禁自發 commit；改 B軌召回須重捕 resume golden）
+  - `2026-06-08_RAG-ASYNC-HOTFIX-1_提示詞.md` — Hotfix doc（第一性原理體檢發現 #1 section_summaries 原文 key vs 譯文 key 對不上→Chapter Summary 永遠進不了 chunk、C5 白做〔doc 階段 live repro 證〕；修法：`_collect_render_slots` title slot 帶原文標題 path key、`_collect_rag_sections` 存 `summary_key`、`rag_indexer._walk` 以 summary_key 首選查〔向後相容 fallback〕+ 移除 dead `_load_index_meta`〔#3〕+ 補接縫整合測試；**baron 選 doc-only：碼已還原、hotfix.md 留 baton 待過目後下 Run**；#2/#4/#5 分流 backlog）
 - ✅ **RAG-ASYNC P4 RAG 索引共用真理源（2026-06-07 plan → 2026-06-08 Tasks → C1-C6 + C7 收官）**
   - `2026-06-08_RAG-ASYNC_Check_提示詞.md` — C7 Check（Conformance 五維度驗收〔plan_v2 §2 U1-U6 / tasks §6 grep+pytest / 不可動清單 git 證據 / 提示詞稽核 / msg 完整性〕→ 全合規後 TODO 結案〔C1-C7 完成表 + hash 全量自癒〕+ baton 一次性 mv 歸檔〔plan_v2→plans//tasks→tasks//C1-C7 報告→executions/〕+ baton 乾淨度；嚴禁自發 commit、msg 寫 /tmp；RAG-ASYNC 全案結案、chunks=1 修復、B 軌零 A 軌依賴）
   - `2026-06-08_RAG-ASYNC_C6_run_提示詞.md` — C6 Run（BE-Refactor Wire P4：`run_phase3` 附加封存譯後 section 結構〔title/level/content/children〕至旁路 `ctx.rag_sections`〔is_zh/degraded 容器降級、不改 final_zh/en 輸出〕；`run_phase4` 移除 `from processor.rag_processor import RagProcessor`〔L73〕改呼 `rag_indexer.index(譯後結構 + section_summaries + doc_type)`、不再餵 final_zh_path；交付 RagDbSpec 不變、paper_db_id None 降級；test P4 改 mock 驗 indexer 呼叫/chunks 量級/零 LLM；`# === [RAG-ASYNC C6 START/END] ===` + 改前 .bak；B 軌全鏈零 rag_processor 依賴、chunks=1 退化修復）
@@ -253,6 +267,13 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-1_HOTFIX-1_run_提示詞.md`
+- 2026-06-08 — `2026-06-08_WORKFLOW-3_plan_提示詞.md`
+- 2026-06-08 — `2026-06-08_CHAT-STRUCT-1_plan_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-3_doc_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_doc_提示詞.md`
+- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-1_提示詞.md`
 
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_Check_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C6_run_提示詞.md`
@@ -262,10 +283,3 @@
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C2_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_C1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC_Tasks_提示詞.md`
-- 2026-06-07 — `2026-06-07_RAG-ASYNC_plan_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_Check_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_C3_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_C2_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_C1_run_提示詞.md`
-- 2026-06-06 — `2026-06-06_RESUME-PERF-1_Tasks_提示詞.md`
-- 2026-06-06 — `2026-06-06_VISION-HOTFIX-1_run_提示詞.md`

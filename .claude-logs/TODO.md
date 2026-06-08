@@ -11,6 +11,30 @@
 
 ## ✅ 已完成
 
+### BE-Hotfix RAG-ASYNC-HOTFIX-2 — B 軌補產 rag_tree.json（#2·選 B 完整版）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-2 | `processor/rag_indexer.py` 新增 `build_rag_tree`+`_walk_tree`（依 P3 ctx.rag_sections 自建完整 rag_tree：**key_map key=B 軌 chunk Header〔=node_key、與 `_walk`/`build_chunk_markdown` 同式〕→`/sections/{i}/content/0`** + 巢狀節點帶 translated_content/translated_title/type=text/index）+ `index()` 加 `rag_tree_path/title/translated_title` 寫 `final_{paper}_rag_tree.json`〔IO try/except `logger.error(exc_info)` 優雅降級不阻斷交付〕+ module 補 `import json`；`pipelines/resume_pipeline.py` `run_phase4` 傳 `paper_manager.rag_tree_path` + `ctx.ingestion.title`；根治 RAG-ASYNC C4 B 軌只產 FAISS+paper_chunks+index_meta、未產 rag_tree.json → `rag_retriever.load_rag_tree` 回 {} → 章節引用/paper_title 前綴/公式相鄰全降級（A 軌有、B 軌無、非崩潰故易忽略）；零依賴 A 軌、**rag_retriever/ai_core 檢索載入端 100% 零改**；`# === [RAG-ASYNC-HOTFIX-2 HOTFIX-2 START/END] ===` 包裹 + 4 .bak + 補 4 測試〔key_map↔chunk Header 不變式 / 節點 translated_content / run_phase4 傳路徑+標題 / **retriever 對接整合「{paper_title}>{section}」非空引用**〕；rag_indexer+resume 57 passed、全套件 532 passed（僅 env flake）| `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-08_RAG-ASYNC-HOTFIX-2_hotfix.md`
+> **真因（流程）**：RAG-ASYNC plan v2 §U5 ④ 輸出列「FAISS+paper_chunks+index_meta」**漏列 rag_tree.json**（SPEC §1.4 含 tree_json_file）；C4 conformance 只驗 load_vector_store+similarity_search（不需 rag_tree）→ 沒照出。治本歸 WORKFLOW-3（④ 輸出完整性清單 + 收官前整合測試）。
+> **依賴**：建於 RAG-ASYNC-HOTFIX-1（#1 node_key 語意已穩定）之上；key_map key＝chunk Header＝node_key 與 #1 summary_key 同源「穩定 key」。
+> **邊界（誠實）**：重複葉標題 key_map 後者覆蓋（履歷罕見、根治需 chunk_key 改路徑、與 #1 同源議題另排）；公式相鄰對履歷 inert（academic/book 才生效）。
+> **⚠️ 不衝擊 golden**：只新增 rag_tree.json 旁檔、不動 FAISS/chunk → 無需重捕向量；baron 影子 E2E 觀察 references 顯示「《姓名》> 章節」即可。
+> **後續分流**：#4 zh per-section（HOTFIX-3 doc 待 Run、依賴 #1）/ #5 聯絡資訊（CHAT-STRUCT-1 plan）。
+
+### BE-Hotfix RAG-ASYNC-HOTFIX-1 — section_summaries 跨譯 key 對位失效 + dead code
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-1 | `pipelines/resume_pipeline.py` `_collect_render_slots` title slot 帶**原文標題 path** `key`（加 `path_prefix` 遞迴穿線、slot 翻譯前收集故 text=原文、與 P2 `_collect_summary_targets` node_key 同基準）+ `_collect_rag_sections` 譯後 section 存 `summary_key`（原文 path、譯後 title 另存供顯示）；`processor/rag_indexer.py` `_walk` 以 `summary_key` 首選查節點摘要（無則 fallback node_key/title 向後相容 C3/C4）；移除無 caller dead `_load_index_meta`〔#3〕；根治 RAG-ASYNC C5 section_summaries（原文 key）vs P3 譯後 title（譯文 key）vs P4 譯後 node_key 查找三方不一致 → Chapter Summary 永不進 chunk、Strategy B 靜默退化成 A、C5 白做（非崩潰故影子 chunks≥20 誤判成功）；`# === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START/END] ===` 包裹 + 4 .bak + 補 3 測試〔跨譯查找 / 無 key fallback / **P3→P4 接縫整合測試（FakeTr 真翻譯+巢狀 path）**〕；rag_indexer+resume 53 passed、全套件 528 passed（僅 env flake）| `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-08_RAG-ASYNC-HOTFIX-1_hotfix.md`
+> **真因（流程）**：plan v2 §U3/D1 只寫「key 對位巢狀樹」、**未凍結跨 Phase 接縫 key 契約**（key=何物 + P2 產/P3 帶/P4 取須同基準）；C5/C6 各自孤立實作（原文 key/譯文 title）單元皆自洽全綠；**全程無 P2→P3→P4 串接 + 真翻譯器整合測試** → 6 commit + Conformance 五維度全綠仍漏。治本歸 WORKFLOW-3（plan v3 已產）。
+> **⚠️ 行為變更 + 重捕**：B 軌履歷召回改變（Chapter Summary 進 chunk）→ 衝擊 golden D2/D3；**Flip/結案前須重捕 resume 單路**（`venv/bin/python tools/golden_baseline.py capture resume --force`）。
+> **後續分流（backlog）**：#2 rag_tree（RAG-ASYNC-HOTFIX-2 doc 待 Run）/ #4 zh per-section（HOTFIX-3 doc 待 Run、依賴本 #1 slot key）/ #5 聯絡資訊（CHAT-STRUCT-1 plan）。
+
 ### BE-Refactor PIPE-RESUME ResumePipeline策略管線（PIPE 大改版縱向五路絞殺第 1 路）
 
 | Commit | 內容 | Hash |
@@ -126,7 +150,7 @@
 | C4 | Vector Persist：`rag_indexer.index()` split→filter→Embedding→FAISS(MAX_INNER_PRODUCT) save_local→paper_chunks〔embedding 交易外、paper_db_id None 降級〕→自寫 index_meta→RagDbSpec；+3 ④ conformance〔B 軌 vector store→rag_retriever.load_vector_store 讀回召回〕 | `a09128e` |
 | C5 | P2 Six-Step：`run_phase2` 四步→統一六步：⑤批次產原文 section 摘要〔1 次 LLM〕+ ⑥全文摘要引導批次翻繁中〔1 次〕→ section_summaries；三安全鎖〔批次非 N / 非致命 logger.warning exc_info+extra_fields 不阻 reading_ready / 可量測 performance_metric phase=P2〕；LLM 交易外；+3 測試 | `d9b03f4` |
 | C6 | Wire P4：**砍 `from processor.rag_processor import RagProcessor`**；run_phase3 附加封存譯後 section 結構至旁路 `ctx.rag_sections`〔context.py 加旁路欄、不改 final_zh/en 輸出〕；run_phase4 改呼 `rag_indexer.index(rag_sections + section_summaries)` 不再餵 final_zh.md；P4 測試改 mock rag_indexer + run_phase3 旁路測試 | `13abdfa` |
-| C7 | Checkout：Conformance 五維度驗收全綠（目標規格 U1-U6 / tasks §6 grep+全套件 525 passed / 不可動清單 git diff 空〔rag_processor/rag_retriever/pipeline_core 零改〕/ 提示詞 9 份 / msg 完整）+ baton 一次性歸檔（plan_v2/tasks/C1-C7 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+| C7 | Checkout：Conformance 五維度驗收全綠（目標規格 U1-U6 / tasks §6 grep+全套件 525 passed / 不可動清單 git diff 空〔rag_processor/rag_retriever/pipeline_core 零改〕/ 提示詞 9 份 / msg 完整）+ baton 一次性歸檔（plan_v2/tasks/C1-C7 報告 → plans//tasks//executions/）+ hash 全量自癒 | `0d73601` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-07_RAG-ASYNC_P4_RAG索引共用真理源與全P2摘要_plan_v2.md`（§99.2 v2、§7 定案紀錄 D1-D7、七輪設計討論收斂）
 > **PIPE 對齊**：P4 升格為與 P2（DomainNormalizer/GlossaryManager）、P3（Translator）對稱之**共用真理源**——新建 B 軌自有 `rag_indexer`（全重寫、零依賴 A 軌 `rag_processor`）依 P3 結構自生 Strategy B 摘要增強分塊 + size-cap 二段子切；section_summaries 收斂為**統一 P2 六步流程**（全五路通用、單一節點摘要欄、繁中、批次）。
@@ -584,6 +608,32 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🔵 **WORKFLOW-3 — 跨 Phase 接縫契約 + 收官前整合測試（補流程治本·DOC-Refactor）**（plan v3 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`）
+  - 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + plan→tasks→6 run→Conformance 全是單元/grep 尺度、無整合測試 → 6 commit 全綠仍漏（C5 白做）
+  - 解法：WORKFLOW_SOP 加 §7「跨 Phase 接縫契約」〔plan 必凍結 handoff producer/consumer/key 同基準 + **附 worked example（修正版 #1）**〕+「收官前跨 Phase 整合測試」強制〔真 transform、Checkout Conformance 必驗〕+ §4.2 A6 + **template_plan 確立 plan 結構 SSOT〔接縫契約 + 變動風險章〕、framework §4.1 改引用 template〔根治 drift〕**
+  - v3 重評（「對專案有幫助就做、不拖延」）：① template↔framework drift → **SSOT 根治**（非只補佔位、**刪 WORKFLOW-4 候選**）② 認知負荷 → **附 worked example**（非空佔位）③ 進行中分支以下一 Checkout 為界（HOTFIX-1 已前瞻合規、維持）④ 硬 gate 顯式豁免（移除有害、維持）→ **2 做 2 維持**
+  - 狀態：**plan v3 純規格（§8：Q6/Q8 定案、其餘待拍板）；100% DOC、不溯及既往**
+  - 正交：純治理文件、不依賴任何 #1-5 hotfix；v1/v2 留 baton 作 §1.9 軌跡
+
+- 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
+  - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
+  - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
+  - 狀態：**plan 純規格（§7 八項 Open Questions 待拍板，尤 Q1 意圖機制混合/Q3 欄位集/Q4 值 pin）**
+  - 性質：跨 chat 模組（AI_professor_chat + ai_router_prompt）；不依賴 #1/#2/#4（與 P4 向量路正交）
+
+- 🔵 **RAG-ASYNC-HOTFIX-3 — zh 來源履歷 per-section（#4·選 B）**（hotfix 計畫已產、**doc-only 待 Run**；`.claude-logs/baton/2026-06-08_RAG-ASYNC-HOTFIX-3_hotfix.md`）
+  - #4：run_phase3 is_zh 路只做 zh_text=full_text、順帶跳過結構化 → rag_sections 單一容器 → zh 履歷 P4 不依 section 切、size-cap 任意窗、召回粒度低於 en（不對稱）
+  - 修法（選 B）：is_zh 有 section 走 ctx.ingestion.tiles 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section；zh「原文＝譯文」故 summary_key 與 P2/#1 天然對齊；不改 zh_text=full_text（閱讀輸出不變）
+  - 狀態：**doc-only（程式碼 diff 在文件、實檔未動、待 Run）**
+  - 依賴：**#1**（slot key/summary_key 由 #1 引入）→ 建議 #1+#4 合併或 #1 先；⚠️ zh 來源 golden 須重捕（en 不需）
+
+- 🔵 **RAG-ASYNC-HOTFIX-2 — B 軌補產 rag_tree.json（#2·選 B 完整版）**（hotfix 計畫已產、**doc-only 待 Run**；`.claude-logs/baton/2026-06-08_RAG-ASYNC-HOTFIX-2_hotfix.md`）
+  - #2：RAG-ASYNC C4 B 軌 rag_indexer 未產 rag_tree.json → rag_retriever load_rag_tree 回 {} → 章節引用/paper_title/公式相鄰降級（A 軌有、B 軌無）
+  - 修法（選 B 完整）：rag_indexer 新增 `build_rag_tree`（依 ctx.rag_sections 自建 key_map〔key=chunk Header=node_key→/sections/{i}/content/0〕+ 巢狀節點帶 translated_content + translated_title）+ index() 加 rag_tree_path 寫 `final_{paper}_rag_tree.json` + run_phase4 傳 `paper_manager.rag_tree_path` + 標題；零改 rag_retriever/ai_core
+  - 狀態：**doc-only（程式碼 diff 在文件、實檔未動、待 baron 過目後下 Run）**
+  - 依賴/邊界：與 #1（node_key 一致性同源）建議合併或先後；重複葉標題邊界（根治需 chunk_key 改路徑）；公式相鄰對履歷 inert（academic/book 才生效）
+  - 真因：plan v2 §U5 ④ 輸出漏列 rag_tree（SPEC §1.4 有）；C4 conformance 只驗 similarity_search 沒照出
 
 - 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
   - PipelineCore 實作 class-level 執行緒安全任務註冊表
