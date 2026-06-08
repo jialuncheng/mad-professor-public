@@ -15,7 +15,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-3 | `pipelines/resume_pipeline.py` `run_phase3` is_zh 分支：`_single_container_sections`→**有 section 時走 `ctx.ingestion.tiles` 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section rag_sections**〔text=原文 zh、summary_key=原文標題 path〕、無 section 退單一容器兜底；zh「原文＝譯文」故 summary_key 與 P2 section_summaries key、#1 chunk node_key **天然對齊**（無跨譯落差）；根治 is_zh 路只做 zh_text=full_text、順帶跳過結構化 → rag_sections 單一容器 → zh 履歷 P4 chunk 不依 section 切、size-cap 切任意 token 窗、召回粒度低於 en（不對稱、非崩潰故易忽略）；不改 zh_text=full_text〔final_zh byte 不變〕/en 主路/degraded；`# === [RAG-ASYNC-HOTFIX-3 HOTFIX-3 START/END] ===` 包裹 + 2 .bak + 補 3 測試〔zh per-section / zh 無 section 兜底 / 接 #1 摘要對位〕；resume 42 passed〔en 主路不退化〕、全套件 535 passed（僅 env flake）| `待 baron 回填` |
+| HOTFIX-3 | `pipelines/resume_pipeline.py` `run_phase3` is_zh 分支：`_single_container_sections`→**有 section 時走 `ctx.ingestion.tiles` 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section rag_sections**〔text=原文 zh、summary_key=原文標題 path〕、無 section 退單一容器兜底；zh「原文＝譯文」故 summary_key 與 P2 section_summaries key、#1 chunk node_key **天然對齊**（無跨譯落差）；根治 is_zh 路只做 zh_text=full_text、順帶跳過結構化 → rag_sections 單一容器 → zh 履歷 P4 chunk 不依 section 切、size-cap 切任意 token 窗、召回粒度低於 en（不對稱、非崩潰故易忽略）；不改 zh_text=full_text〔final_zh byte 不變〕/en 主路/degraded；`# === [RAG-ASYNC-HOTFIX-3 HOTFIX-3 START/END] ===` 包裹 + 2 .bak + 補 3 測試〔zh per-section / zh 無 section 兜底 / 接 #1 摘要對位〕；resume 42 passed〔en 主路不退化〕、全套件 535 passed（僅 env flake）| `6794331` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-08_RAG-ASYNC-HOTFIX-3_hotfix.md`
 > **真因（流程）**：RAG-ASYNC plan v2 只設計 en→zh 主路 per-section chunking、**未規範 is_zh 路結構化**；C6 給 is_zh「單一容器 fallback」（合理但粗、當時聚焦 chunks=1 主修）。治本歸 WORKFLOW-3（各路 edge path 需 plan 規範 + 收官前覆蓋測試）。
@@ -621,12 +621,15 @@
 
 ### 🔴 高優先
 
-- 🔵 **WORKFLOW-3 — 跨 Phase 接縫契約 + 收官前整合測試（補流程治本·DOC-Refactor）**（plan v3 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`）
-  - 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + plan→tasks→6 run→Conformance 全是單元/grep 尺度、無整合測試 → 6 commit 全綠仍漏（C5 白做）
-  - 解法：WORKFLOW_SOP 加 §7「跨 Phase 接縫契約」〔plan 必凍結 handoff producer/consumer/key 同基準 + **附 worked example（修正版 #1）**〕+「收官前跨 Phase 整合測試」強制〔真 transform、Checkout Conformance 必驗〕+ §4.2 A6 + **template_plan 確立 plan 結構 SSOT〔接縫契約 + 變動風險章〕、framework §4.1 改引用 template〔根治 drift〕**
-  - v3 重評（「對專案有幫助就做、不拖延」）：① template↔framework drift → **SSOT 根治**（非只補佔位、**刪 WORKFLOW-4 候選**）② 認知負荷 → **附 worked example**（非空佔位）③ 進行中分支以下一 Checkout 為界（HOTFIX-1 已前瞻合規、維持）④ 硬 gate 顯式豁免（移除有害、維持）→ **2 做 2 維持**
-  - 狀態：**plan v3 純規格（§8：Q6/Q8 定案、其餘待拍板）；100% DOC、不溯及既往**
-  - 正交：純治理文件、不依賴任何 #1-5 hotfix；v1/v2 留 baton 作 §1.9 軌跡
+- 🟡 **WORKFLOW-3 跨Phase接縫契約與收官前整合測試**（`.claude-logs/baton/2026-06-08_WORKFLOW-3_跨Phase接縫契約與收官前整合測試_plan_v3.md`；tasks 已產 `..._tasks.md`）
+  - [x] ✅ C1 — WORKFLOW_SOP 接縫契約與整合測試條款（接縫契約強制條款）`待 baron 回填`
+  - [/] 🟡 WIP: C2 — template_plan SSOT 化（plan 結構真理源升格）
+  - [ ] ⬜ 未開始: C3 — framework §4.1 改引用 template（消滅 doc-drift）
+  - [ ] ⬜ 未開始: C4 — Checkout 收官（一次性歸檔結案）
+  - 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + 全程無整合測試 → 6 commit + Conformance 全綠仍漏（C5 白做）；另 template_plan↔framework §4.1 doc-drift
+  - 工時：4 個 commits（3 doc + Checkout）
+  - 依賴：無（C3 依賴 C2、C4 依賴全部；純治理文件、不依賴任何 hotfix）
+  - 註：v1/v2/v3 三版留 baton 作 §1.9 多輪 review 軌跡，Checkout 一併歸檔 plans/
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -931,7 +934,7 @@
 - ✅ ~~RESUME-PERF-1 run_phase3 逐 section 翻譯並行化~~（已落地、C1 `b110742` + C2 `d5abdf0` + C3/C4 收官；序列→ThreadPool 受限並行〔保序靠 slot index、限流靠既有 `_api_semaphore`、單 unit 失敗退原文〕；C1 解耦先鎖等價、C2 並行、C3 4 並行測試；行為等價、預估 ~5x；baron 拍板不必等五路）
 
 ### RAG-ASYNC (✅ 已完成·PIPE Phase 4 共用真理源)
-- ✅ ~~RAG-ASYNC-HOTFIX-3 zh 來源履歷 P3 改建 per-section rag_sections（#4·選 B）~~（已落地、`待 baron 回填`；run_phase3 is_zh 分支單一容器→有 section 走 ctx.ingestion.tiles 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section〔summary_key=原文 zh path、與 P2/#1 天然對齊〕、無 section 退兜底；不改 zh_text=full_text/en 主路/degraded；resume 42 passed、全套件 535 passed；⚠️ zh 來源 golden 須重捕、en 不需）
+- ✅ ~~RAG-ASYNC-HOTFIX-3 zh 來源履歷 P3 改建 per-section rag_sections（#4·選 B）~~（已落地、`6794331`；run_phase3 is_zh 分支單一容器→有 section 走 ctx.ingestion.tiles 不翻譯、複用 `_collect_render_slots`+`_collect_rag_sections(translate=False)` 建 per-section〔summary_key=原文 zh path、與 P2/#1 天然對齊〕、無 section 退兜底；不改 zh_text=full_text/en 主路/degraded；resume 42 passed、全套件 535 passed；⚠️ zh 來源 golden 須重捕、en 不需）
 - ✅ ~~RAG-ASYNC-HOTFIX-1 section_summaries 跨譯 key 對位失效 + dead code~~（已落地、`300feb1`；#1 P2 原文 key vs P3 譯文 title vs P4 譯後 node_key 三方不一致 → Chapter Summary 永不進 chunk、Strategy B 靜默退化成 A；穿原文標題 path key 貫穿 P2/P3/P4 + 移除 dead `_load_index_meta`〔#3〕+ 補 P3→P4 接縫整合測試；全套件 528 passed）
 - ✅ ~~RAG-ASYNC-HOTFIX-2 B 軌補產 rag_tree.json（#2·選 B 完整版）~~（已落地、`300feb1`；rag_indexer 新增 `build_rag_tree`+`_walk_tree`〔key_map key=chunk Header=node_key→`/sections/{i}/content/0` + 巢狀 translated_content〕+ `index()` 寫 `final_{paper}_rag_tree.json` + run_phase4 傳路徑/標題；根治 C4 漏產 rag_tree → 章節引用/paper_title/公式相鄰降級；零改 rag_retriever/ai_core；全套件 532 passed；不衝擊 golden）
 - ✅ ~~RAG-ASYNC P4 RAG 索引共用真理源與全 P2 摘要~~（已落地、C1 `195e12b` + C2 `8c76274` + C3 `53755c4` + C4 `a09128e` + C5 `d9b03f4` + C6 `13abdfa` + C7 收官；新建 `processor/rag_indexer.py` B 軌自有索引引擎〔全重寫零 import rag_processor、Strategy B header augment + size-cap 二段子切 + 自實作 is_chunk_meaningful、index() 落庫 byte 相容 ④ 合約〕+ GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步〔批次產+翻 section_summaries、三安全鎖〕+ run_phase3 旁路封存 ctx.rag_sections + run_phase4 改呼 rag_indexer〔砍 rag_processor 耦合〕+ 母 plan v10/PIPE-SPEC 同步〔含修 §1.3 P3 doc-drift〕；全套件 525 passed；**chunks=1 退化修復、B 軌全鏈零 A 軌依賴**；⚠️ baron 須影子 E2E 驗 chunks 量級 + resume 重捕 Golden；其餘四路 production 隨各自 PIPE-N 跟上）

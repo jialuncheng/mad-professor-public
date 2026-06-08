@@ -6,7 +6,7 @@
 
 ## §0 改版規則
 
-- 改版觸發：§1–§7 任一規格條款變動
+- 改版觸發：§1–§6 任一規格條款變動
 - 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
 - 完整治理規格 → §99
 
@@ -103,7 +103,6 @@ session 必讀核心（跨任務）         → ref/
 - .bak 備份鐵律：修改既有檔案前產出的 .bak 備份，**必須在對應 Run 階段的 `git add` 清單中強制包含**（審計存檔，便於 git show 追溯）
 - baton/ 暫存鐵律：Run 階段產出的執行報告與 plan，**嚴禁在 Run 階段 `mv` 移動或 `git add`**，必須原封不動留在 baton/ 暫存
 - 收官歸檔鐵律：baton/ 下所有暫存文件，**必須且僅能在最後 Check 階段一次性 `mv` + `git add` 歸檔至正式目錄**
-- 跨 Phase 整合測試前置：跨 ≥2 Phase/模組且有資料 handoff 之任務，收官（階段 6）前必跑 §7.2 跨 Phase 整合測試、Checkout Conformance 必驗（詳見 §7）
 
 ---
 
@@ -117,7 +116,7 @@ session 必讀核心（跨任務）         → ref/
 | C2 | 行數符合規格 | `wc -l <檔案>` |
 | C3 | 命名格式合規 | 對照 §6 命名規則 |
 
-### §4.2 進階驗證（特定條件觸發，6 項）
+### §4.2 進階驗證（特定條件觸發，5 項）
 
 | # | 驗證項 | 觸發條件 | 指令 |
 |---|---|---|---|
@@ -126,7 +125,6 @@ session 必讀核心（跨任務）         → ref/
 | A3 | baton/*.md 不入版控 | .gitignore 修改時 | `git check-ignore -v .claude-logs/baton/test.md` |
 | A4 | pytest 全通過 | BE-Refactor / BE-Hotfix | `pytest tests/ -v` |
 | A5 | 動態內容缺席 | CLAUDE.md / SOP / framework 修改時 | `grep -n "TODO-hash\|commit-hash" <檔案>` |
-| A6 | 跨 Phase 整合測試 | 任務跨 ≥2 Phase/模組且有資料 handoff 時 | `<整合測試指令，含 key-changing transform、pass；缺則於 plan §OQ 申請豁免>` |
 
 ---
 
@@ -175,40 +173,6 @@ grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
 
 ---
 
-## §7 跨 Phase 接縫契約
-
-> 觸發：凡任務跨 ≥2 Phase 或 ≥2 模組、且 Phase/模組間有資料 handoff（一方產、另一方消費）者。
-> 動因：RAG-ASYNC #1——plan 未凍結跨 Phase key 契約 + 全程無整合測試 → 6 commit + Conformance 五維度全綠仍漏（C5 白做、靜默退化）。
-
-### §7.1 接縫契約（plan 必含）
-
-跨 Phase/模組之任務，其 plan 必含「接縫契約」章節，逐 handoff 明列：
-
-- **producer**：誰產、產什麼、欄位/key 名。
-- **consumer**：誰取、如何 match。
-- **key 精確身份**：原文 or 譯文 or 穩定 id；何種 path/索引基準。
-- **同基準保證**：明文「producer 寫入之 key 與 consumer 查找之 key 為**同一基準**、不得各自孤立決定」。
-
-**Worked example（修正版 RAG-ASYNC #1，可直接照抄格式）：**
-
-| handoff | producer | consumer | key 精確身份 + 同基準保證 |
-|---|---|---|---|
-| P2→P4 section 摘要 | P2 `_collect_summary_targets` 產 `section_summaries`，key＝**原文標題 path** | P4 `rag_indexer._walk` 以 `summary_key` 查節點摘要 | key＝**原文標題 path**；P2 產與 P4 取**同為原文標題 path**（P3 譯後 title 僅供顯示、不作 key） |
-
-**反例錨點**：原始 RAG-ASYNC #1 plan v2「`section_summaries: Dict[node_key]`、key 對位巢狀樹」屬**不合格**——只寫「key 對位」、未凍結「key＝何物」與「producer/consumer 同基準」，致 P2 產原文 key、P3 帶譯文 title、P4 以譯文查 → MISS、靜默退化。
-
-### §7.2 收官前跨 Phase 整合測試（Checkout 必驗）
-
-同類任務（跨 ≥2 Phase/模組 + handoff）於**階段 6 收官（Checkout）前必跑一條跨 Phase 整合測試**：
-
-- **串接整條相關 Phase/模組**（非單一 Phase 單元）。
-- **至少含一個會改變傳遞物 key 的真實/擬真 transform**（如真翻譯器使譯文≠原文 key）；**純 mock 同一 key 兩端不予承認為整合測試**（#1 所有單元測試都用自洽同 key 故全綠、照不出接縫）。
-- 斷言「上游產物經整條鏈後、下游確實正確消費」（接縫不變式）。
-
-**Checkout Conformance 必驗**：驗收維度新增「跨 Phase 整合測試存在且通過」；缺此測試之多 Phase 任務**不得判 🟢 通過**。特例（純文檔 DOC-Refactor / 外部強依賴如付費 API、無 code handoff）得於 plan §Open Questions **顯式申請豁免**、由 baron 拍板。
-
----
-
 ## §99 治理規格
 
 ### §99.1 治理規格表
@@ -217,18 +181,17 @@ grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
 |---|---|
 | 目的 | 定義五類工作流 / 六階段強制觸發鏈 / 命名規則 / 文件歸屬 / SOP 核查機制 |
 | 用途 | 透過 CLAUDE.md @path 自動載入；BE-Refactor / BE-Hotfix 落地前強制引用 §5 |
-| 權威源 | 本檔 §1–§7 |
+| 權威源 | 本檔 §1–§6 |
 | 引用方 | CLAUDE.md §2（工作流類別判定）/ CLAUDE.md §3（文件歸屬判定） |
 | 被引用方 | `<由 Antigravity 自動掃描注入>` |
-| 約束事項 | 五類工作流定義唯一源在本檔；命名規則唯一源在本檔 §6；跨 Phase 接縫契約唯一源在本檔 §7 |
-| 改版觸發條件 | §1–§7 任一規格條款變動 |
+| 約束事項 | 五類工作流定義唯一源在本檔；命名規則唯一源在本檔 §6 |
+| 改版觸發條件 | §1–§6 任一規格條款變動 |
 | 改版規則 | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
 | 刪除條件 | 不刪（永久必讀核心） |
-| 重複防護 | 工作流定義不在 CLAUDE.md 重寫；SOP 詳細手冊在 sop/ 目錄；跨 Phase 接縫契約唯一源在本檔 §7（plan/template/framework 僅引用） |
+| 重複防護 | 工作流定義不在 CLAUDE.md 重寫；SOP 詳細手冊在 sop/ 目錄 |
 
 ### §99.2 Revision 歷程
 
-- v4 (2026-06-08)：WORKFLOW-3 C1——新增 §7 跨 Phase 接縫契約（§7.1 接縫契約 + worked example〔修正版 RAG-ASYNC #1〕+ 反例 / §7.2 收官前跨 Phase 整合測試〔含 key-changing transform、Checkout Conformance 必驗、顯式豁免〕）+ §3 強制規則整合測試前置一行 + §4.2 A6（6 項）+ §99.1 重複防護；治本 RAG-ASYNC #1 接縫缺陷
 - v3 (2026-05-27)：WORKFLOW-2 C3——§3 強制規則新增三段備份/暫存/收官鐵律（R3）
 - v2 (2026-05-26)：WORKFLOW-1 C1.5——§3 強制規則補入「階段 2 同步更新 TODO.md」規則（對齊 plan r11）
 - v1 (2026-05-26)：WORKFLOW-1 C1 初版——五類工作流 / 六階段觸發鏈 / 驗證分級 / SOP 核查 / 命名規則 / §0 / §99 拆分式結構
