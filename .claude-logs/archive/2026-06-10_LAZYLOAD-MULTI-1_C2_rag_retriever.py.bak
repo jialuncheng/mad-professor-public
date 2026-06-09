@@ -8,7 +8,6 @@ from config import EmbeddingModel
 from settings import RAG_SCORE_THRESHOLD, RAG_MULTI_FLOOR_K, RAG_MULTI_MAX_CHUNKS
 # === [API-PERF C3 START] U3 向量庫 LRU ===
 import gc
-import threading  # === [LAZYLOAD-MULTI-1 C2] === 併發鎖
 from collections import OrderedDict
 from settings import RAG_MAX_CACHE
 # === [API-PERF C3 END] ===
@@ -39,12 +38,6 @@ class RagRetriever:
         # 存不透明 callable，retriever 不 import paper_manager/web_server（零循環）。
         self._loader = None
         # === [LAZYLOAD-MULTI-1 C1 END] ===
-        # === [LAZYLOAD-MULTI-1 C2 START] === in-memory cache 併發鎖（單一共享 RLock）
-        # ③ 把向量庫寫入從序列化 endpoint 搬進並行 to_thread worker（retrieve_multi 自載）→
-        # 無鎖 OrderedDict 複合 mutation 有 race。可重入 RLock 包全 mutation；ai_core._paper_cache
-        # 共用此鎖（self.retriever._lock）→ 零鎖序、不可能 AB-BA 死鎖。
-        self._lock = threading.RLock()
-        # === [LAZYLOAD-MULTI-1 C2 END] ===
 
     # === [LAZYLOAD-MULTI-1 C1 START] === loader 註冊鎖點
     def set_loader(self, fn) -> None:
@@ -55,36 +48,33 @@ class RagRetriever:
     # === [API-PERF C3 START] U3 向量庫 LRU 淘汰 helper ===
     def _evict_vector_lru(self) -> None:
         """vector_stores 超過 RAG_MAX_CACHE 時，自動釋放最久未使用的 FAISS 向量庫。"""
-        with self._lock:  # === [LAZYLOAD-MULTI-1 C2] === 併發保護（可重入）
-            while len(self.vector_stores) > RAG_MAX_CACHE:
-                _ev_key, _ = self.vector_stores.popitem(last=False)
-                gc.collect()  # FAISS 底層 C++ 記憶體不一定隨 ref 歸零即釋放，顯式回收
-                logger.info(f"[lru] 向量庫淘汰最久未使用: {_ev_key}")
+        while len(self.vector_stores) > RAG_MAX_CACHE:
+            _ev_key, _ = self.vector_stores.popitem(last=False)
+            gc.collect()  # FAISS 底層 C++ 記憶體不一定隨 ref 歸零即釋放，顯式回收
+            logger.info(f"[lru] 向量庫淘汰最久未使用: {_ev_key}")
     # === [API-PERF C3 END] ===
 
     def set_rag_tree(self, owner_id: int, paper_id: str, tree: Dict) -> None:
         """由 ai_core 載入 rag_tree 後註冊到記憶體（取代讀 papers_index.json）。"""
         if tree:
-            with self._lock:  # === [LAZYLOAD-MULTI-1 C2] ===
-                self.rag_trees[(owner_id, paper_id)] = tree
+            self.rag_trees[(owner_id, paper_id)] = tree
 
     def add_paper(self, owner_id: int, paper_id: str, vector_store_path: str) -> bool:
         """新增論文向量庫"""
         try:
             key = (owner_id, paper_id)
-            with self._lock:  # === [LAZYLOAD-MULTI-1 C2] === 包 dict mutation（可重入）
-                self.paper_vector_paths[key] = vector_store_path
-                logger.info(f"添加新论文向量库: owner={owner_id} {paper_id} -> {vector_store_path}")
-                vector_store = self.load_vector_store(vector_store_path)
-                if vector_store:
-                    self.vector_stores[key] = vector_store
-                    # === [API-PERF C3 START] U3 LRU：更新最近使用序 + 超限淘汰 ===
-                    self.vector_stores.move_to_end(key)
-                    self._evict_vector_lru()
-                    # === [API-PERF C3 END] ===
-                    logger.info(f"成功加载新论文 owner={owner_id} {paper_id} 的向量库")
-                    return True
-                return False
+            self.paper_vector_paths[key] = vector_store_path
+            logger.info(f"添加新论文向量库: owner={owner_id} {paper_id} -> {vector_store_path}")
+            vector_store = self.load_vector_store(vector_store_path)
+            if vector_store:
+                self.vector_stores[key] = vector_store
+                # === [API-PERF C3 START] U3 LRU：更新最近使用序 + 超限淘汰 ===
+                self.vector_stores.move_to_end(key)
+                self._evict_vector_lru()
+                # === [API-PERF C3 END] ===
+                logger.info(f"成功加载新论文 owner={owner_id} {paper_id} 的向量库")
+                return True
+            return False
         except Exception as e:
             logger.error(f"添加新论文 owner={owner_id} {paper_id} 失敗: {str(e)}")
             return False
@@ -111,28 +101,24 @@ class RagRetriever:
     def _get_vector_store(self, owner_id: int, paper_id: str) -> Optional[FAISS]:
         """取得向量庫（lazy load）"""
         key = (owner_id, paper_id)
-        # === [LAZYLOAD-MULTI-1 C2] === 前兩層 dict 存取持鎖（可重入）
-        with self._lock:
-            if key in self.vector_stores:
-                # === [API-PERF C3 START] U3 LRU：命中即更新最近使用序 ===
+        if key in self.vector_stores:
+            # === [API-PERF C3 START] U3 LRU：命中即更新最近使用序 ===
+            self.vector_stores.move_to_end(key)
+            # === [API-PERF C3 END] ===
+            return self.vector_stores[key]
+        if key in self.paper_vector_paths:
+            store = self.load_vector_store(self.paper_vector_paths[key])
+            if store:
+                self.vector_stores[key] = store
+                # === [API-PERF C3 START] U3 LRU：惰性重載後更新序 + 超限淘汰 ===
                 self.vector_stores.move_to_end(key)
+                self._evict_vector_lru()
                 # === [API-PERF C3 END] ===
-                return self.vector_stores[key]
-            if key in self.paper_vector_paths:
-                store = self.load_vector_store(self.paper_vector_paths[key])
-                if store:
-                    self.vector_stores[key] = store
-                    # === [API-PERF C3 START] U3 LRU：惰性重載後更新序 + 超限淘汰 ===
-                    self.vector_stores.move_to_end(key)
-                    self._evict_vector_lru()
-                    # === [API-PERF C3 END] ===
-                    return store
+                return store
         # === [LAZYLOAD-MULTI-1 C1 START] === 第三層：完全 miss → 呼注入 loader 自載後重試
         # 根治 API-PERF C3 lazy-load 只載當前 paper、跨文件 retrieve_multi 漏召其餘 tagged 篇。
         # loader 未設時略過此段、行為與現況完全一致（回 None）。
         if self._loader is not None:
-            # 🔴 [LAZYLOAD-MULTI-1 C2 死鎖鐵則] loader 會 re-enter ai_core/retriever（取同一共享鎖），
-            # 故 loader 呼叫**必須在鎖外**；僅 loader 回來後的 retry dict 存取持鎖。
             try:
                 self._loader(owner_id, paper_id)
             except Exception as e:
@@ -141,17 +127,16 @@ class RagRetriever:
                     exc_info=True,
                 )
                 return None
-            with self._lock:  # === [LAZYLOAD-MULTI-1 C2] === retry 持鎖
-                if key in self.vector_stores:
+            if key in self.vector_stores:
+                self.vector_stores.move_to_end(key)
+                return self.vector_stores[key]
+            if key in self.paper_vector_paths:
+                store = self.load_vector_store(self.paper_vector_paths[key])
+                if store:
+                    self.vector_stores[key] = store
                     self.vector_stores.move_to_end(key)
-                    return self.vector_stores[key]
-                if key in self.paper_vector_paths:
-                    store = self.load_vector_store(self.paper_vector_paths[key])
-                    if store:
-                        self.vector_stores[key] = store
-                        self.vector_stores.move_to_end(key)
-                        self._evict_vector_lru()
-                        return store
+                    self._evict_vector_lru()
+                    return store
         # === [LAZYLOAD-MULTI-1 C1 END] ===
         return None
 
@@ -170,10 +155,9 @@ class RagRetriever:
     def remove_paper(self, owner_id: int, paper_id: str) -> None:
         """移除該論文的向量快取（FAISS 實例、路徑映射、rag_tree）"""
         key = (owner_id, paper_id)
-        with self._lock:  # === [LAZYLOAD-MULTI-1 C2] === 三 dict pop 持鎖（可重入）
-            self.vector_stores.pop(key, None)
-            self.paper_vector_paths.pop(key, None)
-            self.rag_trees.pop(key, None)
+        self.vector_stores.pop(key, None)
+        self.paper_vector_paths.pop(key, None)
+        self.rag_trees.pop(key, None)
         logger.info(f"已移除論文向量快取: owner={owner_id} {paper_id}")
 
     def retrieve_with_context(self, owner_id: int, query: str, paper_id: str, top_k: int = 5) -> str:

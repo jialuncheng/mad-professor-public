@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### LAZYLOAD-MULTI-1 系列
-- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放（2026-06-10 Tasks → C1 WIP·BE-Refactor）**
+- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放（2026-06-10 Tasks → C1 → C2 WIP·BE-Refactor）**
+  - `2026-06-10_LAZYLOAD-MULTI-1_C2_run_提示詞.md` — C2 Run（in-memory cache 併發鎖純硬化·**單一共享 RLock**：`rag_retriever.py` import threading + `self._lock=RLock()` + `with self._lock` 包 add_paper/_evict/remove_paper/set_rag_tree/_get_vector_store dict mutation〔🔴 鐵則 loader 呼叫在鎖外防 AB-BA re-enter〕；`ai_core.py` 共用 `self.retriever._lock` 包 load_paper_cache/remove_paper〔修正 tasks §4.2 兩鎖 load_paper_cache↔_get_vector_store 相反鎖序死鎖隱患〕；純加鎖行為不變〔既有全套件全綠=回歸網〕+ 追加 `test_concurrent_lazyload_no_corruption`〔≥8 thread、不死鎖 timeout〕；3 .bak；只動 rag_retriever+ai_core+測試、不動 web_server/settings；msg /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-10_LAZYLOAD-MULTI-1_C1_run_提示詞.md` — C1 Run（`rag_retriever.py` loader 接縫：`set_loader` + `_get_vector_store` 兩層後加第三層「完全 miss 呼注入 loader 自載重試」+ `is_ready` 改 `or self._loader is not None`〔U7 防全清繞過〕；保留既有兩層、loader 未設＝現況回 None 向後相容；`# === [LAZYLOAD-MULTI-1 C1] ===` 包裹 + .bak + 新建 `tests/test_lazyload_multi.py` 5 測試〔自載/未設回 None/整合 6 篇只註冊 1/重載 title 非空/is_ready〕；只動 rag_retriever.py+測試、不加 RLock〔C2〕/釋放〔C4〕；msg /tmp〔Opus 4.8 1M〕、baton 不入 git、不自發 commit）
   - `2026-06-10_LAZYLOAD-MULTI-1_Tasks_提示詞.md` — Tasks（依 plan v5 §9 Q6 拆 5 commit〔C1 retriever loader 接縫自載+is_ready / C2 RLock 純硬化+並發 / C3 接線+cap100 核心 LIVE / C4 釋放策略 content 換篇 gate+upload 開關+跳過 active_streams+gc / C5 Checkout〕、忠實轉 §8 六維度不自行增刪、C3/C4 web_server hunk 邊界、對齊 U1-U9/§4 接縫五條；plan v1-v5 留 baton 待 C5 歸檔；各 Run 各產執行報告）
 
@@ -292,6 +293,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C2_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C1_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_Tasks_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_Check_提示詞.md`
@@ -306,4 +308,3 @@
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_Check_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C3_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C2_run_提示詞.md`
-- 2026-06-08 — `2026-06-08_WORKFLOW-3_C1_run_提示詞.md`

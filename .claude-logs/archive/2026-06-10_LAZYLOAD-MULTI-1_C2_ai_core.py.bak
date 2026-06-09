@@ -6,7 +6,6 @@ from rag_retriever import RagRetriever
 # === [API-PERF C3 START] U3 RAG cache LRU ===
 import gc
 from collections import OrderedDict
-from contextlib import nullcontext  # === [LAZYLOAD-MULTI-1 C2] === 共享鎖防呆
 from settings import RAG_MAX_CACHE
 # === [API-PERF C3 END] ===
 
@@ -98,23 +97,17 @@ class AICore:
         try:
             with open(rag_tree_path, 'r', encoding='utf-8') as f:
                 paper_data = json.load(f)
-            # === [LAZYLOAD-MULTI-1 C2 START] === _paper_cache mutation 持共享鎖
-            # （retriever._lock，與 retriever cache 同一把可重入鎖 → 零鎖序、防 AB-BA）；
-            # set_rag_tree 取同鎖、可重入吸收。retriever 理論恆在；None 時退 nullcontext。
-            _lock_ctx = self.retriever._lock if self.retriever is not None else nullcontext()
-            with _lock_ctx:
-                self._paper_cache[(owner_id, paper_id)] = paper_data
-                # 同步註冊到 retriever（取代其讀 papers_index.json）
-                if self.retriever:
-                    self.retriever.set_rag_tree(owner_id, paper_id, paper_data)
-                # === [API-PERF C3 START] U3 RAG cache LRU 淘汰（上限 RAG_MAX_CACHE）===
-                self._paper_cache.move_to_end((owner_id, paper_id))
-                while len(self._paper_cache) > RAG_MAX_CACHE:
-                    _ev_key, _ = self._paper_cache.popitem(last=False)
-                    gc.collect()  # 顯式回收（FAISS/大 dict 底層記憶體）
-                    self.logger.info(f"[lru] RAG cache 淘汰最久未使用: {_ev_key}")
-                # === [API-PERF C3 END] ===
-            # === [LAZYLOAD-MULTI-1 C2 END] ===
+            self._paper_cache[(owner_id, paper_id)] = paper_data
+            # 同步註冊到 retriever（取代其讀 papers_index.json）
+            if self.retriever:
+                self.retriever.set_rag_tree(owner_id, paper_id, paper_data)
+            # === [API-PERF C3 START] U3 RAG cache LRU 淘汰（上限 RAG_MAX_CACHE）===
+            self._paper_cache.move_to_end((owner_id, paper_id))
+            while len(self._paper_cache) > RAG_MAX_CACHE:
+                _ev_key, _ = self._paper_cache.popitem(last=False)
+                gc.collect()  # 顯式回收（FAISS/大 dict 底層記憶體）
+                self.logger.info(f"[lru] RAG cache 淘汰最久未使用: {_ev_key}")
+            # === [API-PERF C3 END] ===
             return True
         except Exception as e:
             self.logger.error(f"載入論文快取失敗: {str(e)}")
@@ -123,11 +116,8 @@ class AICore:
     def remove_paper(self, owner_id: int, paper_id: str) -> None:
         """移除該論文的所有記憶體快取（_paper_cache、retriever、當前對話上下文）"""
         key = (owner_id, paper_id)
-        # === [LAZYLOAD-MULTI-1 C2] === 共享鎖（retriever.remove_paper 取同鎖、可重入）
-        _lock_ctx = self.retriever._lock if self.retriever is not None else nullcontext()
-        with _lock_ctx:
-            if key in self._paper_cache:
-                del self._paper_cache[key]
-            if self.retriever:
-                self.retriever.remove_paper(owner_id, paper_id)
+        if key in self._paper_cache:
+            del self._paper_cache[key]
+        if self.retriever:
+            self.retriever.remove_paper(owner_id, paper_id)
         self.logger.info(f"已移除論文快取: owner={owner_id} {paper_id}")
