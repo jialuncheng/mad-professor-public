@@ -65,9 +65,6 @@ RAG_MULTI_MAX_CHUNKS = int(os.getenv("RAG_MULTI_MAX_CHUNKS", "15"))  # cross-doc
 RAG_MAX_CACHE = int(os.getenv("RAG_MAX_CACHE", "100"))   # === [LAZYLOAD-MULTI-1 C3] === 5→100（記憶體 13MB 語料無虞、釋放策略主導、cap 僅安全天花板）
 # === [API-PERF C3 END] ===
 
-# === [LAZYLOAD-MULTI-1 C4] === 上傳釋放開關（預設 on）：上傳文件時全清向量快取、騰 RAM 給同 VM MinerU Docker
-RELEASE_ON_UPLOAD = os.getenv("RELEASE_ON_UPLOAD", "true").lower() == "true"
-
 # === [API-PERF C4 START] U1 全系統 Pipeline 並發上限 ===
 # web_server.PIPELINE_SEMAPHORE 以此值建立 asyncio.Semaphore，限制同時運行的 Pipeline
 # 任務數（A 軌 run_pipeline + B 軌 run_pipeline_shadow 共用）；多餘任務內存排隊（queued）。

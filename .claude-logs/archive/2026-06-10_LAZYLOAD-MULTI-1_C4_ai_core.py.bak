@@ -121,11 +121,7 @@ class AICore:
             return False
 
     def remove_paper(self, owner_id: int, paper_id: str) -> None:
-        """移除該論文的所有記憶體快取（_paper_cache + retriever 三 dict）。
-
-        === [LAZYLOAD-MULTI-1 C4] === 修正 stale docstring：實際僅清 _paper_cache + retriever，
-        **不清對話上下文**（對話歷史在 DB / active_streams、不受本方法影響）。
-        """
+        """移除該論文的所有記憶體快取（_paper_cache、retriever、當前對話上下文）"""
         key = (owner_id, paper_id)
         # === [LAZYLOAD-MULTI-1 C2] === 共享鎖（retriever.remove_paper 取同鎖、可重入）
         _lock_ctx = self.retriever._lock if self.retriever is not None else nullcontext()

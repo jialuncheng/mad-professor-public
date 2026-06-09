@@ -21,7 +21,6 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 import settings
-import gc  # === [LAZYLOAD-MULTI-1 C4] === 釋放後顯式回收 FAISS C++ 記憶體
 import db
 import paper_manager
 from pipeline_core import PipelineCore
@@ -84,37 +83,6 @@ class StreamSession:
 
 # key = (owner_id, paper_db_id)
 active_streams: _Dict[_Tuple[int, int], StreamSession] = {}
-
-# === [LAZYLOAD-MULTI-1 C4 START] === 記憶體釋放策略（換篇/上傳全清、跳過活躍串流 + gc）
-# owner_id -> 當前 paper_uuid：僅「實際換篇」才釋放，防 F1（語言切換同篇也打 /content）誤放。
-_owner_current_paper: dict = {}
-
-
-def _release_caches_except_active(owner_id: int) -> None:
-    """全清該 owner 所有 cached 篇向量庫/快取，唯一豁免 active_streams 仍在生成（done==False）者。
-
-    靠 ③（C3 set_loader）下次自載兜底（被釋放篇再用即重載 vector+rag_tree）；釋放後 gc.collect()
-    促 FAISS C++ 記憶體歸還 OS（騰給同 VM MinerU Docker、M1）。cache mutation 受 C2 共享 RLock 保護。
-    """
-    if ai_core is None:   # lifespan 未初始化（測試/啟動前）→ 無可釋放
-        return
-    active = {s.paper_uuid for s in active_streams.values()
-              if not s.done and s.owner_id == owner_id}
-    # 快照該 owner 之 cached uuid 後再清，避免 dict 迭代中變動
-    cached = {p for (o, p) in list(ai_core._paper_cache.keys()) if o == owner_id}
-    cached |= {p for (o, p) in list(ai_core.retriever.paper_vector_paths.keys()) if o == owner_id}
-    released = 0
-    for pid in cached:
-        if pid in active:
-            continue
-        ai_core.remove_paper(owner_id, pid)   # 清四 dict（C2 共享鎖、可重入）
-        released += 1
-    if released:
-        gc.collect()
-        logger.info(
-            f"[lazyload-release] owner={owner_id} released={released} skip_active={len(active)}"
-        )
-# === [LAZYLOAD-MULTI-1 C4 END] ===
 streams_lock = asyncio.Lock()
 
 
@@ -502,11 +470,6 @@ async def upload_paper(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="只接受 PDF 檔案")
 
-    # === [LAZYLOAD-MULTI-1 C4 START] === 上傳釋放（開關 on）：上傳即全清向量快取、騰 RAM 給同 VM MinerU Docker
-    if settings.RELEASE_ON_UPLOAD:
-        _release_caches_except_active(current_user.id)
-    # === [LAZYLOAD-MULTI-1 C4 END] ===
-
     # === [API-PERF C2 START] U4 1MB 分塊流式寫入（取代一次性 await file.read()）===
     # 內存常數 (<10MB)：每次僅讀 1MB 緩衝直寫磁碟；首塊校驗 %PDF 魔術字節（415）、
     # 累計超 100MB 立即截斷刪檔（413）；失敗一律清理 partial 檔。
@@ -791,11 +754,6 @@ async def paper_content(paper_id: str, lang: str = "zh",
         raise HTTPException(status_code=404, detail="論文內容不存在")
 
     content = md_path.read_text(encoding='utf-8')
-    # === [LAZYLOAD-MULTI-1 C4 START] === 切換文章釋放（僅實際換篇；語言切換同篇 → 不放·F1）
-    if _owner_current_paper.get(current_user.id) != paper_id:
-        _release_caches_except_active(current_user.id)
-        _owner_current_paper[current_user.id] = paper_id
-    # === [LAZYLOAD-MULTI-1 C4 END] ===
     return {'paper_id': paper_id, 'lang': lang_key, 'content': content}
 
 

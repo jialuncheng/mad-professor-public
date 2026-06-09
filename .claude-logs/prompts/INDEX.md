@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### LAZYLOAD-MULTI-1 系列
-- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放（2026-06-10 Tasks → C1-C2 → C3 WIP·BE-Refactor）**
+- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放（2026-06-10 Tasks → C1-C3 → C4 WIP·BE-Refactor）**
+  - `2026-06-10_LAZYLOAD-MULTI-1_C4_run_提示詞.md` — C4 Run（記憶體釋放策略：`settings.py` `RELEASE_ON_UPLOAD`=on + `web_server.py` 模組級 `_owner_current_paper` + helper `_release_caches_except_active`〔全清該 owner cached、唯一豁免 active_streams done==False、快照 keys 再清、gc.collect 騰 MinerU〕+ `/content` 換篇 gate〔F1 語言切換同篇不放〕+ `/upload` 開關釋放 + `ai_core.py` remove_paper docstring 修〔P4〕；靠 C3 ③ 自載兜底；**只動端點段+helper、不碰 C3 啟動接線段**、不動 rag_retriever；4 .bak + 3 釋放測試〔skip_active/only_on_switch/upload_toggle〕；msg /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-10_LAZYLOAD-MULTI-1_C3_run_提示詞.md` — C3 Run（啟動接線與容量·核心 LIVE：`settings.py` `RAG_MAX_CACHE` 5→100〔env 可覆寫〕+ `web_server.py` 啟動 lifespan 接線一行 `ai_core.retriever.set_loader(λ o,p: load_paper_resources(OUTPUT_DIR,o,p,ai_core))`〔API-PERF C3 區附近、retriever 就緒後 yield 前〕→ retrieve_multi 對未載 tagged 篇經 ③ 自載、跨文件 #cv 不再只召當前篇；純加法 2-3 行；**只動啟動段不碰端點〔C4〕**、不動 rag_retriever/ai_core〔C1/C2〕；3 .bak + test_cap_100_default；msg /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-10_LAZYLOAD-MULTI-1_C2_run_提示詞.md` — C2 Run（in-memory cache 併發鎖純硬化·**單一共享 RLock**：`rag_retriever.py` import threading + `self._lock=RLock()` + `with self._lock` 包 add_paper/_evict/remove_paper/set_rag_tree/_get_vector_store dict mutation〔🔴 鐵則 loader 呼叫在鎖外防 AB-BA re-enter〕；`ai_core.py` 共用 `self.retriever._lock` 包 load_paper_cache/remove_paper〔修正 tasks §4.2 兩鎖 load_paper_cache↔_get_vector_store 相反鎖序死鎖隱患〕；純加鎖行為不變〔既有全套件全綠=回歸網〕+ 追加 `test_concurrent_lazyload_no_corruption`〔≥8 thread、不死鎖 timeout〕；3 .bak；只動 rag_retriever+ai_core+測試、不動 web_server/settings；msg /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-10_LAZYLOAD-MULTI-1_C1_run_提示詞.md` — C1 Run（`rag_retriever.py` loader 接縫：`set_loader` + `_get_vector_store` 兩層後加第三層「完全 miss 呼注入 loader 自載重試」+ `is_ready` 改 `or self._loader is not None`〔U7 防全清繞過〕；保留既有兩層、loader 未設＝現況回 None 向後相容；`# === [LAZYLOAD-MULTI-1 C1] ===` 包裹 + .bak + 新建 `tests/test_lazyload_multi.py` 5 測試〔自載/未設回 None/整合 6 篇只註冊 1/重載 title 非空/is_ready〕；只動 rag_retriever.py+測試、不加 RLock〔C2〕/釋放〔C4〕；msg /tmp〔Opus 4.8 1M〕、baton 不入 git、不自發 commit）
@@ -294,6 +295,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C4_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C3_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C2_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C1_run_提示詞.md`
@@ -308,4 +310,3 @@
 - 2026-06-09 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_doc_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_Check_提示詞.md`
-- 2026-06-08 — `2026-06-08_WORKFLOW-3_C3_run_提示詞.md`
