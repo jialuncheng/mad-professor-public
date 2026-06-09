@@ -31,19 +31,6 @@ class RagRetriever:
         self.base_path = base_path
         # 向量庫路徑與 rag_tree 由 paper_manager（DB 來源）透過
         # add_paper / set_rag_tree 註冊，不再讀 papers_index.json。
-        # === [LAZYLOAD-MULTI-1 C1 START] ===
-        # ③ lazy-load hook：由 web_server 啟動時 set_loader 注入
-        # （`λ o,p: paper_manager.load_paper_resources(OUTPUT_DIR,o,p,ai_core)`）。
-        # _get_vector_store 完全 miss 時呼此 callable 自我載入（單篇/多篇/attach 全收）。
-        # 存不透明 callable，retriever 不 import paper_manager/web_server（零循環）。
-        self._loader = None
-        # === [LAZYLOAD-MULTI-1 C1 END] ===
-
-    # === [LAZYLOAD-MULTI-1 C1 START] === loader 註冊鎖點
-    def set_loader(self, fn) -> None:
-        """註冊 lazy-load callback：fn(owner_id, paper_id) -> None，載入並註冊該篇向量庫 + rag_tree。"""
-        self._loader = fn
-    # === [LAZYLOAD-MULTI-1 C1 END] ===
 
     # === [API-PERF C3 START] U3 向量庫 LRU 淘汰 helper ===
     def _evict_vector_lru(self) -> None:
@@ -115,29 +102,6 @@ class RagRetriever:
                 self._evict_vector_lru()
                 # === [API-PERF C3 END] ===
                 return store
-        # === [LAZYLOAD-MULTI-1 C1 START] === 第三層：完全 miss → 呼注入 loader 自載後重試
-        # 根治 API-PERF C3 lazy-load 只載當前 paper、跨文件 retrieve_multi 漏召其餘 tagged 篇。
-        # loader 未設時略過此段、行為與現況完全一致（回 None）。
-        if self._loader is not None:
-            try:
-                self._loader(owner_id, paper_id)
-            except Exception as e:
-                logger.error(
-                    f"lazy-load 自載失敗: owner={owner_id} paper={paper_id}: {e}",
-                    exc_info=True,
-                )
-                return None
-            if key in self.vector_stores:
-                self.vector_stores.move_to_end(key)
-                return self.vector_stores[key]
-            if key in self.paper_vector_paths:
-                store = self.load_vector_store(self.paper_vector_paths[key])
-                if store:
-                    self.vector_stores[key] = store
-                    self.vector_stores.move_to_end(key)
-                    self._evict_vector_lru()
-                    return store
-        # === [LAZYLOAD-MULTI-1 C1 END] ===
         return None
 
     def load_rag_tree(self, owner_id: int, paper_id: str) -> Dict:
@@ -145,12 +109,8 @@ class RagRetriever:
         return self.rag_trees.get((owner_id, paper_id), {})
 
     def is_ready(self) -> bool:
-        """檢查是否已有向量庫路徑。
-
-        === [LAZYLOAD-MULTI-1 C1] === loader 已設亦視為 ready：全清（切換/上傳釋放）後
-        paper_vector_paths 可能為空，但 loader 能自載重建，故不得回 False 致 retrieve_* 繞過 ③。
-        """
-        return bool(self.paper_vector_paths) or self._loader is not None
+        """檢查是否已有向量庫路徑"""
+        return bool(self.paper_vector_paths)
 
     def remove_paper(self, owner_id: int, paper_id: str) -> None:
         """移除該論文的向量快取（FAISS 實例、路徑映射、rag_tree）"""

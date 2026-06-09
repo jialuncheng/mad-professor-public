@@ -663,6 +663,17 @@
 
 ### 🔴 高優先
 
+- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放**（`.claude-logs/baton/2026-06-09_LAZYLOAD-MULTI-1_跨文件lazyload接縫與記憶體釋放_plan_v5.md`；tasks 已產 `..._tasks.md`）
+  - [x] ✅ C1 — Retriever loader 接縫（自載咽喉）`rag_retriever.py` set_loader + _get_vector_store 完全 miss 自載 + is_ready loader-aware（U1/U7）+ 5 單元（含整合 6 篇只註冊 1）`待 baron 回填`
+  - [/] 🟡 WIP: C2 — Cache 併發鎖純硬化（行為不變防 race）RLock 包 retriever 三 dict + ai_core _paper_cache 全 mutation（U8）+ 並發測試；既有全套件即回歸網
+  - [ ] ⬜ 未開始: C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 set_loader 接線 + `RAG_MAX_CACHE`=100（U2/U4 純加法 2-3 行→跨文件修復 LIVE）
+  - [ ] ⬜ 未開始: C4 — 記憶體釋放策略（換篇/上傳全清跳過活躍）`/content` 換篇 gate〔F1 語言切換不放〕+ `/upload`〔`RELEASE_ON_UPLOAD`=on〕+ 跳過 active_streams + gc + docstring（U5/U9/P4）+ 3 釋放測試
+  - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance 與歸檔）baton 一次性 mv（plan v1-v5 + tasks + C1-C5 報告）+ 結案 + hash 自癒
+  - 真因：API-PERF C3 廢 preload、chat 端點只 lazy-load 當前 paper → retrieve_multi 需全 tagged 篇、未註冊者靜默跳過 → `#cv 比較` 只召當前篇（log 證 candidates=14 全吳焴倫、其餘 5 篇 0）；非 RAG-MULTI-1/非模型（28 篇全 -001、獨立載入都滿分）
+  - 修法：③ retriever 自載咽喉 + is_ready loader-aware + RLock 併發鎖（③ 把寫推進 to_thread worker）+ 釋放策略（切換/上傳全清跳過 active_streams + gc）；cap 5→100、砍 60min TTL
+  - 工時：5 個 commits（C1-C4 + C5 Checkout）；依賴：無（檢索/記憶體層，不依賴 PIPE 五路進度）；plan v1-v5 留 baton 作 §1.9 軌跡、Checkout 一併歸檔
+  - ⚠️ baron 運維（非 commit）：plan v5 §8.2 E2E（直接 #cv 涵蓋全 6 位 / 並發 / 串流中切篇不斷 / 語言切換不放 / 上傳釋放 RAM 降 / shadow pid 入 chosen）
+
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）

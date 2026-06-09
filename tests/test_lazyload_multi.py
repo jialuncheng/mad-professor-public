@@ -1,0 +1,131 @@
+# === [LAZYLOAD-MULTI-1 C1] ===
+"""LAZYLOAD-MULTI-1 C1：RagRetriever loader 接縫（_get_vector_store 完全 miss 自載）pytest。
+
+對齊 plan v5 §4.1 / U1（set_loader + 自載）/ U7（is_ready loader-aware）/ §4 lazy-load callback + rag_tree handoff。
+僅 mock vector store 的 similarity_search_with_score；loader 模擬 load_paper_resources（一併補 vector + rag_tree）。
+不 mock retrieve_multi 本體（整合測試走真實演算法）。
+"""
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import rag_retriever as rr_mod  # noqa: E402
+from rag_retriever import RagRetriever  # noqa: E402
+
+
+# ─────────────────── mock 工具 ───────────────────
+def _mock_store(score_chunks):
+    """建 mock FAISS：similarity_search_with_score(query,k) 回 (Document, score) list。"""
+    vs = MagicMock()
+
+    def _search(query, k=5):
+        return [(SimpleNamespace(page_content=c, metadata={}), s) for s, c in score_chunks[:k]]
+
+    vs.similarity_search_with_score = _search
+    return vs
+
+
+def _register(r, owner, pid, score_chunks, title):
+    """模擬 load_paper_resources：一併註冊 vector_store + path + rag_tree（含 title）。"""
+    r.vector_stores[(owner, pid)] = _mock_store(score_chunks)
+    r.paper_vector_paths[(owner, pid)] = f'/fake/{pid}'
+    r.rag_trees[(owner, pid)] = {'translated_title': title}
+
+
+def _make_loader(r, backing):
+    """loader(owner,pid)：從 backing 取資料、註冊進 retriever（mimic load_paper_resources 全載）。"""
+    def _loader(owner, pid):
+        sc, title = backing[pid]
+        _register(r, owner, pid, sc, title)
+    return _loader
+
+
+def _headers(ctx):
+    return [ln for ln in ctx.split('\n') if ln.startswith('## 摘自文件')]
+
+
+def _pid_in(ctx, pid):
+    return any(ln.startswith(f'{pid}_') for ln in ctx.split('\n'))
+
+
+@pytest.fixture(autouse=True)
+def _low_threshold(monkeypatch):
+    monkeypatch.setattr(rr_mod, 'RAG_SCORE_THRESHOLD', 0.0)
+
+
+# ─────────────────── 1. 完全 miss → 自載 ───────────────────
+def test_get_vector_store_self_loads_on_miss():
+    r = RagRetriever(base_path='/tmp/test_lazyload')
+    backing = {'A': ([(0.9, 'A_0')], 'A_title')}
+    r.set_loader(_make_loader(r, backing))
+    # 完全 miss（未預註冊）→ 第三層呼 loader 自載
+    store = r._get_vector_store(1, 'A')
+    assert store is not None
+    assert (1, 'A') in r.vector_stores   # loader 已註冊
+    assert r.rag_trees[(1, 'A')]['translated_title'] == 'A_title'  # tree 一併補載
+
+
+# ─────────────────── 2. loader 未設 → 回 None（向後相容）───────────────────
+def test_get_vector_store_loader_unset_returns_none():
+    r = RagRetriever(base_path='/tmp/test_lazyload')
+    # 不 set_loader、完全 miss
+    assert r._get_vector_store(1, 'A') is None  # 與現況行為一致
+
+
+# ─────────────────── 3. 整合：6 篇只註冊 1、其餘自載（吳焴倫 bug 修復）───────────────────
+def test_retrieve_multi_loads_all_tagged():
+    r = RagRetriever(base_path='/tmp/test_lazyload')
+    pids = ['A', 'B', 'C', 'D', 'E', 'F']
+    backing = {
+        p: ([(0.7 - 0.02 * i, f'{p}_{i}') for i in range(3)], f'{p}_title')
+        for p in pids
+    }
+    # 只預註冊 1 篇（A）；其餘 5 篇靠 loader 自載
+    _register(r, 1, 'A', *(lambda sc_t: (sc_t[0], sc_t[1]))(backing['A']))
+    r.set_loader(_make_loader(r, backing))
+
+    ctx = r.retrieve_multi_with_context(owner_id=1, query='q', paper_ids=pids)
+    # 全 6 篇都應被搜到（每篇保底覆蓋；自載補齊其餘 5 篇）
+    for p in pids:
+        assert _pid_in(ctx, p), f'{p} 漏召（自載未生效）'
+    # title 正確（自載一併補 tree）
+    for p in pids:
+        assert f'《{p}_title》' in ctx
+
+
+# ─────────────────── 4. 全清→重載 title 非空（U3/U6）───────────────────
+def test_evict_then_reload_preserves_title():
+    r = RagRetriever(base_path='/tmp/test_lazyload')
+    backing = {'A': ([(0.9, 'A_0')], 'A_title')}
+    _register(r, 1, 'A', *backing['A'])
+    r.set_loader(_make_loader(r, backing))
+    # 全清（模擬切換/上傳釋放）
+    r.remove_paper(1, 'A')
+    assert (1, 'A') not in r.paper_vector_paths and (1, 'A') not in r.rag_trees
+    # 再取庫 → loader 自載 → store + tree 回來、title 非空
+    store = r._get_vector_store(1, 'A')
+    assert store is not None
+    tree = r.load_rag_tree(1, 'A')
+    assert tree.get('translated_title') == 'A_title'   # 非空、不退化
+
+
+# ─────────────────── 5. 全清後 is_ready loader-aware（U7）───────────────────
+def test_is_ready_after_full_evict():
+    r = RagRetriever(base_path='/tmp/test_lazyload')
+    # 無 loader、空 → is_ready False（sanity，現況）
+    assert r.is_ready() is False
+    backing = {'A': ([(0.9, 'A_0')], 'A_title')}
+    _register(r, 1, 'A', *backing['A'])
+    r.set_loader(_make_loader(r, backing))
+    # 全清 paper_vector_paths
+    r.remove_paper(1, 'A')
+    assert not r.paper_vector_paths
+    # loader 已設 → is_ready 仍 True（不繞過 ③）
+    assert r.is_ready() is True
