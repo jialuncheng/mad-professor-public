@@ -11,6 +11,22 @@
 
 ## ✅ 已完成
 
+### BE-Refactor RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `settings.py` 廢 `RAG_MULTI_TOP_K`、立 `RAG_MULTI_FLOOR_K`(2)/`RAG_MULTI_MAX_CHUNKS`(15)〔C2 後同 commit 廢 TOP_K〕| `5b9477a` |
+| C2 | `rag_retriever.py` `retrieve_multi_with_context` 廢全域 top-k 飢餓 → **每篇保底覆蓋**〔`effective_floor = min(RAG_MULTI_FLOOR_K, max(1, cap//N))`、不足全拿、補位池排除已保底、N>cap 按各篇最高分取前 cap 篇各 1〕+ `top_k` 參數改 cap override + import 去 TOP_K；更新既有 hashtag 路由測試 | `82b95b1` |
+| C3 | `prompt/ai/ai_character_prompt.txt` 引用段禁 bare `[N]`、只留《文件名》「章節」；共載 `ai_explain_prompt.txt` 已查無反向 [N]〔未改〕| `b5f9ce4` |
+| C4 | 新建 `tests/test_rag_multi.py` 11 測試〔保底/不足全拿/小N不暴漲〔min(floor_k,…)〕/cap/N>cap最高分截斷/補位去重/0候選跳過/cap override/混型book不壓resume/單篇不退化/禁[N]〕；真實演算法驗證〔不 mock retrieve_multi 本體〕；全套件 546 passed | `待 baron 回填` |
+| C5 | Checkout 收官：Conformance 五維度驗收全綠〔plan v3 U1-U7 / tasks §6 grep+pytest / 不可動 / 提示詞稽核 / msg 完整性〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-09_RAG-MULTI-1_跨文件多篇檢索覆蓋與引用修正_plan_v3.md`（v1/v2/v3 三版保留作 §1.9 軌跡；三輪 review 收斂：v1 初稿 → v2 Antigravity 五項+Q2 公式修正 → v3 self-review 三點收緊）
+> **真因（log 鐵證）**：`retrieve_multi_with_context` 全域 top-k=7 飢餓 → 6 篇被擠成 2 人代表（李宗原 A+B軌 佔 5/7、吳焴倫碩士漏召）→ 比較類查詢漏掉有資料文件；另 LLM 多吐無依據 `[1][2][5]` 引用。
+> **治本**：每篇保底覆蓋〔保證有候選之 paper 不 0 代表〕+ cap 防爆 + 禁 bare [N]；`retrieve_multi` 無 doc_type = **五路通用**。
+> **⚠️ 刻意不做（U7）**：shadow 不過濾（維 B軌可見性）→ 同人 A+B軌 重複代表為設計副作用、非 bug；內容去重列後續。
+> **⚠️ baron 運維**：測試機影子 E2E 驗 `#cv 比較` 涵蓋多人（含吳焴倫碩士）、答案無 bare [N]、`grep [retrieve_multi].*chosen` 含先前 0 代表 paper。
+
 ### FE-Hotfix CHAT-EXPORT-HOTFIX-1 — 對話下載在 Dia 卡 8/8 不結束（導覽式下載 → fetch+blob）
 
 | Commit | 內容 | Hash |
@@ -647,17 +663,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正**（`.claude-logs/baton/2026-06-09_RAG-MULTI-1_跨文件多篇檢索覆蓋與引用修正_plan_v3.md`；tasks 已產 `..._tasks.md`）
-  - [x] ✅ C1 — settings 常數（廢 TOP_K 立保底常數）`5b9477a`
-  - [x] ✅ C2 — retrieve_multi 演算法（每篇保底覆蓋與防爆 cap）`82b95b1`
-  - [x] ✅ C3 — 提示詞禁 [N]（引用標記去噪）`b5f9ce4`
-  - [x] ✅ C4 — 單元測試（保底/cap/截斷/補位/混型/單篇）`待 baron 回填`
-  - [/] 🟡 WIP: C5 — Checkout 收官（Conformance 驗收與一次性歸檔）
-  - 真因（log 鐵證）：`retrieve_multi_with_context` 全域 top-k=7 飢餓 → 6 篇被擠成 2 人（李宗原 A+B軌 佔 5/7、吳焴倫碩士漏召）+ LLM 多吐無依據 [N]
-  - 修法：每篇保底 `effective_floor=min(floor_k,max(1,cap//N))`〔不足全拿/補位排除已選/N>cap 最高分截斷〕+ 廢 RAG_MULTI_TOP_K 立 FLOOR_K=2·MAX_CHUNKS=15 + top_k 改 cap override + ai_character_prompt 禁 [N]；retrieve_multi 無 doc_type = 五路通用
-  - **刻意不做**：shadow 過濾（維 B軌可見性）→ 同人重複代表＝U7 副作用非 bug
-  - 工時：5 個 commits（C1-C4 + C5 Checkout）；依賴：無（檢索層、不依賴 PIPE 五路進度）；v1/v2/v3 三版留 baton 作 §1.9 軌跡、Checkout 一併歸檔
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -866,6 +871,7 @@
 ## 索引（依類別）
 
 ### RAG（11 項 active）
+- ✅ ~~RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正~~（已落地、C1 `5b9477a` + C2 `82b95b1` + C3 `b5f9ce4` + C4 + C5 Checkout 收官；retrieve_multi 廢全域 top-k 飢餓→每篇保底覆蓋〔min(floor_k,max(1,cap//N))+不足全拿+補位排除已選+N>cap最高分截斷〕+ 廢 RAG_MULTI_TOP_K 立 FLOOR_K/MAX_CHUNKS + ai_character_prompt 禁 [N] + test_rag_multi.py 11 測試；治本「6 篇擠成 2 人、吳焴倫碩士漏召」；五路通用；⚠️ shadow 不過濾＝U7 刻意副作用、baron 影子 E2E 驗多人涵蓋）
 - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `595e3d8`）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
 - ✅ ~~RAG-1 Phase 1 前端 UI Fixes + 資料夾自動標籤 + 標籤強制小寫~~（已落地、R1 + R2 + R3 三個 commit、hash 待 push 後回填、見上方 ✅ 完成區）

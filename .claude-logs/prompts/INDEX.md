@@ -200,7 +200,8 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
-- 🟡 **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正（2026-06-09 plan v3 → Tasks → C1-C3 → C4 WIP·BE-Refactor）**
+- ✅ **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正（2026-06-09 plan v3 → Tasks → C1-C4 → C5 Checkout 收官·BE-Refactor）**
+  - `2026-06-09_RAG-MULTI-1_Check_提示詞.md` — Check（C5 Checkout 收官：Conformance 三維度〔plan v3 §2 U1-U7 / tasks §6 grep+pytest〔C4 11 測試、全套件 546 passed〕/ 不可動清單〕+ 提示詞稽核 + msg 完整性 → 全綠後 TODO 結案〔C1 `5b9477a`/C2 `82b95b1`/C3 `b5f9ce4`/C4-C5 + 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ C5 報告直寫 executions/；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；RAG-MULTI-1 全案結案、根治全域 top-k 飢餓）
   - `2026-06-09_RAG-MULTI-1_C4_run_提示詞.md` — C4 Run（新建 `tests/test_rag_multi.py`〔檔頭 `# === [RAG-MULTI-1 C4] ===`〕mock vector store 確定化分數、**不 mock retrieve_multi 本體**、11 測試：per_paper_floor / 不足全拿 / 小 N 不暴漲〔floor=2 非 5〕/ cap 不超 / N>cap 最高分截斷 / 補位排除已保底 / 0 候選跳過 / cap override / 混型 book 100 chunk 不壓 resume / 單篇路徑不變 / 提示詞禁 [N]；純新建無 .bak；**嚴禁為過測試改業務碼〔測不符停下回報〕**；SOP+pytest 11 全綠+全套件；執行報告暫存 baton 不入 git、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-09_RAG-MULTI-1_C3_run_提示詞.md` — C3 Run（`prompt/ai/ai_character_prompt.txt`「3. 引用源頭」段加禁令「只用《文件名》「章節」、嚴禁輸出 [1][2] 等純數字引用標記〔context 無編號清單、指向虛空〕」、`# === [RAG-MULTI-1 C3] ===` 標、保留既有引用語意；共載檢查 `grep ai_explain_prompt.txt` 無反向 [N] 則不動〔plan §8.1 點3〕；改前 .bak + §6.3 grep；C3 純提示詞無 .py → SOP 跳過合規；執行報告暫存 baton 不入 git、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-09_RAG-MULTI-1_C2_run_提示詞.md` — C2 Run（`rag_retriever.py` `retrieve_multi_with_context` 廢全域 top-k、改每篇保底覆蓋演算法〔`N=len(paper_ids)`；`effective_floor=min(RAG_MULTI_FLOOR_K,max(1,cap//N))`；分組各取前 floor〔不足全拿〕→ floored；N>cap 按各篇最高分取前 cap 篇各 1；全域補位 pool=候選−已選、score 降序補到 cap；最終 score 降序〕+ `top_k`→cap override + import 去 RAG_MULTI_TOP_K；`settings.py` 移除 RAG_MULTI_TOP_K；`# === [RAG-MULTI-1 C2 START/END] ===` 包裹 + 2 .bak + 更新既有 hashtag 路由測試〔若斷言舊 top-k=7〕；不動單篇/threshold/context 格式/shadow；SOP+§6.2 grep+pytest；執行報告暫存 baton 不入 git、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
@@ -286,6 +287,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-09 — `2026-06-09_RAG-MULTI-1_Check_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C4_run_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C3_run_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C2_run_提示詞.md`
@@ -300,4 +302,3 @@
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_C1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_Tasks_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-3_HOTFIX-3_run_提示詞.md`
-- 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md`
