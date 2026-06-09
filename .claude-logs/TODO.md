@@ -11,6 +11,21 @@
 
 ## ✅ 已完成
 
+### BE-Refactor LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | `rag_retriever.py` `set_loader` + `_get_vector_store` 完全 miss 自載〔第三層、loader 未設＝現況回 None 向後相容〕+ `is_ready` loader-aware〔U1/U7、防全清繞過〕+ tests/test_lazyload_multi.py 5 測試〔含整合 6 篇只註冊 1〕| `8893ad1` |
+| C2 | in-memory cache 併發鎖純硬化·**單一共享 RLock**〔retriever 持鎖、ai_core `_paper_cache` 共用 `retriever._lock`、**loader 呼叫在鎖外防 AB-BA**〕包全 mutation（U8、修正 tasks §4.2 兩鎖之 load_paper_cache↔_get_vector_store 相反鎖序隱患）+ 並發測試〔不死鎖 timeout〕；行為不變、全套件全綠＝回歸網 | `9849600` |
+| C3 | `web_server.py` 啟動 lifespan 接線 `set_loader(λ o,p: load_paper_resources)` + `settings.py` `RAG_MAX_CACHE` 5→100（U2/U4 純加法、只動啟動段不碰端點）→ **跨文件修復 LIVE** | `c5b0c31` |
+| C4 | 記憶體釋放策略：`_release_caches_except_active`〔全清該 owner、唯一豁免 active_streams done==False、快照 keys 再清、gc、ai_core None 防呆〕+ `/content` 換篇 gate〔F1 語言切換同篇不放〕+ `/upload` 開關〔`RELEASE_ON_UPLOAD`=on 騰 RAM 給 MinerU〕+ ai_core remove_paper docstring 修（U5/U9/P4）+ 3 釋放測試 | `6c0e8d2` |
+| C5 | Checkout 收官：Conformance 六維度驗收全綠〔plan v5 U1-U9 / tasks §6 grep+pytest〔10+全套件 556 passed〕/ **§7.2 整合測試〔key=paper_uuid 穩定、key-changing N/A〕** / 不可動〔C3/C4 hunk 不重疊〕/ 提示詞稽核 / msg 完整〕+ baton 一次性 mv 歸檔〔plan v1-v5→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-09_LAZYLOAD-MULTI-1_跨文件lazyload接縫與記憶體釋放_plan_v5.md`（v1-v5 五版保留作 §1.9 軌跡；v3 為 Antigravity 平行 review 版；五輪收斂：v1 初稿 → v2/v3 Antigravity〔rag_tree handoff / is_ready / DB 安全 / shadow〕→ v4 合併〔baron 釋放決策 + Claude P0 併發鎖 + 校正 DB≠cache 兩層〕→ v5 三軸深 review〔前端 F1 / 資料傳導 / 記憶體 M1〕+ mermaid）
+> **真因**：API-PERF C3 廢啟動 preload、chat 端點只 lazy-load 當前 paper → `retrieve_multi` 對未載 tagged 篇 `_get_vector_store` 回 None 靜默跳過 → `#cv 比較` 只召當前篇（log 證 candidates=14 全吳焴倫、其餘 5 篇 0）；**非 RAG-MULTI-1、非模型/regen**（28 篇全 -001、獨立載入都滿分）。
+> **治本**：③ retriever 自載咽喉〔一鎖點修單篇/多篇/attach〕+ is_ready loader-aware + 單一共享 RLock〔③ 把寫推進 to_thread worker〕+ 釋放策略〔換篇/上傳全清跳過 active_streams + gc〕；cap 5→100、砍 60min TTL。
+> **⚠️ baron E2E 運維（非 commit）**：重啟 → 直接 `#cv 比較這幾位候選人的學歷背景` → 涵蓋全 6 位 + 引用顯《文件名》；log chosen ≥5 種 pid；並發/串流中切篇不斷/語言切換不放/上傳釋放 RAM 降/shadow pid 入 chosen。
+
 ### BE-Refactor RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正
 
 | Commit | 內容 | Hash |
@@ -663,20 +678,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放**（`.claude-logs/baton/2026-06-09_LAZYLOAD-MULTI-1_跨文件lazyload接縫與記憶體釋放_plan_v5.md`；tasks 已產 `..._tasks.md`）
-  - [x] ✅ C1 — Retriever loader 接縫（自載咽喉）`rag_retriever.py` set_loader + _get_vector_store 完全 miss 自載 + is_ready loader-aware（U1/U7）+ 5 單元（含整合 6 篇只註冊 1）`8893ad1`
-  - [x] ✅ C2 — Cache 併發鎖純硬化（行為不變防 race）**單一共享 RLock**〔retriever 持鎖、ai_core 共用 retriever._lock、loader 呼叫在鎖外防 AB-BA〕包全 mutation（U8、修正 tasks §4.2 兩鎖死鎖隱患）+ 並發測試〔不死鎖〕；全套件 552 passed `9849600`
-  - [x] ✅ C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 lifespan 接線 `set_loader(λ o,p: load_paper_resources)` + `RAG_MAX_CACHE` 5→100（U2/U4 純加法 8 行、只動啟動段不碰端點）→ **跨文件修復 LIVE**；全套件 553 passed `c5b0c31`
-  - [x] ✅ C4 — 記憶體釋放策略（換篇/上傳全清跳過活躍）`_release_caches_except_active`〔全清該 owner、唯一豁免 active_streams done==False、快照 keys 再清、gc、ai_core None 防呆〕+ `/content` 換篇 gate〔F1 語言切換不放〕+ `/upload`〔`RELEASE_ON_UPLOAD`=on〕+ ai_core docstring 修（U5/U9/P4）+ 3 釋放測試；全套件 556 passed `待 baron 回填`
-  - [/] 🟡 WIP: C5 — Checkout 收官（Conformance 與歸檔）baton 一次性 mv（plan v1-v5 + tasks + C1-C5 報告）+ 結案 + hash 自癒
-  - [ ] ⬜ 未開始: C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 set_loader 接線 + `RAG_MAX_CACHE`=100（U2/U4 純加法 2-3 行→跨文件修復 LIVE）
-  - [ ] ⬜ 未開始: C4 — 記憶體釋放策略（換篇/上傳全清跳過活躍）`/content` 換篇 gate〔F1 語言切換不放〕+ `/upload`〔`RELEASE_ON_UPLOAD`=on〕+ 跳過 active_streams + gc + docstring（U5/U9/P4）+ 3 釋放測試
-  - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance 與歸檔）baton 一次性 mv（plan v1-v5 + tasks + C1-C5 報告）+ 結案 + hash 自癒
-  - 真因：API-PERF C3 廢 preload、chat 端點只 lazy-load 當前 paper → retrieve_multi 需全 tagged 篇、未註冊者靜默跳過 → `#cv 比較` 只召當前篇（log 證 candidates=14 全吳焴倫、其餘 5 篇 0）；非 RAG-MULTI-1/非模型（28 篇全 -001、獨立載入都滿分）
-  - 修法：③ retriever 自載咽喉 + is_ready loader-aware + RLock 併發鎖（③ 把寫推進 to_thread worker）+ 釋放策略（切換/上傳全清跳過 active_streams + gc）；cap 5→100、砍 60min TTL
-  - 工時：5 個 commits（C1-C4 + C5 Checkout）；依賴：無（檢索/記憶體層，不依賴 PIPE 五路進度）；plan v1-v5 留 baton 作 §1.9 軌跡、Checkout 一併歸檔
-  - ⚠️ baron 運維（非 commit）：plan v5 §8.2 E2E（直接 #cv 涵蓋全 6 位 / 並發 / 串流中切篇不斷 / 語言切換不放 / 上傳釋放 RAM 降 / shadow pid 入 chosen）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -885,6 +886,7 @@
 ## 索引（依類別）
 
 ### RAG（11 項 active）
+- ✅ ~~LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放~~（已落地、C1 `8893ad1` + C2 `9849600` + C3 `c5b0c31` + C4 `6c0e8d2` + C5 Checkout 收官；③ retriever 自載咽喉〔_get_vector_store 完全 miss 呼 loader 自載〕+ is_ready loader-aware + 單一共享 RLock〔loader 鎖外防 AB-BA、修正 tasks §4.2 兩鎖隱患〕+ 啟動接線 set_loader + cap 5→100 + 釋放策略〔/content 換篇 gate·F1 + /upload 開關 + 跳過 active_streams + gc〕；治本 API-PERF C3 lazy-load 只載當前 paper 致 retrieve_multi 漏召其餘 tagged 篇〔#cv 只召當前篇〕；非 RAG-MULTI-1/非模型；test_lazyload_multi.py 10 測試〔含 §7.2 整合〕；⚠️ baron E2E 驗 #cv 涵蓋全 6 位）
 - ✅ ~~RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正~~（已落地、C1 `5b9477a` + C2 `82b95b1` + C3 `b5f9ce4` + C4 + C5 Checkout 收官；retrieve_multi 廢全域 top-k 飢餓→每篇保底覆蓋〔min(floor_k,max(1,cap//N))+不足全拿+補位排除已選+N>cap最高分截斷〕+ 廢 RAG_MULTI_TOP_K 立 FLOOR_K/MAX_CHUNKS + ai_character_prompt 禁 [N] + test_rag_multi.py 11 測試；治本「6 篇擠成 2 人、吳焴倫碩士漏召」；五路通用；⚠️ shadow 不過濾＝U7 刻意副作用、baron 影子 E2E 驗多人涵蓋）
 - ✅ ~~RAG-14 多標籤寬鬆格式跨文章RAG檢索與對話體驗升級~~（已落地、C1 `6593962` + C2 `b8e8770` + Check 收官 + 補漏 `595e3d8`）
 - ✅ ~~RAG-1 Phase 2 hashtag RAG 路由 + 雙語摘要 + chat token UI~~（已落地、P2-1 + P2-2 + P2-3 三 commit、見 ✅ 完成區）
