@@ -648,9 +648,9 @@
 ### 🔴 高優先
 
 - 🟡 **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正**（`.claude-logs/baton/2026-06-09_RAG-MULTI-1_跨文件多篇檢索覆蓋與引用修正_plan_v3.md`；tasks 已產 `..._tasks.md`）
-  - [x] ✅ C1 — settings 常數（廢 TOP_K 立保底常數）`待 baron 回填`
-  - [/] 🟡 WIP: C2 — retrieve_multi 演算法（每篇保底覆蓋與防爆 cap）
-  - [ ] ⬜ 未開始: C3 — 提示詞禁 [N]（引用標記去噪）
+  - [x] ✅ C1 — settings 常數（廢 TOP_K 立保底常數）`5b9477a`
+  - [x] ✅ C2 — retrieve_multi 演算法（每篇保底覆蓋與防爆 cap）`待 baron 回填`
+  - [/] 🟡 WIP: C3 — 提示詞禁 [N]（引用標記去噪）
   - [ ] ⬜ 未開始: C4 — 單元測試（保底/cap/截斷/補位/混型/單篇）
   - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance 驗收與一次性歸檔）
   - 真因（log 鐵證）：`retrieve_multi_with_context` 全域 top-k=7 飢餓 → 6 篇被擠成 2 人（李宗原 A+B軌 佔 5/7、吳焴倫碩士漏召）+ LLM 多吐無依據 [N]

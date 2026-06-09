@@ -242,17 +242,19 @@ def test_retrieve_multi_with_context_empty_paper_ids():
     assert ctx == ''
 
 
-def test_retrieve_multi_with_context_top_k_from_settings(monkeypatch):
-    """Q5：top_k=None 時走 settings.RAG_MULTI_TOP_K（mock = 3）。"""
+def test_retrieve_multi_with_context_cap_override(monkeypatch):
+    """RAG-MULTI-1 C2：top_k 參數語意改 cap override（top_k=3 → context 上限 3 chunk）。
+
+    單篇 A（5 候選）、cap=3：每篇保底 effective_floor=min(2, max(1, 3//1=3))=2 取 2、全域補位 1 → 共 3。
+    （原 test_..._top_k_from_settings：RAG_MULTI_TOP_K 已隨 C2 廢除、改測 cap override）"""
     import rag_retriever as rr_mod
-    monkeypatch.setattr(rr_mod, 'RAG_MULTI_TOP_K', 3)
     monkeypatch.setattr(rr_mod, 'RAG_SCORE_THRESHOLD', 0.0)
     paper_chunks = {
         'A': [(0.9 - 0.1 * i, f'A_chunk_{i}') for i in range(5)],
     }
     r = _make_retriever_with_mock_papers(paper_chunks)
     ctx = r.retrieve_multi_with_context(
-        owner_id=1, query='dummy', paper_ids=['A'], top_k=None,
+        owner_id=1, query='dummy', paper_ids=['A'], top_k=3,
     )
     headers = [line for line in ctx.split('\n') if line.startswith('## 摘自文件')]
     assert len(headers) == 3

@@ -52,12 +52,17 @@ EMBEDDING_MAX_TOKENS_PER_ITEM = int(os.getenv("EMBEDDING_MAX_TOKENS_PER_ITEM", "
 # 推測 L2 normalize 後可能需升到 0.35-0.45、待 RAG-3 收實測數據確認
 RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.22"))
 
-# === [RAG-MULTI-1 C1/C2] ===
-# 跨文件多篇 hashtag RAG（rag_retriever.retrieve_multi_with_context）：
-# RAG-MULTI-1 C2 廢「全域 top-k」（RAG_MULTI_TOP_K 已移除）、改「每篇保底覆蓋 + 全域補位 + 防爆 cap」。
+# RAG-1 Phase 2 P2-2：多篇跨 paper hashtag RAG 全域 top-k（Q5）
+# 用戶輸入 `#tag question` 時、若 tag 對應 N>1 篇 paper、走
+# rag_retriever.retrieve_multi_with_context 全域 Merge-Sort 取此 k。
+# 預設 7 兼顧 prompt 不爆與多源 grounding；可 env override。
+RAG_MULTI_TOP_K = int(os.getenv("RAG_MULTI_TOP_K", "7"))
+
+# === [RAG-MULTI-1 C1 START] ===
+# 跨文件多篇檢索改「每篇保底覆蓋」（廢全域 top-k 飢餓；C2 消費、C2 後廢 RAG_MULTI_TOP_K）。
 RAG_MULTI_FLOOR_K = int(os.getenv("RAG_MULTI_FLOOR_K", "2"))         # 每篇保底 chunk 數（cross-doc 覆蓋下限）
 RAG_MULTI_MAX_CHUNKS = int(os.getenv("RAG_MULTI_MAX_CHUNKS", "15"))  # cross-doc context 總 chunk 上限（防 prompt 爆炸）
-# === [RAG-MULTI-1 C1/C2 END] ===
+# === [RAG-MULTI-1 C1 END] ===
 
 # === [API-PERF C3 START] U3 向量庫 / RAG cache LRU 上限 ===
 # 記憶體中同時駐留的活躍 FAISS 向量庫（rag_retriever.vector_stores）與 RAG cache

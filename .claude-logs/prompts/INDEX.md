@@ -200,7 +200,8 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
-- 🟡 **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正（2026-06-09 plan v3 → Tasks → C1 WIP·BE-Refactor）**
+- 🟡 **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正（2026-06-09 plan v3 → Tasks → C1 → C2 WIP·BE-Refactor）**
+  - `2026-06-09_RAG-MULTI-1_C2_run_提示詞.md` — C2 Run（`rag_retriever.py` `retrieve_multi_with_context` 廢全域 top-k、改每篇保底覆蓋演算法〔`N=len(paper_ids)`；`effective_floor=min(RAG_MULTI_FLOOR_K,max(1,cap//N))`；分組各取前 floor〔不足全拿〕→ floored；N>cap 按各篇最高分取前 cap 篇各 1；全域補位 pool=候選−已選、score 降序補到 cap；最終 score 降序〕+ `top_k`→cap override + import 去 RAG_MULTI_TOP_K；`settings.py` 移除 RAG_MULTI_TOP_K；`# === [RAG-MULTI-1 C2 START/END] ===` 包裹 + 2 .bak + 更新既有 hashtag 路由測試〔若斷言舊 top-k=7〕；不動單篇/threshold/context 格式/shadow；SOP+§6.2 grep+pytest；執行報告暫存 baton 不入 git、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-09_RAG-MULTI-1_C1_run_提示詞.md` — C1 Run（`settings.py` 新增 `RAG_MULTI_FLOOR_K`(2)+`RAG_MULTI_MAX_CHUNKS`(15)、`# === [RAG-MULTI-1 C1 START/END] ===` 包裹；保留 `RAG_MULTI_TOP_K`〔C2 才廢、防中途 import 斷裂〕、不動 `RAG_SCORE_THRESHOLD`；純常數 C2 才消費、行為等價；改前 .bak + SOP 核查〔logging/database 無命中合規〕+ §6.1 grep+import 2/15+pytest；執行報告暫存 baton 嚴禁 mv/git add、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
   - `2026-06-09_RAG-MULTI-1_Tasks_提示詞.md` — Tasks（依 plan v3〔§9 五項 OQ 全定案〕拆 BE-Refactor commit：`retrieve_multi` 每篇保底覆蓋〔`effective_floor=min(floor_k,max(1,cap//N))`、不足全拿、補位排除已選、N>cap 按最高分截斷〕+ settings 廢 RAG_MULTI_TOP_K/立 FLOOR_K=2·MAX_CHUNKS=15 + 函式 top_k 改 cap override + ai_character_prompt 禁 bare [N]；**不給 commit 建議·自行拆分、末為 Checkout**；各 Commit 各產執行報告暫存 baton、Checkout 一次性 mv plan v1/v2/v3+tasks+報告歸檔；BE SOP 核查+pytest；含 §0.5 成果盤點 + §8 六維度表）
   - `2026-06-09_RAG-MULTI-1_plan_提示詞.md` — plan（`retrieve_multi_with_context` 全域 top-k=7 飢餓〔log 證 6 篇被擠成 2 人、李宗原 A+B軌 佔 5/7、吳焴倫碩士漏召〕→ 修法 A 每篇保底覆蓋 + 防爆 cap；問題 2 提示詞禁 bare [N] 引用、留《title》「章節」；**不做影子過濾〔維 B軌可見性〕**；retrieve_multi 無 doc_type 參數 = 五路通用；純規格含 Open Questions〔保底策略/top_k/citation/同人去重/五路驗證〕、不給 commit、存 baton 待 tasks）
@@ -283,6 +284,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-09 — `2026-06-09_RAG-MULTI-1_C2_run_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C1_run_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_Tasks_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_plan_提示詞.md`
@@ -297,4 +299,3 @@
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-2_HOTFIX-2_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_RAG-ASYNC-HOTFIX-1_HOTFIX-1_run_提示詞.md`
 - 2026-06-08 — `2026-06-08_WORKFLOW-3_plan_提示詞.md`
-- 2026-06-08 — `2026-06-08_CHAT-STRUCT-1_plan_提示詞.md`

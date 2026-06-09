@@ -4,8 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from config import EmbeddingModel
-# === [RAG-MULTI-1 C2] === 去 RAG_MULTI_TOP_K（廢全域 top-k）、改保底常數
-from settings import RAG_SCORE_THRESHOLD, RAG_MULTI_FLOOR_K, RAG_MULTI_MAX_CHUNKS
+from settings import RAG_SCORE_THRESHOLD, RAG_MULTI_TOP_K
 # === [API-PERF C3 START] U3 向量庫 LRU ===
 import gc
 from collections import OrderedDict
@@ -219,18 +218,18 @@ class RagRetriever:
         paper_ids: List[str],
         top_k: Optional[int] = None,
     ) -> str:
-        """RAG-1 Phase 2 P2-2：跨 paper 多篇檢索（RAG-MULTI-1 C2 改每篇保底覆蓋）。
+        """RAG-1 Phase 2 P2-2：跨 paper 全域 Merge-Sort top-k 檢索。
 
         依 .claude-logs/2026-05-23_RAG-1_Phase2_執行計劃.md §3.2.3
         + Hashtag Backend Plan §2 L49-54
-        + RAG-MULTI-1 plan v3 §2 U1/U2/U3（廢全域 top-k 飢餓、改每篇保底 + 全域補位 + cap）
+        + Q5（top_k 從 env RAG_MULTI_TOP_K 取、預設 7）
 
         流程：
-        1. 對每個 paper_id 取 vector_store、各自 similarity_search_with_score(k=cap)
-        2. 收集所有 (score, chunk, paper_id, paper_title) candidate、過濾 < RAG_SCORE_THRESHOLD
-        3. 每篇保底覆蓋：effective_floor = min(RAG_MULTI_FLOOR_K, max(1, cap // N))，每篇取前 floor
-           （不足全拿）；N>cap 極端按各篇最高分取前 cap 篇各 1
-        4. 全域補位：餘額按全域分數降序補位（排除已保底）、總數 ≤ cap（L2 normalize cosine 排序）
+        1. 對每個 paper_id 取 vector_store、各自 similarity_search_with_score(k=top_k)
+        2. 收集所有 (score, chunk, paper_id, paper_title) candidate
+        3. 全域降序排序、取前 top_k（L2 normalize 後 score 已是 cosine similarity、依
+           MODEL-1+2 B2 ship；DistanceStrategy.MAX_INNER_PRODUCT 對齊建立端）
+        4. 過濾 < RAG_SCORE_THRESHOLD 雜訊
         5. 格式化為「## 摘自文件《paper_title》」段落式 context、便於 LLM 引用
 
         跟既有 retrieve_with_context 解耦：本函式為新增並列函式、不動單篇路徑。
@@ -239,7 +238,7 @@ class RagRetriever:
             owner_id: 使用者 ID
             query: 用戶 query（不含 hashtag、已由 AI_professor_chat 入口 cleaned）
             paper_ids: 目標 paper uuid 清單（由 list_paper_uuids_by_tag 取得）
-            top_k: cap override（context 總 chunk 上限）；None → 走 settings.RAG_MULTI_MAX_CHUNKS（預設 15）
+            top_k: 全域 top-k；None → 走 settings.RAG_MULTI_TOP_K（預設 7）
 
         Returns:
             統合 RAG context 字串；無命中時回空字串。
@@ -249,18 +248,17 @@ class RagRetriever:
         if not self.is_ready():
             return ""
 
-        # === [RAG-MULTI-1 C2 START] === top_k 參數語意改 cap override（None → RAG_MULTI_MAX_CHUNKS）
-        cap = top_k if top_k is not None else RAG_MULTI_MAX_CHUNKS
-        # === [RAG-MULTI-1 C2 END] ===
+        if top_k is None:
+            top_k = RAG_MULTI_TOP_K
 
-        # 每個 paper 各取 cap chunks（候選池）、後續每篇保底覆蓋 + 全域補位
+        # 每個 paper 各取 top_k chunks、最後全域 Merge-Sort 取 top_k
         all_candidates = []  # list of (score, chunk_text, paper_id, paper_title)
         for pid in paper_ids:
             vs = self._get_vector_store(owner_id, pid)
             if vs is None:
                 continue
             try:
-                docs_and_scores = vs.similarity_search_with_score(query=query, k=cap)
+                docs_and_scores = vs.similarity_search_with_score(query=query, k=top_k)
             except Exception as e:
                 logger.warning(
                     f"[retrieve_multi] owner={owner_id} paper={pid} 檢索失敗: {e}"
@@ -284,47 +282,15 @@ class RagRetriever:
         if not all_candidates:
             return ""
 
-        # === [RAG-MULTI-1 C2 START] === 每篇保底覆蓋 + 全域補位 + 防爆 cap（取代全域 top-k 飢餓）
-        # 動因：全域 top-k 致少數文件霸佔名額、其餘 0 代表（比較類查詢漏掉有資料文件）。
-        # plan v3 §2 U1/U2/U3：每篇有候選者至少保底 effective_floor、餘額按全域分數補位、總數 ≤ cap。
-        N = len(paper_ids)  # tagged 總數（0 候選 paper 自然不入 groups、不貢獻）
-        effective_floor = min(RAG_MULTI_FLOOR_K, max(1, cap // N))
-
-        # 1) 按 pid 分組、各組按 score 降序（分組保 all_candidates 內 tuple 物件身分，供補位排除）
-        from collections import OrderedDict
-        groups = OrderedDict()
-        for cand in all_candidates:
-            groups.setdefault(cand[2], []).append(cand)  # cand[2] = pid
-        for _pid in groups:
-            groups[_pid].sort(key=lambda x: x[0], reverse=True)
-
-        # 2) 保底：每組取前 effective_floor（不足全拿 = grp[:effective_floor]）
-        floored = []
-        for _pid, _grp in groups.items():
-            floored.extend(_grp[:effective_floor])
-
-        # 3) N>cap 極端（floor 已 =1 仍 1×篇數 > cap）：按各篇「最高分 chunk」降序取前 cap 篇各 1
-        if len(floored) > cap:
-            papers_by_best = sorted(
-                groups.items(), key=lambda kv: kv[1][0][0], reverse=True
-            )
-            floored = [_grp[0] for _pid, _grp in papers_by_best[:cap]]
-
-        # 4) 全域補位：補位池排除已保底（用 tuple 物件 id 去重）、按 score 降序補到 cap
-        _selected_ids = {id(c) for c in floored}
-        pool = [c for c in all_candidates if id(c) not in _selected_ids]
-        pool.sort(key=lambda x: x[0], reverse=True)
-        fill = pool[:max(0, cap - len(floored))]
-
-        # 5) 合併、最終按 score 降序輸出（context 格式不變）
-        top_chunks = sorted(floored + fill, key=lambda x: x[0], reverse=True)
+        # 全域降序排序、取 top_k（L2 normalize 後 score 已 cosine similarity）
+        all_candidates.sort(key=lambda x: x[0], reverse=True)
+        top_chunks = all_candidates[:top_k]
 
         logger.info(
             f"[retrieve_multi] owner={owner_id} papers={len(paper_ids)} "
-            f"candidates={len(all_candidates)} cap={cap} floor={effective_floor} "
+            f"candidates={len(all_candidates)} top_k={top_k} "
             f"chosen={[(round(s, 3), pid) for s, _, pid, _ in top_chunks]}"
         )
-        # === [RAG-MULTI-1 C2 END] ===
 
         # 格式化為段落式 context（每段標明來源 paper title）
         sections = ["以下是與您問題最相關的多篇論文段落:"]
