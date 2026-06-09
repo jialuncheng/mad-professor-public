@@ -665,8 +665,9 @@
 
 - 🟡 **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放**（`.claude-logs/baton/2026-06-09_LAZYLOAD-MULTI-1_跨文件lazyload接縫與記憶體釋放_plan_v5.md`；tasks 已產 `..._tasks.md`）
   - [x] ✅ C1 — Retriever loader 接縫（自載咽喉）`rag_retriever.py` set_loader + _get_vector_store 完全 miss 自載 + is_ready loader-aware（U1/U7）+ 5 單元（含整合 6 篇只註冊 1）`8893ad1`
-  - [x] ✅ C2 — Cache 併發鎖純硬化（行為不變防 race）**單一共享 RLock**〔retriever 持鎖、ai_core 共用 retriever._lock、loader 呼叫在鎖外防 AB-BA〕包全 mutation（U8、修正 tasks §4.2 兩鎖死鎖隱患）+ 並發測試〔不死鎖〕；全套件 552 passed `待 baron 回填`
-  - [/] 🟡 WIP: C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 set_loader 接線 + `RAG_MAX_CACHE`=100（U2/U4 純加法 2-3 行→跨文件修復 LIVE）
+  - [x] ✅ C2 — Cache 併發鎖純硬化（行為不變防 race）**單一共享 RLock**〔retriever 持鎖、ai_core 共用 retriever._lock、loader 呼叫在鎖外防 AB-BA〕包全 mutation（U8、修正 tasks §4.2 兩鎖死鎖隱患）+ 並發測試〔不死鎖〕；全套件 552 passed `9849600`
+  - [x] ✅ C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 lifespan 接線 `set_loader(λ o,p: load_paper_resources)` + `RAG_MAX_CACHE` 5→100（U2/U4 純加法 8 行、只動啟動段不碰端點）→ **跨文件修復 LIVE**；全套件 553 passed `待 baron 回填`
+  - [/] 🟡 WIP: C4 — 記憶體釋放策略（換篇/上傳全清跳過活躍）`/content` 換篇 gate〔F1 語言切換不放〕+ `/upload`〔`RELEASE_ON_UPLOAD`=on〕+ 跳過 active_streams + gc + docstring（U5/U9/P4）+ 3 釋放測試
   - [ ] ⬜ 未開始: C3 — 啟動接線與容量（核心 LIVE）web_server 啟動 set_loader 接線 + `RAG_MAX_CACHE`=100（U2/U4 純加法 2-3 行→跨文件修復 LIVE）
   - [ ] ⬜ 未開始: C4 — 記憶體釋放策略（換篇/上傳全清跳過活躍）`/content` 換篇 gate〔F1 語言切換不放〕+ `/upload`〔`RELEASE_ON_UPLOAD`=on〕+ 跳過 active_streams + gc + docstring（U5/U9/P4）+ 3 釋放測試
   - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance 與歸檔）baton 一次性 mv（plan v1-v5 + tasks + C1-C5 報告）+ 結案 + hash 自癒

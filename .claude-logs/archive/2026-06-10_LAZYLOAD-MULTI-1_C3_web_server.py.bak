@@ -228,14 +228,6 @@ async def lifespan(app: FastAPI):
     # 的 LRU（上限 5）自動淘汰最久未使用者。preload_vector_stores 函式保留但不再於啟動呼叫。
     # === [API-PERF C3 END] ===
 
-    # === [LAZYLOAD-MULTI-1 C3 START] === ③ lazy-load 接線：retrieve_multi 對未載 tagged 篇自我載入
-    # 根治 API-PERF C3 只 lazy-load 當前 paper、跨文件 retrieve_multi 漏召其餘 tagged 篇。
-    # loader 之 (o,p) ＝ _get_vector_store 之 (owner_id, paper_uuid) 原值、同基準（§4 接縫契約）。
-    ai_core.retriever.set_loader(
-        lambda o, p: paper_manager.load_paper_resources(OUTPUT_DIR, o, p, ai_core)
-    )
-    # === [LAZYLOAD-MULTI-1 C3 END] ===
-
     logger.info("Web server 初始化完成")
     yield
 

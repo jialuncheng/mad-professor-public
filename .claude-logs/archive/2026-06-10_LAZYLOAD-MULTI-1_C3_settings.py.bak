@@ -62,7 +62,7 @@ RAG_MULTI_MAX_CHUNKS = int(os.getenv("RAG_MULTI_MAX_CHUNKS", "15"))  # cross-doc
 # === [API-PERF C3 START] U3 向量庫 / RAG cache LRU 上限 ===
 # 記憶體中同時駐留的活躍 FAISS 向量庫（rag_retriever.vector_stores）與 RAG cache
 # （ai_core._paper_cache）各自上限；超限時自動 LRU 淘汰最久未使用者（按需 Lazy Load）。
-RAG_MAX_CACHE = int(os.getenv("RAG_MAX_CACHE", "100"))   # === [LAZYLOAD-MULTI-1 C3] === 5→100（記憶體 13MB 語料無虞、釋放策略主導、cap 僅安全天花板）
+RAG_MAX_CACHE = int(os.getenv("RAG_MAX_CACHE", "5"))
 # === [API-PERF C3 END] ===
 
 # === [API-PERF C4 START] U1 全系統 Pipeline 並發上限 ===

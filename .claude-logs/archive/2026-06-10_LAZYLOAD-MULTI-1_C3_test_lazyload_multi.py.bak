@@ -171,21 +171,3 @@ def test_concurrent_lazyload_no_corruption(monkeypatch):
 
     assert not errors, f'並發出錯（race/死鎖）: {errors}'
     assert len(r.vector_stores) <= 3   # cap 不超（LRU 在鎖內）
-
-
-# === [LAZYLOAD-MULTI-1 C3] === RAG_MAX_CACHE 預設 100 + env override
-def test_cap_100_default(monkeypatch):
-    """settings.RAG_MAX_CACHE 預設 100（env 未設）；env 可覆寫。"""
-    import importlib
-    import settings as settings_mod
-    try:
-        monkeypatch.delenv("RAG_MAX_CACHE", raising=False)
-        importlib.reload(settings_mod)
-        assert settings_mod.RAG_MAX_CACHE == 100   # U4 預設
-        monkeypatch.setenv("RAG_MAX_CACHE", "7")
-        importlib.reload(settings_mod)
-        assert settings_mod.RAG_MAX_CACHE == 7      # env override
-    finally:
-        # 還原 settings 模組（避免污染後續測試）
-        monkeypatch.delenv("RAG_MAX_CACHE", raising=False)
-        importlib.reload(settings_mod)
