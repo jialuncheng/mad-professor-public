@@ -722,15 +722,7 @@ class SlidePipeline(DocumentStrategy):
             # metadata_json 並補綴 (測試) → 放入即自動流到 DB、前端列表改顯中文題；web_server 零改。
             cover_zh_title = zh_fields[0][0] if zh_fields else ""
             if cover_zh_title:
-                # === [PIPE-SLIDES-HOTFIX-1b START] === 旁路值改三欄 dict（HOTFIX-1 誤塞裸 str →
-                # upsert_paper L231 .get('value') / web_server L714 ['value'] 對 str 炸 AttributeError、
-                # 影子寫庫掛掉前端不顯示；對齊 metadata_extractor {value,source,confidence} 全鏈契約）
-                ctx.raw_metadata["translated_title"] = {
-                    "value": cover_zh_title,
-                    "source": "slide_pipeline",
-                    "confidence": "high",
-                }
-                # === [PIPE-SLIDES-HOTFIX-1b END] ===
+                ctx.raw_metadata["translated_title"] = cover_zh_title
             # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F2 END] ===
 
         zh_path = paper_manager.article_zh_path(
@@ -778,12 +770,7 @@ class SlidePipeline(DocumentStrategy):
         # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F2 START] === 譯題首選旁路（P3 既有封面譯題、
         # 償還 C5「暫同取」技術債；缺〔退化/zh 路/無封面題〕→ 暫同取向後相容）；
         # 影子後綴對齊：title 已含 (測試)、譯題同綴保 rag_tree 雙題一致
-        # === [PIPE-SLIDES-HOTFIX-1b START] === 旁路值已為三欄 dict → 取 value（str 向後相容防呆）
-        _raw_tt = (ctx.raw_metadata or {}).get("translated_title")
-        _translated = (
-            _raw_tt.get("value") if isinstance(_raw_tt, dict) else _raw_tt
-        ) or _title
-        # === [PIPE-SLIDES-HOTFIX-1b END] ===
+        _translated = (ctx.raw_metadata or {}).get("translated_title") or _title
         if ctx.paper_id.endswith("_shadow") and not _translated.endswith(" (測試)"):
             _translated = f"{_translated} (測試)"
         # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F2 END] ===

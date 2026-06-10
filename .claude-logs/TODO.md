@@ -25,11 +25,22 @@
 > **版控先例**：兩真理源本體長駐 baton 不入版控、.bak 入 archive 作審計（195e12b）；sop 檔皆 tracked 正常入庫。
 > **銜接**：下一步開 PIPE-VISUAL plan（SPEC §1.3.1 Vision 共用規格直接引用；其 plan 核心 OQ＝P3 Bypass 或逐 section、Q6 刻意保留給它）。
 
+### BE-Hotfix PIPE-SLIDES-HOTFIX-1b — F2 譯題旁路格式修補（影子寫庫 AttributeError）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-1b | 修補 HOTFIX-1 F2 回歸：`raw_metadata['translated_title']` 誤塞裸 str、而 `upsert_paper` L231 `.get('value')` / web_server SHADOW-HOTFIX-2 L714 `['value']` 全鏈期望 metadata_extractor **三欄 dict** → 影子寫庫 AttributeError〔P1-P4 全綠但 Paper row 未建、前端不顯示；A 軌不受影響〕；寫入端改 `{value, source, confidence}` + `run_phase4` 讀取端 dict 取 value〔str 向後相容〕+ test_hf2 格式契約斷言 + **test_hf1b 與 upsert L231 完全同式消費測試**〔堵 HOTFIX-1 測試盲區〕；`# === [PIPE-SLIDES-HOTFIX-1b ...] ===` 包裹 + 2 .bak；29 passed、全套件 585 passed | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-1b_hotfix.md`
+> **動因**：HOTFIX-1（`f933e54`）commit 後 baron 影子實測 log 爆 `'str' object has no attribute 'get'`（06:45、ALi 件）。
+> **流程教訓**：HOTFIX-1 test_hf2 只測 rag_indexer 傳參、未測旁路值格式契約＝盲區；1b 以「與消費端完全同式」測試堵死。
+> **⚠️ baron E2E**：影子重傳 → log 無 AttributeError、前端顯示該件且標題=中文譯題+(測試)；golden 維持原計畫＝1b 落地後一次首捕 slides。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-1 — B 軌簡報三缺陷緊急修補（同句多譯/譯題未接/段落黏連）
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-1 | `pipelines/slide_pipeline.py` 三點最小修：**F1 `_strip_title_echo`**〔P1 原文層去標題回聲、cap 2、選 C；Vision 忠實轉錄使頁標題同入 title 欄與 content 首行→P3 兩欄各自翻譯→同句雙譯相鄰（實件 p1/p6×3/p8/p16）；title 欄不動 key 契約零影響〕+ **F2 P4 接譯題**〔選 B 零增量 LLM：複用 P3 既有封面譯題穿 raw_metadata 旁路→run_phase4 translated_title+影子 (測試) 綴；償還 C5 暫同取、web_server 零改〕+ **F4 移植 `_normalize_paragraph_breaks`**〔resume PARA-HOTFIX-1 私有重建不跨策略 import；正文裸單 \n soft break 黏段潛伏→pipe-table-safe 升級、zh/en 對稱〕+ **F3 並列密度顯式不修**〔選 C：BM25 受益、頁間零記憶「首次」跨頁無法定義、列觀察項〕；`# === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 ...] ===` 包裹 + 2 .bak + 4 回歸測試〔回聲剔除/P1 接線/譯題穿線/段落正規化端到端〕；28 passed（既有 24 零紅）、全套件 584 passed | `待 baron 回填` |
+| HOTFIX-1 | `pipelines/slide_pipeline.py` 三點最小修：**F1 `_strip_title_echo`**〔P1 原文層去標題回聲、cap 2、選 C；Vision 忠實轉錄使頁標題同入 title 欄與 content 首行→P3 兩欄各自翻譯→同句雙譯相鄰（實件 p1/p6×3/p8/p16）；title 欄不動 key 契約零影響〕+ **F2 P4 接譯題**〔選 B 零增量 LLM：複用 P3 既有封面譯題穿 raw_metadata 旁路→run_phase4 translated_title+影子 (測試) 綴；償還 C5 暫同取、web_server 零改〕+ **F4 移植 `_normalize_paragraph_breaks`**〔resume PARA-HOTFIX-1 私有重建不跨策略 import；正文裸單 \n soft break 黏段潛伏→pipe-table-safe 升級、zh/en 對稱〕+ **F3 並列密度顯式不修**〔選 C：BM25 受益、頁間零記憶「首次」跨頁無法定義、列觀察項〕；`# === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 ...] ===` 包裹 + 2 .bak + 4 回歸測試〔回聲剔除/P1 接線/譯題穿線/段落正規化端到端〕；28 passed（既有 24 零紅）、全套件 584 passed | `f933e54` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-1_hotfix.md`（baron 拍板 1C/2B/3C 不修/4 移植）
 > **動因**：PIPE-SLIDES 收官後 baron A/B 軌同件實測（ST 簡報、兩列印實件）——B 軌四大目標全中（雙 Caption 0/標題乾淨/並列/覆蓋全）但餘三缺陷。
@@ -1019,6 +1030,7 @@
 - ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES-HOTFIX-1b F2 譯題旁路格式修補~~（已落地；裸 str→三欄 dict 對齊 upsert_paper/web_server 契約、影子寫庫復活；同式消費測試堵盲區；全套件 585 passed）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1 B 軌簡報三缺陷緊急修補~~（已落地；F1 去標題回聲〔原文層〕+ F2 接譯題〔複用 P3 譯題穿旁路〕+ F4 段落正規化移植 + F3 並列顯式不修；4 回歸測試、全套件 584 passed；⚠️ slides golden 落地後一次首捕）
 - ✅ ~~PIPE-SLIDES SlidePipeline簡報策略管線~~（已落地、C1 `31dab5a` + C2 `941eed7` + C3 `f8a24d7` + C4 `4d7684c` + C5 `dbf90bd` + C6 `cb5e2bd` + C7 Checkout 收官；原 PIPE-VISUAL 改名；四 Phase 全落地〔P1 存圖+Vision temp=0+封面+去重 / P2 六步 key=`p{N}_{原文頁標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除 / P4 rag_indexer 四產物〕+ §7.2 key-changing 整合測試正面達標；24 測試、全套件 580 passed；⚠️ baron 影子 E2E + B 軌 golden 另捕〔Q8 改善豁免〕）
 

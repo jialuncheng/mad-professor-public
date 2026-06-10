@@ -559,11 +559,7 @@ def test_hf2_translated_title_wired(monkeypatch, tmp_path):
     ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf2_shadow')
     strategy = SlidePipeline()
     spec3 = strategy.run_phase3(ctx)
-    # === [PIPE-SLIDES-HOTFIX-1b START] === 格式契約斷言（HOTFIX-1 盲區：裸 str 曾炸影子寫庫）
-    tt = ctx.raw_metadata['translated_title']
-    assert isinstance(tt, dict) and tt['value'] == '譯Power Deck'   # 三欄 dict、非裸 str
-    assert tt.get('source') == 'slide_pipeline' and tt.get('confidence')
-    # === [PIPE-SLIDES-HOTFIX-1b END] ===
+    assert ctx.raw_metadata['translated_title'] == '譯Power Deck'   # 旁路就位
     captured = {}
 
     def _fake_index(sections, summaries, doc_type, vdir, **kw):
@@ -596,25 +592,3 @@ def test_hf4_paragraph_breaks_normalized(monkeypatch, tmp_path):
     zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
     assert '今日\n\n機櫃標籤' in zh                              # 渲染路已套用
 # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 END] ===
-
-
-# === [PIPE-SLIDES-HOTFIX-1b START] === 寫庫端契約消費測試（堵 HOTFIX-1 測試盲區）
-def test_hf1b_meta_dict_upsert_compatible(monkeypatch, tmp_path):
-    """F2 旁路值必須能被 upsert_paper 同式 `.get('translated_title', {}).get('value')` 消費。
-
-    HOTFIX-1 主回歸：裸 str 在此式下炸 AttributeError（paper_manager.py:231 實式重演）。
-    """
-    import processor.translator as tr_mod
-    from pipelines.slide_pipeline import SlidePipeline
-    fake_tr = _FakeTranslator()
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: fake_tr)
-    tiles = [_t4(1, 'Power Deck', '- a'), _t4(2, 'Spec', '- b')]
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf1b_shadow')
-    SlidePipeline().run_phase3(ctx)
-    # 與 paper_manager.upsert_paper L231 完全同式取值——裸 str 會在此 AttributeError
-    m_tt = ctx.raw_metadata.get('translated_title', {}).get('value')
-    assert m_tt == '譯Power Deck'
-    # web_server SHADOW-HOTFIX-2 L714 同式賦值亦須可行（dict 可變）
-    ctx.raw_metadata['translated_title']['value'] = f"{m_tt} (測試)"
-    assert ctx.raw_metadata['translated_title']['value'].endswith(' (測試)')
-# === [PIPE-SLIDES-HOTFIX-1b END] ===

@@ -9,6 +9,8 @@
 
 ### PIPE-SLIDES 系列
 - ✅ **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C6 → C7 Checkout 收官·BE-Refactor·第 2 路）**
+  - `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md` — HOTFIX-1b Run（寫入端三欄 dict 化+run_phase4 取 value+2 測試堵盲區；收官 mv hotfixes/+executions/；不自發 commit）
+  - `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md` — HOTFIX-1b 文件產出（F2 譯題旁路裸 str → upsert_paper/web_server 期望三欄 dict → 影子寫庫 AttributeError 前端不顯示；修寫入端 dict 化+讀取端取 value+堵測試盲區；baton 暫存待 Run）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md` — HOTFIX-1 Run（依 hotfix.md 落地 F1 去標題回聲/F2 接譯題/F4 段落正規化＋4 回歸測試；收官自動化 mv hotfix→hotfixes/+報告→executions/；兩規格書長駐 baton 嚴禁動；不自發 commit）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-1_doc_提示詞.md` — hotfix 文件產出（四問題拍板 1C 物理去標題回聲/2B 複用 P3 譯題/3C 並列顯式不修/4 移植 _normalize_paragraph_breaks；單檔三點+4 測試+msg；baton 暫存待 Run）
   - `2026-06-11_PIPE-SLIDES_Check_提示詞.md` — Check（C7 Checkout：Conformance 五維度〔plan U1-U11 / tasks §6.1-§6.6 / 不可動〔A 軌/rag_indexer/合約〕/ 提示詞稽核 / msg 完整〕+ **§7.2 整合測試正面合規**〔key-changing 已實作通過〕→ 母 plan v10 同步〔§8.5 PIPE-VISUAL→PIPE-SLIDES 改名+✅+L70/L258 Bypass 句更正、補註⁷〕+ baton 歸檔〔plan/tasks/C1-C7 報告 + **修改後母 plan→plans/ 升格入版控**；PIPE-SPEC 長駐〕+ TODO 結案；不自發 commit；第 2 路全案結案）
@@ -317,6 +319,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md`
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_Check_提示詞.md`
@@ -330,5 +334,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Check_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C3_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C2_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C1_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Tasks_提示詞.md`
