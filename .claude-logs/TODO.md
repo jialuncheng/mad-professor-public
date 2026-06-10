@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Master Plan Sync：母 plan v10 就地補註〔U1 resume P3 Bypass 雙處→逐 section〔slides 留·Q6〕/ U2 §8.5 RAG-ASYNC ⬜→✅+PIPE-RESUME 狀態自癒 / U3 key 契約母句 / U8 Tiles 交付形狀措辭 / U5 PIPE-VISUAL §1.3.1 指標〕+ 補註⁶ | `c54327c` |
+| C2 | SPEC Sync：PIPE-SPEC 就地補註〔U3 §1.1②+§1.4.1 **key 接縫契約凍結**〔原文標題 path、P2產/P3帶/P4取三方同基準、對齊 WORKFLOW_SOP §7.1〕/ U4 zh 來源五路通用 edge path / U5 **新增 §1.3.1 Vision 解析共用規格**〔忠實轉錄鐵律/temp=0/非確定性註記〕/ U6 樣例 -001 / U7 rag_tree 由 build_rag_tree 自建+四產物完整性 / U8/U9/U10 註〕+ v6；四凍結合約欄位結構零變動 | `9666b20` |
+| C3 | SOP Fix & Archive：U11 model_recommendations EMBEDDING 建議值 -2→**-001**🔴+EXTRA_INFO 已廢註 / U12 guide 勘誤 banner〔內文不動〕/ U13 doc_type v3 A 軌 banner+**v1/v2→archive**〔sop 僅留 v3〕/ U14 mineru §6 RELEASE_ON_UPLOAD 配套+v3 | `29f13ca` |
+| C4 | Checkout 收官：Conformance 五維度全綠〔U1-U14 / tasks §6 十八條 grep / 不可動〔業務碼/凍結合約/Slides Bypass〕/ 提示詞 5 份 / msg 完整〕+ **§7.2 豁免顯式聲明**〔DOC、無 code handoff、Q4〕+ baton 歸檔〔plan/tasks/C1-C4 報告；兩長駐真理源不動〕 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-10_PIPE-SYNC-2_resume路落地經驗回灌母plan與SPEC_plan_v1.md`（§99.2 v1.2、U1-U14、§9 六 OQ 全結清〔Q1 不 bump/Q2 全納/Q3 §1.3.1/Q4 豁免/Q5 mineru/Q6 slides Bypass 留〕）
+> **動因**：第 1 路（Resume）收官後兩真理源 1 矛盾+4 缺口+3 stale、sop 4 檔誤導（model_recommendations 仍推已廢 embedding-2）→ 第 2-5 路照 spec 實作會重蹈 HOTFIX-1/2/3 與 MODEL-11 的坑；**PIPE-VISUAL（第 2 路 Slides）開 plan 前置、現已完成**。
+> **版控先例**：兩真理源本體長駐 baton 不入版控、.bak 入 archive 作審計（195e12b）；sop 檔皆 tracked 正常入庫。
+> **銜接**：下一步開 PIPE-VISUAL plan（SPEC §1.3.1 Vision 共用規格直接引用；其 plan 核心 OQ＝P3 Bypass 或逐 section、Q6 刻意保留給它）。
+
 ### BE-Refactor LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放
 
 | Commit | 內容 | Hash |
@@ -678,15 +692,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-SYNC-2 resume路落地經驗回灌母plan與SPEC**（`.claude-logs/baton/2026-06-10_PIPE-SYNC-2_resume路落地經驗回灌母plan與SPEC_plan_v1.md`〔v1.2、U1-U14、OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`）
-  - [x] ✅ C1 — Master Plan Sync（母 plan 就地補註·消矛盾與 stale）U1 resume Bypass 雙處改逐 section〔slides 不動·Q6〕+ U2 §8.5 RAG-ASYNC/PIPE-RESUME 狀態自癒 + U3 母句 + U8 Tiles 措辭 + U5 指標；§6.1 六 grep 全綠 `c54327c`
-  - [x] ✅ C2 — SPEC Sync（PIPE-SPEC 就地補註·凍結缺口規格）U3 key 契約〔原文標題 path、三方同基準、對齊 WORKFLOW_SOP §7.1〕+ U4 zh 路 + U5 §1.3.1 Vision 三原則 + U6 樣例 -001 + U7 rag_tree 歸屬+四產物完整性 + U8/U9/U10 註；§6.2 七 grep 全綠、四凍結合約欄位結構零變動 `9666b20`
-  - [x] ✅ C3 — SOP Fix & Archive（sop 四檔修正與歸檔·配置權威去誤導）U11 model_recommendations 🔴 -001 更正+EXTRA_INFO 已廢註 + U12 guide 勘誤 banner〔內文不動〕+ U13 doc_type v3 A 軌 banner+v1/v2→archive〔sop 僅留 v3〕+ U14 mineru §6 RELEASE_ON_UPLOAD 配套+§99.2 v3；§6.3 五 grep 全綠 `待 baron 回填`
-  - [/] 🟡 WIP: C4 — Checkout（收官歸檔）Conformance U1-U14 + §7.2 豁免聲明 + baton 一次性 mv〔plan/tasks/C1-C3 報告；兩真理源長駐 baton 不歸檔〕
-  - 動因：第 1 路收官後兩真理源 1 矛盾+4 缺口+3 stale、sop 4 檔誤導（model_recommendations 仍推已廢 embedding-2）→ 第 2-5 路照 spec 實作會重蹈 HOTFIX-1/2/3 與 MODEL-11 的坑；PIPE-VISUAL 開 plan 前置
-  - 工時：4 個 commits；依賴：無；版控先例＝195e12b（baton 真理源 .bak 入庫審計、本體留 baton）
-  - 銜接：收官後開 PIPE-VISUAL plan（第 2 路 Slides、引用乾淨 SPEC §1.3.1）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -966,6 +971,9 @@
 
 ### PIPE-CORE (✅ 已完成)
 - ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check `13c1dcb`；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
+
+### PIPE-SYNC (✅ 已完成·第 2 路前置)
+- ✅ ~~PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC~~（已落地、C1 `c54327c` + C2 `9666b20` + C3 `29f13ca` + C4 Checkout 收官；母 plan 補註⁶〔U1 矛盾/U2 stale/U3 key 母句/U8/U5 指標〕+ SPEC v6〔key 契約凍結/zh 路/§1.3.1 Vision 共用規格/-001 樣例/rag_tree 歸屬/三註〕+ sop 四檔去誤導〔model_recommendations -001🔴/guide 勘誤/doc_type banner+v1v2 歸檔/mineru RELEASE_ON_UPLOAD〕；§7.2 DOC 豁免；PIPE-VISUAL 開 plan 前置完成）
 
 ### PIPE-SCAFFOLD (✅ 已完成·階段一建)
 - ✅ ~~PIPE-SCAFFOLD web_server 雙軌派發 scaffolding~~（已落地、OP-1 `13c1dcb` + OP-2 `6807a7f` + OP-3 `58e1b89`；旗標惰性插入點 + 影子派發單元 + 兩派發點閘門，A 軌 byte 不動；階段二 Flip 屬 PIPE-FLIP）
