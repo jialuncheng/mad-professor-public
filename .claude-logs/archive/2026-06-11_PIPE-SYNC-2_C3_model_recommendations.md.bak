@@ -16,8 +16,8 @@
 | **`LLM_DOMAIN_MODEL`** | `CHAT_MODEL` fallback | **`gemini-2.5-pro`** | 每篇文件僅上傳時分析一次。選用 Pro 旗艦能以強大視覺與文字理解力，精準識別專業術語領域。 | 💎 中 |
 | **`LLM_DOC_MODEL`** | `CHAT_MODEL` fallback | **`gemini-3.5-flash`** | 後台標題分析與 Metadata 提取。Flash 等級兼顧大 Context Window (1M) 與高性價比。 | ✅ 低 |
 | **`LLM_VISION_MODEL`** | `CHAT_MODEL` fallback | **`gemini-3.5-flash`** <br>*(密集視覺可選 `2.5-pro`)* | 圖片圖說、簡報與多頁履歷分析。建議回退至 Flash 級以大幅降低後台處理時間與 API 成本。 | 💎 中 |
-| **`LLM_EXTRA_INFO_MODEL`** | `CHAT_MODEL` fallback | **`gemini-3.5-flash`** | 密集生成章節摘要與提問。`3.5-flash` 對於 LaTeX 數學公式與結構化生成能力更佳。<!-- === [PIPE-SYNC-2 C3] === -->⚠️ `extra_info` stage **B 軌已廢**（PIPE 母 plan U6、摘要歸 P2 六步）、本欄僅 A 軌影子期沿用。<!-- === [PIPE-SYNC-2 C3 END] === --> | ✅ 低 |
-| **`EMBEDDING_MODEL`** | `gemini-embedding-2` | <!-- === [PIPE-SYNC-2 C3] === -->**`gemini-embedding-001`**<!-- === [PIPE-SYNC-2 C3 END] === --> | <!-- === [PIPE-SYNC-2 C3] === -->**MODEL-11 更正**：embedding-2 為多模態交錯模型——SDK `t_contents()` 把批次併 1 向量（**假批次**、永遠退逐筆）且**不支援 task_type**（query/doc 向量同質、RAG 召回非對稱性喪失）；`-001` 為文字 embedding GA、真批次 + task_type（Dev API 探針鋼證 `-001 embeddings=3` vs `-2 embeddings=1`）。**新舊向量不可混庫**、換用須 `regen_rag --all`。<!-- === [PIPE-SYNC-2 C3 END] === --> | 🌟 高 |
+| **`LLM_EXTRA_INFO_MODEL`** | `CHAT_MODEL` fallback | **`gemini-3.5-flash`** | 密集生成章節摘要與提問。`3.5-flash` 對於 LaTeX 數學公式與結構化生成能力更佳。 | ✅ 低 |
+| **`EMBEDDING_MODEL`** | `gemini-embedding-2` | **`gemini-embedding-2`** | 2026 最新旗艦多模態嵌入。原生支持 Text, Image, PDF 混合表徵，Context 擴展至 8k。 | 🌟 高 |
 | **`EMBEDDING_OUTPUT_DIMENSIONS`**| `768` | **`768` (MRL)** | 使用 MRL 降維技術輸出 768 維向量。**100% 無痛相容現有 FAISS 向量庫規格**。 | 🌟 高 |
 | **`RAG_SCORE_THRESHOLD`** | `0.22` | **`0.38` ~ `0.42`** | 代碼已實作 L2 正規化（Cosine 相似度）。閥值調高能精確排除背景噪聲，拉大安全邊際。 | 🌟 高 |
 

@@ -1,9 +1,5 @@
 # Google Gemini 2026 最新旗艦模型與 API 開發指南
 
-<!-- === [PIPE-SYNC-2 C3 START] === -->
-> ⚠️ **勘誤（2026-06-11、MODEL-11 實測）**：本指南對 `gemini-embedding-2` 之「文字 embedding 首選／批次嵌入」描述**與實測矛盾**——embedding-2 為多模態**交錯**模型，統一 SDK `t_contents()` 將文字批次併為 **1 個融合向量**（Dev API 探針：`-2 embeddings=1` vs `gemini-embedding-001 embeddings=3`），且不支援 `task_type`（RAG query/doc 召回非對稱性喪失）。**本專案文字 embedding 一律採 `gemini-embedding-001`**（MODEL-11 決策、`settings.py` 預設）；embedding-2 僅適用真·多模態交錯場景（圖文混合向量化）、引入前須另行實測。下文 embedding-2 相關段落保留原文作歷史參考、閱讀時以本勘誤為準。
-<!-- === [PIPE-SYNC-2 C3 END] === -->
-
 > 本文件彙整了 **Google 於 2026 年 I/O 大會及春季正式 GA 的最新一代 Gemini 模型系列技術規格**。
 > 重點聚焦於 2026 年 5 月 19 日甫發布的 **Gemini 3.5 Flash**，以及 2026 年 4 月 22 日 GA 的**多模態嵌入旗艦 Gemini Embedding 2**。
 > 本指南亦提供 2026 年全新一代統一 Python SDK `google-genai` 的標準開發範例、呼叫限制與開發實務建議。

@@ -159,10 +159,6 @@ ls -lt /var/mineru_output/ | tail -5
 
 ## §6 容器卡死釋放（應急排障）
 
-<!-- === [PIPE-SYNC-2 C3 START] === -->
-> ℹ️ **app 端 RAM 配套（LAZYLOAD-MULTI-1 C4、2026-06-10 起）**：上傳文件時 app 端**自動全清向量快取（FAISS/_paper_cache）+ `gc.collect()`**、騰 RAM 給同 VM 的 MinerU Docker——開關 `RELEASE_ON_UPLOAD`（預設 on、env 可關）、活躍 SSE 串流豁免、被清篇下次檢索經 loader 自載無感重建。排障時若觀察上傳期 app RAM 驟降屬**預期行為**、非洩漏。
-<!-- === [PIPE-SYNC-2 C3 END] === -->
-
 若 MinerU HTTP API 無回應、連線瞬斷或 CPU/RAM 長時間 100%，執行以下步驟：
 
 ```bash
@@ -216,6 +212,5 @@ docker compose down && docker compose up -d
 
 ### §99.2 Revision 歷程
 
-- v3 (2026-06-11)：PIPE-SYNC-2 C3（U14）——§6 頂補 app 端 RAM 配套註（LAZYLOAD-MULTI-1 C4 `RELEASE_ON_UPLOAD`=on 上傳自動全清向量快取+gc 騰 RAM 給 MinerU、活躍 SSE 豁免、loader 自載重建；排障時上傳期 app RAM 驟降屬預期）
 - v2 (2026-05-28)：INFRA-1 C2——§1 補 MINERU_VIRTUAL_VRAM_SIZE CPU 禁用條目 + §2.3 CPU 後端紅線規格 + §6.2 VRAM OOM 自愈步驟
 - v1 (2026-05-27)：初版建立（MODEL-10 C2，隨 pdf_processor.py MINERU_TIMEOUT 防禦性載入落地）
