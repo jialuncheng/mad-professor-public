@@ -697,9 +697,9 @@
   - [x] ✅ C2 — P1 Vision Ingestion（每頁存圖與視覺解析）fitz 整頁存圖 page-{N}.jpg〔自建零 A 軌 import、直向裁半/空白跳過〕+ Vision temp=0〔§1.3.1、prompt 含 cell 禁 ###〕+ 條件滾動〔Q1 預設關、(續)/表格截斷觸發〕+ 封面判定→raw_metadata/title fallback 檔名 + 統計去重〔Q2、封面排除、log〕+ source_lang/影子後綴 → IngestionMetadataSpec；6 mock 測試、全套件 566 passed `941eed7`
   - [x] ✅ C3 — P2 Six-Step（六步與頁 key 契約）統一六步〔①順產 raw_domain 缺→內容判定 / ②順產缺失頁標題回填 tiles / ③LCC(context=摘要) / ④Glossary 級聯·LLM 交易外 / ⑤DEEP_THINK 翻摘要雙用 / ⑥批次翻頁摘要〕+ **`page_key()`=`p{N:02d}_{原文頁標題}` 單一實作點**〔同標題不撞、P3/P4 同基準〕+ 三安全鎖；4 mock 測試、全套件 570 passed `f8a24d7`
   - [x] ✅ C4 — P3 Per-Page Translate & Restore（逐頁翻譯與排版還原）逐頁三欄並行〔RESUME-PERF-1 範式、單欄退原文〕+ **alt 對齊雙 Caption 物理根除**〔渲染零 *圖表：* 段、測試鎖死〕+ _SLIDE_CONSTRAINTS〔Q4 四條〕+ rag_sections 旁路〔summary_key=page_key 同實作點、譯 title 僅顯示=key-changing 不變式；同頁合併 Q3 策略側 rag_indexer 零污染〕+ zh 路跳譯仍建 per-section + fallback〔Q5〕+ 不渲染 meta header（U7-U10）；5 mock 測試、全套件 575 passed `4d7684c`
-  - [x] ✅ C5 — P4 Wire（RAG 接線）run_phase4 呼共用 rag_indexer.index〔P3 旁路+P2 summaries 同 key 直餵、rag_tree_path/title→四產物、≥3 門檻、失敗拋出不阻 reading_ready、零 rag_processor〕；**四 Phase 全落地**；2 mock 測試、全套件 577 passed `待 baron 回填`
-  - [/] 🟡 WIP: C6 — Unit & Integration Tests（測試補全）§8.1 全清單 + **§7.2 key-changing 整合測試**〔FakeTranslator 真改寫頁標題、正面達標免豁免〕
-  - [ ] ⬜ 未開始: C7 — Checkout（收官歸檔與母 plan 同步）Conformance + 母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名/狀態/Bypass 句更正〔Q6/Q7〕+ baton 一次性歸檔
+  - [x] ✅ C5 — P4 Wire（RAG 接線）run_phase4 呼共用 rag_indexer.index〔P3 旁路+P2 summaries 同 key 直餵、rag_tree_path/title→四產物、≥3 門檻、失敗拋出不阻 reading_ready、零 rag_processor〕；**四 Phase 全落地**；2 mock 測試、全套件 577 passed `dbf90bd`
+  - [x] ✅ C6 — Unit & Integration Tests（測試補全·業務碼零改）**§7.2 整合測試**〔真實 P2→P3〔FakeTranslator 真改寫頁標題=key-changing〕→真實 build_chunk_markdown；雙斷言：summary_key 原文同基準 + 頁摘要進 Chapter Summary 行——HOTFIX-1 類退化必紅〕+ Q2 小樣本邊界 + 合約① forbid 防線；24 測試、全套件 580 passed `待 baron 回填`
+  - [/] 🟡 WIP: C7 — Checkout（收官歸檔與母 plan 同步）Conformance + 母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名/狀態/Bypass 句更正〔Q6/Q7〕+ baton 一次性歸檔
   - 工時：7 個 commits；依賴：無（基建全就緒：PIPE-CORE/三真理源/rag_indexer/六步/§1.3.1/並行範式/影子派發）
   - 工作範圍硬限三檔：`pipelines/slide_pipeline.py`（新）/ `pipelines/__init__.py`（+1 import）/ `tests/test_slide_pipeline.py`（新）；rag_indexer 零改禁分支污染
   - ⚠️ baron 運維（非 commit）：影子上傳 ST 實件 E2E（無雙 Caption/toolbar 摘要/重跑穩定/引用 p{N} 標題）+ B 軌 golden 另捕〔Q8 改善豁免〕
