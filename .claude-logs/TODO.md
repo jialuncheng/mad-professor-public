@@ -19,7 +19,7 @@
 | C2 | in-memory cache 併發鎖純硬化·**單一共享 RLock**〔retriever 持鎖、ai_core `_paper_cache` 共用 `retriever._lock`、**loader 呼叫在鎖外防 AB-BA**〕包全 mutation（U8、修正 tasks §4.2 兩鎖之 load_paper_cache↔_get_vector_store 相反鎖序隱患）+ 並發測試〔不死鎖 timeout〕；行為不變、全套件全綠＝回歸網 | `9849600` |
 | C3 | `web_server.py` 啟動 lifespan 接線 `set_loader(λ o,p: load_paper_resources)` + `settings.py` `RAG_MAX_CACHE` 5→100（U2/U4 純加法、只動啟動段不碰端點）→ **跨文件修復 LIVE** | `c5b0c31` |
 | C4 | 記憶體釋放策略：`_release_caches_except_active`〔全清該 owner、唯一豁免 active_streams done==False、快照 keys 再清、gc、ai_core None 防呆〕+ `/content` 換篇 gate〔F1 語言切換同篇不放〕+ `/upload` 開關〔`RELEASE_ON_UPLOAD`=on 騰 RAM 給 MinerU〕+ ai_core remove_paper docstring 修（U5/U9/P4）+ 3 釋放測試 | `6c0e8d2` |
-| C5 | Checkout 收官：Conformance 六維度驗收全綠〔plan v5 U1-U9 / tasks §6 grep+pytest〔10+全套件 556 passed〕/ **§7.2 整合測試〔key=paper_uuid 穩定、key-changing N/A〕** / 不可動〔C3/C4 hunk 不重疊〕/ 提示詞稽核 / msg 完整〕+ baton 一次性 mv 歸檔〔plan v1-v5→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+| C5 | Checkout 收官：Conformance 六維度驗收全綠〔plan v5 U1-U9 / tasks §6 grep+pytest〔10+全套件 556 passed〕/ **§7.2 整合測試〔key=paper_uuid 穩定、key-changing N/A〕** / 不可動〔C3/C4 hunk 不重疊〕/ 提示詞稽核 / msg 完整〕+ baton 一次性 mv 歸檔〔plan v1-v5→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `30e024e` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-09_LAZYLOAD-MULTI-1_跨文件lazyload接縫與記憶體釋放_plan_v5.md`（v1-v5 五版保留作 §1.9 軌跡；v3 為 Antigravity 平行 review 版；五輪收斂：v1 初稿 → v2/v3 Antigravity〔rag_tree handoff / is_ready / DB 安全 / shadow〕→ v4 合併〔baron 釋放決策 + Claude P0 併發鎖 + 校正 DB≠cache 兩層〕→ v5 三軸深 review〔前端 F1 / 資料傳導 / 記憶體 M1〕+ mermaid）
 > **真因**：API-PERF C3 廢啟動 preload、chat 端點只 lazy-load 當前 paper → `retrieve_multi` 對未載 tagged 篇 `_get_vector_store` 回 None 靜默跳過 → `#cv 比較` 只召當前篇（log 證 candidates=14 全吳焴倫、其餘 5 篇 0）；**非 RAG-MULTI-1、非模型/regen**（28 篇全 -001、獨立載入都滿分）。
@@ -33,8 +33,8 @@
 | C1 | `settings.py` 廢 `RAG_MULTI_TOP_K`、立 `RAG_MULTI_FLOOR_K`(2)/`RAG_MULTI_MAX_CHUNKS`(15)〔C2 後同 commit 廢 TOP_K〕| `5b9477a` |
 | C2 | `rag_retriever.py` `retrieve_multi_with_context` 廢全域 top-k 飢餓 → **每篇保底覆蓋**〔`effective_floor = min(RAG_MULTI_FLOOR_K, max(1, cap//N))`、不足全拿、補位池排除已保底、N>cap 按各篇最高分取前 cap 篇各 1〕+ `top_k` 參數改 cap override + import 去 TOP_K；更新既有 hashtag 路由測試 | `82b95b1` |
 | C3 | `prompt/ai/ai_character_prompt.txt` 引用段禁 bare `[N]`、只留《文件名》「章節」；共載 `ai_explain_prompt.txt` 已查無反向 [N]〔未改〕| `b5f9ce4` |
-| C4 | 新建 `tests/test_rag_multi.py` 11 測試〔保底/不足全拿/小N不暴漲〔min(floor_k,…)〕/cap/N>cap最高分截斷/補位去重/0候選跳過/cap override/混型book不壓resume/單篇不退化/禁[N]〕；真實演算法驗證〔不 mock retrieve_multi 本體〕；全套件 546 passed | `待 baron 回填` |
-| C5 | Checkout 收官：Conformance 五維度驗收全綠〔plan v3 U1-U7 / tasks §6 grep+pytest / 不可動 / 提示詞稽核 / msg 完整性〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+| C4 | 新建 `tests/test_rag_multi.py` 11 測試〔保底/不足全拿/小N不暴漲〔min(floor_k,…)〕/cap/N>cap最高分截斷/補位去重/0候選跳過/cap override/混型book不壓resume/單篇不退化/禁[N]〕；真實演算法驗證〔不 mock retrieve_multi 本體〕；全套件 546 passed | `01d1270` |
+| C5 | Checkout 收官：Conformance 五維度驗收全綠〔plan v3 U1-U7 / tasks §6 grep+pytest / 不可動 / 提示詞稽核 / msg 完整性〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ TODO 結案 + hash 全量自癒 | `e88c304` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-09_RAG-MULTI-1_跨文件多篇檢索覆蓋與引用修正_plan_v3.md`（v1/v2/v3 三版保留作 §1.9 軌跡；三輪 review 收斂：v1 初稿 → v2 Antigravity 五項+Q2 公式修正 → v3 self-review 三點收緊）
 > **真因（log 鐵證）**：`retrieve_multi_with_context` 全域 top-k=7 飢餓 → 6 篇被擠成 2 人代表（李宗原 A+B軌 佔 5/7、吳焴倫碩士漏召）→ 比較類查詢漏掉有資料文件；另 LLM 多吐無依據 `[1][2][5]` 引用。
@@ -677,6 +677,15 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **PIPE-SYNC-2 resume路落地經驗回灌母plan與SPEC**（`.claude-logs/baton/2026-06-10_PIPE-SYNC-2_resume路落地經驗回灌母plan與SPEC_plan_v1.md`〔v1.2、U1-U14、OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`）
+  - [x] ✅ C1 — Master Plan Sync（母 plan 就地補註·消矛盾與 stale）U1 resume Bypass 雙處改逐 section〔slides 不動·Q6〕+ U2 §8.5 RAG-ASYNC/PIPE-RESUME 狀態自癒 + U3 母句 + U8 Tiles 措辭 + U5 指標；§6.1 六 grep 全綠 `待 baron 回填`
+  - [/] 🟡 WIP: C2 — SPEC Sync（PIPE-SPEC 就地補註·凍結缺口規格）U3 key 契約〔原文標題 path、三方同基準、對齊 WORKFLOW_SOP §7.1〕+ U4 zh 路 + U5 §1.3.1 Vision 三原則 + U6 樣例 -001 + U7 rag_tree 歸屬 + U8/U9/U10 註
+  - [ ] ⬜ 未開始: C3 — SOP Fix & Archive（sop 四檔修正與歸檔）U11 model_recommendations 🔴 -001 更正 + U12 guide 勘誤 banner + U13 doc_type v3 banner+v1/v2→archive + U14 mineru RELEASE_ON_UPLOAD 句
+  - [ ] ⬜ 未開始: C4 — Checkout（收官歸檔）Conformance U1-U14 + §7.2 豁免聲明 + baton 一次性 mv〔plan/tasks/C1-C3 報告；兩真理源長駐 baton 不歸檔〕
+  - 動因：第 1 路收官後兩真理源 1 矛盾+4 缺口+3 stale、sop 4 檔誤導（model_recommendations 仍推已廢 embedding-2）→ 第 2-5 路照 spec 實作會重蹈 HOTFIX-1/2/3 與 MODEL-11 的坑；PIPE-VISUAL 開 plan 前置
+  - 工時：4 個 commits；依賴：無；版控先例＝195e12b（baton 真理源 .bak 入庫審計、本體留 baton）
+  - 銜接：收官後開 PIPE-VISUAL plan（第 2 路 Slides、引用乾淨 SPEC §1.3.1）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）

@@ -7,6 +7,11 @@
 
 ## 依任務分類
 
+### PIPE-SYNC-2 系列
+- 🟡 **PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC（2026-06-11 Tasks → C1 WIP·DOC-Refactor）**
+  - `2026-06-11_PIPE-SYNC-2_C1_run_提示詞.md` — C1 Run（Master Plan Sync：母 plan v10 就地補註〔U1 resume Bypass 雙處 L71/L257 改逐 section、slides L70/L258 嚴禁動·Q6 / U2 §8.5 RAG-ASYNC ⬜→✅+產出補 rag_indexer·PIPE-RESUME 狀態註 / U3 母句 key=原文標題 path / U8 Tiles 交付形狀措辭 / U5 PIPE-VISUAL 條目尾 §1.3.1 指標〕；HTML 註解包裹 + §99.2 補註⁶；.bak 入 archive 審計、母 plan 本體不入版控〔195e12b 先例〕；§6.1 六條 grep 驗收；執行報告暫存 baton、不自發 commit）
+  - `2026-06-11_PIPE-SYNC-2_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.2 OQ 全結清、U1-U14〕拆 commit：兩真理源就地補註〔U1 矛盾/U2 stale/U3 key 契約/U4 zh 路/U5 Vision §1.3.1/U6 樣例 -001/U7 rag_tree 歸屬/U8 Tiles 措辭/U9 並行/U10 還原三件套〕+ sop 四檔〔U11 model_recommendations 🔴/U12 guide 勘誤/U13 doc_type banner+v1v2 歸檔/U14 mineru RELEASE_ON_UPLOAD〕；HTML 註解包裹、不 bump 版本；末 commit Checkout 一次性歸檔；§7.2 豁免）
+
 ### LAZYLOAD-MULTI-1 系列
 - ✅ **LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放（2026-06-10 Tasks → C1-C4 → C5 Checkout 收官·BE-Refactor）**
   - `2026-06-10_LAZYLOAD-MULTI-1_Check_提示詞.md` — Check（C5 Checkout：Conformance 六維度〔plan v5 U1-U9 / tasks §6 grep+pytest〔10+556 passed〕/ **§7.2 整合測試 test_retrieve_multi_loads_all_tagged〔key=paper_uuid 穩定、key-changing N/A〕** / 不可動〔C3/C4 hunk 不重疊〕/ 提示詞稽核 / msg 完整〕→ 全綠後 TODO 結案〔C1 8893ad1/C2 9849600/C3 c5b0c31/C4-C5 + 全量 hash 自癒〕+ baton 一次性 mv〔plan v1-v5→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ C5 報告直寫；YuLun_Wu_CV_chat.md 保持原狀；msg /tmp〔Opus 4.8 1M〕、不自發 commit；LAZYLOAD-MULTI-1 全案結案、根治 API-PERF C3 lazy-load 漏召）
@@ -296,6 +301,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C1_run_提示詞.md`
+- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Tasks_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_Check_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C4_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C3_run_提示詞.md`
@@ -309,5 +316,3 @@
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C1_run_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_Tasks_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_plan_提示詞.md`
-- 2026-06-09 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_run_提示詞.md`
-- 2026-06-08 — `2026-06-08_CHAT-EXPORT-HOTFIX-1_doc_提示詞.md`
