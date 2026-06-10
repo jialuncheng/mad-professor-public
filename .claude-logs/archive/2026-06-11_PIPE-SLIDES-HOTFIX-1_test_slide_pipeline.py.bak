@@ -308,12 +308,12 @@ class _FakeTranslator:
         return f"譯{text}"
 
 
-def _make_p3_ctx(tmp_path, monkeypatch, tiles, source_lang='en', paper_id='deck1'):
+def _make_p3_ctx(tmp_path, monkeypatch, tiles, source_lang='en'):
     import settings
     from pipelines.context import PipelineContext
     from pipelines.contracts import GlossaryReadySpec, IngestionMetadataSpec
     monkeypatch.setattr(settings, 'OUTPUT_DIR', tmp_path)
-    ctx = PipelineContext(doc_type='slides', paper_id=paper_id, owner_id=1)
+    ctx = PipelineContext(doc_type='slides', paper_id='deck1', owner_id=1)
     ctx.ingestion = IngestionMetadataSpec(title='T', source_lang=source_lang, tiles=tiles)
     ctx.glossary_ready = GlossaryReadySpec(
         abstract='a', lcc='TK', glossary={}, translated_abstract='譯摘要',
@@ -520,75 +520,3 @@ def test_contract_p1_zero_derived_context(monkeypatch, tmp_path):
     with pytest.raises(Exception):   # pydantic ValidationError（abstract 非法欄）
         IngestionMetadataSpec(title='T', source_lang='en', tiles=[], abstract='x')
 # === [PIPE-SLIDES C6 END] ===
-
-
-# === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 START] === F1/F2/F4 回歸測試
-def test_hf1_title_echo_stripped():
-    """F1：content 開頭回聲行（含 ×2 副標重抄、大小寫/標點變體）→ 物理剔除；非回聲不誤殺。"""
-    from pipelines.slide_pipeline import SlidePipeline
-    c = SlidePipeline._strip_title_echo(
-        "30 kW Three-Phase Vienna Rectifier",
-        "30 kW three-phase Vienna rectifier\n30 kW Three-Phase Vienna Rectifier\n- spec A")
-    assert c == "- spec A"                              # ×2 回聲全剔（p6 ×3 案例）
-    c2 = SlidePipeline._strip_title_echo("Agenda", "1. Infrastructure\n2. Grid to POL")
-    assert c2.startswith("1. Infrastructure")           # 非回聲首行不誤殺
-    assert SlidePipeline._strip_title_echo("", "any\nbody") == "any\nbody"   # 無標題不動
-
-
-def test_hf1_p1_units_content_echo_free(monkeypatch, tmp_path):
-    """F1 接線：run_phase1 產出 tiles content 已去回聲（rag_sections/chunk 上游即淨）；title 欄不動。"""
-    responses = {
-        b'p0': _resp('Power Architecture',
-                     'Power Architecture\n- 800V rack details', '', cover=False),
-        b'p1': _resp('Spec', '- 98%', ''),
-    }
-    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='deckhf1')
-    assert spec.tiles[0]['content'] == '- 800V rack details'   # 首行回聲已剔
-    assert spec.tiles[0]['title'] == 'Power Architecture'       # title 不動（key 契約不受影響）
-
-
-def test_hf2_translated_title_wired(monkeypatch, tmp_path):
-    """F2：正常路封面譯題入 raw_metadata 旁路；run_phase4 傳譯題 + 影子 (測試) 綴。"""
-    import paper_manager
-    import processor.translator as tr_mod
-    from processor import rag_indexer
-    from pipelines.slide_pipeline import SlidePipeline
-    tiles = [_t4(1, 'Power Deck', '- a'), _t4(2, 'Spec', '- b')]
-    fake_tr = _FakeTranslator()
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: fake_tr)
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf2_shadow')
-    strategy = SlidePipeline()
-    spec3 = strategy.run_phase3(ctx)
-    assert ctx.raw_metadata['translated_title'] == '譯Power Deck'   # 旁路就位
-    captured = {}
-
-    def _fake_index(sections, summaries, doc_type, vdir, **kw):
-        captured.update(kw)
-        from types import SimpleNamespace
-        return SimpleNamespace(index_meta={"chunks_total": 1}, paper_chunk_count=1)
-    monkeypatch.setattr(rag_indexer, 'index', _fake_index)
-    monkeypatch.setattr(paper_manager, 'get_paper_db_id', lambda o, p: None)
-    ctx.bilingual = spec3
-    strategy.run_phase4(ctx)
-    assert captured['translated_title'] == '譯Power Deck (測試)'   # 譯題 + 影子綴（非暫同取）
-
-
-def test_hf4_paragraph_breaks_normalized(monkeypatch, tmp_path):
-    """F4：純文字連續行 soft break 升級 \\n\\n；pipe table rows 不拆散；端到端進 final_zh。"""
-    import processor.translator as tr_mod
-    from pipelines.slide_pipeline import SlidePipeline
-    out = SlidePipeline._normalize_paragraph_breaks("今日\nAI 伺服器機櫃\n交流輸入")
-    assert out == "今日\n\nAI 伺服器機櫃\n\n交流輸入"
-    tbl = SlidePipeline._normalize_paragraph_breaks("| A | 1 |\n| B | 2 |")
-    assert "| A | 1 |\n| B | 2 |" in tbl                        # table rows 間單 \n 保留
-
-    class _IdTr:                                                # 譯文=原文（聚焦排版斷言）
-        def translate(self, text, ictx, mode, text_type="content"):
-            return text
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: _IdTr())
-    tiles = [_t4(1, 'Arch', '今日\n機櫃標籤'), _t4(2, 'Spec', '- ok')]
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf4')
-    spec = SlidePipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
-    assert '今日\n\n機櫃標籤' in zh                              # 渲染路已套用
-# === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 END] ===
