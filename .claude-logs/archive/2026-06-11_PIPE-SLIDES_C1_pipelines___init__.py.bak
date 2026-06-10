@@ -37,9 +37,3 @@ __all__ = [
 # 後續四路（VISUAL/ACADEMIC/LITEDOC/BOOK）落地時須各補同款 import（見 hotfix 銜接 §1）。
 from pipelines import resume_pipeline  # noqa: E402,F401
 # === [PIPE-RESUME C7-hotfix END] ===
-
-# === [PIPE-SLIDES C1 START] ===
-# 第 2 路註冊觸發：import slide_pipeline 使其 @PipelineFactory.register('slides') 裝飾器執行
-# （C7-hotfix 教訓：runtime 不 import 具體策略 → get_strategy('slides') 回 NullStrategy 阻斷）。
-from pipelines import slide_pipeline  # noqa: E402,F401
-# === [PIPE-SLIDES C1 END] ===

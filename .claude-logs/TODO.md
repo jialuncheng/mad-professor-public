@@ -18,7 +18,7 @@
 | C1 | Master Plan Sync：母 plan v10 就地補註〔U1 resume P3 Bypass 雙處→逐 section〔slides 留·Q6〕/ U2 §8.5 RAG-ASYNC ⬜→✅+PIPE-RESUME 狀態自癒 / U3 key 契約母句 / U8 Tiles 交付形狀措辭 / U5 PIPE-VISUAL §1.3.1 指標〕+ 補註⁶ | `c54327c` |
 | C2 | SPEC Sync：PIPE-SPEC 就地補註〔U3 §1.1②+§1.4.1 **key 接縫契約凍結**〔原文標題 path、P2產/P3帶/P4取三方同基準、對齊 WORKFLOW_SOP §7.1〕/ U4 zh 來源五路通用 edge path / U5 **新增 §1.3.1 Vision 解析共用規格**〔忠實轉錄鐵律/temp=0/非確定性註記〕/ U6 樣例 -001 / U7 rag_tree 由 build_rag_tree 自建+四產物完整性 / U8/U9/U10 註〕+ v6；四凍結合約欄位結構零變動 | `9666b20` |
 | C3 | SOP Fix & Archive：U11 model_recommendations EMBEDDING 建議值 -2→**-001**🔴+EXTRA_INFO 已廢註 / U12 guide 勘誤 banner〔內文不動〕/ U13 doc_type v3 A 軌 banner+**v1/v2→archive**〔sop 僅留 v3〕/ U14 mineru §6 RELEASE_ON_UPLOAD 配套+v3 | `29f13ca` |
-| C4 | Checkout 收官：Conformance 五維度全綠〔U1-U14 / tasks §6 十八條 grep / 不可動〔業務碼/凍結合約/Slides Bypass〕/ 提示詞 5 份 / msg 完整〕+ **§7.2 豁免顯式聲明**〔DOC、無 code handoff、Q4〕+ baton 歸檔〔plan/tasks/C1-C4 報告；兩長駐真理源不動〕 | `待 baron 回填` |
+| C4 | Checkout 收官：Conformance 五維度全綠〔U1-U14 / tasks §6 十八條 grep / 不可動〔業務碼/凍結合約/Slides Bypass〕/ 提示詞 5 份 / msg 完整〕+ **§7.2 豁免顯式聲明**〔DOC、無 code handoff、Q4〕+ baton 歸檔〔plan/tasks/C1-C4 報告；兩長駐真理源不動〕 | `43ad9c6` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-10_PIPE-SYNC-2_resume路落地經驗回灌母plan與SPEC_plan_v1.md`（§99.2 v1.2、U1-U14、§9 六 OQ 全結清〔Q1 不 bump/Q2 全納/Q3 §1.3.1/Q4 豁免/Q5 mineru/Q6 slides Bypass 留〕）
 > **動因**：第 1 路（Resume）收官後兩真理源 1 矛盾+4 缺口+3 stale、sop 4 檔誤導（model_recommendations 仍推已廢 embedding-2）→ 第 2-5 路照 spec 實作會重蹈 HOTFIX-1/2/3 與 MODEL-11 的坑；**PIPE-VISUAL（第 2 路 Slides）開 plan 前置、現已完成**。
@@ -691,6 +691,18 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **PIPE-SLIDES SlidePipeline簡報策略管線**（`.claude-logs/baton/2026-06-11_PIPE-SLIDES_SlidePipeline簡報策略管線_plan_v1.md`〔v1.1、U1-U11、八 OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`；PIPE 縱向五路**第 2 路**、原 PIPE-VISUAL 改名）
+  - [x] ✅ C1 — Skeleton & Register（骨架與註冊）`@register('slides')` + 四方法 strict stub〔NotImplementedError 安全攔截〕+ `rag_char_threshold=3` + `__init__` import（C7-hotfix 教訓）+ 4 分派測試；全套件 560 passed `待 baron 回填`
+  - [/] 🟡 WIP: C2 — P1 Vision Ingestion（每頁存圖與視覺解析）fitz 整頁存圖〔自建不耦合 A 軌〕+ Vision temp=0〔§1.3.1〕+ 條件滾動〔Q1 預設關〕+ 封面判定/title fallback + 跨頁統計去重〔Q2 ≥60% 非封面頁+log〕（U1-U4）
+  - [ ] ⬜ 未開始: C3 — P2 Six-Step（六步與頁 key 契約）統一六步、① 順產 raw_domain、② 順產缺失頁標題、**key=`p{N}_{原文頁標題}`**〔根除 HOTFIX-2 重複標題邊界〕（U5/U6）
+  - [ ] ⬜ 未開始: C4 — P3 Per-Page Translate & Restore（逐頁翻譯與排版還原）並行照抄 RESUME-PERF-1 + **alt 對齊雙 Caption 物理根除**〔A 軌 slides_processor:155 病灶〕+ constraints〔cell 禁 ###〕+ rag_sections 旁路〔含同頁合併·Q3 策略側〕+ zh 路 + fallback〔Q5〕+ 不渲染 meta header（U7-U10）
+  - [ ] ⬜ 未開始: C5 — P4 Wire（RAG 接線）rag_indexer.index 四產物（U11）
+  - [ ] ⬜ 未開始: C6 — Unit & Integration Tests（測試補全）§8.1 全清單 + **§7.2 key-changing 整合測試**〔FakeTranslator 真改寫頁標題、正面達標免豁免〕
+  - [ ] ⬜ 未開始: C7 — Checkout（收官歸檔與母 plan 同步）Conformance + 母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名/狀態/Bypass 句更正〔Q6/Q7〕+ baton 一次性歸檔
+  - 工時：7 個 commits；依賴：無（基建全就緒：PIPE-CORE/三真理源/rag_indexer/六步/§1.3.1/並行範式/影子派發）
+  - 工作範圍硬限三檔：`pipelines/slide_pipeline.py`（新）/ `pipelines/__init__.py`（+1 import）/ `tests/test_slide_pipeline.py`（新）；rag_indexer 零改禁分支污染
+  - ⚠️ baron 運維（非 commit）：影子上傳 ST 實件 E2E（無雙 Caption/toolbar 摘要/重跑穩定/引用 p{N} 標題）+ B 軌 golden 另捕〔Q8 改善豁免〕
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）

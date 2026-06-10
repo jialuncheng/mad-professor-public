@@ -7,6 +7,11 @@
 
 ## 依任務分類
 
+### PIPE-SLIDES 系列
+- 🟡 **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1 WIP·BE-Refactor·第 2 路）**
+  - `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md` — C1 Run（Skeleton & Register：新建 `pipelines/slide_pipeline.py`〔`@register('slides')` + DocumentStrategy 四方法 stub + `rag_char_threshold=3`〕+ `pipelines/__init__.py` 補 import〔`# === [PIPE-SLIDES C1] ===` 包裹、C7-hotfix 教訓〕+ 新建 `tests/test_slide_pipeline.py` 分派測試〔_registry 含 'slides'、get_strategy 非 NullStrategy〕；僅三檔；.bak；msg /tmp、不自發 commit）
+  - `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.1 八 OQ 全結清〕拆 commit：新建 `pipelines/slide_pipeline.py`〔P1 每頁存圖+Vision temp=0+封面判定+統計去重 / P2 六步 key=`p{N}_{標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除+rag_sections / P4 rag_indexer 照抄〕+ `__init__` 註冊 + `tests/test_slide_pipeline.py`〔含 §7.2 key-changing 整合測試〕；末 commit Checkout 含母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名同步〔Q6/Q7〕；工作範圍硬限三檔）
+
 ### PIPE-SYNC-2 系列
 - ✅ **PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC（2026-06-11 Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor）**
   - `2026-06-11_PIPE-SYNC-2_Check_提示詞.md` — Check（C4 Checkout：Conformance 五維度〔plan §2 U1-U14 / tasks §6.1 六+§6.2 七+§6.3 五條 grep / 不可動〔業務碼/凍結合約欄位/Slides Bypass〕/ 提示詞稽核 / msg 完整〕+ **§7.2 豁免顯式聲明〔DOC、無 code handoff、Q4〕** → 全綠後 TODO 結案 + baton 歸檔〔plan→plans/ + tasks→tasks/ + C1-C4 報告→executions/；**兩長駐真理源 2026-06-01_PIPE* 嚴禁動**〕；msg /tmp、不自發 commit；PIPE-SYNC-2 全案結案、PIPE-VISUAL 前置完成）
@@ -304,6 +309,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md`
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Check_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C3_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C2_run_提示詞.md`
@@ -317,5 +324,3 @@
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_Tasks_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_Check_提示詞.md`
 - 2026-06-09 — `2026-06-09_RAG-MULTI-1_C4_run_提示詞.md`
-- 2026-06-09 — `2026-06-09_RAG-MULTI-1_C3_run_提示詞.md`
-- 2026-06-09 — `2026-06-09_RAG-MULTI-1_C2_run_提示詞.md`
