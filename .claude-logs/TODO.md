@@ -679,9 +679,9 @@
 ### 🔴 高優先
 
 - 🟡 **PIPE-SYNC-2 resume路落地經驗回灌母plan與SPEC**（`.claude-logs/baton/2026-06-10_PIPE-SYNC-2_resume路落地經驗回灌母plan與SPEC_plan_v1.md`〔v1.2、U1-U14、OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`）
-  - [x] ✅ C1 — Master Plan Sync（母 plan 就地補註·消矛盾與 stale）U1 resume Bypass 雙處改逐 section〔slides 不動·Q6〕+ U2 §8.5 RAG-ASYNC/PIPE-RESUME 狀態自癒 + U3 母句 + U8 Tiles 措辭 + U5 指標；§6.1 六 grep 全綠 `待 baron 回填`
-  - [/] 🟡 WIP: C2 — SPEC Sync（PIPE-SPEC 就地補註·凍結缺口規格）U3 key 契約〔原文標題 path、三方同基準、對齊 WORKFLOW_SOP §7.1〕+ U4 zh 路 + U5 §1.3.1 Vision 三原則 + U6 樣例 -001 + U7 rag_tree 歸屬 + U8/U9/U10 註
-  - [ ] ⬜ 未開始: C3 — SOP Fix & Archive（sop 四檔修正與歸檔）U11 model_recommendations 🔴 -001 更正 + U12 guide 勘誤 banner + U13 doc_type v3 banner+v1/v2→archive + U14 mineru RELEASE_ON_UPLOAD 句
+  - [x] ✅ C1 — Master Plan Sync（母 plan 就地補註·消矛盾與 stale）U1 resume Bypass 雙處改逐 section〔slides 不動·Q6〕+ U2 §8.5 RAG-ASYNC/PIPE-RESUME 狀態自癒 + U3 母句 + U8 Tiles 措辭 + U5 指標；§6.1 六 grep 全綠 `c54327c`
+  - [x] ✅ C2 — SPEC Sync（PIPE-SPEC 就地補註·凍結缺口規格）U3 key 契約〔原文標題 path、三方同基準、對齊 WORKFLOW_SOP §7.1〕+ U4 zh 路 + U5 §1.3.1 Vision 三原則 + U6 樣例 -001 + U7 rag_tree 歸屬+四產物完整性 + U8/U9/U10 註；§6.2 七 grep 全綠、四凍結合約欄位結構零變動 `待 baron 回填`
+  - [/] 🟡 WIP: C3 — SOP Fix & Archive（sop 四檔修正與歸檔）U11 model_recommendations 🔴 -001 更正 + U12 guide 勘誤 banner + U13 doc_type v3 banner+v1/v2→archive + U14 mineru RELEASE_ON_UPLOAD 句
   - [ ] ⬜ 未開始: C4 — Checkout（收官歸檔）Conformance U1-U14 + §7.2 豁免聲明 + baton 一次性 mv〔plan/tasks/C1-C3 報告；兩真理源長駐 baton 不歸檔〕
   - 動因：第 1 路收官後兩真理源 1 矛盾+4 缺口+3 stale、sop 4 檔誤導（model_recommendations 仍推已廢 embedding-2）→ 第 2-5 路照 spec 實作會重蹈 HOTFIX-1/2/3 與 MODEL-11 的坑；PIPE-VISUAL 開 plan 前置
   - 工時：4 個 commits；依賴：無；版控先例＝195e12b（baton 真理源 .bak 入庫審計、本體留 baton）
