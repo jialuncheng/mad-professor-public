@@ -45,9 +45,7 @@ def test_stub_phases_raise_not_implemented():
     from pipelines.factory import PipelineFactory
     strategy = PipelineFactory.get_strategy('slides')
     # === [PIPE-SLIDES C3 START] === phase2 已落地、自清單移除
-    # === [PIPE-SLIDES C4 START] === phase3 已落地、自清單移除
-    for phase in ('run_phase4',):
-        # === [PIPE-SLIDES C4 END] ===
+    for phase in ('run_phase3', 'run_phase4'):
         # === [PIPE-SLIDES C3 END] ===
         with pytest.raises(NotImplementedError):
             getattr(strategy, phase)(ctx=None)
@@ -291,100 +289,3 @@ def test_p2_summaries_nonfatal_degrade(monkeypatch):
     assert spec.section_summaries is None
     assert spec.abstract == '摘要。'
 # === [PIPE-SLIDES C3 END] ===
-
-
-# === [PIPE-SLIDES C4 START] === P3 逐頁翻譯與還原測試（fake Translator、零真 API）
-class _FakeTranslator:
-    """假 Translator：記錄呼叫、可對指定原文拋例外；譯文=「譯{原文}」（key-changing）。"""
-
-    def __init__(self, fail_on=None):
-        self.calls = []          # (text, text_type)
-        self.fail_on = fail_on
-
-    def translate(self, text, ictx, mode, text_type="content"):
-        self.calls.append((text, text_type))
-        if self.fail_on and self.fail_on in text:
-            raise RuntimeError("boom")
-        return f"譯{text}"
-
-
-def _make_p3_ctx(tmp_path, monkeypatch, tiles, source_lang='en'):
-    import settings
-    from pipelines.context import PipelineContext
-    from pipelines.contracts import GlossaryReadySpec, IngestionMetadataSpec
-    monkeypatch.setattr(settings, 'OUTPUT_DIR', tmp_path)
-    ctx = PipelineContext(doc_type='slides', paper_id='deck1', owner_id=1)
-    ctx.ingestion = IngestionMetadataSpec(title='T', source_lang=source_lang, tiles=tiles)
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract='a', lcc='TK', glossary={}, translated_abstract='譯摘要',
-        section_summaries=None, domain_name='Tech')
-    return ctx
-
-
-def _run_p3(monkeypatch, tmp_path, tiles, source_lang='en', fail_on=None):
-    import pipelines.slide_pipeline as sp
-    from pipelines.slide_pipeline import SlidePipeline
-    import processor.translator as tr_mod
-    fake = _FakeTranslator(fail_on=fail_on)
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: fake)
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, source_lang)
-    spec = SlidePipeline().run_phase3(ctx)
-    zh = (tmp_path / '1' / 'deck1').glob('*zh*')
-    zh_text = next(iter(zh)).read_text(encoding='utf-8') if spec else ''
-    return spec, ctx, fake, Path(spec.final_zh_path).read_text(encoding='utf-8')
-
-
-def _t4(page, title, content, desc=''):
-    return {"page": page, "title": title, "content": content,
-            "figure_description": desc,
-            "image_file": f"images/page-{page:02d}.jpg", "is_cover": False}
-
-
-def test_p3_alt_aligned_no_caption_segment_no_header(monkeypatch, tmp_path):
-    """U8/U10：alt=description 譯文單點呈現、全文無 `*圖表：*` 段、不渲染 meta header。"""
-    tiles = [_t4(1, 'Arch', '- 800V', 'rack diagram'), _t4(2, 'Spec', '- 98%', '')]
-    spec, _, _, zh = _run_p3(monkeypatch, tmp_path, tiles)
-    assert '![譯rack diagram](images/page-01.jpg)' in zh   # alt=譯 description
-    assert '圖表：' not in zh                               # 雙 Caption 根除
-    assert not zh.startswith('# ')                          # 無 meta header（首節即 ##）
-    assert '## 譯Arch' in zh
-
-
-def test_p3_rag_sections_key_from_source_title(monkeypatch, tmp_path):
-    """§4 key 契約：summary_key=page_key(N,**原文**標題)；譯後 title 改變不影響（key-changing 不變式）。"""
-    from pipelines.slide_pipeline import SlidePipeline
-    tiles = [_t4(1, 'Arch', '- a'), _t4(2, 'Arch', '- b')]
-    _, ctx, _, _ = _run_p3(monkeypatch, tmp_path, tiles)
-    keys = [s['summary_key'] for s in ctx.rag_sections]
-    assert keys == ['p01_Arch', 'p02_Arch']                 # 原文 key、同標題不撞
-    assert ctx.rag_sections[0]['title'] == '譯Arch'          # 譯後 title 僅顯示
-    assert keys[0] == SlidePipeline.page_key(1, 'Arch')      # 與 P2 同一實作點
-
-
-def test_p3_unit_failure_falls_back_to_source(monkeypatch, tmp_path):
-    """並行單欄失敗 → 該欄退原文、其餘正常、交付不阻（RESUME-PERF-1 範式）。"""
-    tiles = [_t4(1, 'Arch', 'BADCONTENT', 'd1'), _t4(2, 'Spec', '- ok')]
-    spec, _, _, zh = _run_p3(monkeypatch, tmp_path, tiles, fail_on='BADCONTENT')
-    assert 'BADCONTENT' in zh          # 失敗欄退原文
-    assert '## 譯Arch' in zh           # 同頁其餘欄正常
-    assert '譯- ok' in zh              # 他頁不受污染
-
-
-def test_p3_zh_source_skips_translate(monkeypatch, tmp_path):
-    """SPEC U4：zh 來源跳譯（零 Translator 呼叫）、仍建 per-section、原文即譯文。"""
-    tiles = [_t4(1, '架構', '- 內容'), _t4(2, '規格', '- 細節')]
-    spec, ctx, fake, zh = _run_p3(monkeypatch, tmp_path, tiles, source_lang='zh')
-    assert fake.calls == []                                  # 零翻譯呼叫
-    assert len(ctx.rag_sections) == 2
-    assert ctx.rag_sections[0]['summary_key'] == 'p01_架構'
-    assert '## 架構' in zh
-
-
-def test_p3_degraded_single_page_whole_translate(monkeypatch, tmp_path):
-    """Q5 退化：頁數=1 → 整檔單發（1 次 translate）+ 單一容器 section。"""
-    tiles = [_t4(1, 'Only', '- x')]
-    spec, ctx, fake, zh = _run_p3(monkeypatch, tmp_path, tiles)
-    assert len(fake.calls) == 1                              # 整檔 1 次
-    assert len(ctx.rag_sections) == 1
-    assert ctx.rag_sections[0]['content'][0]['content'].startswith('譯')
-# === [PIPE-SLIDES C4 END] ===

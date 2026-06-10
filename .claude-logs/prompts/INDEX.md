@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### PIPE-SLIDES 系列
-- 🟡 **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C2 → C3 WIP·BE-Refactor·第 2 路）**
+- 🟡 **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C3 → C4 WIP·BE-Refactor·第 2 路）**
+  - `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md` — C4 Run（P3 Per-Page Translate & Restore〔最大 commit〕：逐頁 InjectionContext+NORMAL、並行照抄 RESUME-PERF-1〔slot 保序+semaphore+單頁退原文〕；還原 `![alt=description 譯文](images/page-N.jpg)`+譯文、**嚴禁 *圖表：* 段**〔雙 Caption 物理根除〕、不渲染 meta header；_SLIDE_CONSTRAINTS〔Q4 四條〕；ctx.rag_sections 旁路 summary_key=page_key 同基準+同頁合併〔Q3 策略側〕；zh 路跳譯仍建 per-section；fallback Q5；不污染 rag_indexer；C4 包裹+2 .bak；不自發 commit）
   - `2026-06-11_PIPE-SLIDES_C3_run_提示詞.md` — C3 Run（P2 Six-Step：`run_phase2` 統一六步〔①全文摘要同呼叫順產 raw_domain·缺→None 降級 / ②批次每頁摘要同呼叫順產缺失頁標題·**key=`p{頁序}_{原文頁標題}`** 防連續同標題撞 / ③LCC ④Glossary 級聯〔query_cascade→extract→upsert 冪等·LLM 交易外〕 ⑤DEEP_THINK 翻摘要 ⑥批次翻頁摘要→section_summaries〕+ 三安全鎖 + domain_name；C3 包裹+2 .bak；§6.3 pytest+裸 commit grep；不自發 commit）
   - `2026-06-11_PIPE-SLIDES_C2_run_提示詞.md` — C2 Run（P1 Vision Ingestion：`run_phase1`＋私有群〔`_render_pages` fitz 整頁存圖 page-{N}.png 空白跳過·自建零 A 軌 import / `_transcribe_page` Vision temp=settings.LLM_VISION_TEMPERATURE+忠實轉錄 prompt 含 cell 禁 ###+條件滾動 Q1 預設關 / `_detect_cover` 封面→raw_metadata·否→title fallback 檔名 / `_dedupe_headers` Q2 短行≥60% 非封面頁剔除+log〕；每頁=section、tiles=processed JSON、source_lang 啟發式、影子後綴 → IngestionMetadataSpec；C2 包裹+2 .bak；§6.2 grep+pytest；不自發 commit）
   - `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md` — C1 Run（Skeleton & Register：新建 `pipelines/slide_pipeline.py`〔`@register('slides')` + DocumentStrategy 四方法 stub + `rag_char_threshold=3`〕+ `pipelines/__init__.py` 補 import〔`# === [PIPE-SLIDES C1] ===` 包裹、C7-hotfix 教訓〕+ 新建 `tests/test_slide_pipeline.py` 分派測試〔_registry 含 'slides'、get_strategy 非 NullStrategy〕；僅三檔；.bak；msg /tmp、不自發 commit）
@@ -311,6 +312,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C3_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C2_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md`
@@ -325,4 +327,3 @@
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C3_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C2_run_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C1_run_提示詞.md`
-- 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_Tasks_提示詞.md`
