@@ -25,6 +25,23 @@
 > **版控先例**：兩真理源本體長駐 baton 不入版控、.bak 入 archive 作審計（195e12b）；sop 檔皆 tracked 正常入庫。
 > **銜接**：下一步開 PIPE-VISUAL plan（SPEC §1.3.1 Vision 共用規格直接引用；其 plan 核心 OQ＝P3 Bypass 或逐 section、Q6 刻意保留給它）。
 
+### BE-Refactor PIPE-SLIDES SlidePipeline簡報策略管線（PIPE 縱向五路第 2 路·原 PIPE-VISUAL 改名）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | 骨架與註冊：`@register('slides')` + 四方法 strict stub + `rag_char_threshold=3` + `__init__` import〔C7-hotfix 教訓〕+ 4 分派測試 | `31dab5a` |
+| C2 | P1 每頁存圖與視覺解析：fitz 整頁存圖 page-{N}.jpg〔自建零 A 軌 import〕+ Vision temp=0〔§1.3.1、prompt 含 cell 禁 ###〕+ 條件滾動〔Q1 預設關〕+ 封面判定→raw_metadata/title fallback 檔名 + 跨頁統計去重〔Q2 ≥60% 非封面頁+log〕→ IngestionMetadataSpec；6 測試 | `941eed7` |
+| C3 | P2 六步與頁 key 契約：統一六步〔①順產 raw_domain / ②順產缺失頁標題回填 / ③LCC(context=摘要) / ④Glossary 級聯·交易外 / ⑤DEEP_THINK 翻摘要雙用 / ⑥批次翻頁摘要〕+ **`page_key()`=`p{N:02d}_{原文頁標題}` 單一實作點** + 三安全鎖；4 測試 | `f8a24d7` |
+| C4 | P3 逐頁翻譯與排版還原：三欄並行〔RESUME-PERF-1 範式、單欄退原文〕+ **alt 對齊雙 Caption 物理根除**〔渲染零 *圖表：* 段〕+ _SLIDE_CONSTRAINTS〔Q4〕+ rag_sections 旁路〔summary_key=page_key、同頁合併 Q3 策略側〕+ zh 路 + fallback〔Q5〕+ 不渲染 meta header；5 測試 | `4d7684c` |
+| C5 | P4 RAG 接線：run_phase4 呼共用 rag_indexer.index〔同 key 直餵、四產物、≥3、失敗拋出不阻 reading_ready、零 rag_processor〕；四 Phase 全落地；2 測試 | `dbf90bd` |
+| C6 | 測試補全（業務碼零改）：**§7.2 key-changing 整合測試**〔真實 P2→P3〔FakeTranslator 真改寫頁標題〕→真實 build_chunk_markdown、雙斷言接縫不變式——HOTFIX-1 類退化必紅〕+ Q2 小樣本邊界 + 合約① forbid 防線；24 測試、全套件 580 passed | `cb5e2bd` |
+| C7 | Checkout 收官：Conformance 五維度全綠〔plan U1-U11 / tasks §6.1-§6.6 / 不可動〔A 軌/rag_indexer/合約〕/ 提示詞 8 份稽核 / msg 完整〕+ **§7.2 整合測試存在且通過（正面達標、免豁免）** + 母 plan v10 同步〔§8.5 PIPE-VISUAL→PIPE-SLIDES 改名+✅+Bypass 句更正、補註⁷、**升格 plans/ 入版控**〕+ baton 一次性歸檔 + TODO 結案 + hash 全量自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-11_PIPE-SLIDES_SlidePipeline簡報策略管線_plan_v1.md`（v1.1、八 OQ 全結清：Q1 滾動預設關/Q2 去重 ≥60%/Q3 合併策略側/Q4 constraints/Q5 fallback/Q6 改名/Q7 逐頁定案/Q8 golden 改善豁免）
+> **設計基礎**：resume 第 1 路全經驗零學費繼承（六步/旁路/key 契約/並行/四產物/§1.3.1）+ A 軌實件品質模擬（ST 簡報 18 頁）實證三病灶——雙 Caption（`slides_processor.py:155`）/ Vision 零 temperature / 表格 cell 塞 ###——分別以 alt 對齊、temp=0、constraints 根除。
+> **接縫契約**：key=`p{頁序:02d}_{原文頁標題}`（頁序物理唯一防 HOTFIX-2 重複標題覆蓋）、P2 產/P3 帶/P4 取三方同基準、`page_key()` 單一實作點；§7.2 整合測試含真 key-changing transform 鎖死。
+> **⚠️ baron E2E 運維（非 commit）**：影子上傳 ST 實件 → 圖文對照無「圖表：」段/無頁頂重複總述、toolbar 雙語摘要、重跑兩次輸出穩定（temp=0）、引用「《簡報名》> p{N} 標題」、`#sst` 跨文件；B 軌 golden 另捕（`golden_baseline.py capture slides --force`、與 A 軌 diff 走改善豁免=Q8）。
+
 ### BE-Refactor LAZYLOAD-MULTI-1 跨文件 lazy-load 接縫修復與記憶體釋放
 
 | Commit | 內容 | Hash |
@@ -692,18 +709,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-SLIDES SlidePipeline簡報策略管線**（`.claude-logs/baton/2026-06-11_PIPE-SLIDES_SlidePipeline簡報策略管線_plan_v1.md`〔v1.1、U1-U11、八 OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`；PIPE 縱向五路**第 2 路**、原 PIPE-VISUAL 改名）
-  - [x] ✅ C1 — Skeleton & Register（骨架與註冊）`@register('slides')` + 四方法 strict stub〔NotImplementedError 安全攔截〕+ `rag_char_threshold=3` + `__init__` import（C7-hotfix 教訓）+ 4 分派測試；全套件 560 passed `31dab5a`
-  - [x] ✅ C2 — P1 Vision Ingestion（每頁存圖與視覺解析）fitz 整頁存圖 page-{N}.jpg〔自建零 A 軌 import、直向裁半/空白跳過〕+ Vision temp=0〔§1.3.1、prompt 含 cell 禁 ###〕+ 條件滾動〔Q1 預設關、(續)/表格截斷觸發〕+ 封面判定→raw_metadata/title fallback 檔名 + 統計去重〔Q2、封面排除、log〕+ source_lang/影子後綴 → IngestionMetadataSpec；6 mock 測試、全套件 566 passed `941eed7`
-  - [x] ✅ C3 — P2 Six-Step（六步與頁 key 契約）統一六步〔①順產 raw_domain 缺→內容判定 / ②順產缺失頁標題回填 tiles / ③LCC(context=摘要) / ④Glossary 級聯·LLM 交易外 / ⑤DEEP_THINK 翻摘要雙用 / ⑥批次翻頁摘要〕+ **`page_key()`=`p{N:02d}_{原文頁標題}` 單一實作點**〔同標題不撞、P3/P4 同基準〕+ 三安全鎖；4 mock 測試、全套件 570 passed `f8a24d7`
-  - [x] ✅ C4 — P3 Per-Page Translate & Restore（逐頁翻譯與排版還原）逐頁三欄並行〔RESUME-PERF-1 範式、單欄退原文〕+ **alt 對齊雙 Caption 物理根除**〔渲染零 *圖表：* 段、測試鎖死〕+ _SLIDE_CONSTRAINTS〔Q4 四條〕+ rag_sections 旁路〔summary_key=page_key 同實作點、譯 title 僅顯示=key-changing 不變式；同頁合併 Q3 策略側 rag_indexer 零污染〕+ zh 路跳譯仍建 per-section + fallback〔Q5〕+ 不渲染 meta header（U7-U10）；5 mock 測試、全套件 575 passed `4d7684c`
-  - [x] ✅ C5 — P4 Wire（RAG 接線）run_phase4 呼共用 rag_indexer.index〔P3 旁路+P2 summaries 同 key 直餵、rag_tree_path/title→四產物、≥3 門檻、失敗拋出不阻 reading_ready、零 rag_processor〕；**四 Phase 全落地**；2 mock 測試、全套件 577 passed `dbf90bd`
-  - [x] ✅ C6 — Unit & Integration Tests（測試補全·業務碼零改）**§7.2 整合測試**〔真實 P2→P3〔FakeTranslator 真改寫頁標題=key-changing〕→真實 build_chunk_markdown；雙斷言：summary_key 原文同基準 + 頁摘要進 Chapter Summary 行——HOTFIX-1 類退化必紅〕+ Q2 小樣本邊界 + 合約① forbid 防線；24 測試、全套件 580 passed `待 baron 回填`
-  - [/] 🟡 WIP: C7 — Checkout（收官歸檔與母 plan 同步）Conformance + 母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名/狀態/Bypass 句更正〔Q6/Q7〕+ baton 一次性歸檔
-  - 工時：7 個 commits；依賴：無（基建全就緒：PIPE-CORE/三真理源/rag_indexer/六步/§1.3.1/並行範式/影子派發）
-  - 工作範圍硬限三檔：`pipelines/slide_pipeline.py`（新）/ `pipelines/__init__.py`（+1 import）/ `tests/test_slide_pipeline.py`（新）；rag_indexer 零改禁分支污染
-  - ⚠️ baron 運維（非 commit）：影子上傳 ST 實件 E2E（無雙 Caption/toolbar 摘要/重跑穩定/引用 p{N} 標題）+ B 軌 golden 另捕〔Q8 改善豁免〕
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1001,6 +1006,9 @@
 
 ### TRANSLATOR (✅ 已完成·PIPE 共用真理源之三)
 - ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
+
+### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES SlidePipeline簡報策略管線~~（已落地、C1 `31dab5a` + C2 `941eed7` + C3 `f8a24d7` + C4 `4d7684c` + C5 `dbf90bd` + C6 `cb5e2bd` + C7 Checkout 收官；原 PIPE-VISUAL 改名；四 Phase 全落地〔P1 存圖+Vision temp=0+封面+去重 / P2 六步 key=`p{N}_{原文頁標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除 / P4 rag_indexer 四產物〕+ §7.2 key-changing 整合測試正面達標；24 測試、全套件 580 passed；⚠️ baron 影子 E2E + B 軌 golden 另捕〔Q8 改善豁免〕）
 
 ### PIPE-RESUME (✅ 已完成·PIPE 縱向五路絞殺第 1 路)
 - ✅ ~~PIPE-RESUME ResumePipeline策略管線~~（已落地、C1 `f3d4e41` + C2 `d7edcd9` + C3 `48aa5df` + C4 `8971a19` + C5 `e8a7429` + C6 `fabb114` + C7 收官；`pipelines/resume_pipeline.py` 四 Phase 策略〔P1 Vision 全鏈/P2 LCC+摘要+Glossary 自癒/P3 100% Bypass/P4 RAG ≥3〕+ tests/test_resume_pipeline.py 15 測試；消費 PIPE-CORE ABC/三大真理源/PIPE-SCAFFOLD 影子；baron 拍板擴 PipelineContext pdf_path/owner_id；custom_metadata 硬前置 defer 僅影子 B 軌、不 Flip）

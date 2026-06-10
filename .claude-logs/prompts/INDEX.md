@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### PIPE-SLIDES 系列
-- 🟡 **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C5 → C6 WIP·BE-Refactor·第 2 路）**
+- ✅ **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C6 → C7 Checkout 收官·BE-Refactor·第 2 路）**
+  - `2026-06-11_PIPE-SLIDES_Check_提示詞.md` — Check（C7 Checkout：Conformance 五維度〔plan U1-U11 / tasks §6.1-§6.6 / 不可動〔A 軌/rag_indexer/合約〕/ 提示詞稽核 / msg 完整〕+ **§7.2 整合測試正面合規**〔key-changing 已實作通過〕→ 母 plan v10 同步〔§8.5 PIPE-VISUAL→PIPE-SLIDES 改名+✅+L70/L258 Bypass 句更正、補註⁷〕+ baton 歸檔〔plan/tasks/C1-C7 報告 + **修改後母 plan→plans/ 升格入版控**；PIPE-SPEC 長駐〕+ TODO 結案；不自發 commit；第 2 路全案結案）
   - `2026-06-11_PIPE-SLIDES_C6_run_提示詞.md` — C6 Run（Unit & Integration Tests·純測試：補全 plan §8.1 缺口 + **§7.2 跨 Phase 整合測試**〔P2→P3→P4 串接、FakeTranslator 真改寫頁標題=key-changing transform、斷言下游 chunk 對位取得正確頁摘要·p{N}_ key 同基準不變式〕；嚴禁改業務碼〔發現 bug 暫停回報〕；1 .bak；不自發 commit）
   - `2026-06-11_PIPE-SLIDES_C5_run_提示詞.md` — C5 Run（P4 Wire：`run_phase4` 呼共用 `rag_indexer.index`〔sections=ctx.rag_sections+section_summaries+rag_tree_path+title、resume 同範式〕；四產物、≥3 門檻、異常拋出由 Orchestrator 標 rag_status='failed' 不阻 reading_ready；**零 A 軌 rag_processor import**；mock 接線測試；C5 包裹+2 .bak；不自發 commit）
   - `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md` — C4 Run（P3 Per-Page Translate & Restore〔最大 commit〕：逐頁 InjectionContext+NORMAL、並行照抄 RESUME-PERF-1〔slot 保序+semaphore+單頁退原文〕；還原 `![alt=description 譯文](images/page-N.jpg)`+譯文、**嚴禁 *圖表：* 段**〔雙 Caption 物理根除〕、不渲染 meta header；_SLIDE_CONSTRAINTS〔Q4 四條〕；ctx.rag_sections 旁路 summary_key=page_key 同基準+同頁合併〔Q3 策略側〕；zh 路跳譯仍建 per-section；fallback Q5；不污染 rag_indexer；C4 包裹+2 .bak；不自發 commit）
@@ -314,6 +315,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES_Check_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C6_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C5_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md`
@@ -328,4 +330,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Tasks_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_Check_提示詞.md`
 - 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C4_run_提示詞.md`
-- 2026-06-10 — `2026-06-10_LAZYLOAD-MULTI-1_C3_run_提示詞.md`
