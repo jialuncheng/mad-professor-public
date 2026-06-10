@@ -693,9 +693,9 @@
 ### 🔴 高優先
 
 - 🟡 **PIPE-SLIDES SlidePipeline簡報策略管線**（`.claude-logs/baton/2026-06-11_PIPE-SLIDES_SlidePipeline簡報策略管線_plan_v1.md`〔v1.1、U1-U11、八 OQ 全結清〕；tasks 已產 `2026-06-11_..._tasks.md`；PIPE 縱向五路**第 2 路**、原 PIPE-VISUAL 改名）
-  - [x] ✅ C1 — Skeleton & Register（骨架與註冊）`@register('slides')` + 四方法 strict stub〔NotImplementedError 安全攔截〕+ `rag_char_threshold=3` + `__init__` import（C7-hotfix 教訓）+ 4 分派測試；全套件 560 passed `待 baron 回填`
-  - [/] 🟡 WIP: C2 — P1 Vision Ingestion（每頁存圖與視覺解析）fitz 整頁存圖〔自建不耦合 A 軌〕+ Vision temp=0〔§1.3.1〕+ 條件滾動〔Q1 預設關〕+ 封面判定/title fallback + 跨頁統計去重〔Q2 ≥60% 非封面頁+log〕（U1-U4）
-  - [ ] ⬜ 未開始: C3 — P2 Six-Step（六步與頁 key 契約）統一六步、① 順產 raw_domain、② 順產缺失頁標題、**key=`p{N}_{原文頁標題}`**〔根除 HOTFIX-2 重複標題邊界〕（U5/U6）
+  - [x] ✅ C1 — Skeleton & Register（骨架與註冊）`@register('slides')` + 四方法 strict stub〔NotImplementedError 安全攔截〕+ `rag_char_threshold=3` + `__init__` import（C7-hotfix 教訓）+ 4 分派測試；全套件 560 passed `31dab5a`
+  - [x] ✅ C2 — P1 Vision Ingestion（每頁存圖與視覺解析）fitz 整頁存圖 page-{N}.jpg〔自建零 A 軌 import、直向裁半/空白跳過〕+ Vision temp=0〔§1.3.1、prompt 含 cell 禁 ###〕+ 條件滾動〔Q1 預設關、(續)/表格截斷觸發〕+ 封面判定→raw_metadata/title fallback 檔名 + 統計去重〔Q2、封面排除、log〕+ source_lang/影子後綴 → IngestionMetadataSpec；6 mock 測試、全套件 566 passed `待 baron 回填`
+  - [/] 🟡 WIP: C3 — P2 Six-Step（六步與頁 key 契約）統一六步、① 順產 raw_domain、② 順產缺失頁標題、**key=`p{N}_{原文頁標題}`**〔根除 HOTFIX-2 重複標題邊界〕（U5/U6）
   - [ ] ⬜ 未開始: C4 — P3 Per-Page Translate & Restore（逐頁翻譯與排版還原）並行照抄 RESUME-PERF-1 + **alt 對齊雙 Caption 物理根除**〔A 軌 slides_processor:155 病灶〕+ constraints〔cell 禁 ###〕+ rag_sections 旁路〔含同頁合併·Q3 策略側〕+ zh 路 + fallback〔Q5〕+ 不渲染 meta header（U7-U10）
   - [ ] ⬜ 未開始: C5 — P4 Wire（RAG 接線）rag_indexer.index 四產物（U11）
   - [ ] ⬜ 未開始: C6 — Unit & Integration Tests（測試補全）§8.1 全清單 + **§7.2 key-changing 整合測試**〔FakeTranslator 真改寫頁標題、正面達標免豁免〕
