@@ -42,15 +42,15 @@ def test_stub_phases_raise_not_implemented():
 
     # === [PIPE-SLIDES C2 START] === phase1 已於 C2 落地、自清單移除（C3/C4/C5 落地時遞減）
     """
-    from pipelines.slide_pipeline import SlidePipeline
-    # === [PIPE-SLIDES C3 START] === phase2 已落地
-    # === [PIPE-SLIDES C4 START] === phase3 已落地
-    # === [PIPE-SLIDES C5 START] === phase4 已落地——四 Phase stub 全清、改驗皆已覆寫
-    for phase in ('run_phase1', 'run_phase2', 'run_phase3', 'run_phase4'):
-        assert phase in SlidePipeline.__dict__   # 非 ABC stub、皆已實作
-    # === [PIPE-SLIDES C5 END] ===
-    # === [PIPE-SLIDES C4 END] ===
-    # === [PIPE-SLIDES C3 END] ===
+    from pipelines.factory import PipelineFactory
+    strategy = PipelineFactory.get_strategy('slides')
+    # === [PIPE-SLIDES C3 START] === phase2 已落地、自清單移除
+    # === [PIPE-SLIDES C4 START] === phase3 已落地、自清單移除
+    for phase in ('run_phase4',):
+        # === [PIPE-SLIDES C4 END] ===
+        # === [PIPE-SLIDES C3 END] ===
+        with pytest.raises(NotImplementedError):
+            getattr(strategy, phase)(ctx=None)
     # === [PIPE-SLIDES C2 END] ===
 
 
@@ -388,62 +388,3 @@ def test_p3_degraded_single_page_whole_translate(monkeypatch, tmp_path):
     assert len(ctx.rag_sections) == 1
     assert ctx.rag_sections[0]['content'][0]['content'].startswith('譯')
 # === [PIPE-SLIDES C4 END] ===
-
-
-# === [PIPE-SLIDES C5 START] === P4 Wire 測試（mock rag_indexer、零真 Embedding/DB）
-def _make_p4_ctx(tmp_path, monkeypatch):
-    import settings
-    from pipelines.context import PipelineContext
-    from pipelines.contracts import (BilingualMarkdownSpec, GlossaryReadySpec,
-                                     IngestionMetadataSpec)
-    monkeypatch.setattr(settings, 'OUTPUT_DIR', tmp_path)
-    ctx = PipelineContext(doc_type='slides', paper_id='deck1', owner_id=1)
-    ctx.ingestion = IngestionMetadataSpec(title='封面題', source_lang='en', tiles=[])
-    ctx.glossary_ready = GlossaryReadySpec(
-        abstract='a', lcc='TK', glossary={}, translated_abstract='譯',
-        section_summaries={'p01_X': '頁摘要'}, domain_name='Tech')
-    ctx.bilingual = BilingualMarkdownSpec(
-        final_zh_path='x', final_en_path='y', translated_abstract='譯')
-    ctx.rag_sections = [{"title": "譯X", "level": 2, "summary_key": "p01_X",
-                         "content": [{"type": "text", "content": "c"}], "children": []}]
-    return ctx
-
-
-def test_p4_wires_rag_indexer_with_contract_args(monkeypatch, tmp_path):
-    """U11：run_phase4 傳 rag_sections+section_summaries+doc_type='slides'+rag_tree_path+title。"""
-    import paper_manager
-    from processor import rag_indexer
-    from pipelines.slide_pipeline import SlidePipeline
-    captured = {}
-
-    def _fake_index(sections, section_summaries, doc_type, vectors_dir, **kw):
-        captured.update(sections=sections, summaries=section_summaries,
-                        doc_type=doc_type, **kw)
-        from types import SimpleNamespace
-        return SimpleNamespace(index_meta={"chunks_total": 3}, paper_chunk_count=3)
-    monkeypatch.setattr(rag_indexer, 'index', _fake_index)
-    monkeypatch.setattr(paper_manager, 'get_paper_db_id', lambda o, p: None)
-    ctx = _make_p4_ctx(tmp_path, monkeypatch)
-    spec = SlidePipeline().run_phase4(ctx)
-    assert captured['doc_type'] == 'slides'
-    assert captured['sections'][0]['summary_key'] == 'p01_X'   # P3 旁路直餵
-    assert captured['summaries'] == {'p01_X': '頁摘要'}          # P2 同 key 基準
-    assert 'rag_tree.json' in captured['rag_tree_path']         # HOTFIX-2 四產物
-    assert captured['title'] == '封面題'
-    assert spec.paper_chunk_count == 3
-
-
-def test_p4_failure_raises_not_swallowed(monkeypatch, tmp_path):
-    """錯誤隔離：rag_indexer 失敗 → warning 後拋出（Orchestrator 標 failed、不吞）。"""
-    import paper_manager
-    from processor import rag_indexer
-    from pipelines.slide_pipeline import SlidePipeline
-
-    def _boom(*a, **k):
-        raise RuntimeError("embed down")
-    monkeypatch.setattr(rag_indexer, 'index', _boom)
-    monkeypatch.setattr(paper_manager, 'get_paper_db_id', lambda o, p: 1)
-    ctx = _make_p4_ctx(tmp_path, monkeypatch)
-    with pytest.raises(RuntimeError):
-        SlidePipeline().run_phase4(ctx)
-# === [PIPE-SLIDES C5 END] ===

@@ -660,54 +660,6 @@ class SlidePipeline(DocumentStrategy):
         )
     # === [PIPE-SLIDES C4 END] ===
 
-    # === [PIPE-SLIDES C5 START] P4 Wire（U11、resume run_phase4 同範式）===
     def run_phase4(self, ctx: PipelineContext) -> RagDbSpec:
-        """P4 Async RAG：呼 B 軌共用真理源 `rag_indexer.index` 一站式落庫。
-
-        輸入＝P3 旁路 `ctx.rag_sections` + P2 `section_summaries`（key=page_key 同基準、
-        **不餵 reading-view final_zh.md**）；四產物（FAISS+paper_chunks+index_meta+
-        rag_tree.json）；`rag_char_threshold=3` 由 doc_type='slides' 於 rag_indexer 內生效。
-        錯誤隔離：異常 warning(exc_info) 後**拋出**、交 Orchestrator 標 rag_status='failed'、
-        不阻 reading_ready；paper_db_id None → rag_indexer 內部優雅降級。零 A 軌 rag_processor。
-        """
-        import paper_manager
-        import settings
-        from processor import rag_indexer  # 惰性 import（B 軌自有、零 rag_processor）
-
-        if ctx.bilingual is None:
-            raise ValueError("PIPE-SLIDES P4：ctx.bilingual 缺失（P3 未交付）")
-
-        rag_sections = ctx.rag_sections or []
-        section_summaries = (
-            ctx.glossary_ready.section_summaries if ctx.glossary_ready else None
-        ) or {}
-        vectors_dir = paper_manager.vectors_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-        rag_tree_path = paper_manager.rag_tree_path(
-            settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-        # 簡報以封面題/檔名為標題；譯後整份標題未另產 → title/translated_title 暫同取（同 resume 先例）
-        _title = (ctx.ingestion.title if ctx.ingestion else None) or ctx.paper_id
-        paper_db_id = paper_manager.get_paper_db_id(ctx.owner_id, ctx.paper_id)
-        if paper_db_id is None:
-            logger.warning(
-                "[PIPE-SLIDES P4] %s paper_db_id 未取得（DB 寫入降級、僅 FAISS + index_meta）",
-                ctx.paper_id)
-
-        try:
-            spec = rag_indexer.index(
-                rag_sections, section_summaries, "slides", vectors_dir,
-                paper_db_id=paper_db_id,
-                rag_tree_path=str(rag_tree_path),
-                title=_title, translated_title=_title,
-            )
-            logger.info(
-                "[PIPE-SLIDES P4] %s RAG 完成 chunks=%d paper_chunks=%d",
-                ctx.paper_id, int(spec.index_meta.get("chunks_total", 0)),
-                spec.paper_chunk_count)
-            return spec
-        except Exception as exc:  # noqa: BLE001 — 拋出由 Orchestrator 標 rag_status='failed'
-            logger.warning(
-                "[PIPE-SLIDES P4] %s RAG 向量化失敗（不阻主鏈、Orchestrator 標 failed）: %s",
-                ctx.paper_id, exc, exc_info=True)
-            raise
-    # === [PIPE-SLIDES C5 END] ===
+        """P4 rag_indexer 共用真理源接線（C5 落地）。"""
+        raise NotImplementedError("SlidePipeline.run_phase4 於 PIPE-SLIDES C5 落地")
