@@ -8,7 +8,9 @@
 ## 依任務分類
 
 ### META-NORM 系列
-- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan·BE-Refactor·解 PIPE-SLIDES C+D）**
+- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1 WIP·BE-Refactor·解 PIPE-SLIDES C+D）**
+  - `2026-06-11_META-NORM_C1_run_提示詞.md` — C1 Run（Schema & Flag：models +MetaField/MetaFieldAlias 兩表〔PK/Unique+FK CASCADE+sort_weight、繼承 Domains 範式〕+ settings `LLM_USE_META_NORM`(False) + db.py init_db seed 6 欄〔course/instructor/organization/date/venue/doi、sqlite_insert on_conflict_do_nothing + session.begin 交易安全〕+ 新建 tests/test_meta_norm.py 表結構/種子驗證；僅四檔；3 .bak；不自發 commit）
+  - `2026-06-11_META-NORM_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.2 八 OQ+Q9/Q10 全定案、BS1-7〕拆 commit：MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪 + P1 開放抽取/封面放寬接線 + subtitle + 前端通用渲染 + 測試；末 commit checkout 收官；schema 新增 2 表）
   - `2026-06-11_META-NORM_plan_提示詞.md` — plan（baron 構想：LLM 開放抽取封面 meta + 第二次 LLM 比對既有欄位統一＝DOMAIN-NORM 飛輪搬到 metadata 欄名；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 三步飛輪 + P1 開放抽取/封面判定放寬 + subtitle〔D〕併入 + 前端通用 key-value 渲染；§9 八 OQ；A 撤案、B/E/F 歸 HOTFIX-2；不寫碼純規格）
 
 ### PIPE-SLIDES 系列

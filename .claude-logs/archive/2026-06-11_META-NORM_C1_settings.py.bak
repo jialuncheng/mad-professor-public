@@ -111,13 +111,6 @@ EMBEDDING_MAX_CONCURRENT = int(os.getenv("EMBEDDING_MAX_CONCURRENT", "5"))
 LLM_USE_GLOSSARY_ALIGN = os.getenv("LLM_USE_GLOSSARY_ALIGN", "false").lower() in ("1", "true", "yes")
 # === [DOMAIN-NORM C3 END] ===
 
-# === [META-NORM C1 START] ===
-# 封面 metadata 自癒飛輪總開關（依 tasks U5）。
-# False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。
-# True → 啟用 LLM 開放抽取比對 + MetaField/MetaFieldAlias 動態註冊與快取（漸進開、影子先驗）。
-LLM_USE_META_NORM = os.getenv("LLM_USE_META_NORM", "false").lower() in ("1", "true", "yes")
-# === [META-NORM C1 END] ===
-
 # Phase 4.7d RAG-7a：浮水印偵測閾值
 # 整篇 markdown 內出現 ≥ N 次的 heading line 視為浮水印、整行移除
 # 預設 3（DeHunt 履歷實測 XDeHunt 出現 5 處、HDeHunt 出現 5 處）

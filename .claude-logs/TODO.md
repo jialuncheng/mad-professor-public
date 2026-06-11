@@ -29,7 +29,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-2 | `pipelines/slide_pipeline.py` 單檔三點純渲染/清洗（學術簡報 Ch37 逐頁分析）：**B `_safe_alt`**〔alt 內 `][()`→全形、換行→空白；根除 CommonMark `![alt](url)` 之 `]` 提前閉合致破圖+描述洩漏正文（圖密集頁 p29/35/37 缺圖真因；HOTFIX-1 U8 alt 對齊暴露）〕+ **E `_strip_master_date`**〔原稿母片日期欄位 `4/28/2026` 烙進 20/20 頁非內容、P1 純日期行 ≥2 頁直接洗；補 `_dedupe_headers` 格式變異漏網（三變體各 <60% 門檻）〕+ **F `_normalize_paragraph_breaks` list-aware**〔修 HOTFIX-1 F4 回歸：單 `\n` 升級未排除條列致 tight list 炸 loose；負向前瞻補 `- * + • 數字.`〕；A 撤案〔忠實轉錄〕、C/D 留 META-NORM；3 回歸測試、32 passed、全套件 588 passed | `待 baron 回填` |
+| HOTFIX-2 | `pipelines/slide_pipeline.py` 單檔三點純渲染/清洗（學術簡報 Ch37 逐頁分析）：**B `_safe_alt`**〔alt 內 `][()`→全形、換行→空白；根除 CommonMark `![alt](url)` 之 `]` 提前閉合致破圖+描述洩漏正文（圖密集頁 p29/35/37 缺圖真因；HOTFIX-1 U8 alt 對齊暴露）〕+ **E `_strip_master_date`**〔原稿母片日期欄位 `4/28/2026` 烙進 20/20 頁非內容、P1 純日期行 ≥2 頁直接洗；補 `_dedupe_headers` 格式變異漏網（三變體各 <60% 門檻）〕+ **F `_normalize_paragraph_breaks` list-aware**〔修 HOTFIX-1 F4 回歸：單 `\n` 升級未排除條列致 tight list 炸 loose；負向前瞻補 `- * + • 數字.`〕；A 撤案〔忠實轉錄〕、C/D 留 META-NORM；3 回歸測試、32 passed、全套件 588 passed | `657a703` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-2_hotfix.md`（baron 拍板 B+E+F、A 撤案）
 > **動因**：HOTFIX-1/1b 後 baron 上傳學術簡報 `Ch37_Plant-Nutrition.pdf`（44/38 頁）逐頁分析暴露 B（圖密集頁破圖+圖說洩漏）/ E（母片日期散落）/ F（HOTFIX-1 F4 條列鬆散回歸）。
@@ -742,6 +742,17 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **META-NORM 封面元數據自癒飛輪與動態欄位登記**（`.claude-logs/baton/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`〔v1.2、八 OQ+Q9/Q10 全定案、BS1-7〕；tasks 已產；解 PIPE-SLIDES 實測 C+D；PIPE 共用真理源家族第 4 員）
+  - [x] ✅ C1 — Schema & Flag（登記表與旗標）MetaField/MetaFieldAlias 兩表〔繼承 Domains 範式、PK+FK CASCADE+sort_weight〕+ `LLM_USE_META_NORM`(False) + db.py seed 6 欄〔on_conflict 冪等+session.begin〕+ 3 測試〔schema/seed 冪等/FK CASCADE〕；全套件 591 passed `待 baron 回填`
+  - [/] 🟡 WIP: C2 — MetaNormalizer Flywheel（自癒飛輪）normalize_fields 五步〔快取查→批次 LLM 比對既有→on_conflict 註冊+label 提案〕+ 泛用詞黑名單不快取〔Q9〕+ reserved〔BS1〕+ 旗標閘門、LLM 交易外
+  - [ ] ⬜ 未開始: C3 — P1 Wire（開放抽取與封面放寬接線）cover prompt 開放抽取 + 封面判定放寬 + normalize→raw_metadata 三欄 dict〔HOTFIX-1b 契約〕+ reserved 回填合約
+  - [ ] ⬜ 未開始: C4 — Subtitle（小標題結構化）Vision schema +subtitle + P3 `### {subtitle}` 渲染〔D〕
+  - [ ] ⬜ 未開始: C5 — Frontend Generic Renderer（前端通用渲染）通用 key-value + 排除集〔BS2〕+ 排序〔BS7〕
+  - [ ] ⬜ 未開始: C6 — Tests（測試補全）飛輪單元 + **§7.2 key-changing 整合** + 三欄 dict 契約
+  - [ ] ⬜ 未開始: checkout — 收官與文件歸檔（Conformance + 母 plan 登記 + baton 一次性歸檔）
+  - 工時：7 個 commits；依賴：無（飛輪範式繼承 DOMAIN-NORM/GLOSSARY-CORE）
+  - ⚠️ schema 新增 2 表（baron §1.6 已點頭）；旗標 `LLM_USE_META_NORM` 預設 False 線上 0 風險；Vision schema 改（C3/C4）→ slides golden 重捕；綜效：餵養 CHAT-STRUCT-1
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）

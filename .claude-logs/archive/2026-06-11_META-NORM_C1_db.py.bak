@@ -94,34 +94,6 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
 
-    # === [META-NORM C1 START] ===
-    # seed 小種子（plan Q1）：6 大常見封面欄含 i18n 標籤 + sort_weight，冪等註冊。
-    # on_conflict_do_nothing 防重複；with session.begin() 自動 commit/rollback（database SOP §5.2）。
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-    from models import MetaField
-
-    _META_SEEDS = [
-        {"canonical_key": "course", "label_zh": "課程", "label_en": "Course",
-         "category": "cover", "source": "manual", "sort_weight": 10},
-        {"canonical_key": "instructor", "label_zh": "講師", "label_en": "Instructor",
-         "category": "cover", "source": "manual", "sort_weight": 20},
-        {"canonical_key": "organization", "label_zh": "組織/機構", "label_en": "Organization",
-         "category": "cover", "source": "manual", "sort_weight": 30},
-        {"canonical_key": "date", "label_zh": "日期", "label_en": "Date",
-         "category": "cover", "source": "manual", "sort_weight": 40},
-        {"canonical_key": "venue", "label_zh": "發表地點/期刊", "label_en": "Venue",
-         "category": "cover", "source": "manual", "sort_weight": 50},
-        {"canonical_key": "doi", "label_zh": "DOI", "label_en": "DOI",
-         "category": "cover", "source": "manual", "sort_weight": 60},
-    ]
-    with SessionLocal() as session:
-        with session.begin():
-            for seed in _META_SEEDS:
-                session.execute(
-                    sqlite_insert(MetaField).values(**seed).on_conflict_do_nothing())
-    # === [META-NORM C1 END] ===
-
 
 if __name__ == "__main__":
     init_db()
