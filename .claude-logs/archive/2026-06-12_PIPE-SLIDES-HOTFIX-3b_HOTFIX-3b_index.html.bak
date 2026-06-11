@@ -894,10 +894,7 @@
     margin: 4px 0 0;
     line-height: 1.5;
   }
-  /* 二：清單縮排（結構性 fallback、主題無關、含自訂主題受益）
-     L79 全域 reset 把 ul/ol padding 歸零 → list-style:outside 下 bullet 凸排；
-     此處補回 top-level + 巢狀縮排（HOTFIX-3b：補 top-level、原僅巢狀） */
-  #paper-content ul, #paper-content ol,
+  /* 二：巢狀清單縮排（結構性 fallback、主題無關、含自訂主題受益） */
   #paper-content ul ul, #paper-content ol ol,
   #paper-content ul ol, #paper-content ol ul {
     padding-left: 1.5em;

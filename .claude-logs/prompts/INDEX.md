@@ -20,6 +20,9 @@
   - `2026-06-11_META-NORM_plan_提示詞.md` — plan（baron 構想：LLM 開放抽取封面 meta + 第二次 LLM 比對既有欄位統一＝DOMAIN-NORM 飛輪搬到 metadata 欄名；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 三步飛輪 + P1 開放抽取/封面判定放寬 + subtitle〔D〕併入 + 前端通用 key-value 渲染；§9 八 OQ；A 撤案、B/E/F 歸 HOTFIX-2；不寫碼純規格）
 
 ### PIPE-SLIDES 系列
+  - `2026-06-12_PIPE-SLIDES-HOTFIX-3b_HOTFIX-3b_run_提示詞.md` — HOTFIX-3b Run（top-level 清單凸排修補執行：HOTFIX-3 二 selector 前置 `#paper-content ul/ol`；備份+grep+pytest 驗收；TODO 標 ✅ + hash 自癒 + baton 移出歸檔）
+  - `2026-06-12_PIPE-SLIDES-HOTFIX-3b_doc_提示詞.md` — HOTFIX-3b 文件產出（top-level bullet 凸排：index.html L79 全域 reset 歸零 ul/ol padding、HOTFIX-3 二只修巢狀；base 一處把 list-indent 規則擴含 top-level `#paper-content ul/ol`；不動 themes〔主題 0 命中 list、結構歸主檔〕；baton 暫存待 Run）
+
   - `2026-06-12_PIPE-SLIDES-HOTFIX-3_HOTFIX-3_run_提示詞.md` — HOTFIX-3 Run（簡報閱讀視圖排版打磨：P3 一-a 圖序+C `_slide_head_html` 標題塊〔解 一-b〕+A/B/C `_promote_subheadings` 升 h3〔\r 相容/不產連續空行〕；base CSS .slide-head/.slide-sub + 巢狀 ul 縮排;rag_sections 原封不動;更新既有斷言+4 新測試;收官 mv hotfixes/+executions/;不自發 commit）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-3_doc_提示詞.md` — HOTFIX-3 文件產出（簡報閱讀視圖排版打磨：一-a 圖在上+C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線〕+A/B/C 升 h3+二 base 巢狀縮排；design/docs 設計對齊、subtitle 對 RAG 零影響已驗；baton 暫存待 Run）
 

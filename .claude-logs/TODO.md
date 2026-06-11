@@ -42,11 +42,22 @@
 > **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
 > **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
 
+### FE-Hotfix PIPE-SLIDES-HOTFIX-3b — top-level 清單凸排修補（HOTFIX-3 二補完）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-3b | `static/index.html` base CSS 單 hunk：HOTFIX-3「二：清單縮排」selector 前置 `#paper-content ul, #paper-content ol,`〔`padding-left:1.5em` 不變、含 top-level + 巢狀〕；真因＝L79 全域 reset `ul/ol{padding:0}` 歸零 top-level 縮排、`list-style:outside` 下第一層 bullet marker 溢出到 `#paper-content` 左 padding〔`var(--space-8)`〕外側→凸排（比同頁標題更左），HOTFIX-3 二只補巢狀漏 top-level；**不動 themes**〔四主題 grep 清單 0 命中、縮排=結構歸主檔 principles.md、base 一處含自訂上傳主題受益〕；零 `.py`/零後端/零 RAG；包裹沿用 HOTFIX-3 既有 START/END；grep top-level/巢狀各 1 命中 + themes 仍 0、全套件零 Python diff 維持 605 passed〔僅 .env LOG_FORMAT=json env flake〕 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3b_hotfix.md`
+> **真因**：`static/index.html:79` 全域 reset `body,...,ul{margin:0;padding:0}` 把 top-level `ul/ol` padding 歸零 + `list-style:outside` → 第一層 bullet 凸排；HOTFIX-3「二」selector 只涵蓋 `ul ul/ol ol/ul ol/ol ul`（巢狀）、漏第一層 `#paper-content ul/ol`。
+> **歸屬（為何 base 不 themes）**：四主題 `#paper-content ul/ol/li` grep 0 命中（縮排本由 base L79 reset 單方決定）；縮排=結構歸主檔（`principles.md`）；base 一處含自訂上傳主題受益、放 themes 須改 4 檔且自訂主題永遠漏。與 HOTFIX-3「二」放 base 同一正當性、本 hotfix 僅把 selector 從「只巢狀」擴成「含 top-level」。
+> **⚠️ baron E2E**：重整 ALi 簡報 → 第一層 `•` 不凸排（與標題左緣對齊/內縮）+ 巢狀子項未退化 + 四主題逐一一致 + 非 slides 文體清單正常。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-3 — 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-3 | baron 前端逐頁 QA（Ch37）+ design/docs 設計對齊後 4 項排版修：**一-a** P3 parts 重排〔圖→標題塊→內文〕+ **C** `_slide_head_html` 副標併 `<div class="slide-head">`〔base CSS 底線移整塊下·用主題 `--divider-w` 變數→**順帶解 一-b** h2 夾線〕+ **A/B/C** `_promote_subheadings` 整行 `**X**`→`### X`〔升設計內 h3 非孤兒 h4、`\r?` 相容 CRLF、不產連續空行〕+ **二** base CSS `ul ul{padding-left}`〔結構 fallback、含自訂主題〕；**RAG 零改**〔subtitle 不進 chunk body、`sections.append` 原封不動、test_hf3_rag_sections_unaffected 證〕；不動 4 主題檔；5 既有斷言更新+4 新測試、40 passed、全套件 605 passed | `待 baron 回填` |
+| HOTFIX-3 | baron 前端逐頁 QA（Ch37）+ design/docs 設計對齊後 4 項排版修：**一-a** P3 parts 重排〔圖→標題塊→內文〕+ **C** `_slide_head_html` 副標併 `<div class="slide-head">`〔base CSS 底線移整塊下·用主題 `--divider-w` 變數→**順帶解 一-b** h2 夾線〕+ **A/B/C** `_promote_subheadings` 整行 `**X**`→`### X`〔升設計內 h3 非孤兒 h4、`\r?` 相容 CRLF、不產連續空行〕+ **二** base CSS `ul ul{padding-left}`〔結構 fallback、含自訂主題〕；**RAG 零改**〔subtitle 不進 chunk body、`sections.append` 原封不動、test_hf3_rag_sections_unaffected 證〕；不動 4 主題檔；5 既有斷言更新+4 新測試、40 passed、全套件 605 passed | `3f26d5c` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-3_hotfix.md`（含三盲點修正：\r 相容/不產連續空行/HTML 塊內 markdown 失效註記）
 > **設計對齊（design/docs）**：`typography.md` 證 h2 底線是明文設計意圖→一-b 不在 base 蓋、改 C 從根源；A/B/C 升 h3〔h4 未規範=孤兒〕；二 縮排=結構〔principles.md 結構歸主檔、含自訂主題受益〕。
@@ -1074,6 +1085,7 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES-HOTFIX-3b top-level 清單凸排修補（HOTFIX-3 二補完）~~（已落地；`static/index.html` base CSS 單 hunk：HOTFIX-3「二」selector 前置 `#paper-content ul/ol`〔top-level〕、`padding-left:1.5em` 不變；真因＝L79 全域 reset 歸零 top-level ul/ol padding、`list-style:outside` 下第一層 bullet 凸排、HOTFIX-3 二只補巢狀；不動 themes〔四主題 grep 0 命中、結構歸主檔、含自訂主題受益〕；零 .py、全套件 605 passed〔僅 env flake〕；⚠️ baron E2E ALi 第一層不凸排+四主題一致+巢狀未退化）
 - ✅ ~~PIPE-SLIDES-HOTFIX-3 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）~~（已落地；一-a 圖在上 + C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線、用主題 divider 變數〕+ A/B/C 升 h3〔非孤兒 h4〕+ 二 base 巢狀縮排；design/docs 設計對齊、RAG 零改；40 測試、全套件 605 passed；⚠️ slides golden 待 fixture 補齊後首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1b F2 譯題旁路格式修補~~（已落地；裸 str→三欄 dict 對齊 upsert_paper/web_server 契約、影子寫庫復活；同式消費測試堵盲區；全套件 585 passed）
