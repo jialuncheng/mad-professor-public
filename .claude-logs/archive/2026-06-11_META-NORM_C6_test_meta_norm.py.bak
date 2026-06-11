@@ -206,38 +206,3 @@ def test_meta_normalizer_flag_off(session_factory, monkeypatch):
     assert out == {"課程": "LS1005", "作者": "鄭佳宜"}                        # 原樣
     assert llm.calls == 0
 # === [META-NORM C2 END] ===
-
-
-# === [META-NORM C6 START] === §7.2 跨模組 key-changing 整合測試
-def test_c6_key_changing_integration(session_factory, monkeypatch):
-    """§7.2（WORKFLOW_SOP）：P1 自提 raw_key → 飛輪收斂 canonical → 消費端對位。
-
-    接縫不變式：raw_key（『課程』）≠ canonical_key（course），但消費端以 canonical_key
-    唯一真理源完美對位取值——key-changing transform 下接縫不破（HOTFIX-1b 三欄 dict 契約）。
-    """
-    _run_seed(session_factory)
-    # P1 階段自提原始欄名（中文、與 seed canonical 不同字面）
-    p1_raw = {"課程": "LS1005"}
-    # 飛輪：mock LLM 將『課程』比對既有 course（key-changing：raw≠canonical）
-    llm = _MockLLM('{"canonical":"course","label_zh":"","label_en":""}')
-    mn = _norm(session_factory, llm, monkeypatch)
-    # P3 寫旁路：模擬 slide_pipeline 把 normalize 結果包成三欄 dict（HOTFIX-1b 契約）
-    aligned = mn.normalize({k: v for k, v in p1_raw.items()})
-    raw_metadata = {
-        ck: {"value": cv, "source": "meta_normalizer", "confidence": "high"}
-        for ck, cv in aligned.items()
-    }
-    # P4/web_server 消費端：以 canonical_key 取值（upsert_paper L231 同式）
-    val = raw_metadata.get("course", {}).get("value")
-
-    # ① 接縫不變式：key-changing 後仍對位
-    assert val == "LS1005"
-    assert "課程" != "course"                      # raw_key ≠ canonical_key（轉換確實發生）
-    assert "課程" not in raw_metadata               # 消費端不靠 raw_key、靠 canonical
-    # ② 三欄 dict 格式契約（杜 bare string 退化、防 HOTFIX-1b 類回歸）
-    assert isinstance(raw_metadata["course"], dict)
-    assert set(raw_metadata["course"].keys()) == {"value", "source", "confidence"}
-    # ③ alias 已寫回（飛輪收斂、下次同 raw_key 命中快取）
-    with session_factory() as s:
-        assert s.get(MetaFieldAlias, "課程").canonical_key == "course"
-# === [META-NORM C6 END] ===

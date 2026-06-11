@@ -725,9 +725,6 @@ def test_c4_subtitle_translated_in_parallel(monkeypatch, tmp_path):
     assert '### 譯sub-label' in zh                        # subtitle 確實被翻譯
     assert any('sub-label' == c[0] for c in fake.calls)   # subtitle 進翻譯任務
 # === [META-NORM C4 END] ===
-# === [META-NORM C6] === C3/C4 測試 assertions 已於上方各測試完整（旗標 on/off、reserved 回填、
-# 三欄 dict、subtitle EN/ZH 渲染、key fallback）；C6 審視確認完整、無補強需求。
-# §7.2 key-changing 整合測試見 tests/test_meta_norm.py::test_c6_key_changing_integration。
 
 
 # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 START] === B/E/F 回歸測試

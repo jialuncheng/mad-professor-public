@@ -748,9 +748,9 @@
   - [x] ✅ C2 — MetaNormalizer Flywheel（自癒飛輪）`processor/meta_normalizer.py` 三路分流〔reserved 映合約標記不入庫不問 LLM·BS1 / 泛用詞黑名單不快取每次 LLM·Q9 / 非黑名單快取查→LLM 比對既有 canonical→on_conflict 註冊+label 提案·BS4〕+ temp=0 保守比對·Q2 + LLM 交易外 + 旗標閘門 + try/except 降級 logger.error(exc_info)；5 測試、全套件 596 passed `6dd48f8`
   - [x] ✅ C3 — P1 Wire（開放抽取與封面放寬接線）`_COVER_PROMPT` 追加開放 metadata 抽取+封面放寬〔容主視覺圖學術封面〕+ run_phase1 旗標 on 呼 normalize_fields→reserved 回填合約不入旁路 + 其餘 canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 company/date + return 補 venue/doi；2 測試、全套件 598 passed `6c37a1d`
   - [x] ✅ C4 — Subtitle（小標題結構化）`_VISION_PROMPT` +subtitle 欄 + units 收 + `_key_title` fallback〔title 空用 subtitle 防 key 漂移〕+ 並行翻譯 4-tuple + `_page_source_md`/`_deliver` 渲染 `### {subtitle}`〔EN/ZH〕；2 測試、全套件 600 passed `dedd915`
-  - [x] ✅ C5 — Frontend Generic Renderer（前端通用渲染）web_server +GET /api/meta-fields〔唯讀〕+ static/index.html 通用 key-value 渲染器〔window.metaFields seed 兜底+fetch、renderTitleHeader 遍歷非排除集·BS2 + sort_weight/字母序·BS7、追加標題下方〕；飛輪 end-to-end 貫通；全套件 600 passed `待 baron 回填`
-  - [/] 🟡 WIP: C6 — Tests（測試補全）飛輪單元 + **§7.2 key-changing 整合** + 三欄 dict 契約
-  - [ ] ⬜ 未開始: checkout — 收官與文件歸檔（Conformance + 母 plan 登記 + baton 一次性歸檔）
+  - [x] ✅ C5 — Frontend Generic Renderer（前端通用渲染）web_server +GET /api/meta-fields〔唯讀〕+ static/index.html 通用 key-value 渲染器〔window.metaFields seed 兜底+fetch、renderTitleHeader 遍歷非排除集·BS2 + sort_weight/字母序·BS7、追加標題下方〕；飛輪 end-to-end 貫通；全套件 600 passed `d2a3db2`
+  - [x] ✅ C6 — Tests（測試補全·業務碼零改）`test_c6_key_changing_integration`〔P1 自提『課程』→飛輪 course→消費端 .get('course').get('value')；三斷言：接縫不變式 raw≠canonical 對位 + 三欄 dict 杜退化 + alias 寫回〕+ test_slide assertions 審視；45 passed、全套件 601 passed `待 baron 回填`
+  - [/] 🟡 WIP: checkout — 收官與文件歸檔（Conformance + 母 plan 登記 + baton 一次性歸檔）
   - 工時：7 個 commits；依賴：無（飛輪範式繼承 DOMAIN-NORM/GLOSSARY-CORE）
   - ⚠️ schema 新增 2 表（baron §1.6 已點頭）；旗標 `LLM_USE_META_NORM` 預設 False 線上 0 風險；Vision schema 改（C3/C4）→ slides golden 重捕；綜效：餵養 CHAT-STRUCT-1
 
