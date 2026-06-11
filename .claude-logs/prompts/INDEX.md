@@ -7,8 +7,14 @@
 
 ## 依任務分類
 
+### META-NORM 系列
+- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan·BE-Refactor·解 PIPE-SLIDES C+D）**
+  - `2026-06-11_META-NORM_plan_提示詞.md` — plan（baron 構想：LLM 開放抽取封面 meta + 第二次 LLM 比對既有欄位統一＝DOMAIN-NORM 飛輪搬到 metadata 欄名；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 三步飛輪 + P1 開放抽取/封面判定放寬 + subtitle〔D〕併入 + 前端通用 key-value 渲染；§9 八 OQ；A 撤案、B/E/F 歸 HOTFIX-2；不寫碼純規格）
+
 ### PIPE-SLIDES 系列
 - ✅ **PIPE-SLIDES SlidePipeline 簡報策略管線（2026-06-11 Tasks → C1-C6 → C7 Checkout 收官·BE-Refactor·第 2 路）**
+  - `2026-06-11_PIPE-SLIDES-HOTFIX-2_HOTFIX-2_run_提示詞.md` — HOTFIX-2 Run（B _safe_alt 破圖根除 + E _strip_master_date 母片日期洗 + F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 回歸〕+ 3 測試；單檔兩檔、收官 mv hotfixes/+executions/；不自發 commit）
+  - `2026-06-11_PIPE-SLIDES-HOTFIX-2_doc_提示詞.md` — HOTFIX-2 文件產出（B alt 轉義破圖根除 + E 母片日期洗除〔dedup 格式變異漏網〕+ F 修 HOTFIX-1 F4 條列鬆散回歸；單檔三點純渲染/清洗、零 Vision prompt 改動；A 撤案、C/D 留 schema 後話；baton 暫存待 Run）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md` — HOTFIX-1b Run（寫入端三欄 dict 化+run_phase4 取 value+2 測試堵盲區；收官 mv hotfixes/+executions/；不自發 commit）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md` — HOTFIX-1b 文件產出（F2 譯題旁路裸 str → upsert_paper/web_server 期望三欄 dict → 影子寫庫 AttributeError 前端不顯示；修寫入端 dict 化+讀取端取 value+堵測試盲區；baton 暫存待 Run）
   - `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md` — HOTFIX-1 Run（依 hotfix.md 落地 F1 去標題回聲/F2 接譯題/F4 段落正規化＋4 回歸測試；收官自動化 mv hotfix→hotfixes/+報告→executions/；兩規格書長駐 baton 嚴禁動；不自發 commit）
@@ -319,6 +325,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_HOTFIX-2_run_提示詞.md`
+- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md`
@@ -332,5 +340,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Check_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C3_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_C2_run_提示詞.md`

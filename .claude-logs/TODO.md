@@ -25,11 +25,23 @@
 > **版控先例**：兩真理源本體長駐 baton 不入版控、.bak 入 archive 作審計（195e12b）；sop 檔皆 tracked 正常入庫。
 > **銜接**：下一步開 PIPE-VISUAL plan（SPEC §1.3.1 Vision 共用規格直接引用；其 plan 核心 OQ＝P3 Bypass 或逐 section、Q6 刻意保留給它）。
 
+### BE-Hotfix PIPE-SLIDES-HOTFIX-2 — alt 破圖 / 母片重複日期 / F4 條列鬆散（B+E+F）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-2 | `pipelines/slide_pipeline.py` 單檔三點純渲染/清洗（學術簡報 Ch37 逐頁分析）：**B `_safe_alt`**〔alt 內 `][()`→全形、換行→空白；根除 CommonMark `![alt](url)` 之 `]` 提前閉合致破圖+描述洩漏正文（圖密集頁 p29/35/37 缺圖真因；HOTFIX-1 U8 alt 對齊暴露）〕+ **E `_strip_master_date`**〔原稿母片日期欄位 `4/28/2026` 烙進 20/20 頁非內容、P1 純日期行 ≥2 頁直接洗；補 `_dedupe_headers` 格式變異漏網（三變體各 <60% 門檻）〕+ **F `_normalize_paragraph_breaks` list-aware**〔修 HOTFIX-1 F4 回歸：單 `\n` 升級未排除條列致 tight list 炸 loose；負向前瞻補 `- * + • 數字.`〕；A 撤案〔忠實轉錄〕、C/D 留 META-NORM；3 回歸測試、32 passed、全套件 588 passed | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-2_hotfix.md`（baron 拍板 B+E+F、A 撤案）
+> **動因**：HOTFIX-1/1b 後 baron 上傳學術簡報 `Ch37_Plant-Nutrition.pdf`（44/38 頁）逐頁分析暴露 B（圖密集頁破圖+圖說洩漏）/ E（母片日期散落）/ F（HOTFIX-1 F4 條列鬆散回歸）。
+> **零 Vision prompt 改動**：純渲染/清洗層、與 META-NORM 之 Vision schema 改動風險隔離。
+> **⚠️ golden**：B/E/F 改 B 軌 final → slides golden 本 hotfix 後一次首捕（含 HOTFIX-1/1b 變更一次到位）。
+> **⚠️ baron E2E**：影子重傳 Ch37 → 圖密集頁整頁截圖正常/無破圖/無描述洩漏（B）、各頁無 4/28/2026（E）、條列緊湊（F）。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-1b — F2 譯題旁路格式修補（影子寫庫 AttributeError）
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-1b | 修補 HOTFIX-1 F2 回歸：`raw_metadata['translated_title']` 誤塞裸 str、而 `upsert_paper` L231 `.get('value')` / web_server SHADOW-HOTFIX-2 L714 `['value']` 全鏈期望 metadata_extractor **三欄 dict** → 影子寫庫 AttributeError〔P1-P4 全綠但 Paper row 未建、前端不顯示；A 軌不受影響〕；寫入端改 `{value, source, confidence}` + `run_phase4` 讀取端 dict 取 value〔str 向後相容〕+ test_hf2 格式契約斷言 + **test_hf1b 與 upsert L231 完全同式消費測試**〔堵 HOTFIX-1 測試盲區〕；`# === [PIPE-SLIDES-HOTFIX-1b ...] ===` 包裹 + 2 .bak；29 passed、全套件 585 passed | `待 baron 回填` |
+| HOTFIX-1b | 修補 HOTFIX-1 F2 回歸：`raw_metadata['translated_title']` 誤塞裸 str、而 `upsert_paper` L231 `.get('value')` / web_server SHADOW-HOTFIX-2 L714 `['value']` 全鏈期望 metadata_extractor **三欄 dict** → 影子寫庫 AttributeError〔P1-P4 全綠但 Paper row 未建、前端不顯示；A 軌不受影響〕；寫入端改 `{value, source, confidence}` + `run_phase4` 讀取端 dict 取 value〔str 向後相容〕+ test_hf2 格式契約斷言 + **test_hf1b 與 upsert L231 完全同式消費測試**〔堵 HOTFIX-1 測試盲區〕；`# === [PIPE-SLIDES-HOTFIX-1b ...] ===` 包裹 + 2 .bak；29 passed、全套件 585 passed | `1a2ec98` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-1b_hotfix.md`
 > **動因**：HOTFIX-1（`f933e54`）commit 後 baron 影子實測 log 爆 `'str' object has no attribute 'get'`（06:45、ALi 件）。
@@ -1030,6 +1042,7 @@
 - ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1b F2 譯題旁路格式修補~~（已落地；裸 str→三欄 dict 對齊 upsert_paper/web_server 契約、影子寫庫復活；同式消費測試堵盲區；全套件 585 passed）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1 B 軌簡報三缺陷緊急修補~~（已落地；F1 去標題回聲〔原文層〕+ F2 接譯題〔複用 P3 譯題穿旁路〕+ F4 段落正規化移植 + F3 並列顯式不修；4 回歸測試、全套件 584 passed；⚠️ slides golden 落地後一次首捕）
 - ✅ ~~PIPE-SLIDES SlidePipeline簡報策略管線~~（已落地、C1 `31dab5a` + C2 `941eed7` + C3 `f8a24d7` + C4 `4d7684c` + C5 `dbf90bd` + C6 `cb5e2bd` + C7 Checkout 收官；原 PIPE-VISUAL 改名；四 Phase 全落地〔P1 存圖+Vision temp=0+封面+去重 / P2 六步 key=`p{N}_{原文頁標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除 / P4 rag_indexer 四產物〕+ §7.2 key-changing 整合測試正面達標；24 測試、全套件 580 passed；⚠️ baron 影子 E2E + B 軌 golden 另捕〔Q8 改善豁免〕）

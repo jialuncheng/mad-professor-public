@@ -42,9 +42,6 @@ _CJK_RATIO = 0.2
 # Q2 跨頁統計去重：短行（≤20 字）出現於 ≥60% 非封面頁 → 判頁眉頁腳剔除。
 _DEDUPE_MAX_LEN = 20
 _DEDUPE_PAGE_RATIO = 0.6
-# === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 E START] === 母片日期頁眉：整行僅日期（格式寬鬆）
-_DATE_LINE_RE = re.compile(r"^\s*\d{1,4}\s*[/\-.]\s*\d{1,2}\s*[/\-.]\s*\d{1,4}\s*$")
-# === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 E END] ===
 # Q1 條件式滾動觸發：頁標題含延續標記、或前頁表格截斷（前頁尾/當頁首皆為 '|' 行）。
 _ROLLING_MARKERS = ("(續)", "（續）", "cont'd", "continued")
 
@@ -192,8 +189,6 @@ class SlidePipeline(DocumentStrategy):
 
         # ⑥ U3 跨頁統計去重（排除封面）
         self._dedupe_headers(units)
-        # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 E] === 母片日期頁眉洗除（補統計去重格式變異漏網）
-        self._strip_master_date(units)
 
         # ⑦ source_lang 啟發式（鏡像 resume）+ 影子標題後綴
         all_text = "\n".join(u["content"] for u in units)
@@ -290,28 +285,6 @@ class SlidePipeline(DocumentStrategy):
             u["content"] = "\n".join(
                 ln for ln in u["content"].splitlines() if ln.strip() not in noise)
 
-    # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 E START] ===
-    @staticmethod
-    def _strip_master_date(units: list) -> None:
-        """母片日期頁眉洗除（HOTFIX-2 E）：整行僅為日期、且出現於 ≥2 頁 → 母片日期欄位
-        （投影片匯出 PDF 烙進每頁、非投影片內容）剔除。補 _dedupe_headers 之不足——
-        日期 OCR 格式逐頁飄（4/28/2026 vs 2026/4/28 vs 4/28/26）、各變體 <60% 門檻全漏網；
-        本法以「整行即日期」語意判定、不依賴格式一致。單頁日期（可能是真內容如時間軸）不洗、
-        句中夾帶日期不動（只剔整行就是日期者）。剔除清單入 log。"""
-        hit_pages = sum(
-            1 for u in units
-            if any(_DATE_LINE_RE.match(ln) for ln in u["content"].splitlines()))
-        if hit_pages < 2:
-            return
-        removed = 0
-        for u in units:
-            lines = u["content"].splitlines()
-            kept = [ln for ln in lines if not _DATE_LINE_RE.match(ln)]
-            removed += len(lines) - len(kept)
-            u["content"] = "\n".join(kept).strip()
-        logger.info("[PIPE-SLIDES P1] 母片日期頁眉洗除 pages=%d lines=%d", hit_pages, removed)
-    # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 E END] ===
-
     @staticmethod
     def _detect_source_lang(text: str) -> str:
         """CJK 顯著佔比 → zh（鏡像 resume 啟發式）。"""
@@ -385,25 +358,8 @@ class SlidePipeline(DocumentStrategy):
             else:
                 out_lines.append(line)
         text = "\n".join(out_lines)
-        # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 F START] === 單 \n→\n\n 升級追加排除「下一行為條列行」
-        # （修 HOTFIX-1 F4 把 tight list 炸成 loose list 之回歸：item 間插空行醜排；
-        # 負向前瞻擴充 - / * / + / • / 數字. / 縮排子項 → 條列維持緊湊、段落仍正規化、table 不破）
-        return re.sub(
-            r"(?<!\|)(?<!\n)\n(?![\n\|]|\s*(?:[-*+•]|\d+[.、])\s|\s*-\s)", "\n\n", text)
-        # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 F END] ===
+        return re.sub(r"(?<!\|)(?<!\n)\n(?![\n\|])", "\n\n", text)
     # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F4 END] ===
-
-    # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B START] ===
-    @staticmethod
-    def _safe_alt(text: str) -> str:
-        """alt 文字轉義（HOTFIX-2 B）：CommonMark ![alt](url) 之 alt 內 ] [ ( ) 換行會破壞
-        語法 → ① 破圖 ② 文字洩成正文（圖密集頁 figure_description 充滿括號最易中招）。
-        中括號/括號轉全形（語意可讀不損）、換行與連續空白合併單空格。"""
-        if not text:
-            return text
-        trans = str.maketrans({"[": "［", "]": "］", "(": "（", ")": "）"})
-        return " ".join(text.translate(trans).split())
-    # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B END] ===
     # === [PIPE-SLIDES C2 END] ===
 
     # === [PIPE-SLIDES C3 START] P2 統一六步（U5/U6）===
@@ -663,8 +619,7 @@ class SlidePipeline(DocumentStrategy):
         if (u.get("title") or "").strip():
             parts.append(f"## {u['title'].strip()}")
         alt = (u.get("figure_description") or u.get("title") or f"page {u['page']}").strip()
-        # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖
-        parts.append(f"![{SlidePipeline._safe_alt(alt)}]({u['image_file']})")
+        parts.append(f"![{alt}]({u['image_file']})")
         if (u.get("content") or "").strip():
             # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F4] === en 版正文段落正規化（zh/en 對稱）
             parts.append(SlidePipeline._normalize_paragraph_breaks(u["content"].strip()))
@@ -748,8 +703,7 @@ class SlidePipeline(DocumentStrategy):
                 if zh_title:
                     parts.append(f"## {zh_title}")
                 alt = zh_desc or zh_title or f"page {u['page']}"
-                # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖（U8 alt 單點呈現、無 *圖表：* 段）
-                parts.append(f"![{self._safe_alt(alt)}]({u['image_file']})")
+                parts.append(f"![{alt}]({u['image_file']})")   # U8：alt 單點呈現、無 *圖表：* 段
                 if zh_content:
                     # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F4] === zh 版正文段落正規化（soft break 黏段根除）
                     parts.append(self._normalize_paragraph_breaks(zh_content))
