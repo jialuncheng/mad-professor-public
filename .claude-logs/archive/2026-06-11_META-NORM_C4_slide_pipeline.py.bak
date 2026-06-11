@@ -55,9 +55,7 @@ _VISION_PROMPT = """你是簡報忠實轉錄器。請將這一頁簡報的內容
 3. 圖表/示意圖/照片：用一兩句話描述放 figure_description 欄，嚴禁混入 markdown_content。
 4. 頁面有明確標題放 title；沒有就空字串。
 只輸出 JSON：
-{"title": "", "subtitle": "", "markdown_content": "", "figure_description": ""}
-其中 title 放頁面**大標題**、subtitle 放緊接其下的**次級小標題**（如有；無則空字串）；
-正文（條列/段落/表格）一律放 markdown_content、不要把小標題塞進正文。"""
+{"title": "", "markdown_content": "", "figure_description": ""}"""
 
 # 第 1 頁追加封面判定欄（U2）。
 # === [META-NORM C3 START] === 封面 prompt 改開放抽取 + 判定放寬（容主視覺圖之學術封面·U6）
@@ -172,8 +170,6 @@ class SlidePipeline(DocumentStrategy):
             units.append({
                 "page": n,
                 "title": (r.get("title") or "").strip(),
-                # === [META-NORM C4] === 次級小標題（解 D；無則空字串）
-                "subtitle": (r.get("subtitle") or "").strip(),
                 # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F1] === 原文層去標題回聲（閱讀視圖/rag_sections/chunk 三處同淨）
                 "content": self._strip_title_echo(
                     (r.get("title") or "").strip(),
@@ -536,14 +532,6 @@ class SlidePipeline(DocumentStrategy):
         """§4 接縫契約：key＝p{頁序:02d}_{原文頁標題}（P2 產／P3 帶／P4 取三方同此基準）。"""
         return f"p{page:02d}_{(title or '').strip()}"
 
-    # === [META-NORM C4 START] ===
-    @staticmethod
-    def _key_title(u: dict) -> str:
-        """page_key / section title 之標題來源：title 空但 subtitle 存在 → 用 subtitle
-        （解 D：分隔頁僅次級小標題時防 key 漂移；頁序前綴仍保唯一）。"""
-        return (u.get("title") or u.get("subtitle") or "").strip()
-    # === [META-NORM C4 END] ===
-
     def _make_summary_and_domain(self, full_text: str):
         """① 1 次 LLM：全文摘要 + 末行 `domain:` 順產 raw_domain（缺→""、非致命）。"""
         import settings
@@ -596,8 +584,7 @@ class SlidePipeline(DocumentStrategy):
                 u["title"] = item["title"].strip()   # 順產標題回填（P3/P4 同 key 基準）
             summary = (item.get("summary") or "").strip()
             if summary:
-                # === [META-NORM C4] === title 空 fallback subtitle（防 key 漂移）
-                result[self.page_key(u["page"], self._key_title(u))] = summary
+                result[self.page_key(u["page"], u.get("title") or "")] = summary
         return result
 
     @staticmethod
@@ -695,9 +682,8 @@ class SlidePipeline(DocumentStrategy):
 
         if is_zh:
             # SPEC U4：zh 來源跳譯（原文≡譯文）、仍建 per-section（key 天然對齊）
-            # === [META-NORM C4] === 4-tuple 對齊 _translate_pages_parallel（含 subtitle）
-            zh_fields = {i: (u.get("title") or "", u.get("subtitle") or "",
-                             u.get("content") or "", u.get("figure_description") or "")
+            zh_fields = {i: (u.get("title") or "", u.get("content") or "",
+                             u.get("figure_description") or "")
                          for i, u in enumerate(tiles)}
         elif degraded:
             logger.warning(
@@ -718,9 +704,6 @@ class SlidePipeline(DocumentStrategy):
         parts = []
         if (u.get("title") or "").strip():
             parts.append(f"## {u['title'].strip()}")
-        # === [META-NORM C4] === en 版次級小標題渲染（## 後、圖前）
-        if (u.get("subtitle") or "").strip():
-            parts.append(f"### {u['subtitle'].strip()}")
         alt = (u.get("figure_description") or u.get("title") or f"page {u['page']}").strip()
         # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖
         parts.append(f"![{SlidePipeline._safe_alt(alt)}]({u['image_file']})")
@@ -742,9 +725,8 @@ class SlidePipeline(DocumentStrategy):
 
         tasks = []
         for i, u in enumerate(tiles):
-            # === [META-NORM C4] === subtitle 併入並行翻譯（text_type=title）
-            for field, ttype in (("title", "title"), ("subtitle", "title"),
-                                 ("content", "content"), ("figure_description", "caption")):
+            for field, ttype in (("title", "title"), ("content", "content"),
+                                 ("figure_description", "caption")):
                 text = (u.get(field) or "").strip()
                 if text:
                     tasks.append((i, field, ttype, text))
@@ -768,10 +750,9 @@ class SlidePipeline(DocumentStrategy):
                                 "page": i + 1, "field": field}},
                         )
                         results[(i, field)] = text
-        # === [META-NORM C4] === 4-tuple：(title, subtitle, content, desc)
         return {
-            i: (results.get((i, "title"), ""), results.get((i, "subtitle"), ""),
-                results.get((i, "content"), ""), results.get((i, "figure_description"), ""))
+            i: (results.get((i, "title"), ""), results.get((i, "content"), ""),
+                results.get((i, "figure_description"), ""))
             for i in range(len(tiles))
         }
 
@@ -798,20 +779,16 @@ class SlidePipeline(DocumentStrategy):
             title = (ctx.ingestion.title if ctx.ingestion else "") or "簡報全文"
             ctx.rag_sections = [{
                 "title": title, "level": 2,
-                "summary_key": self.page_key(1, self._key_title(tiles[0])) if tiles else "p01_",
+                "summary_key": self.page_key(1, tiles[0].get("title") or "") if tiles else "p01_",
                 "content": [{"type": "text", "content": whole_zh}], "children": [],
             }]
         else:
             zh_pages, sections = [], []
             for i, u in enumerate(tiles):
-                # === [META-NORM C4] === 解 4-tuple（含 subtitle）
-                zh_title, zh_subtitle, zh_content, zh_desc = zh_fields[i]
+                zh_title, zh_content, zh_desc = zh_fields[i]
                 parts = []
                 if zh_title:
                     parts.append(f"## {zh_title}")
-                # === [META-NORM C4] === 次級小標題渲染（## 後、圖前；解 D）
-                if zh_subtitle:
-                    parts.append(f"### {zh_subtitle}")
                 alt = zh_desc or zh_title or f"page {u['page']}"
                 # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖（U8 alt 單點呈現、無 *圖表：* 段）
                 parts.append(f"![{self._safe_alt(alt)}]({u['image_file']})")
@@ -822,9 +799,8 @@ class SlidePipeline(DocumentStrategy):
                 # Q3 同頁短 items 合併：content+description 併單一 text chunk
                 merged = "\n\n".join(x for x in (zh_content, zh_desc) if x)
                 sections.append({
-                    # === [META-NORM C4] === title 空 fallback subtitle（防 key 漂移）
-                    "title": zh_title or zh_subtitle or f"page {u['page']}", "level": 2,
-                    "summary_key": self.page_key(u["page"], self._key_title(u)),
+                    "title": zh_title or f"page {u['page']}", "level": 2,
+                    "summary_key": self.page_key(u["page"], u.get("title") or ""),
                     "content": [{"type": "text", "content": merged}], "children": [],
                 })
             zh_text = "\n\n".join(zh_pages)          # U10：不渲染 meta header

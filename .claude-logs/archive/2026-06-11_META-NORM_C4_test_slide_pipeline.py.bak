@@ -334,9 +334,9 @@ def _run_p3(monkeypatch, tmp_path, tiles, source_lang='en', fail_on=None):
     return spec, ctx, fake, Path(spec.final_zh_path).read_text(encoding='utf-8')
 
 
-def _t4(page, title, content, desc='', subtitle=''):
+def _t4(page, title, content, desc=''):
     return {"page": page, "title": title, "content": content,
-            "figure_description": desc, "subtitle": subtitle,
+            "figure_description": desc,
             "image_file": f"images/page-{page:02d}.jpg", "is_cover": False}
 
 
@@ -684,47 +684,6 @@ def test_c3_meta_norm_p1_wire_flag_off(monkeypatch, tmp_path):
     assert 'course' not in ctx.raw_metadata          # 飛輪未跑
     assert spec.venue is None and spec.doi is None    # 旗標 off venue/doi 留 None
 # === [META-NORM C3 END] ===
-
-
-# === [META-NORM C4 START] === subtitle 結構化測試
-def test_c4_subtitle_extraction_and_rendering(monkeypatch, tmp_path):
-    """U8/D：subtitle 翻譯 + EN/ZH 渲染 ### {subtitle}；無大標題頁 key/title fallback subtitle。"""
-    import processor.translator as tr_mod
-
-    class _IdTr:                                          # 譯文=原文（聚焦結構）
-        def translate(self, text, ictx, mode, text_type="content"):
-            return text
-    from pipelines.slide_pipeline import SlidePipeline
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: _IdTr())
-
-    tiles = [_t4(1, 'Plant Nutrition', '- a', subtitle='availability + accessibility'),
-             _t4(2, '', '- b', subtitle='只有小標題')]   # 無大標題頁
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckc4')
-    spec = SlidePipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
-    en = Path(spec.final_en_path).read_text(encoding='utf-8')
-    # 渲染：## title 後接 ### subtitle（雙語）
-    assert '## Plant Nutrition' in zh and '### availability + accessibility' in zh
-    assert '## Plant Nutrition' in en and '### availability + accessibility' in en
-    # 無大標題頁 → key/title fallback subtitle（p02_只有小標題、不漂移成 p02_）
-    keys = [s['summary_key'] for s in ctx.rag_sections]
-    assert keys == ['p01_Plant Nutrition', 'p02_只有小標題']
-    assert ctx.rag_sections[1]['title'] == '只有小標題'   # section title fallback subtitle
-
-
-def test_c4_subtitle_translated_in_parallel(monkeypatch, tmp_path):
-    """U8：subtitle 走並行翻譯（text_type=title）、譯文進渲染。"""
-    import processor.translator as tr_mod
-    from pipelines.slide_pipeline import SlidePipeline
-    fake = _FakeTranslator()                              # 譯文='譯'+原文
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: fake)
-    tiles = [_t4(1, 'Arch', '- x', subtitle='sub-label'), _t4(2, 'Spec', '- y')]
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckc4t')
-    spec = SlidePipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
-    assert '### 譯sub-label' in zh                        # subtitle 確實被翻譯
-    assert any('sub-label' == c[0] for c in fake.calls)   # subtitle 進翻譯任務
-# === [META-NORM C4 END] ===
 
 
 # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 START] === B/E/F 回歸測試
