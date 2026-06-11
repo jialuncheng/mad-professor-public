@@ -875,31 +875,6 @@
   #paper-content h2 {
     /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
   }
-  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === */
-  /* C：簡報標題塊——底線移到「標題+副標」整塊之下（用主題 divider 變數、各主題自動吻合）；
-     內層 h2 不再各自畫線（覆寫主題 #paper-content h2 border、特異度 1,1,1 > 1,0,1）→ 一-b 夾線消失 */
-  #paper-content .slide-head {
-    border-bottom: var(--divider-w) solid var(--color-divider);
-    padding-bottom: var(--space-2);
-    margin: var(--space-6) 0 var(--space-3);
-  }
-  #paper-content .slide-head h2 {
-    border-bottom: none;
-    padding-bottom: 0;
-    margin: 0;
-  }
-  #paper-content .slide-sub {
-    font-size: 15px;
-    color: var(--color-text-secondary);
-    margin: 4px 0 0;
-    line-height: 1.5;
-  }
-  /* 二：巢狀清單縮排（結構性 fallback、主題無關、含自訂主題受益） */
-  #paper-content ul ul, #paper-content ol ol,
-  #paper-content ul ol, #paper-content ol ul {
-    padding-left: 1.5em;
-  }
-  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] === */
   #paper-content img {
     max-width: 100%;
     height: auto;

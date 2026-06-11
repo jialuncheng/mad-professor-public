@@ -346,9 +346,8 @@ def test_p3_alt_aligned_no_caption_segment_no_header(monkeypatch, tmp_path):
     spec, _, _, zh = _run_p3(monkeypatch, tmp_path, tiles)
     assert '![譯rack diagram](images/page-01.jpg)' in zh   # alt=譯 description
     assert '圖表：' not in zh                               # 雙 Caption 根除
-    # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3] === 圖在上、標題改 .slide-head HTML 塊
-    assert zh.lstrip().startswith('![')                     # 一-a：首元素為圖
-    assert '<h2>譯Arch</h2>' in zh and '<div class="slide-head">' in zh
+    assert not zh.startswith('# ')                          # 無 meta header（首節即 ##）
+    assert '## 譯Arch' in zh
 
 
 def test_p3_rag_sections_key_from_source_title(monkeypatch, tmp_path):
@@ -367,7 +366,7 @@ def test_p3_unit_failure_falls_back_to_source(monkeypatch, tmp_path):
     tiles = [_t4(1, 'Arch', 'BADCONTENT', 'd1'), _t4(2, 'Spec', '- ok')]
     spec, _, _, zh = _run_p3(monkeypatch, tmp_path, tiles, fail_on='BADCONTENT')
     assert 'BADCONTENT' in zh          # 失敗欄退原文
-    assert '<h2>譯Arch</h2>' in zh     # 同頁其餘欄正常（HOTFIX-3 標題塊）
+    assert '## 譯Arch' in zh           # 同頁其餘欄正常
     assert '譯- ok' in zh              # 他頁不受污染
 
 
@@ -378,7 +377,7 @@ def test_p3_zh_source_skips_translate(monkeypatch, tmp_path):
     assert fake.calls == []                                  # 零翻譯呼叫
     assert len(ctx.rag_sections) == 2
     assert ctx.rag_sections[0]['summary_key'] == 'p01_架構'
-    assert '<h2>架構</h2>' in zh        # HOTFIX-3 標題塊（zh 來源原文即譯文）
+    assert '## 架構' in zh
 
 
 def test_p3_degraded_single_page_whole_translate(monkeypatch, tmp_path):
@@ -704,9 +703,9 @@ def test_c4_subtitle_extraction_and_rendering(monkeypatch, tmp_path):
     spec = SlidePipeline().run_phase3(ctx)
     zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
     en = Path(spec.final_en_path).read_text(encoding='utf-8')
-    # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3] === 標題塊：<h2>title</h2> + <p class="slide-sub">subtitle
-    assert '<h2>Plant Nutrition</h2>' in zh and '<p class="slide-sub">availability + accessibility' in zh
-    assert '<h2>Plant Nutrition</h2>' in en and '<p class="slide-sub">availability + accessibility' in en
+    # 渲染：## title 後接 ### subtitle（雙語）
+    assert '## Plant Nutrition' in zh and '### availability + accessibility' in zh
+    assert '## Plant Nutrition' in en and '### availability + accessibility' in en
     # 無大標題頁 → key/title fallback subtitle（p02_只有小標題、不漂移成 p02_）
     keys = [s['summary_key'] for s in ctx.rag_sections]
     assert keys == ['p01_Plant Nutrition', 'p02_只有小標題']
@@ -723,60 +722,12 @@ def test_c4_subtitle_translated_in_parallel(monkeypatch, tmp_path):
     ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckc4t')
     spec = SlidePipeline().run_phase3(ctx)
     zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
-    assert '<p class="slide-sub">譯sub-label</p>' in zh   # subtitle 翻譯後進 .slide-sub
+    assert '### 譯sub-label' in zh                        # subtitle 確實被翻譯
     assert any('sub-label' == c[0] for c in fake.calls)   # subtitle 進翻譯任務
 # === [META-NORM C4 END] ===
 # === [META-NORM C6] === C3/C4 測試 assertions 已於上方各測試完整（旗標 on/off、reserved 回填、
 # 三欄 dict、subtitle EN/ZH 渲染、key fallback）；C6 審視確認完整、無補強需求。
 # §7.2 key-changing 整合測試見 tests/test_meta_norm.py::test_c6_key_changing_integration。
-
-
-# === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === 排版打磨測試
-def test_hf3_image_first_and_slide_head(monkeypatch, tmp_path):
-    """一-a + C：圖在 .slide-head 前；標題塊 <div class="slide-head"> 含 <h2>+.slide-sub；無 ##/###。"""
-    import processor.translator as tr_mod
-    from pipelines.slide_pipeline import SlidePipeline
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: _FakeTranslator())
-    tiles = [_t4(1, 'Arch', '- x', subtitle='sub'), _t4(2, 'Spec', '- y')]  # 2 tiles 避退化路
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf3a')
-    spec = SlidePipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding='utf-8')
-    assert zh.index('![') < zh.index('<div class="slide-head">')   # 圖先於標題塊
-    assert '<h2>譯Arch</h2>' in zh and '<p class="slide-sub">譯sub</p>' in zh
-    assert '## 譯Arch' not in zh and '### 譯sub' not in zh          # 無舊 ##/### 標題
-
-
-def test_hf3_subheading_promoted_to_h3():
-    """A/B/C：整行 **X** → ### X；句中 bold 不動；\\r 相容；不產連續空行。"""
-    from pipelines.slide_pipeline import SlidePipeline as S
-    assert '### B層' in S._promote_subheadings("* a\n**B層**\n* b")
-    assert S._promote_subheadings("這是 **強調** 句") == "這是 **強調** 句"   # 句中 bold 不誤升
-    assert '### B層' in S._promote_subheadings("* a\r\n**B層**\r\n* b")        # \r 相容
-    assert "\n\n\n" not in S._promote_subheadings("* a\n\n**B層**\n* b")       # 不產連續空行
-
-
-def test_hf3_slide_head_escapes():
-    """C：title/subtitle 含 <>& 須 escape 防破版。"""
-    from pipelines.slide_pipeline import SlidePipeline as S
-    h = S._slide_head_html("A<b> & C", "x>y")
-    assert "&lt;b&gt;" in h and "&amp;" in h
-    assert '<p class="slide-sub">' in h and "x&gt;y" in h
-    assert S._slide_head_html("", "") == ""                        # 全空回空字串
-
-
-def test_hf3_rag_sections_unaffected(monkeypatch, tmp_path):
-    """RAG 安全：rag_sections 仍以 title/欄位建、不受 .slide-head 渲染影響。"""
-    import processor.translator as tr_mod
-    from pipelines.slide_pipeline import SlidePipeline
-    monkeypatch.setattr(tr_mod, 'Translator', lambda: _FakeTranslator())
-    tiles = [_t4(1, 'Arch', '- 內容', subtitle='sub'), _t4(2, 'Spec', '- y')]  # 2 tiles 避退化路
-    ctx = _make_p3_ctx(tmp_path, monkeypatch, tiles, paper_id='deckhf3r')
-    SlidePipeline().run_phase3(ctx)
-    sec = ctx.rag_sections[0]
-    assert sec['summary_key'] == 'p01_Arch'                        # 原文 key 不變
-    body = sec['content'][0]['content']
-    assert 'sub' not in body and 'slide-head' not in body          # subtitle/HTML 不入 chunk body
-# === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
 
 
 # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 START] === B/E/F 回歸測試

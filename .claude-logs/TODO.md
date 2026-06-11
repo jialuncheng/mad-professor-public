@@ -35,12 +35,24 @@
 | C4 | Subtitle：`_VISION_PROMPT` +subtitle 欄 + units 收 + `_key_title` fallback〔title 空用 subtitle 防 key 漂移〕+ 並行翻譯 4-tuple + EN/ZH 渲染 `### {subtitle}`〔解 D〕；2 測試 | `dedd915` |
 | C5 | Frontend Generic Renderer：web_server +GET /api/meta-fields〔唯讀〕+ static/index.html 通用 key-value 渲染器〔window.metaFields seed 兜底+fetch、renderTitleHeader 遍歷非排除集·BS2 + sort_weight/字母序·BS7〕；飛輪 end-to-end 貫通 | `d2a3db2` |
 | C6 | Tests：`test_c6_key_changing_integration`〔§7.2：P1 自提『課程』→飛輪 course→消費端取值；接縫不變式 raw≠canonical 對位 + 三欄 dict 杜退化 + alias 寫回〕+ test_slide assertions 審視；45 passed、全套件 601 passed | `6bb440e` |
-| C7 | checkout 收官：Conformance 全維度全綠〔U1-U9+U*.1 / §6 C1-C6 測試 / §7.2 整合存在且通過·免豁免 / 不可動 / 提示詞 9 份 / msg 6 份〕+ baton 一次性歸檔〔plan/tasks/C1-C7 報告〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C7 | checkout 收官：Conformance 全維度全綠〔U1-U9+U*.1 / §6 C1-C6 測試 / §7.2 整合存在且通過·免豁免 / 不可動 / 提示詞 9 份 / msg 6 份〕+ baton 一次性歸檔〔plan/tasks/C1-C7 報告〕+ TODO 結案 + hash 自癒 | `caf31fa` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`（v1.2、八 OQ+Q9/Q10 全定案、BS1-BS7 收編）
 > **動因**：PIPE-SLIDES 學術簡報實測（Ch37_Plant-Nutrition）暴露 C（封面課程/講師未進結構化 Meta）+ D（小標題塞正文）；baron 構想「LLM 開放抽取 + 二次 LLM 比對既有欄統一」＝DOMAIN-NORM 知識飛輪搬到 metadata 欄名。
 > **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
 > **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
+
+### BE-Hotfix PIPE-SLIDES-HOTFIX-3 — 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-3 | baron 前端逐頁 QA（Ch37）+ design/docs 設計對齊後 4 項排版修：**一-a** P3 parts 重排〔圖→標題塊→內文〕+ **C** `_slide_head_html` 副標併 `<div class="slide-head">`〔base CSS 底線移整塊下·用主題 `--divider-w` 變數→**順帶解 一-b** h2 夾線〕+ **A/B/C** `_promote_subheadings` 整行 `**X**`→`### X`〔升設計內 h3 非孤兒 h4、`\r?` 相容 CRLF、不產連續空行〕+ **二** base CSS `ul ul{padding-left}`〔結構 fallback、含自訂主題〕；**RAG 零改**〔subtitle 不進 chunk body、`sections.append` 原封不動、test_hf3_rag_sections_unaffected 證〕；不動 4 主題檔；5 既有斷言更新+4 新測試、40 passed、全套件 605 passed | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-3_hotfix.md`（含三盲點修正：\r 相容/不產連續空行/HTML 塊內 markdown 失效註記）
+> **設計對齊（design/docs）**：`typography.md` 證 h2 底線是明文設計意圖→一-b 不在 base 蓋、改 C 從根源；A/B/C 升 h3〔h4 未規範=孤兒〕；二 縮排=結構〔principles.md 結構歸主檔、含自訂主題受益〕。
+> **動因**：META-NORM 上線後 baron 前端 QA 植物營養簡報，發現圖序/標題夾線/子標題扁平黏連/子項目未縮排 4 項排版問題；經設計意圖核對 + 多輪決策（C 副標併標題塊最還原投影片）+ subtitle 對 RAG 零影響碼證後落地。
+> **⚠️ golden**：改 B 軌 final 渲染 → slides golden 全變更〔HOTFIX-1/1b/2 + META-NORM C3/C4 + 本 HOTFIX-3〕落地後一次首捕；**slides fixture 需先補齊**（PaperRead-Lab 缺 `tests/golden_baseline/fixtures/slides.pdf`、入版控被 gitignore 排除）。
+> **backlog**：h2 border 規則重複 4 主題檔（DRY 債）→ 未來 FE 清理上移 base。
 
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-2 — alt 破圖 / 母片重複日期 / F4 條列鬆散（B+E+F）
 
@@ -1062,6 +1074,7 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES-HOTFIX-3 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）~~（已落地；一-a 圖在上 + C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線、用主題 divider 變數〕+ A/B/C 升 h3〔非孤兒 h4〕+ 二 base 巢狀縮排；design/docs 設計對齊、RAG 零改；40 測試、全套件 605 passed；⚠️ slides golden 待 fixture 補齊後首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1b F2 譯題旁路格式修補~~（已落地；裸 str→三欄 dict 對齊 upsert_paper/web_server 契約、影子寫庫復活；同式消費測試堵盲區；全套件 585 passed）
 - ✅ ~~PIPE-SLIDES-HOTFIX-1 B 軌簡報三缺陷緊急修補~~（已落地；F1 去標題回聲〔原文層〕+ F2 接譯題〔複用 P3 譯題穿旁路〕+ F4 段落正規化移植 + F3 並列顯式不修；4 回歸測試、全套件 584 passed；⚠️ slides golden 落地後一次首捕）

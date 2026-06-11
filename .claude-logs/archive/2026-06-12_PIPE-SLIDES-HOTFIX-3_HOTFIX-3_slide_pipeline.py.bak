@@ -712,62 +712,21 @@ class SlidePipeline(DocumentStrategy):
         return self._deliver(ctx, gspec, tiles, zh_fields=zh_fields)
 
     # ── P3 私有群 ──
-    # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] ===
-    @staticmethod
-    def _slide_head_html(title, subtitle) -> str:
-        """C：標題+副標併入單一 .slide-head 標題塊（raw HTML、底線由 CSS 移整塊下）。
-
-        還原投影片「大標題 + 緊貼副標」一體感；h2 仍為 h2（語意/RAG 不變）、副標降 .slide-sub
-        （不再 h3、不觸發 h2 章節分隔線夾在中間 → 一-b 隨之消失）。title/subtitle escape 防破版。
-        """
-        import html as _html
-        t = (title or "").strip()
-        s = (subtitle or "").strip()
-        if not t and not s:
-            return ""
-        rows = []
-        if t:
-            rows.append(f"<h2>{_html.escape(t)}</h2>")
-        if s:
-            rows.append(f'<p class="slide-sub">{_html.escape(s)}</p>')
-        return '<div class="slide-head">\n' + "\n".join(rows) + "\n</div>"
-
-    @staticmethod
-    def _promote_subheadings(text: str) -> str:
-        """A/B/C：整行純 **X** 之內文子標題 → ### X（升設計內 h3、無底線、有間距）。
-
-        Vision 把投影片內小節標題（A horizon/B horizon…）忠實轉錄為 **bold**；扁平且黏 bullet。
-        升 h3（typography 已規範）→ 真子標題擁有自己 bullet 群；前補空行確保 heading 解析。
-        """
-        out = []
-        for line in (text or "").split("\n"):
-            # \r? 相容 Windows 換行（split('\n') 殘留 \r 會使 $ 匹配失敗）
-            m = re.match(r"^\s*\*\*(.+?)\*\*\s*\r?$", line)
-            if m:
-                if out and out[-1] != "":          # 前一行非空才補（避免連續多餘空行）
-                    out.append("")
-                out.append(f"### {m.group(1).strip()}")
-            else:
-                out.append(line)
-        return "\n".join(out)
-    # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
-
     @staticmethod
     def _page_source_md(u: dict) -> str:
         """單頁原文 markdown（en 版還原與整檔 fallback 共用；alt=原文 description、單點呈現）。"""
         parts = []
-        # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === 一-a 圖在上 + C 標題塊 + A/B/C h3
+        if (u.get("title") or "").strip():
+            parts.append(f"## {u['title'].strip()}")
+        # === [META-NORM C4] === en 版次級小標題渲染（## 後、圖前）
+        if (u.get("subtitle") or "").strip():
+            parts.append(f"### {u['subtitle'].strip()}")
         alt = (u.get("figure_description") or u.get("title") or f"page {u['page']}").strip()
-        # alt 轉義防破圖（HOTFIX-2 B 邏輯保留）
+        # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖
         parts.append(f"![{SlidePipeline._safe_alt(alt)}]({u['image_file']})")
-        head = SlidePipeline._slide_head_html(u.get("title"), u.get("subtitle"))
-        if head:
-            parts.append(head)
         if (u.get("content") or "").strip():
-            # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、zh/en 對稱）
-            body = SlidePipeline._promote_subheadings(u["content"].strip())
-            parts.append(SlidePipeline._normalize_paragraph_breaks(body))
-        # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
+            # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F4] === en 版正文段落正規化（zh/en 對稱）
+            parts.append(SlidePipeline._normalize_paragraph_breaks(u["content"].strip()))
         return "\n\n".join(parts)
 
     def _translate_pages_parallel(self, tiles, inj, translator) -> dict:
@@ -848,18 +807,17 @@ class SlidePipeline(DocumentStrategy):
                 # === [META-NORM C4] === 解 4-tuple（含 subtitle）
                 zh_title, zh_subtitle, zh_content, zh_desc = zh_fields[i]
                 parts = []
-                # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === 一-a 圖在上 + C 標題塊 + A/B/C h3
+                if zh_title:
+                    parts.append(f"## {zh_title}")
+                # === [META-NORM C4] === 次級小標題渲染（## 後、圖前；解 D）
+                if zh_subtitle:
+                    parts.append(f"### {zh_subtitle}")
                 alt = zh_desc or zh_title or f"page {u['page']}"
-                # alt 轉義防破圖（HOTFIX-2 B、U8 單點呈現）
+                # === [PIPE-SLIDES-HOTFIX-2 HOTFIX-2 B] === alt 轉義防破圖（U8 alt 單點呈現、無 *圖表：* 段）
                 parts.append(f"![{self._safe_alt(alt)}]({u['image_file']})")
-                head = self._slide_head_html(zh_title, zh_subtitle)
-                if head:
-                    parts.append(head)
                 if zh_content:
-                    # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、soft break 黏段根除）
-                    body = self._promote_subheadings(zh_content)
-                    parts.append(self._normalize_paragraph_breaks(body))
-                # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
+                    # === [PIPE-SLIDES-HOTFIX-1 HOTFIX-1 F4] === zh 版正文段落正規化（soft break 黏段根除）
+                    parts.append(self._normalize_paragraph_breaks(zh_content))
                 zh_pages.append("\n\n".join(parts))
                 # Q3 同頁短 items 合併：content+description 併單一 text chunk
                 merged = "\n\n".join(x for x in (zh_content, zh_desc) if x)
