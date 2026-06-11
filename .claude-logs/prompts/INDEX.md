@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### META-NORM 系列
-- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C4·BE-Refactor·解 PIPE-SLIDES C+D）**
+- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C5·BE-Refactor·解 PIPE-SLIDES C+D）**
+  - `2026-06-11_META-NORM_C5_run_提示詞.md` — C5 Run（Frontend Generic Renderer：web_server +GET /api/meta-fields〔唯讀回 MetaField label/sort_weight〕+ static/index.html CSS .paper-dynamic-meta + window.metaFields 快取〔seed 離線兜底〕+ renderTitleHeader 遍歷非排除集〔BS2〕→ label 顯示 → sort_weight/字母序〔BS7〕渲染標題下方；飛輪產物首次前端顯示；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C4_run_提示詞.md` — C4 Run（Subtitle：`_VISION_PROMPT` schema +subtitle 欄 + run_phase1 units 收 subtitle + page_key/section_summaries fallback〔title 空用 subtitle〕+ `_translate_pages_parallel` 翻 subtitle + `_page_source_md`/`_deliver` 渲染 `### {subtitle}`〔EN/ZH〕；解 D 小標題；2 測試；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C3_run_提示詞.md` — C3 Run（P1 Wire：`_COVER_PROMPT` 追加開放 metadata 抽取〔保留 company/date/authors〕+ run_phase1 旗標 on 呼 MetaNormalizer.normalize_fields → pop reserved〔title/authors/venue/doi〕回填合約 + 其餘 canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 + IngestionMetadataSpec 補 venue/doi；2 測試；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C2_run_提示詞.md` — C2 Run（MetaNormalizer Flywheel：新建 `processor/meta_normalizer.py` 繼承 DomainNormalizer 範式；reserved 映射不入庫〔BS1〕+ GENERIC_KEYS 黑名單不快取〔Q9〕+ _cache_lookup/_llm_classify〔temp=0 交易外〕/_register_and_cache〔session.begin on_conflict 註冊+label 提案 BS4〕+ normalize_fields 三路分流 + try/except 降級 + 旗標閘門；4 測試；僅兩檔；不自發 commit）

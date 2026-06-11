@@ -839,29 +839,6 @@
     color: var(--color-text-subtle);
     margin-top: var(--space-2);
   }
-  /* === [META-NORM C5 START] === 動態 metadata 通用渲染（飛輪 canonical 欄）=== */
-  .paper-dynamic-meta {
-    margin-top: var(--space-2);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-  .paper-dynamic-meta .dynamic-meta-item {
-    display: flex;
-    gap: var(--space-2);
-    font-size: var(--font-sm);
-    line-height: 1.5;
-  }
-  .paper-dynamic-meta .meta-label {
-    color: var(--color-text-subtle);
-    flex-shrink: 0;
-    font-weight: 500;
-  }
-  .paper-dynamic-meta .meta-value {
-    color: var(--color-text);
-    word-break: break-word;
-  }
-  /* === [META-NORM C5 END] === */
   #paper-content > h1:first-child {
     text-align: center;
     font-size: var(--font-2xl);
@@ -2168,29 +2145,6 @@
 
   loadThemesFromServer();
 
-  // === [META-NORM C5 START] === 動態 metadata 欄位映射快取（seed 離線兜底 + fetch 更新）
-  window.metaFields = window.metaFields || {
-    course: { label_zh: '課程', label_en: 'Course', sort_weight: 10 },
-    instructor: { label_zh: '講師', label_en: 'Instructor', sort_weight: 20 },
-    organization: { label_zh: '組織/機構', label_en: 'Organization', sort_weight: 30 },
-    date: { label_zh: '日期', label_en: 'Date', sort_weight: 40 },
-    venue: { label_zh: '發表地點/期刊', label_en: 'Venue', sort_weight: 50 },
-    doi: { label_zh: 'DOI', label_en: 'DOI', sort_weight: 60 },
-  };
-  (async function loadMetaFields() {
-    try {
-      const res = await fetch('/api/meta-fields');
-      if (!res.ok) throw new Error('Failed to fetch meta-fields');
-      const data = await res.json();
-      if (data && typeof data === 'object') {
-        window.metaFields = Object.assign({}, window.metaFields, data);  // 合併、保 seed 兜底
-      }
-    } catch (err) {
-      console.error('[MetaFields Load Error]', err);  // 失敗保留 seed、不阻前端
-    }
-  })();
-  // === [META-NORM C5 END] ===
-
   // ─── BUG-F2 A5【upload handler】TDZ-aware：dropdownAPI IIFE 之後 ───
   //   原 L1831 已搬到此處（保險防 TDZ）；handler body 內呼叫 dropdownAPI.addTheme + getThemeLabel
   document.getElementById('theme-upload-input').addEventListener('change', async (e) => {
@@ -2628,31 +2582,6 @@ function renderTitleHeader(p) {
     const pills = userTags.map(t => `<span class="tag-pill">#${_esc(t)}</span>`).join('');
     parts.push(`<div class="paper-tags">${pills}</div>`);
   }
-
-  // === [META-NORM C5 START] === 動態 metadata 通用渲染（飛輪 canonical 欄）
-  // 排除集（BS2）：已由既有寫死路徑渲染之 key，不重複顯示。
-  const _EXCLUDE = new Set(['title', 'authors', 'venue', 'doi',
-    'translated_abstract', 'translated_title', 'abstract', 'user_tags']);
-  const mf = window.metaFields || {};
-  const dynItems = [];
-  Object.keys(m).forEach((k) => {
-    if (_EXCLUDE.has(k)) return;
-    const val = (m[k] && typeof m[k] === 'object') ? m[k].value : m[k];
-    if (val === undefined || val === null || String(val).trim() === '') return;
-    const def = mf[k] || {};
-    const label = (currentLang === 'zh' ? def.label_zh : def.label_en) || def.label_zh || def.label_en || k;
-    const weight = (typeof def.sort_weight === 'number') ? def.sort_weight : 999;
-    dynItems.push({ key: k, label, value: String(val), weight });
-  });
-  if (dynItems.length) {
-    // 排序（BS7）：sort_weight 升序、tie 則 canonical_key 字母序 fallback。
-    dynItems.sort((a, b) => (a.weight - b.weight) || a.key.localeCompare(b.key));
-    const rows = dynItems.map(it =>
-      `<div class="dynamic-meta-item"><span class="meta-label">${_esc(it.label)}</span>`
-      + `<span class="meta-value">${_esc(it.value)}</span></div>`).join('');
-    parts.push(`<div class="paper-dynamic-meta">${rows}</div>`);
-  }
-  // === [META-NORM C5 END] ===
   el.innerHTML = parts.join('');
 }
 function renderPapers() {

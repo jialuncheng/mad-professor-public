@@ -1301,31 +1301,6 @@ async def list_themes():
     return result
 
 
-# === [META-NORM C5 START] ===
-@app.get("/api/meta-fields")
-async def list_meta_fields():
-    """META-NORM C5：回傳 MetaField canonical 欄位登記（前端通用渲染器之 label/排序映射）。
-
-    回 {canonical_key: {label_zh, label_en, sort_weight}}；唯讀（with session.begin()）。
-    讀取失敗 → 回 {}（前端有 seed 離線兜底、不阻前端）。
-    """
-    out = {}
-    try:
-        from models import MetaField
-        from sqlalchemy import select
-        with db.SessionLocal() as session:
-            with session.begin():
-                for mf in session.execute(select(MetaField)).scalars().all():
-                    out[mf.canonical_key] = {
-                        "label_zh": mf.label_zh, "label_en": mf.label_en,
-                        "sort_weight": mf.sort_weight,
-                    }
-    except Exception as exc:  # noqa: BLE001 — 不阻前端（有 seed 兜底）
-        logger.error("[meta-norm] /api/meta-fields 讀取失敗: %s", exc, exc_info=True)
-    return out
-# === [META-NORM C5 END] ===
-
-
 # ── 健康檢查 ──
 
 @app.get("/api/health")
