@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### META-NORM 系列
-- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C6·BE-Refactor·解 PIPE-SLIDES C+D）**
+- ✅ **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C6 → C7 收官·BE-Refactor·解 PIPE-SLIDES C+D）**
+  - `2026-06-11_META-NORM_Check_提示詞.md` — Check（C7 收官：Conformance〔U1-U9 / §6 C1-C6 測試 / §7.2 key-changing 整合存在且通過 / 不可動 / 提示詞稽核 / msg〕→ TODO 結案 + baton 一次性歸檔〔plan/tasks/C1-C7 報告→plans//tasks//executions/〕+ hash 全量自癒；PIPE-SPEC 長駐；飛輪 end-to-end 全案結案）
   - `2026-06-11_META-NORM_C6_run_提示詞.md` — C6 Run（Tests·純測試：test_meta_norm 新增 §7.2 key-changing 整合〔P1 自提『課程』→飛輪映 course→消費端 .get('course').get('value') 取值；雙斷言 raw_key≠canonical 仍對位 + 三欄 dict 杜 bare string 退化〕+ test_slide_pipeline assertions 檢查；僅兩測試檔；不自發 commit）
   - `2026-06-11_META-NORM_C5_run_提示詞.md` — C5 Run（Frontend Generic Renderer：web_server +GET /api/meta-fields〔唯讀回 MetaField label/sort_weight〕+ static/index.html CSS .paper-dynamic-meta + window.metaFields 快取〔seed 離線兜底〕+ renderTitleHeader 遍歷非排除集〔BS2〕→ label 顯示 → sort_weight/字母序〔BS7〕渲染標題下方；飛輪產物首次前端顯示；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C4_run_提示詞.md` — C4 Run（Subtitle：`_VISION_PROMPT` schema +subtitle 欄 + run_phase1 units 收 subtitle + page_key/section_summaries fallback〔title 空用 subtitle〕+ `_translate_pages_parallel` 翻 subtitle + `_page_source_md`/`_deliver` 渲染 `### {subtitle}`〔EN/ZH〕；解 D 小標題；2 測試；僅兩檔；不自發 commit）

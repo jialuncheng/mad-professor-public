@@ -25,6 +25,23 @@
 > **版控先例**：兩真理源本體長駐 baton 不入版控、.bak 入 archive 作審計（195e12b）；sop 檔皆 tracked 正常入庫。
 > **銜接**：下一步開 PIPE-VISUAL plan（SPEC §1.3.1 Vision 共用規格直接引用；其 plan 核心 OQ＝P3 Bypass 或逐 section、Q6 刻意保留給它）。
 
+### BE-Refactor META-NORM 封面元數據自癒飛輪與動態欄位登記（PIPE 共用真理源家族第 4 員·解 PIPE-SLIDES C+D）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Schema & Flag：`MetaField`/`MetaFieldAlias` 兩表〔繼承 Domains 範式、PK/Unique+FK CASCADE+sort_weight〕+ `LLM_USE_META_NORM`(False) + db.py seed 6 欄〔on_conflict 冪等+session.begin〕；3 測試 | `ae407ef` |
+| C2 | MetaNormalizer 自癒飛輪：三路分流〔reserved 映合約標記不入庫不問 LLM·BS1 / 泛用詞黑名單不快取每次 LLM·Q9 / 非黑名單快取查→LLM 比對既有 canonical→on_conflict 註冊+label 提案·BS4〕+ temp=0 保守比對·Q2 + LLM 交易外 + 旗標閘門 + try/except 降級；5 測試 | `6dd48f8` |
+| C3 | P1 Wire：`_COVER_PROMPT` 開放 metadata 抽取+封面判定放寬 + run_phase1 旗標 on 呼 normalize_fields→reserved 回填合約不入旁路 + canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 + return 補 venue/doi；2 測試 | `6c37a1d` |
+| C4 | Subtitle：`_VISION_PROMPT` +subtitle 欄 + units 收 + `_key_title` fallback〔title 空用 subtitle 防 key 漂移〕+ 並行翻譯 4-tuple + EN/ZH 渲染 `### {subtitle}`〔解 D〕；2 測試 | `dedd915` |
+| C5 | Frontend Generic Renderer：web_server +GET /api/meta-fields〔唯讀〕+ static/index.html 通用 key-value 渲染器〔window.metaFields seed 兜底+fetch、renderTitleHeader 遍歷非排除集·BS2 + sort_weight/字母序·BS7〕；飛輪 end-to-end 貫通 | `d2a3db2` |
+| C6 | Tests：`test_c6_key_changing_integration`〔§7.2：P1 自提『課程』→飛輪 course→消費端取值；接縫不變式 raw≠canonical 對位 + 三欄 dict 杜退化 + alias 寫回〕+ test_slide assertions 審視；45 passed、全套件 601 passed | `6bb440e` |
+| C7 | checkout 收官：Conformance 全維度全綠〔U1-U9+U*.1 / §6 C1-C6 測試 / §7.2 整合存在且通過·免豁免 / 不可動 / 提示詞 9 份 / msg 6 份〕+ baton 一次性歸檔〔plan/tasks/C1-C7 報告〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`（v1.2、八 OQ+Q9/Q10 全定案、BS1-BS7 收編）
+> **動因**：PIPE-SLIDES 學術簡報實測（Ch37_Plant-Nutrition）暴露 C（封面課程/講師未進結構化 Meta）+ D（小標題塞正文）；baron 構想「LLM 開放抽取 + 二次 LLM 比對既有欄統一」＝DOMAIN-NORM 知識飛輪搬到 metadata 欄名。
+> **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
+> **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-2 — alt 破圖 / 母片重複日期 / F4 條列鬆散（B+E+F）
 
 | Commit | 內容 | Hash |
@@ -743,17 +760,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **META-NORM 封面元數據自癒飛輪與動態欄位登記**（`.claude-logs/baton/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`〔v1.2、八 OQ+Q9/Q10 全定案、BS1-7〕；tasks 已產；解 PIPE-SLIDES 實測 C+D；PIPE 共用真理源家族第 4 員）
-  - [x] ✅ C1 — Schema & Flag（登記表與旗標）MetaField/MetaFieldAlias 兩表〔繼承 Domains 範式、PK+FK CASCADE+sort_weight〕+ `LLM_USE_META_NORM`(False) + db.py seed 6 欄〔on_conflict 冪等+session.begin〕+ 3 測試〔schema/seed 冪等/FK CASCADE〕；全套件 591 passed `ae407ef`
-  - [x] ✅ C2 — MetaNormalizer Flywheel（自癒飛輪）`processor/meta_normalizer.py` 三路分流〔reserved 映合約標記不入庫不問 LLM·BS1 / 泛用詞黑名單不快取每次 LLM·Q9 / 非黑名單快取查→LLM 比對既有 canonical→on_conflict 註冊+label 提案·BS4〕+ temp=0 保守比對·Q2 + LLM 交易外 + 旗標閘門 + try/except 降級 logger.error(exc_info)；5 測試、全套件 596 passed `6dd48f8`
-  - [x] ✅ C3 — P1 Wire（開放抽取與封面放寬接線）`_COVER_PROMPT` 追加開放 metadata 抽取+封面放寬〔容主視覺圖學術封面〕+ run_phase1 旗標 on 呼 normalize_fields→reserved 回填合約不入旁路 + 其餘 canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 company/date + return 補 venue/doi；2 測試、全套件 598 passed `6c37a1d`
-  - [x] ✅ C4 — Subtitle（小標題結構化）`_VISION_PROMPT` +subtitle 欄 + units 收 + `_key_title` fallback〔title 空用 subtitle 防 key 漂移〕+ 並行翻譯 4-tuple + `_page_source_md`/`_deliver` 渲染 `### {subtitle}`〔EN/ZH〕；2 測試、全套件 600 passed `dedd915`
-  - [x] ✅ C5 — Frontend Generic Renderer（前端通用渲染）web_server +GET /api/meta-fields〔唯讀〕+ static/index.html 通用 key-value 渲染器〔window.metaFields seed 兜底+fetch、renderTitleHeader 遍歷非排除集·BS2 + sort_weight/字母序·BS7、追加標題下方〕；飛輪 end-to-end 貫通；全套件 600 passed `d2a3db2`
-  - [x] ✅ C6 — Tests（測試補全·業務碼零改）`test_c6_key_changing_integration`〔P1 自提『課程』→飛輪 course→消費端 .get('course').get('value')；三斷言：接縫不變式 raw≠canonical 對位 + 三欄 dict 杜退化 + alias 寫回〕+ test_slide assertions 審視；45 passed、全套件 601 passed `待 baron 回填`
-  - [/] 🟡 WIP: checkout — 收官與文件歸檔（Conformance + 母 plan 登記 + baton 一次性歸檔）
-  - 工時：7 個 commits；依賴：無（飛輪範式繼承 DOMAIN-NORM/GLOSSARY-CORE）
-  - ⚠️ schema 新增 2 表（baron §1.6 已點頭）；旗標 `LLM_USE_META_NORM` 預設 False 線上 0 風險；Vision schema 改（C3/C4）→ slides golden 重捕；綜效：餵養 CHAT-STRUCT-1
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1051,6 +1057,9 @@
 
 ### TRANSLATOR (✅ 已完成·PIPE 共用真理源之三)
 - ✅ ~~TRANSLATOR 雙模式原子翻譯器~~（已落地、C1 `1558f79` + C2 `27db830` + C3 `11ea52a` + C4 `2ebda03` + C5 收官；processor/translator.py InjectionContext〔7 欄〕/TranslateMode/Translator〔Prompt Engine 五步 + 雙模式路由 + U4 兜底〕+ contracts GlossaryReadySpec 補 domain_name + client thinking_config 受控擴充〔§4 唯一例外、前向相容〕+ caption 提示詞 + 8 pytest；消費 DomainNormalizer/GlossaryManager；三大真理源全數就緒；plan v10 八輪 review 定稿）
+
+### META-NORM (✅ 已完成·PIPE 共用真理源家族第 4 員)
+- ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
 - ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）
