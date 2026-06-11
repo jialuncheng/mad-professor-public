@@ -8,7 +8,8 @@
 ## 依任務分類
 
 ### META-NORM 系列
-- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C2·BE-Refactor·解 PIPE-SLIDES C+D）**
+- 🔵 **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C3·BE-Refactor·解 PIPE-SLIDES C+D）**
+  - `2026-06-11_META-NORM_C3_run_提示詞.md` — C3 Run（P1 Wire：`_COVER_PROMPT` 追加開放 metadata 抽取〔保留 company/date/authors〕+ run_phase1 旗標 on 呼 MetaNormalizer.normalize_fields → pop reserved〔title/authors/venue/doi〕回填合約 + 其餘 canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 + IngestionMetadataSpec 補 venue/doi；2 測試；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C2_run_提示詞.md` — C2 Run（MetaNormalizer Flywheel：新建 `processor/meta_normalizer.py` 繼承 DomainNormalizer 範式；reserved 映射不入庫〔BS1〕+ GENERIC_KEYS 黑名單不快取〔Q9〕+ _cache_lookup/_llm_classify〔temp=0 交易外〕/_register_and_cache〔session.begin on_conflict 註冊+label 提案 BS4〕+ normalize_fields 三路分流 + try/except 降級 + 旗標閘門；4 測試；僅兩檔；不自發 commit）
   - `2026-06-11_META-NORM_C1_run_提示詞.md` — C1 Run（Schema & Flag：models +MetaField/MetaFieldAlias 兩表〔PK/Unique+FK CASCADE+sort_weight、繼承 Domains 範式〕+ settings `LLM_USE_META_NORM`(False) + db.py init_db seed 6 欄〔course/instructor/organization/date/venue/doi、sqlite_insert on_conflict_do_nothing + session.begin 交易安全〕+ 新建 tests/test_meta_norm.py 表結構/種子驗證；僅四檔；3 .bak；不自發 commit）
   - `2026-06-11_META-NORM_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.2 八 OQ+Q9/Q10 全定案、BS1-7〕拆 commit：MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪 + P1 開放抽取/封面放寬接線 + subtitle + 前端通用渲染 + 測試；末 commit checkout 收官；schema 新增 2 表）

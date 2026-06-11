@@ -745,9 +745,9 @@
 
 - 🟡 **META-NORM 封面元數據自癒飛輪與動態欄位登記**（`.claude-logs/baton/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`〔v1.2、八 OQ+Q9/Q10 全定案、BS1-7〕；tasks 已產；解 PIPE-SLIDES 實測 C+D；PIPE 共用真理源家族第 4 員）
   - [x] ✅ C1 — Schema & Flag（登記表與旗標）MetaField/MetaFieldAlias 兩表〔繼承 Domains 範式、PK+FK CASCADE+sort_weight〕+ `LLM_USE_META_NORM`(False) + db.py seed 6 欄〔on_conflict 冪等+session.begin〕+ 3 測試〔schema/seed 冪等/FK CASCADE〕；全套件 591 passed `ae407ef`
-  - [x] ✅ C2 — MetaNormalizer Flywheel（自癒飛輪）`processor/meta_normalizer.py` 三路分流〔reserved 映合約標記不入庫不問 LLM·BS1 / 泛用詞黑名單不快取每次 LLM·Q9 / 非黑名單快取查→LLM 比對既有 canonical→on_conflict 註冊+label 提案·BS4〕+ temp=0 保守比對·Q2 + LLM 交易外 + 旗標閘門 + try/except 降級 logger.error(exc_info)；5 測試、全套件 596 passed `待 baron 回填`
-  - [/] 🟡 WIP: C3 — P1 Wire（開放抽取與封面放寬接線）cover prompt 開放抽取 + 封面判定放寬 + normalize→raw_metadata 三欄 dict〔HOTFIX-1b 契約〕+ reserved 回填合約
-  - [ ] ⬜ 未開始: C4 — Subtitle（小標題結構化）Vision schema +subtitle + P3 `### {subtitle}` 渲染〔D〕
+  - [x] ✅ C2 — MetaNormalizer Flywheel（自癒飛輪）`processor/meta_normalizer.py` 三路分流〔reserved 映合約標記不入庫不問 LLM·BS1 / 泛用詞黑名單不快取每次 LLM·Q9 / 非黑名單快取查→LLM 比對既有 canonical→on_conflict 註冊+label 提案·BS4〕+ temp=0 保守比對·Q2 + LLM 交易外 + 旗標閘門 + try/except 降級 logger.error(exc_info)；5 測試、全套件 596 passed `6dd48f8`
+  - [x] ✅ C3 — P1 Wire（開放抽取與封面放寬接線）`_COVER_PROMPT` 追加開放 metadata 抽取+封面放寬〔容主視覺圖學術封面〕+ run_phase1 旗標 on 呼 normalize_fields→reserved 回填合約不入旁路 + 其餘 canonical 三欄 dict 寫旁路〔HOTFIX-1b 契約〕、旗標 off 退寫死 company/date + return 補 venue/doi；2 測試、全套件 598 passed `待 baron 回填`
+  - [/] 🟡 WIP: C4 — Subtitle（小標題結構化）Vision schema +subtitle + P3 `### {subtitle}` 渲染〔D〕
   - [ ] ⬜ 未開始: C5 — Frontend Generic Renderer（前端通用渲染）通用 key-value + 排除集〔BS2〕+ 排序〔BS7〕
   - [ ] ⬜ 未開始: C6 — Tests（測試補全）飛輪單元 + **§7.2 key-changing 整合** + 三欄 dict 契約
   - [ ] ⬜ 未開始: checkout — 收官與文件歸檔（Conformance + 母 plan 登記 + baton 一次性歸檔）

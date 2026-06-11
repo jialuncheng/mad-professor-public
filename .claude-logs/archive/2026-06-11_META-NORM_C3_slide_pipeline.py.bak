@@ -58,17 +58,11 @@ _VISION_PROMPT = """你是簡報忠實轉錄器。請將這一頁簡報的內容
 {"title": "", "markdown_content": "", "figure_description": ""}"""
 
 # 第 1 頁追加封面判定欄（U2）。
-# === [META-NORM C3 START] === 封面 prompt 改開放抽取 + 判定放寬（容主視覺圖之學術封面·U6）
 _COVER_PROMPT = _VISION_PROMPT + """
-此外這是文件第一頁，請追加判定它是否為「封面頁」（標題頁：大標題 + 作者/課程/機構/日期等
-識別資訊；**即使含一張主視覺圖或示意圖、只要具備上述標題頁特徵仍判為封面**）：
+此外這是文件第一頁，請追加判定它是否為「封面頁」（標題頁：大標題+作者/公司/日期、無正文內容）：
 {"title": "", "markdown_content": "", "figure_description": "", "is_cover": true|false,
- "cover": {"title": "", "company": "", "date": "", "authors": [],
-           "metadata": {"欄名": "值"}}}
-其中 cover.metadata 為**開放式鍵值對**：請自由列出你在封面上識別到的所有額外 metadata
-（如 課程/課程代碼、講師、機構、發表期刊、DOI、日期、版本等；欄名可中可英、依封面實際標示）。
-company/date/authors 維持既有欄位填寫（向後相容）；無對應則留空。非封面時 is_cover=false 且各欄空。"""
-# === [META-NORM C3 END] ===
+ "cover": {"title": "", "company": "", "date": "", "authors": []}}
+非封面時 is_cover=false 且 cover 各欄空。"""
 # === [PIPE-SLIDES C2 END] ===
 
 # === [PIPE-SLIDES C3 START] P2 六步常數 ===
@@ -182,51 +176,17 @@ class SlidePipeline(DocumentStrategy):
         # ⑤ U2 封面判定 → title / raw_metadata 旁路；非封面 → title fallback 檔名
         title = Path(ctx.pdf_path).stem
         authors: list = []
-        # === [META-NORM C3 START] === 凍結合約欄（venue/doi）由 reserved 回填、預設 None
-        venue = None
-        doi = None
-        # === [META-NORM C3 END] ===
         if units and units[0]["is_cover"]:
             cover = (results[0] or {}).get("cover") or {}
             if (cover.get("title") or "").strip():
                 title = cover["title"].strip()
             authors = [a for a in (cover.get("authors") or []) if isinstance(a, str) and a.strip()]
-            # === [META-NORM C3 START] === 開放抽取 + 自癒飛輪對齊（旗標 on）；off 退寫死路徑
-            import settings
-            if settings.LLM_USE_META_NORM:
-                from processor import meta_normalizer
-                raw_meta = dict(cover.get("metadata") or {})
-                # 既有 company/date 併入開放抽取池（飛輪統一收斂、避免漏抓）
-                for k, src in (("company", cover.get("company")), ("date", cover.get("date"))):
-                    if (src or "").strip() and k not in raw_meta:
-                        raw_meta[k] = src.strip()
-                normalized = meta_normalizer.normalize_fields(raw_meta, context=title)
-                # reserved 回填凍結合約（不入旁路·U7.1/BS1）
-                _RP = "__reserved__:"
-                rt = normalized.pop(f"{_RP}title", None)
-                if (rt or "").strip():
-                    title = rt.strip()
-                ra = normalized.pop(f"{_RP}authors", None)
-                if ra:
-                    authors = ra if isinstance(ra, list) else re.split(r"[,;，；\n]+", ra)
-                    authors = [a.strip() for a in authors if a and a.strip()]
-                venue = (normalized.pop(f"{_RP}venue", None) or "").strip() or None
-                doi = (normalized.pop(f"{_RP}doi", None) or "").strip() or None
-                # 其餘 canonical 欄 → 三欄 dict 旁路（HOTFIX-1b 契約·U7）
-                for ckey, cval in normalized.items():
-                    if (cval or "").strip():
-                        ctx.raw_metadata[ckey] = {
-                            "value": cval.strip(), "source": "meta_normalizer",
-                            "confidence": "high"}
-            else:
-                # 旗標 off：原寫死路徑（向後相容）
-                ctx.raw_metadata.update({
-                    k: v for k, v in (
-                        ("company", (cover.get("company") or "").strip()),
-                        ("date", (cover.get("date") or "").strip()),
-                    ) if v
-                })
-            # === [META-NORM C3 END] ===
+            ctx.raw_metadata.update({
+                k: v for k, v in (
+                    ("company", (cover.get("company") or "").strip()),
+                    ("date", (cover.get("date") or "").strip()),
+                ) if v
+            })
         else:
             logger.info("[PIPE-SLIDES P1] %s 無封面、title fallback 檔名", ctx.paper_id)
 
@@ -248,8 +208,6 @@ class SlidePipeline(DocumentStrategy):
         )
         return IngestionMetadataSpec(
             title=title, authors=authors, source_lang=source_lang, tiles=units,
-            # === [META-NORM C3] === reserved 回填之 venue/doi（旗標 off 時為 None、向後相容）
-            venue=venue, doi=doi,
         )
 
     # ── P1 私有群 ──
