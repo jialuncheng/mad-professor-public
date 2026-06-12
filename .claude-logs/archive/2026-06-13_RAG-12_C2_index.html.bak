@@ -911,15 +911,6 @@
     max-width: 100%;
     height: auto;
   }
-  /* === [RAG-12 C2] === KaTeX 顯示式：收斂預設 1em margin（避撞 slides tight list）、
-     overflow-x 防超長式撐破中欄、padding 防橫向 scrollbar 切下標尾巴（plan_v7 §2-9） */
-  #paper-content .katex-display {
-    margin: var(--space-2) 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 4px 0;
-  }
-  /* === [RAG-12 C2 END] === */
   #paper-content .figure { /* margin 由主題覆寫 */ }
   #paper-content .figure .ph {
     width: 100%;
@@ -1586,51 +1577,6 @@
       renderer() { return ''; }
     }]
   });
-
-  // === [RAG-12 C2 START] === 核心數學渲染管線（三階段順序佔位 + 自託管 KaTeX）
-  // 依 plan_v7 §2.1 七步 + §2-5 無 lookbehind texmath 正則 + 步驟 7 ESC 還原。
-  // 佔位符鐵律：math 佔位**穿透 marked.parse**，故不可用 `__x__`（marked GFM 雙底線→<strong>，
-  //   實測 `__MATH_PLACEHOLDER_0__`→`<strong>...`、步驟 7 撈不到）→ 改用 Unicode PUA 哨兵
-  //   `{idx}`（不可見、零 markdown 語意、零撞內容；marked block/inline 皆原樣穿透）。
-  //   code/ESC 佔位於步驟 5（marked.parse 前）即還原、不穿透 marked，故維持 `__x__` 可。
-  function renderMarkdownWithMath(raw) {
-    if (raw == null) raw = '';
-    const MO = '\uE000', MC = '\uE001';     // math 佔位哨兵（Unicode PUA、marked 原樣穿透）
-    const codeBlocks = [], mathBlocks = [];
-    let t = String(raw);
-    // 1. 抽 code（fenced + inline）→ 佔位（步驟 5 還原、不穿透 marked）
-    t = t.replace(/(```[\s\S]*?```|`[^`\n]+?`)/g, function (m) {
-      codeBlocks.push(m); return '__CODE_PLACEHOLDER_' + (codeBlocks.length - 1) + '__';
-    });
-    // 2. 護跳脫 \$（split 法、無 lookbehind）→ 使步驟 3/4 之 $ 必為真 math
-    t = t.split('\\$').join('__ESC_DOLLAR__');
-    // 3. 抽 block math（$$ 先於 $；[\s\S] 跨行、不用 dotAll s 旗標）→ PUA 佔位
-    t = t.replace(/\$\$([\s\S]+?)\$\$/g, function (m, f) {
-      mathBlocks.push({ formula: f, displayMode: true }); return MO + (mathBlocks.length - 1) + MC;
-    });
-    // 4. 抽 inline math（texmath：開 $ 後非空白、閉 $ 前非空白且後非數字；僅 lookahead、無 lookbehind）
-    t = t.replace(/\$([^\s$](?:[^$]*?[^\s$])?)\$(?!\d)/g, function (m, f) {
-      mathBlocks.push({ formula: f, displayMode: false }); return MO + (mathBlocks.length - 1) + MC;
-    });
-    // 5. 還原 code 與 \$（僅 tempText；math 仍佔位）
-    t = t.replace(/__CODE_PLACEHOLDER_(\d+)__/g, function (m, i) { return codeBlocks[i]; });
-    t = t.split('__ESC_DOLLAR__').join('\\$');
-    // 6. marked.parse（math PUA 佔位穿透）
-    let html = marked.parse(t);
-    // 7. 回填 math：先還原公式內 __ESC_DOLLAR__→\$（步驟 7 鐵律），再 katex 渲染、壞式優雅降級
-    html = html.replace(new RegExp(MO + '(\\d+)' + MC, 'g'), function (m, i) {
-      const item = mathBlocks[i];
-      if (!item) return m;
-      const clean = item.formula.replace(/__ESC_DOLLAR__/g, '\\$');
-      try {
-        return katex.renderToString(clean, { displayMode: item.displayMode, throwOnError: false });
-      } catch (e) {
-        return '<span class="katex-error" style="color:#cc0000">' + clean + '</span>';
-      }
-    });
-    return html;
-  }
-  // === [RAG-12 C2 END] ===
 
   // ── 三欄收合 toggle ─────────────────────────
   const sidebar = document.getElementById('sidebar');
