@@ -11,6 +11,23 @@
 
 ## ✅ 已完成
 
+### FE-Refactor RAG-12 前端 KaTeX 數學渲染（自託管 KaTeX + 三階段順序佔位）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | 引入自託管 KaTeX 0.16.47 資產與載入（vendor css/js/20 woff2 + fetch 腳本 + vendor README〔SHA〕+ index.html head；零 .py diff、605 passed、未接線） | `013371a` |
+| C2 | 核心渲染管線 `renderMarkdownWithMath` + CSS（三階段順序佔位〔code/`\$`/math〕+ 無 lookbehind texmath 正則 + 步驟7 ESC 還原 + 壞式 `.katex-error` 降級 + `.katex-display` 防禦 CSS;**⚠️ math 佔位改 Unicode PUA 哨兵**〔spike 證 `__MATH__` 被 marked 雙底線咬 `<strong>`〕;端到端 9/9〔真 marked+katex〕、未接線） | `79a8e89` |
+| C3 | 接線六處 marked.parse 消費端（paper L2864 + chat 5 處 → renderMarkdownWithMath;函式內步驟6 marked.parse 保留;grep rMWM=7/marked.parse=1;數學渲染 LIVE） | `0ea0cf8` |
+| C4 | producer 契約 pytest（`tests/test_latex_preservation.py` 4 測試:formula 塊 `$$\tag`/text 行內 `$P_base$`/_preserve_pipe_table/_write_to_md 逐字;鎖 academic A-rail **RestoreProcessor** 不截斷轉義 `$$`/`$`;零業務碼 diff、609 passed） | `a4b4b3f` |
+| C5 | 文件同步（README 前端 vendored 依賴段 + api-integration renderMarkdownWithMath 雙端整合 + dom-reference .katex/.katex-display DOM+CSS+降級;3 .bak、純 .md） | `f3d48eb` |
+| C6 | Checkout 收官：Conformance 五維度全綠〔目標規格 U1-U12 / tasks §6 grep+pytest / 不可動業務碼零 diff / 提示詞 8 份 / msg 完整〕+ §7.2 整合〔producer pytest 4 passed 達成 + consumer 同碼 spike 9/9 實證;真瀏覽器 E2E 列 baron 運維〕+ baton 一次性歸檔〔plan v1-v7/tasks/C1-C6 報告;slide 3c/3d 非本任務留 baton〕+ 執行期 deviation 補註 plan/tasks §99.2 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-12_RAG-12_前端KaTeX數學渲染_plan_v7.md`（七輪 review + 三次 spike 實證、無 lookbehind、步驟7 ESC 還原、Unicode PUA 佔位）
+> **動因**：含真二維 LaTeX（`\frac`/`\mathrm`/`\tag`）之論文（2601 800VDC 資料中心 / byz 拜占庭 / 2412 TradingAgents）前端呈現字面 `$$`/`$` 原始碼、無法二維排版；Unicode 上下標無法表達分數/積分故必須引入渲染引擎。
+> **解法**：自託管 KaTeX 0.16.47（離線/GFW 字型不依賴 CDN）+ 三階段順序佔位整合（code→`\$`→math→還原→marked.parse→KaTeX 回填）；行內 `$` 採 pandoc/texmath 啟發式（開 `$` 後非空白、閉 `$` 後非數字）防貨幣誤渲且不退化 `$i$`/`$3x$`；marked 仍 CDN、不裝 marked-katex-extension。
+> **執行期 deviation（已補註 plan/tasks §99.2）**：① math 佔位 `__MATH__`→Unicode PUA 哨兵（marked 雙底線咬粗體）② producer class `AcademicPipeline`→`RestoreProcessor`（grep 實證、與 plan Q7 一致）。
+> **⚠️ baron 運維（非 commit）**：瀏覽器 E2E（plan §8.3 八項，尤自託管字型 `/static/vendor/katex/fonts/` 200 + `.katex` DOM + slides 公式頁緊排）；數學段落未翻譯（2601 行 65/67/69 英文）屬正交 backlog（academic 路 translator、Q6 另立）。
+
 ### DOC-Refactor PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC
 
 | Commit | 內容 | Hash |
@@ -46,7 +63,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-3b | `static/index.html` base CSS 單 hunk：HOTFIX-3「二：清單縮排」selector 前置 `#paper-content ul, #paper-content ol,`〔`padding-left:1.5em` 不變、含 top-level + 巢狀〕；真因＝L79 全域 reset `ul/ol{padding:0}` 歸零 top-level 縮排、`list-style:outside` 下第一層 bullet marker 溢出到 `#paper-content` 左 padding〔`var(--space-8)`〕外側→凸排（比同頁標題更左），HOTFIX-3 二只補巢狀漏 top-level；**不動 themes**〔四主題 grep 清單 0 命中、縮排=結構歸主檔 principles.md、base 一處含自訂上傳主題受益〕；零 `.py`/零後端/零 RAG；包裹沿用 HOTFIX-3 既有 START/END；grep top-level/巢狀各 1 命中 + themes 仍 0、全套件零 Python diff 維持 605 passed〔僅 .env LOG_FORMAT=json env flake〕 | `待 baron 回填` |
+| HOTFIX-3b | `static/index.html` base CSS 單 hunk：HOTFIX-3「二：清單縮排」selector 前置 `#paper-content ul, #paper-content ol,`〔`padding-left:1.5em` 不變、含 top-level + 巢狀〕；真因＝L79 全域 reset `ul/ol{padding:0}` 歸零 top-level 縮排、`list-style:outside` 下第一層 bullet marker 溢出到 `#paper-content` 左 padding〔`var(--space-8)`〕外側→凸排（比同頁標題更左），HOTFIX-3 二只補巢狀漏 top-level；**不動 themes**〔四主題 grep 清單 0 命中、縮排=結構歸主檔 principles.md、base 一處含自訂上傳主題受益〕；零 `.py`/零後端/零 RAG；包裹沿用 HOTFIX-3 既有 START/END；grep top-level/巢狀各 1 命中 + themes 仍 0、全套件零 Python diff 維持 605 passed〔僅 .env LOG_FORMAT=json env flake〕 | `1b8b939` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3b_hotfix.md`
 > **真因**：`static/index.html:79` 全域 reset `body,...,ul{margin:0;padding:0}` 把 top-level `ul/ol` padding 歸零 + `list-style:outside` → 第一層 bullet 凸排；HOTFIX-3「二」selector 只涵蓋 `ul ul/ol ol/ul ol/ol ul`（巢狀）、漏第一層 `#paper-content ul/ol`。
@@ -810,10 +827,6 @@
   - 工時：待 plan 評估（預估 1-2 commits）
   - 依賴：無
 
-- ⬜ **RAG-12 LaTeX KaTeX 渲染支援**（Bug 9、需獨立 plan 評估）
-  - 問題：論文 / 履歷中的 LaTeX 數學公式無法在前端正確渲染（需引入 KaTeX CDN）
-  - 工時：待 plan 評估（預估 1 commit）
-  - 依賴：無
 
 ### 🟡 中優先
 
@@ -1004,7 +1017,7 @@
 - RAG-6 docs（低）
 - 🔵 RAG-10 中文 Header meta block 軟換行渲染 bug（候選、修法 ~5 行、user-facing 排版）
 - ⬜ RAG-11 reload SSE 還原（高、需獨立 plan）
-- ⬜ RAG-12 LaTeX KaTeX 渲染支援（高、需獨立 plan）
+- ✅ ~~RAG-12 LaTeX KaTeX 渲染支援~~（已落地、自託管 KaTeX 0.16.47 + 三階段順序佔位、C1-C6 收官）
 - ⚙️ ~~RAG-2 backfill CLI~~（合併到 MODEL-8、見 MODEL 區）
 - ✅ ~~RAG-7 doc_analyzer 切 section~~（已落地、拆 RAG-7a `e2ed0e4` + RAG-7b `5c182cf`）
 - ✅ ~~RAG-8 md_restore / translate table 渲染 bug~~ `230ca13`
