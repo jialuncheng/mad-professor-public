@@ -6,10 +6,6 @@
 <!-- 簡單 SVG favicon：三條橫線（漢堡圖示，呼應介面 icon 系統） -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-<!-- === [RAG-12 C1] === 自託管 KaTeX 0.16.47（前端數學渲染、離線/GFW；接線見 RAG-12 C2/C3） -->
-<link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-<script src="/static/vendor/katex/katex.min.js"></script>
-<!-- === [RAG-12 C1 END] === -->
 <style>
   :root {
     /* ──────────────────────────────────────────────

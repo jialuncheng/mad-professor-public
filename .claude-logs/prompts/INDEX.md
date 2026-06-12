@@ -20,6 +20,7 @@
   - `2026-06-11_META-NORM_plan_提示詞.md` — plan（baron 構想：LLM 開放抽取封面 meta + 第二次 LLM 比對既有欄位統一＝DOMAIN-NORM 飛輪搬到 metadata 欄名；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 三步飛輪 + P1 開放抽取/封面判定放寬 + subtitle〔D〕併入 + 前端通用 key-value 渲染；§9 八 OQ；A 撤案、B/E/F 歸 HOTFIX-2；不寫碼純規格）
 
 ### PIPE-SLIDES 系列
+  - `2026-06-12_PIPE-SLIDES-HOTFIX-3d_doc_提示詞.md` — HOTFIX-3d 文件產出（B 軌 vs 原稿比對後修 #2：行內 `**X**`→`<strong>`〔解 CJK 緊貼 `**` 未渲染粗體〕+ 剝除整行裸 URL〔解 p6/18/27/35 破版〕；slide 渲染層、RAG 旁路不碰；baton 暫存待 Run）
   - `2026-06-12_PIPE-SLIDES-HOTFIX-3b_HOTFIX-3b_run_提示詞.md` — HOTFIX-3b Run（top-level 清單凸排修補執行：HOTFIX-3 二 selector 前置 `#paper-content ul/ol`；備份+grep+pytest 驗收；TODO 標 ✅ + hash 自癒 + baton 移出歸檔）
   - `2026-06-12_PIPE-SLIDES-HOTFIX-3b_doc_提示詞.md` — HOTFIX-3b 文件產出（top-level bullet 凸排：index.html L79 全域 reset 歸零 ul/ol padding、HOTFIX-3 二只修巢狀；base 一處把 list-indent 規則擴含 top-level `#paper-content ul/ol`；不動 themes〔主題 0 命中 list、結構歸主檔〕；baton 暫存待 Run）
 
@@ -252,6 +253,10 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
+  - `2026-06-13_RAG-12_C1_run_提示詞.md` — RAG-12 C1 Run（引入自託管 KaTeX 0.16.47 資產：vendor/katex css/js/字型 + fetch 腳本 + vendor README + index.html head 載入；備份+grep+pytest；TODO C1✅/C2 WIP + hash 自癒；baton 報告暫存）
+  - `2026-06-13_RAG-12_Tasks_提示詞.md` — RAG-12 Tasks 拆分（依 plan_v7 拆 Commit：自託管 KaTeX 資產/正則核心/視圖+Chat 注入/驗證；§0.5 成果盤點 + §8 六維度表 + TODO 同步；baton 暫存待 Run）
+  - `2026-06-12_RAG-12_plan_提示詞.md` — RAG-12 plan 產出（前端 KaTeX 數學渲染：marked-katex-extension + 自託管 KaTeX；解 `$$`/`$` loose inline 跨行真二維公式；FE-Refactor、含套件安裝檔與文件更新；baton 暫存待 plan review）
+  - `2026-06-12_RAG-12_plan_提示詞.md` — RAG-12 plan（前端 KaTeX 數學渲染：marked-katex-extension + 自託管 KaTeX；勘查確認 delimiter＝loose inline `$$` 跨軟換行 + inline `$`、token 怪空格無害；附帶發現含數學段落 zh 未翻譯另立任務）
 - ✅ **RAG-MULTI-1 跨文件多篇檢索覆蓋與引用修正（2026-06-09 plan v3 → Tasks → C1-C4 → C5 Checkout 收官·BE-Refactor）**
   - `2026-06-09_RAG-MULTI-1_Check_提示詞.md` — Check（C5 Checkout 收官：Conformance 三維度〔plan v3 §2 U1-U7 / tasks §6 grep+pytest〔C4 11 測試、全套件 546 passed〕/ 不可動清單〕+ 提示詞稽核 + msg 完整性 → 全綠後 TODO 結案〔C1 `5b9477a`/C2 `82b95b1`/C3 `b5f9ce4`/C4-C5 + 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C4 報告→executions/〕+ C5 報告直寫 executions/；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；RAG-MULTI-1 全案結案、根治全域 top-k 飢餓）
   - `2026-06-09_RAG-MULTI-1_C4_run_提示詞.md` — C4 Run（新建 `tests/test_rag_multi.py`〔檔頭 `# === [RAG-MULTI-1 C4] ===`〕mock vector store 確定化分數、**不 mock retrieve_multi 本體**、11 測試：per_paper_floor / 不足全拿 / 小 N 不暴漲〔floor=2 非 5〕/ cap 不超 / N>cap 最高分截斷 / 補位排除已保底 / 0 候選跳過 / cap override / 混型 book 100 chunk 不壓 resume / 單篇路徑不變 / 提示詞禁 [N]；純新建無 .bak；**嚴禁為過測試改業務碼〔測不符停下回報〕**；SOP+pytest 11 全綠+全套件；執行報告暫存 baton 不入 git、C5 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit）
