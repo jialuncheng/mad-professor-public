@@ -2861,7 +2861,7 @@ async function fetchContent(paperId, lang) {
     `![$1](/api/papers/${paperId}/images/$2)`
   );
 
-  document.getElementById('paper-content').innerHTML = renderMarkdownWithMath(content); // [RAG-12 C3] 數學渲染接線
+  document.getElementById('paper-content').innerHTML = marked.parse(content);
   normalizeAcademicHeader(); // FE-AESTHETICS HOTFIX-1：學術扉頁自癒
 }
 
@@ -3074,7 +3074,7 @@ async function loadChatHistory(paperId) {
       } else {
         div.className = 'msg-ai';
         const formatted = msg.content.replace(/\n(?!\n)/g, '\n\n');
-        div.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+        div.innerHTML = marked.parse(formatted);
         if (msg.grounding_sources && msg.grounding_sources.length > 0) {
           div.dataset.groundingSources = JSON.stringify(msg.grounding_sources);
           renderSources(div, msg.grounding_sources);
@@ -3094,7 +3094,7 @@ async function loadChatHistory(paperId) {
       aiMsg.className = 'msg-ai';
       const partial = in_progress.partial || '';
       const formatted = partial.replace(/\n(?!\n)/g, '\n\n');
-      aiMsg.innerHTML = renderMarkdownWithMath(formatted || ''); // [RAG-12 C3] 數學渲染接線
+      aiMsg.innerHTML = marked.parse(formatted || '');
       const cursor = document.createElement('span');
       cursor.textContent = '▋';
       cursor.className = 'cursor-blink';
@@ -3163,7 +3163,7 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
       if (chunk.sentence) {
         removeCursor();
         const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-        aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+        aiMsg.innerHTML = marked.parse(formatted);
         appendCursor();
         const msgsEl = document.getElementById('chat-messages');
         msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -3172,7 +3172,7 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
       if (chunk.done) {
         removeCursor();
         const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-        aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+        aiMsg.innerHTML = marked.parse(formatted);
         if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
           aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
           renderSources(aiMsg, chunk.grounding_sources);
@@ -3480,7 +3480,7 @@ async function sendMessage() {
             accumulated += chunk.sentence;
             // 把單換行轉成 Markdown 段落（兩個換行）
             const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-            aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+            aiMsg.innerHTML = marked.parse(formatted);
             messages.scrollTop = messages.scrollHeight;
           }
           if (chunk.done) {

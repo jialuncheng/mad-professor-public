@@ -253,6 +253,7 @@
   - `2026-05-27_WORKFLOW-2_Check_提示詞.md` — Check（5 維度 Conformance 驗收 + INDEX 幽靈自癒 + baton 全歸檔收官）
 
 ### RAG 系列
+  - `2026-06-13_RAG-12_C3_run_提示詞.md` — RAG-12 C3 Run（接線六處 marked.parse → renderMarkdownWithMath：paper L2806 + chat 5 處；保留函式內步驟6 marked.parse；grep 驗 renderMarkdownWithMath=7/marked.parse=1；TODO C3✅/C4 WIP）
   - `2026-06-13_RAG-12_C2_run_提示詞.md` — RAG-12 C2 Run（核心渲染管線 renderMarkdownWithMath：三階段順序佔位 + 無 lookbehind texmath 正則 + 步驟7 ESC 還原 + .katex-display CSS；僅定義不接線；grep+備份；TODO C2✅/C3 WIP）
   - `2026-06-13_RAG-12_C1_run_提示詞.md` — RAG-12 C1 Run（引入自託管 KaTeX 0.16.47 資產：vendor/katex css/js/字型 + fetch 腳本 + vendor README + index.html head 載入；備份+grep+pytest；TODO C1✅/C2 WIP + hash 自癒；baton 報告暫存）
   - `2026-06-13_RAG-12_Tasks_提示詞.md` — RAG-12 Tasks 拆分（依 plan_v7 拆 Commit：自託管 KaTeX 資產/正則核心/視圖+Chat 注入/驗證；§0.5 成果盤點 + §8 六維度表 + TODO 同步；baton 暫存待 Run）
