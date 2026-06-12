@@ -59,6 +59,17 @@
 > **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
 > **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
 
+### BE-Hotfix PIPE-SLIDES-HOTFIX-3c — 簡報「標題+重點」節奏正規化（保留原始符號·硬換行收緊）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-3c | `pipelines/slide_pipeline.py` 新增私有 `_tighten_point_groups`〔① 連續行首箭頭 `→`/`->` 合併單一段落 + 兩空格硬換行〔`<br>`〕→ tight 群、**箭頭原樣保留為文字不轉 bullet**、群內空行跳過、孤行不變、行中箭頭（連接詞）不碰；② `- * + • / 數字.` 相鄰清單項空行收緊 loose→tight、清單↔標題/圖/段落邊界留白；`\r?` 相容 CRLF〕+ `_page_source_md`/`_deliver` 渲染 body **殿後注入**〔於 `_promote_subheadings`+`_normalize_paragraph_breaks` 之後、硬換行不被 normalize 單 `\n`→`\n\n` 拆回段落〕;真因＝Vision 對「標題+重點群」每頁吐不同結構〔頁 A `*` loose list 母項下大縫·子項貼母項 / 頁 B `###`+`→` 散段落標題貼首項·項目散〕、CSS 對 loose `<p>`/tight `<li>`/散段落給不同 margin → 每頁節奏不一;**RAG 零影響**〔`rag_sections` content＝原始 `zh_content`〔merged L929〕、未套 tighten;slides RAG 走 `ctx.rag_sections` 旁路、不從 final_zh 切〕;零後端/DB/models/static/其餘四路改動;SOP logging+database 皆無命中（合規）;helper grep 3 命中 + HOTFIX-3c 4 命中 + merged 仍原始;9 新 pytest〔箭頭硬換行群/群內空行/行中不碰/孤行不變/loose 收緊/邊界留白/CRLF/RAG 隔離〔真 P3〕/頁 B 端到端〕、slide 49 passed、全套件 618 passed | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3c_hotfix.md`（v3、保 `→` 硬換行版；四輪對話收斂——白名單→texmath 否決→保符號硬換行）
+> **動因**：META-NORM/HOTFIX-3 後 baron 掃 `植物營養 (Plant Nutrition) (測試).pdf` 40 頁 + 比對原稿 `Ch37`，發現「標題+重點」兩頁兩種不一致節奏（頁 A 土壤顆粒清單 loose / 頁 B 氮素形態 `→` 散段落）；baron 拍板「保 `→` 原始符號、硬換行收緊」（非轉 bullet、非 CSS 全域 margin 滲論文）。
+> **⚠️ golden**：改 B 軌 final_zh 渲染（箭頭群硬換行 + `*` 收緊）→ slides golden 併既有批次〔HOTFIX-1/1b/2/3/3b + META-NORM C3/C4 + 本 3c〕一次首捕。
+> **⚠️ baron E2E**：影子重傳 Ch37 → 頁 B `NH₄⁺` 標題下三點均勻緊湊群、`→` 原樣保留、群間留白；頁 A 母項/子項節奏均勻、`•` 保留；行中箭頭句維持段落。
+
 ### FE-Hotfix PIPE-SLIDES-HOTFIX-3b — top-level 清單凸排修補（HOTFIX-3 二補完）
 
 | Commit | 內容 | Hash |
@@ -1098,6 +1109,7 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
+- ✅ ~~PIPE-SLIDES-HOTFIX-3c 簡報「標題+重點」節奏正規化（保留原始符號·硬換行收緊）~~（已落地；`pipelines/slide_pipeline.py` 新增 `_tighten_point_groups`〔連續行首箭頭合併硬換行〔保 `→`、不轉 bullet〕+ 相鄰清單 loose→tight〕殿後注入 `_page_source_md`/`_deliver`；真因＝Vision 每頁吐不同「標題+重點」結構〔頁 A `*` loose / 頁 B `→` 散段落〕節奏不一；RAG 零影響〔merged 取原始 zh_content、未套 tighten〕；零後端/DB/四路；9 新 pytest、全套件 618 passed；⚠️ slides golden 併批次首捕、baron E2E Ch37）
 - ✅ ~~PIPE-SLIDES-HOTFIX-3b top-level 清單凸排修補（HOTFIX-3 二補完）~~（已落地；`static/index.html` base CSS 單 hunk：HOTFIX-3「二」selector 前置 `#paper-content ul/ol`〔top-level〕、`padding-left:1.5em` 不變；真因＝L79 全域 reset 歸零 top-level ul/ol padding、`list-style:outside` 下第一層 bullet 凸排、HOTFIX-3 二只補巢狀；不動 themes〔四主題 grep 0 命中、結構歸主檔、含自訂主題受益〕；零 .py、全套件 605 passed〔僅 env flake〕；⚠️ baron E2E ALi 第一層不凸排+四主題一致+巢狀未退化）
 - ✅ ~~PIPE-SLIDES-HOTFIX-3 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）~~（已落地；一-a 圖在上 + C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線、用主題 divider 變數〕+ A/B/C 升 h3〔非孤兒 h4〕+ 二 base 巢狀縮排；design/docs 設計對齊、RAG 零改；40 測試、全套件 605 passed；⚠️ slides golden 待 fixture 補齊後首捕）
 - ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）

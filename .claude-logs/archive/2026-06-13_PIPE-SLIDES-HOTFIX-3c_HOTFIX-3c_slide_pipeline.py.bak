@@ -752,64 +752,6 @@ class SlidePipeline(DocumentStrategy):
         return "\n".join(out)
     # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
 
-    # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c START] ===
-    @staticmethod
-    def _tighten_point_groups(text: str) -> str:
-        """簡報「標題+重點」節奏正規化（保留原始符號、不轉 bullet）。
-
-        ① 連續『行首箭頭 → / ->』行 → 合併為單一段落、行間兩尾隨空格硬換行（<br>）→ tight 群、
-           箭頭原樣保留為文字；行中箭頭（如「吸收 NH₄⁺ → 釋放 H⁺」連接詞）不碰。
-        ② 『- * + • / 數字.』清單之相鄰項間空行收緊（loose→tight）；清單↔標題/圖/段落 邊界留白。
-
-        殿後於 _normalize_paragraph_breaks（其單 \\n→\\n\\n 不再拆我的硬換行群）。
-        只動渲染 body、不碰 rag_sections（RAG 零影響）。\\r? 相容 CRLF（對齊 _promote_subheadings 風格）。
-        """
-        if not text:
-            return text
-        lines = text.split("\n")
-        ARROW_RE = re.compile(r"^(\s*)(?:→|->)\s+(.+?)\s*\r?$")
-        LIST_RE = re.compile(r"^\s*(?:[-*+•]|\d+[.、])\s+")
-        # ① 合併連續行首箭頭群（群內空行跳過、遇非箭頭非空行斷群）
-        merged = []
-        i, n = 0, len(lines)
-        while i < n:
-            if ARROW_RE.match(lines[i]):
-                group = [lines[i].rstrip("\r")]
-                j = i + 1
-                while j < n:
-                    if ARROW_RE.match(lines[j]):
-                        group.append(lines[j].rstrip("\r"))
-                        j += 1
-                    elif lines[j].strip() == "":
-                        k = j + 1
-                        while k < n and lines[k].strip() == "":
-                            k += 1
-                        if k < n and ARROW_RE.match(lines[k]):
-                            j = k          # 跳過群內空行、續併
-                        else:
-                            break          # 群尾（下一個非空非箭頭）→ 斷
-                    else:
-                        break
-                # ≥2 行才合併硬換行（單行箭頭保持原樣、屬獨立點）
-                merged.append("  \n".join(group) if len(group) >= 2 else group[0])
-                i = j
-            else:
-                merged.append(lines[i])
-                i += 1
-        # ② 相鄰清單項間空行收緊（兩側皆清單才丟、邊界留白）
-        out, m = [], len(merged)
-        for idx, line in enumerate(merged):
-            if line.strip() == "":
-                prev = next((merged[p] for p in range(idx - 1, -1, -1)
-                             if merged[p].strip()), "")
-                nxt = next((merged[q] for q in range(idx + 1, m)
-                            if merged[q].strip()), "")
-                if LIST_RE.match(prev) and LIST_RE.match(nxt):
-                    continue   # 兩側皆清單 → 丟此空行（tight）
-            out.append(line)
-        return "\n".join(out)
-    # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c END] ===
-
     @staticmethod
     def _page_source_md(u: dict) -> str:
         """單頁原文 markdown（en 版還原與整檔 fallback 共用；alt=原文 description、單點呈現）。"""
@@ -824,10 +766,7 @@ class SlidePipeline(DocumentStrategy):
         if (u.get("content") or "").strip():
             # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、zh/en 對稱）
             body = SlidePipeline._promote_subheadings(u["content"].strip())
-            body = SlidePipeline._normalize_paragraph_breaks(body)
-            # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c] === 重點群收緊（殿後、硬換行不被 normalize 拆）
-            body = SlidePipeline._tighten_point_groups(body)
-            parts.append(body)
+            parts.append(SlidePipeline._normalize_paragraph_breaks(body))
         # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
         return "\n\n".join(parts)
 
@@ -919,10 +858,7 @@ class SlidePipeline(DocumentStrategy):
                 if zh_content:
                     # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、soft break 黏段根除）
                     body = self._promote_subheadings(zh_content)
-                    body = self._normalize_paragraph_breaks(body)
-                    # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c] === 重點群收緊（殿後、硬換行不被 normalize 拆）
-                    body = self._tighten_point_groups(body)
-                    parts.append(body)
+                    parts.append(self._normalize_paragraph_breaks(body))
                 # === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] ===
                 zh_pages.append("\n\n".join(parts))
                 # Q3 同頁短 items 合併：content+description 併單一 text chunk
