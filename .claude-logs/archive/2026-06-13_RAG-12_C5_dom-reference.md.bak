@@ -230,13 +230,12 @@ Phase 4.7c 修正 3。`#current-title` 為 `#content-toolbar` 子元素（取原
 
 ### 4.3 文章 🔒 `#paper-content`
 
-容器：`flex:1`、可捲。內容由 `renderMarkdownWithMath()`（包裹 `marked.parse()`，RAG-12）渲染 Markdown + KaTeX 數學。
+容器：`flex:1`、可捲。內容由 `marked.parse()` 渲染 Markdown。
 
 **結構契約**
 - `max-width` 由 `--content-max-w` token 控制（BUG-F1 / ui-fixes-batch B7、主題各自覆寫：kahn 720 / nara 800 / kandinsky 820 / mies 860）
 - 圖片相對路徑會被改寫為 `/api/papers/{id}/images/...`
 - h1 / h2 / h3 / p / img / table 樣式由主題定義
-- **數學（RAG-12）**：LaTeX `$$...$$` / `$...$` 經 KaTeX 渲染為 `.katex`（行內）/ `.katex-display`（區塊）節點；顯示式防禦 CSS（`#paper-content .katex-display`）收斂 margin（避撞 slides tight list）+ `overflow-x:auto`（防超長式撐破中欄）+ `padding:4px 0`（防橫向 scrollbar 切下標）；KaTeX 資產自託管於 `static/vendor/katex/`。渲染失敗之單式降級為 `.katex-error`（紅字）、不影響整頁。
 
 **子結構（BUG-B2 / ui-fixes-batch B8 新增）**
 

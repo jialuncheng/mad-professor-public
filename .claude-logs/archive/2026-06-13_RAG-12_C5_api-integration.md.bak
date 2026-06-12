@@ -56,7 +56,7 @@
 
 **前端後處理**
 - 圖片路徑改寫：`![](images/x.png)` → `![](/api/papers/{id}/images/x.png)`
-- `renderMarkdownWithMath()` 渲染到 `#paper-content`（RAG-12）：包裹 `marked.parse()`，先以三階段順序佔位保護 LaTeX 數學（`$$...$$` / `$...$`），`marked.parse` 後以 KaTeX 回填 → 數學以 `.katex` 排版呈現。**閱讀視圖與 chat 雙端共用同一函式**（chat AI 回答之公式一致渲染）；非數學內容行為等同原 `marked.parse`。
+- `marked.parse()` 渲染到 `#paper-content`
 
 ### `GET /api/papers/{paperId}/images/{filename}`
 

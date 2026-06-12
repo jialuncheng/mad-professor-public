@@ -279,15 +279,6 @@ data/                  ← SQLite DB 檔位置（已 gitignore）
 - `logs/pipeline.log` — pipeline / paper_manager / processor（DEBUG，輪替）
 - `logs/chat.log` — AI_professor_chat / ai_core / rag_retriever（DEBUG，輪替）
 
-### 前端 vendored 依賴（KaTeX 數學渲染）
-
-前端閱讀視圖與 chat 以 `marked.js`（CDN）渲染 Markdown；論文/簡報內的 LaTeX 數學（`$$...$$` / `$...$`）由 **KaTeX 渲染**（RAG-12）。
-
-- **KaTeX 自託管**於 `static/vendor/katex/`（CSS + JS + 字型 woff2，版本 `0.16.47`）——離線 / 受限網路（GFW）環境下字型不依賴外部 CDN、跨環境一致。
-- **更新 / 重現**：`bash tools/fetch_frontend_vendor.sh`（`npm pack` 下載指定版本 + 印 SHA-256 校驗）；資產版本 / 來源 / SHA 詳見 `static/vendor/README.md`。
-- `marked` 本身仍走 CDN（無字型阻塞、風險低）。
-- 整合方式：`static/index.html::renderMarkdownWithMath()`（三階段順序佔位保護：先抽 code / 護 `\$` / 抽 `$$`、`$` → `marked.parse` → KaTeX 回填），不裝 `marked-katex-extension`。
-
 ---
 
 ## 九、部署
