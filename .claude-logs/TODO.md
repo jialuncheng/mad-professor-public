@@ -59,6 +59,18 @@
 > **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
 > **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
 
+### FE-Hotfix FE-RHYTHM-1 — 閱讀視圖「清單前寬後窄」垂直節奏治本（base CSS · :has() 交界修正）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| FE-RHYTHM-1 | `static/index.html` base CSS（`#paper-content` 區）新增兩條 `:has()`、**僅打「段落↔清單」交界**:`p:has(+ ul/ol){margin-bottom:var(--space-1)}`〔標籤段落貼緊其下清單·收窄過寬〕+ `ul/ol:has(+ p){margin-bottom:var(--space-4)}`〔清單與後續段落/標籤間補留白·補足過窄〕;**巢狀清單**〔後接 `<li>` 非 `<p>`〕**與「清單接標題」**〔後接 `<h>` 非 `<p>`〕**不中、波及最小**;真因＝base 垂直節奏只靠 `margin-bottom`〔`#paper-content p` 無 `margin-top`〕+ `index.html:79` 全域 reset 歸零 `ul/ol` margin、四主題 0 補 → 清單「前有間距〔吃前段 mb〕後無間距〔自身 0、後段無 mt〕」單向黑洞;Vision 把區段標籤吐成純段落緊接清單且交替重複 → 顯「標籤→清單寬、清單→下個標籤窄」反轉〔Ch37 施肥頁〕;**全文體共用閱讀視圖一次治本**〔履歷/論文/書籍/litedoc/簡報〕、**chat（`.msg-ai`）不受影響**、不動 themes;**同時解 #2**〔slide 末條列→下張圖 `<p><img>` 之 `ul:has(+ p)` 補 space-4 → 不黏烤進右上的母片日期;採 (a) 不額外加 CSS、純圖頁邊角暫留〕;`:has()` 相容 Safari 15.4+/Chromium 105+〔Dia OK〕、舊版整條忽略降級現況;grep 兩規則命中 + themes 0 + 零 .py、全套件 631 passed | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-13_FE-RHYTHM-1_hotfix.md`
+> **代號**：**非 slide 專屬**——由 PIPE-SLIDES QA（Ch37 施肥頁）暴露、但根因在全文體共用 base CSS 之垂直節奏、治本歸此通用代號。
+> **動因/根因**：base 只用 margin-bottom 做節奏 + reset 歸零清單 margin → 清單「前寬後窄」單向黑洞（反覆出現、之前擱置）;baron 拍板 A（`:has()` 全域治本、最小 delta、須驗三軌）、否決 B（slide-only wrapper、需管線+重捕）。
+> **⚠️ baron 三軌 E2E（非 commit）**：簡報 Ch37 施肥頁〔標籤貼清單、清單後留白〕+ 履歷〔小標+條列節奏〕+ 論文 2601/byz〔**尤巢狀清單未被 `ul:has(+p)` 誤撐**〕+ 四主題逐一 + chat 不受影響;#2 黏字〔前頁條列→下頁圖留白〕;純圖頁邊角暫留、礙眼再補 `img{margin-top}`(b)。
+> **無 golden 重捕**（純 CSS、final_zh 不變）。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-4 — P1 空白頁 Vision 檢測（is_blank 旗標·跳過空白單位）
 
 | Commit | 內容 | Hash |

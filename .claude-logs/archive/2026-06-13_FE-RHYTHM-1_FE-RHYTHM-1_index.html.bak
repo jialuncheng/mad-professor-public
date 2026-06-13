@@ -907,20 +907,6 @@
     padding-left: 1.5em;
   }
   /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] === */
-  /* === [FE-RHYTHM-1 FE-RHYTHM-1 START] === 閱讀視圖清單垂直節奏治本（全文體共用 base）
-     根因：base 只用 margin-bottom 做節奏 + L79 reset 歸零清單 margin →
-     清單「前寬（吃前段 mb）後窄（自身 0、後段無 mt）」。
-     僅修「段落↔清單」交界、不碰巢狀清單與「清單接標題」（最小波及）：
-     並順帶解 #2（slide 末條列 → 下張圖 <p><img> 之 ul:has(+ p) 留白、不黏母片日期）。 */
-  #paper-content p:has(+ ul),
-  #paper-content p:has(+ ol) {
-    margin-bottom: var(--space-1);   /* 標籤段落貼緊其下清單（收窄過寬） */
-  }
-  #paper-content ul:has(+ p),
-  #paper-content ol:has(+ p) {
-    margin-bottom: var(--space-4);   /* 清單與後續段落/標籤間補留白（補足過窄） */
-  }
-  /* === [FE-RHYTHM-1 FE-RHYTHM-1 END] === */
   #paper-content img {
     max-width: 100%;
     height: auto;
