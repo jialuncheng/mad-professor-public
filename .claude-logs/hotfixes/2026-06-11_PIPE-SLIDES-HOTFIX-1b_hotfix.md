@@ -119,6 +119,11 @@ grep -nE "\.commit\(\)" pipelines/slide_pipeline.py | grep -v session.begin # �
 2. 點開閱讀視圖正常（HOTFIX-1 F1/F4 效果同步可驗）。
 
 ### ⚠️ golden
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 不另衝擊（F2 只影響 DB/rag_tree 譯題、HOTFIX-1 已宣告 slides golden 落地後首捕——**維持原計畫：本 1b 落地後一次首捕**）。
 
 ---

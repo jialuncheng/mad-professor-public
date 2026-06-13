@@ -134,6 +134,11 @@ venv/bin/python -m pytest -q                                # 期望：全套件
 
 ---
 
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 ## ⚠️ golden 重捕（行為變更）
 
 改動 ① 變更 Vision prompt（is_blank 定義）→ **Vision schema/輸出變更 → slides golden 須重捕**。**搭既有待重捕批次一次首捕、零額外成本**：HOTFIX-1/1b/2/3/3b/3c/3d/**4** + META-NORM C3/C4 + 本 HOTFIX-5（`venv/bin/python tools/golden_baseline.py capture slides --force`）。

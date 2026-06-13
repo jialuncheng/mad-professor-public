@@ -227,6 +227,11 @@ grep -n "merged = " pipelines/slide_pipeline.py                    # 確認 merg
 - chat 對該頁提問召回正常（RAG 未受影響佐證）。
 
 ### 5.4 ⚠️ Golden
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 改 B 軌 final_zh 渲染（箭頭群硬換行 + `*` 收緊）→ **slides golden 變更**；併入既有「slides golden 待 fixture 補齊後一次首捕」批次（HOTFIX-1/1b/2/3 + META-NORM C3/C4 + 本 3c），不另捕。
 
 ### 5.5 §5 SOP 一致性核查（BE 強制）

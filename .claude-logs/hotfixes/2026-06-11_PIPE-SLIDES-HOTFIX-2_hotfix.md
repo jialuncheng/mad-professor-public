@@ -191,6 +191,11 @@ grep -nE "\.commit\(\)" pipelines/slide_pipeline.py | grep -v session.begin # �
 1. 影子重傳 `Ch37_Plant-Nutrition.pdf` → ① p29/p35/p37 等圖密集頁**整頁截圖正常顯示**、無破圖、無長描述洩漏正文（B）；② 各頁**無 `4/28/2026`**（E）；③ 條列**緊湊、item 間無多餘空行**（F）。
 
 ### ⚠️ 行為變更 + golden
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 B/E/F 均改 B 軌 `final_zh`/`final_en` 輸出 → **衝擊 slides golden**。slides golden 尚未首捕（前 HOTFIX-1/1b 已宣告待首捕）→ **維持原計畫：本 HOTFIX-2 落地後一次首捕**（`venv/bin/python tools/golden_baseline.py capture slides --force`、免捕多次）。
 
 ---

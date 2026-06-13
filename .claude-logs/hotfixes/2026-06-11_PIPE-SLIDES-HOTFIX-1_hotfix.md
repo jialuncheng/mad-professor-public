@@ -255,6 +255,11 @@ grep -nE "\.commit\(\)" pipelines/slide_pipeline.py | grep -v "session.begin"  #
 3. chat 引用仍顯「《簡報名》> p{N} 標題」（F1 不動 title 欄、key 不變）。
 
 ### ⚠️ 行為變更 + golden
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 F1/F4 改 B 軌 `final_zh`/`final_en` 內容與空行結構、F2 改 rag_tree translated_title → **衝擊 slides golden**。B 軌 slides golden 尚未首捕（PIPE-SLIDES Q8 排程中）→ **建議本 hotfix 落地後再首捕**（`venv/bin/python tools/golden_baseline.py capture slides --force`、一次到位、免捕兩次）。
 
 ---

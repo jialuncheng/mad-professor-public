@@ -359,17 +359,6 @@ class SlidePipeline(DocumentStrategy):
         日期 OCR 格式逐頁飄（4/28/2026 vs 2026/4/28 vs 4/28/26）、各變體 <60% 門檻全漏網；
         本法以「整行即日期」語意判定、不依賴格式一致。單頁日期（可能是真內容如時間軸）不洗、
         句中夾帶日期不動（只剔整行就是日期者）。剔除清單入 log。"""
-        # === [PIPE-SLIDES-HOTFIX-6 HOTFIX-6 START] === 單頁殘留：整頁 content 僅純日期行 → 清空
-        #   （母片/頁尾日期典型樣態、無論幾頁；補 HOTFIX-2「≥2 頁」門檻對「Vision 僅單頁吐母片
-        #   頁尾日期」之漏網——該頁實質資訊在 title/figure、content 只剩一個日期。運行 P1 譯前
-        #   → 清掉原文 4/28/2026、永不進 P3 重排成 2026/4/28。真內容頁不受影響：日期與其他文字
-        #   並存時其他行不匹配 _DATE_LINE_RE → all(...) False → 不清。）
-        for u in units:
-            body = u["content"].strip()
-            if body and all(_DATE_LINE_RE.match(ln)
-                            for ln in body.splitlines() if ln.strip()):
-                u["content"] = ""
-        # === [PIPE-SLIDES-HOTFIX-6 HOTFIX-6 END] ===
         hit_pages = sum(
             1 for u in units
             if any(_DATE_LINE_RE.match(ln) for ln in u["content"].splitlines()))

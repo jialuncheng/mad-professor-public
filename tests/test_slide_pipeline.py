@@ -1093,3 +1093,55 @@ def test_hf5_legacy_no_is_blank_kept(monkeypatch, tmp_path):
     }
     spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5e')
     assert len(spec.tiles) == 3                        # 無 is_blank → 三欄判定（title/desc 非空）保留
+
+
+# === [PIPE-SLIDES-HOTFIX-6 HOTFIX-6] === 單頁殘留母片日期清空（_strip_master_date 單頁 pass）
+def test_hf6_sole_date_content_cleared(monkeypatch, tmp_path):
+    """單頁殘留：整頁 content 僅純日期行（母片頁尾日期）→ 清空；單位保留（title/figure 在）。
+       真因 Ch37 都市農業頁 4/28/2026 hit_pages=1 漏 HOTFIX-2 ≥2 門檻。"""
+    responses = {
+        b'p0': _resp('首頁', '- 內容', '', cover=False),
+        b'p1': _resp('都市農業', '4/28/2026', '某裝飾圖'),    # content 僅日期、is_blank 無欄
+        b'p2': _resp('尾頁', '- 結論', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf6a')
+    assert len(spec.tiles) == 3                        # 單位保留（有 title/figure_description）
+    urban = next(u for u in spec.tiles if u['title'] == '都市農業')
+    assert urban['content'] == ''                      # 純日期 content 已清空
+
+
+def test_hf6_date_amid_content_kept(monkeypatch, tmp_path):
+    """真內容單頁日期：日期與其他正文並存（單頁）→ 不清（HOTFIX-6 all() False、HOTFIX-2 hit_pages<2）。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp('時間軸', '1840 年\n* 李比希提出最小因子定律', ''),  # 日期＋真內容、單頁
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf6b')
+    body = next(u for u in spec.tiles if u['title'] == '時間軸')['content']
+    assert '1840' in body and '最小因子定律' in body   # 真內容單頁日期未誤殺
+
+
+def test_hf6_multipage_inline_date_stripped(monkeypatch, tmp_path):
+    """既有 HOTFIX-2 ≥2 頁不退化：≥2 頁 content 含日期行＋其他內容 → 剔日期行、保留其他。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp('頁A', '4/28/2026\n* A 重點', ''),     # 日期＋內容（多頁之一）
+        b'p2': _resp('頁B', '4/28/2026\n* B 重點', ''),     # 日期＋內容（多頁之二）
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf6c')
+    for t in ('頁A', '頁B'):
+        body = next(u for u in spec.tiles if u['title'] == t)['content']
+        assert '4/28/2026' not in body and '重點' in body  # 日期行剔除、內容保留
+
+
+def test_hf6_normal_content_untouched(monkeypatch, tmp_path):
+    """一般無日期 content → 完全不動。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp('正常頁', '* 第一點\n* 第二點', ''),
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf6d')
+    body = next(u for u in spec.tiles if u['title'] == '正常頁')['content']
+    assert '第一點' in body and '第二點' in body

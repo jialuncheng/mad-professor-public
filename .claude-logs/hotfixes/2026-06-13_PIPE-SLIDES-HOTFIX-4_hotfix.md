@@ -131,6 +131,11 @@ grep -n "三欄全空\|空白頁跳過（A 軌同款" pipelines/slide_pipeline.p
 - 驗純圖頁（架構圖/照片）**未被誤跳**。
 
 ### 5.4 ⚠️ Golden（Vision prompt 變更）
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 本修**改 Vision prompt（加 is_blank 欄 + 第 5 條）** → Vision 輸出 schema 變更 → **slides golden 須重捕**；**搭既有待重捕批次**（HOTFIX-1/1b/2/3/3b/3c/3d + META-NORM C3/C4）一次首捕、零額外成本。
 
 ### 5.5 §5 SOP 一致性核查（BE 強制）

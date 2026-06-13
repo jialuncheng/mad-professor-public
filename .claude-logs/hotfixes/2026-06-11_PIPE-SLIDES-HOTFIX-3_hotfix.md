@@ -254,6 +254,11 @@ grep -nE "\.commit\(\)" pipelines/slide_pipeline.py | grep -v session.begin # �
 影子重傳 `Ch37` → 每頁：① **整頁截圖在上、標題塊在下**（一-a）② 標題+副標**同框、中間無夾線**、底線在整塊下（C/一-b）③ A 層/B 層/C 層為**有間距的子標題**、bullet 群組其下（A/B/C）④ water/pH/texture 等**明顯往右縮排**（二）。chat 引用「《簡報名》> p{N} 標題」不變（RAG 未動）。
 
 ### ⚠️ 行為變更 + golden
+> ⚠️ **更正（PIPE-SLIDES-HOTFIX-6 回溯）**：本文件下方「slides golden 須重捕/首捕」之敘述**作廢**。
+> `golden_baseline.py capture slides` 捕的是 **A 軌**（`PipelineCore`/`slides_processor`、shadow=False 正本基準）；
+> 本 hotfix 改的是 **B 軌**（`slide_pipeline.py`）→ **A 軌 golden 不受影響、不需重捕**。
+> B 軌驗證走**影子重傳 E2E**（+ 未來 PIPE Flip 時 B 軌 diff A 軌 golden、改善豁免 Q8）。
+
 改 B 軌 `final_zh`/`final_en` 渲染結構 → **衝擊 slides golden**（與前 HOTFIX-1/1b/2 + META-NORM C3/C4 同屬 B 軌輸出變更）。slides golden 尚未首捕 → **維持原計畫：全部 Vision/渲染變更落地後一次首捕**（`tools/golden_baseline.py capture slides --force`、且 slides fixture 需先補齊·見運維備忘）。
 
 ---

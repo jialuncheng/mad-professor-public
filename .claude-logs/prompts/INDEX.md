@@ -352,6 +352,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_run_提示詞.md`（HOTFIX-6 Run·殘留母片日期單頁清除落地 + 8 份歷史文件 golden 誤述 banner 作廢 + TODO 尾註）
+- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_doc_提示詞.md`（殘留母片日期單頁清除 + golden 重捕說明回溯更正·hotfix 文件產出：_strip_master_date 加單頁純日期清空 + 8 份文件 A/B 軌 golden 更正）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_run_提示詞.md`（HOTFIX-5 Run·有標題過場頁未踢除落地：is_blank 過濾放寬〔且 markdown_content 空〕+ Vision prompt 釐清 + 5 回歸測試）
 - 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_run_提示詞.md`（RAG-12-HOTFIX-1 Run·圖片 alt 內 LaTeX 破版落地：抽 math 前保護圖片整段、grep+node spike+pytest）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_doc_提示詞.md`（B2 過場頁·hotfix 文件產出：放寬跳過為 is_blank 且 markdown_content 空 + Vision prompt 釐清過場頁 is_blank=true）
@@ -365,5 +367,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_doc_提示詞.md`

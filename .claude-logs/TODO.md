@@ -11,15 +11,25 @@
 
 ## ✅ 已完成
 
+### BE-Hotfix PIPE-SLIDES-HOTFIX-6 — 殘留母片日期單頁清除 + golden 重捕說明回溯更正
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-6 | **Part A**〔`pipelines/slide_pipeline.py` `# === [PIPE-SLIDES-HOTFIX-6] ===` 包裹〕`_strip_master_date` 加「整頁 content 僅純日期行 → 清空」單頁 pass〔無論幾頁、運行 P1 譯前〕——真因＝HOTFIX-2 ≥2 頁門檻對「Vision 僅單頁吐母片頁尾日期」漏網〔Ch37 都市農業頁 `4/28/2026` 留存、P3 譯重排成 `2026/4/28`、全檔唯一日期行〕;真內容頁日期與其他行並存→`all()` False→不清〔不誤殺時間軸〕、與 HOTFIX-2 正交;**Part B**〔文件回溯更正〕釐清 `capture slides` 捕 A 軌〔PipelineCore/slides_processor〕非 B 軌→B 軌 hotfix 不需 A 軌 golden 重捕、驗證走影子 E2E;8 份 hotfix 文件〔HOTFIX-1/1b/2/3/3c/3d/4/5〕「slides golden 須重捕」誤述加更正 banner 作廢〔原句保留作審計〕+ TODO 14 行 slide-golden 尾註〔含 META-NORM C4 同誤;resume golden 6 行未動·A 軌共用本即正確〕;RAG-12-HOTFIX-1「零 golden 重捕」正確不改;RAG 隔離、四路零碰;SOP logging+database 無命中（合規）;4 新回歸測試〔單頁純日期清空/單頁日期夾內容保留/多頁 HOTFIX-2 不退化/一般不動〕、slide 71 passed、全套件 640 passed〔基線+4、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-14_PIPE-SLIDES-HOTFIX-6_hotfix.md`
+> **動因**：HOTFIX-5 後 baron 發現 Ch37 都市農業頁殘留母片日期 `2026/4/28`（被翻譯重排）;並釐清 `capture slides` 捕 A 軌、先前 8 份 hotfix 文件「golden 須重捕」為 A/B 軌混淆誤述。
+> **⚠️ A 軌 golden 不需重捕**（本改 B 軌、A 軌 slides_processor 未動）;**baron 影子重傳 Ch37**〔無需 golden 重捕〕→ 都市農業頁底不再殘留日期、真內容頁日期未誤殺。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-5 — 有標題過場頁未踢除（is_blank 跳過放寬 + Vision prompt 釐清）
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-5 | `pipelines/slide_pipeline.py`〔`# === [PIPE-SLIDES-HOTFIX-5] ===` 包裹〕P1 `_process` ④ **跳過放寬**：`is_blank 且 title+content 皆空`→**`is_blank 且 markdown_content 空`**〔容許 title/figure_description 非空、安全網＝有實質正文則不跳防誤殺〕+ `_VISION_PROMPT` 第5條釐清〔純過場/章節分隔/裝飾頁即使有「過場/Transition」標題仍 is_blank=true;保留「含真實圖表/資料/條列正文一律 is_blank=false」防誤踢真圖頁〕;真因＝HOTFIX-4 雙保險「title 須空」對 Vision 給了標題之過場頁（Ch37 page-32 生態球）漏網、figure_description 非空使三欄規則亦不跳;過場頁與純圖表頁結構同型〔title+figure_description+無正文〕唯 is_blank 可分;RAG 隔離〔ctx.rag_sections/merged 不碰〕、四路/web_server 零碰、保留三欄全空後盾;SOP logging+database 無命中（合規）;5 新回歸測試〔過場跳/裝飾跳/真圖保留/有正文保留/舊無欄相容〕+ 既有 HOTFIX-4 四測試不退化、slide 67 passed、全套件 636 passed〔基線+5、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+| HOTFIX-5 | `pipelines/slide_pipeline.py`〔`# === [PIPE-SLIDES-HOTFIX-5] ===` 包裹〕P1 `_process` ④ **跳過放寬**：`is_blank 且 title+content 皆空`→**`is_blank 且 markdown_content 空`**〔容許 title/figure_description 非空、安全網＝有實質正文則不跳防誤殺〕+ `_VISION_PROMPT` 第5條釐清〔純過場/章節分隔/裝飾頁即使有「過場/Transition」標題仍 is_blank=true;保留「含真實圖表/資料/條列正文一律 is_blank=false」防誤踢真圖頁〕;真因＝HOTFIX-4 雙保險「title 須空」對 Vision 給了標題之過場頁（Ch37 page-32 生態球）漏網、figure_description 非空使三欄規則亦不跳;過場頁與純圖表頁結構同型〔title+figure_description+無正文〕唯 is_blank 可分;RAG 隔離〔ctx.rag_sections/merged 不碰〕、四路/web_server 零碰、保留三欄全空後盾;SOP logging+database 無命中（合規）;5 新回歸測試〔過場跳/裝飾跳/真圖保留/有正文保留/舊無欄相容〕+ 既有 HOTFIX-4 四測試不退化、slide 67 passed、全套件 636 passed〔基線+5、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `67de0d2` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-14_PIPE-SLIDES-HOTFIX-5_hotfix.md`
 > **動因**：RAG-12-HOTFIX-1 後 baron 比對 Ch37 發現 page-32 生態球過場頁未踢除;Vision 給了標題「過場投影片 (Transition Slide)」→ HOTFIX-4 跳過條件「is_blank 且 title+content 皆空」不成立 → 漏網。
-> **⚠️ golden + baron E2E（非 commit）**：改 Vision prompt → slides golden 須重捕、**搭既有待捕批次**〔HOTFIX-1/1b/2/3/3b/3c/3d/4 + META-NORM C3/C4〕一次首捕;影子重傳 Ch37 → page-32 不產頁、頁序順移、真圖表頁（氮循環/土壤剖面/PCoA）未誤踢。
+> **⚠️ golden + baron E2E（非 commit）**：改 Vision prompt → slides golden 須重捕、**搭既有待捕批次**〔HOTFIX-1/1b/2/3/3b/3c/3d/4 + META-NORM C3/C4〕一次首捕;影子重傳 Ch37 → page-32 不產頁、頁序順移、真圖表頁（氮循環/土壤剖面/PCoA）未誤踢。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 
 ### FE-Hotfix RAG-12-HOTFIX-1 — 圖片 alt 內 LaTeX 破版（renderMarkdownWithMath 抽 math 前保護圖片整段）
 
@@ -92,7 +102,7 @@
 > **修法依據**：`.claude-logs/plans/2026-06-11_META-NORM_封面元數據自癒飛輪與動態欄位登記_plan_v1.md`（v1.2、八 OQ+Q9/Q10 全定案、BS1-BS7 收編）
 > **動因**：PIPE-SLIDES 學術簡報實測（Ch37_Plant-Nutrition）暴露 C（封面課程/講師未進結構化 Meta）+ D（小標題塞正文）；baron 構想「LLM 開放抽取 + 二次 LLM 比對既有欄統一」＝DOMAIN-NORM 知識飛輪搬到 metadata 欄名。
 > **範式繼承**：DOMAIN-NORM（Domains/DomainMapping + 快取→LLM→on_conflict 動態註冊）/ GLOSSARY-CORE（旗標閘門）；新增僅 MetaField/MetaFieldAlias 兩表 + MetaNormalizer。
-> **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。
+> **⚠️ baron 運維（非 commit）**：① `.env` `LLM_USE_META_NORM=true` 漸進開（影子先驗飛輪收斂/誤併/前端顯示）② C3/C4 改 Vision prompt → slides golden 重捕 ③ 綜效：餵養 CHAT-STRUCT-1（backlog #5、意圖路由改查 canonical key）。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 
 ### FE-Hotfix FE-RHYTHM-1 — 閱讀視圖「清單前寬後窄」垂直節奏治本（base CSS · :has() 交界修正）
 
@@ -115,7 +125,7 @@
 > **修法依據**：`.claude-logs/hotfixes/2026-06-13_PIPE-SLIDES-HOTFIX-4_hotfix.md`
 > **動因**：baron 比對原稿 `Ch37_Plant-Nutrition.pdf` 第 16 張空白投影片，B 軌仍產空框黑條 reading 頁;現有 P1 空白跳過僅「三欄全空」、Vision 對空白頁回非空 figure_description 漏網。
 > **方案抉擇（baron 拍板 A）**：Vision `is_blank` 旗標（看真圖判斷、與 `is_cover` 對稱）;否決 B（figure_description 關鍵詞啟發式·脆/誤殺）、C（像素門檻·難調）。雙保險防誤殺有內容頁。
-> **⚠️ golden**：改 Vision prompt → Vision schema 變更 → slides golden 須重捕;**搭既有待重捕批次**（HOTFIX-1/1b/2/3/3b/3c/3d + META-NORM C3/C4）一次首捕、零額外成本。
+> **⚠️ golden**：改 Vision prompt → Vision schema 變更 → slides golden 須重捕;**搭既有待重捕批次**（HOTFIX-1/1b/2/3/3b/3c/3d + META-NORM C3/C4）一次首捕、零額外成本。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **⚠️ baron E2E**：影子重傳 Ch37 → 第 16 張不再產 reading 頁、頁序順移;純圖頁（架構圖/照片）未被誤跳。
 
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-3d — 字面 `**` 未渲染粗體 + 裸 URL 破版（slide 渲染層清洗）
@@ -126,7 +136,7 @@
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3d_hotfix.md`
 > **動因**：baron 掃 `植物營養 (Plant Nutrition) (測試).pdf` 40 頁 + 比對原稿 `Ch37_Plant-Nutrition.pdf`，#2 兩類渲染破版（字面 `**`〔p27〕+ 裸 URL〔p6/18/27/35〕、原稿無 B 軌引入）；baron 拍板開為獨立 BE-Hotfix。
-> **⚠️ golden**：改 B 軌 final_zh 渲染（`<strong>` + 去 URL 行）→ slides golden 併既有批次〔HOTFIX-1/1b/2/3/3b/3c + META-NORM C3/C4〕一次首捕。
+> **⚠️ golden**：改 B 軌 final_zh 渲染（`<strong>` + 去 URL 行）→ slides golden 併既有批次〔HOTFIX-1/1b/2/3/3b/3c + META-NORM C3/C4〕一次首捕。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **⚠️ baron E2E**：影子重傳 Ch37 → p27 粗體詞正確顯示無字面 `**`、底部無 biorender 裸連結；p6/p18/p35 無超長裸 URL；圖片/行內連結保留。
 > **後續**：`$LaTeX$` 數學渲染屬 RAG-12（已收官、自託管 KaTeX）；「數學段落未翻譯」屬正交 backlog（academic translator）。
 
@@ -138,7 +148,7 @@
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3c_hotfix.md`（v3、保 `→` 硬換行版；四輪對話收斂——白名單→texmath 否決→保符號硬換行）
 > **動因**：META-NORM/HOTFIX-3 後 baron 掃 `植物營養 (Plant Nutrition) (測試).pdf` 40 頁 + 比對原稿 `Ch37`，發現「標題+重點」兩頁兩種不一致節奏（頁 A 土壤顆粒清單 loose / 頁 B 氮素形態 `→` 散段落）；baron 拍板「保 `→` 原始符號、硬換行收緊」（非轉 bullet、非 CSS 全域 margin 滲論文）。
-> **⚠️ golden**：改 B 軌 final_zh 渲染（箭頭群硬換行 + `*` 收緊）→ slides golden 併既有批次〔HOTFIX-1/1b/2/3/3b + META-NORM C3/C4 + 本 3c〕一次首捕。
+> **⚠️ golden**：改 B 軌 final_zh 渲染（箭頭群硬換行 + `*` 收緊）→ slides golden 併既有批次〔HOTFIX-1/1b/2/3/3b + META-NORM C3/C4 + 本 3c〕一次首捕。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **⚠️ baron E2E**：影子重傳 Ch37 → 頁 B `NH₄⁺` 標題下三點均勻緊湊群、`→` 原樣保留、群間留白；頁 A 母項/子項節奏均勻、`•` 保留；行中箭頭句維持段落。
 
 ### FE-Hotfix PIPE-SLIDES-HOTFIX-3b — top-level 清單凸排修補（HOTFIX-3 二補完）
@@ -161,7 +171,7 @@
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-3_hotfix.md`（含三盲點修正：\r 相容/不產連續空行/HTML 塊內 markdown 失效註記）
 > **設計對齊（design/docs）**：`typography.md` 證 h2 底線是明文設計意圖→一-b 不在 base 蓋、改 C 從根源；A/B/C 升 h3〔h4 未規範=孤兒〕；二 縮排=結構〔principles.md 結構歸主檔、含自訂主題受益〕。
 > **動因**：META-NORM 上線後 baron 前端 QA 植物營養簡報，發現圖序/標題夾線/子標題扁平黏連/子項目未縮排 4 項排版問題；經設計意圖核對 + 多輪決策（C 副標併標題塊最還原投影片）+ subtitle 對 RAG 零影響碼證後落地。
-> **⚠️ golden**：改 B 軌 final 渲染 → slides golden 全變更〔HOTFIX-1/1b/2 + META-NORM C3/C4 + 本 HOTFIX-3〕落地後一次首捕；**slides fixture 需先補齊**（PaperRead-Lab 缺 `tests/golden_baseline/fixtures/slides.pdf`、入版控被 gitignore 排除）。
+> **⚠️ golden**：改 B 軌 final 渲染 → slides golden 全變更〔HOTFIX-1/1b/2 + META-NORM C3/C4 + 本 HOTFIX-3〕落地後一次首捕；**slides fixture 需先補齊**（PaperRead-Lab 缺 `tests/golden_baseline/fixtures/slides.pdf`、入版控被 gitignore 排除）。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **backlog**：h2 border 規則重複 4 主題檔（DRY 債）→ 未來 FE 清理上移 base。
 
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-2 — alt 破圖 / 母片重複日期 / F4 條列鬆散（B+E+F）
@@ -173,7 +183,7 @@
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-2_hotfix.md`（baron 拍板 B+E+F、A 撤案）
 > **動因**：HOTFIX-1/1b 後 baron 上傳學術簡報 `Ch37_Plant-Nutrition.pdf`（44/38 頁）逐頁分析暴露 B（圖密集頁破圖+圖說洩漏）/ E（母片日期散落）/ F（HOTFIX-1 F4 條列鬆散回歸）。
 > **零 Vision prompt 改動**：純渲染/清洗層、與 META-NORM 之 Vision schema 改動風險隔離。
-> **⚠️ golden**：B/E/F 改 B 軌 final → slides golden 本 hotfix 後一次首捕（含 HOTFIX-1/1b 變更一次到位）。
+> **⚠️ golden**：B/E/F 改 B 軌 final → slides golden 本 hotfix 後一次首捕（含 HOTFIX-1/1b 變更一次到位）。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **⚠️ baron E2E**：影子重傳 Ch37 → 圖密集頁整頁截圖正常/無破圖/無描述洩漏（B）、各頁無 4/28/2026（E）、條列緊湊（F）。
 
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-1b — F2 譯題旁路格式修補（影子寫庫 AttributeError）
@@ -185,7 +195,7 @@
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-1b_hotfix.md`
 > **動因**：HOTFIX-1（`f933e54`）commit 後 baron 影子實測 log 爆 `'str' object has no attribute 'get'`（06:45、ALi 件）。
 > **流程教訓**：HOTFIX-1 test_hf2 只測 rag_indexer 傳參、未測旁路值格式契約＝盲區；1b 以「與消費端完全同式」測試堵死。
-> **⚠️ baron E2E**：影子重傳 → log 無 AttributeError、前端顯示該件且標題=中文譯題+(測試)；golden 維持原計畫＝1b 落地後一次首捕 slides。
+> **⚠️ baron E2E**：影子重傳 → log 無 AttributeError、前端顯示該件且標題=中文譯題+(測試)；golden 維持原計畫＝1b 落地後一次首捕 slides。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-1 — B 軌簡報三缺陷緊急修補（同句多譯/譯題未接/段落黏連）
 
@@ -195,7 +205,7 @@
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-11_PIPE-SLIDES-HOTFIX-1_hotfix.md`（baron 拍板 1C/2B/3C 不修/4 移植）
 > **動因**：PIPE-SLIDES 收官後 baron A/B 軌同件實測（ST 簡報、兩列印實件）——B 軌四大目標全中（雙 Caption 0/標題乾淨/並列/覆蓋全）但餘三缺陷。
-> **⚠️ 行為變更 + golden**：F1/F4 改 B 軌 final、F2 改 rag_tree 譯題 → **slides golden 建議本 hotfix 落地後一次首捕**（`golden_baseline.py capture slides --force`、免捕兩次）。
+> **⚠️ 行為變更 + golden**：F1/F4 改 B 軌 final、F2 改 rag_tree 譯題 → **slides golden 建議本 hotfix 落地後一次首捕**（`golden_baseline.py capture slides --force`、免捕兩次）。〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 > **⚠️ baron E2E**：影子重傳 ST 件 → p1 單一標題/p6 僅 1 次/前端列表顯中文譯題+(測試)/table 不破碎/引用 p{N} 不變。
 
 ### BE-Refactor PIPE-SLIDES SlidePipeline簡報策略管線（PIPE 縱向五路第 2 路·原 PIPE-VISUAL 改名）
@@ -1184,14 +1194,14 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
-- ✅ ~~PIPE-SLIDES-HOTFIX-4 P1 空白頁 Vision 檢測（is_blank 旗標·跳過空白單位）~~（已落地；`_VISION_PROMPT` 基底加 `is_blank` 欄 + 第5條判定〔含封面〕+ `_process` ④ 雙保險跳過〔is_blank 且 title/content 皆空才跳、防誤殺有內容頁、純圖頁 is_blank=false 不跳、舊 golden 無欄向後相容〕;既有三欄全空保留為第二道、與 is_cover 對稱;真因＝Ch37 第16張空白頁 Vision 回非空 figure_description 漏舊判定;RAG/渲染/四路零碰;4 新 pytest、全套件 631 passed;⚠️ 改 Vision prompt → slides golden 併批次重捕、baron E2E 驗第16張不產頁+純圖頁未誤跳）
+- ✅ ~~PIPE-SLIDES-HOTFIX-4 P1 空白頁 Vision 檢測（is_blank 旗標·跳過空白單位）~~（已落地；`_VISION_PROMPT` 基底加 `is_blank` 欄 + 第5條判定〔含封面〕+ `_process` ④ 雙保險跳過〔is_blank 且 title/content 皆空才跳、防誤殺有內容頁、純圖頁 is_blank=false 不跳、舊 golden 無欄向後相容〕;既有三欄全空保留為第二道、與 is_cover 對稱;真因＝Ch37 第16張空白頁 Vision 回非空 figure_description 漏舊判定;RAG/渲染/四路零碰;4 新 pytest、全套件 631 passed;⚠️ 改 Vision prompt → slides golden 併批次重捕、baron E2E 驗第16張不產頁+純圖頁未誤跳）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 - ✅ ~~PIPE-SLIDES-HOTFIX-3d 字面 `**` 未渲染粗體 + 裸 URL 破版（slide 渲染層清洗）~~（已落地；`pipelines/slide_pipeline.py` 新增 `_render_inline_bold`〔`**X**`→`<strong>` 繞 CommonMark CJK emphasis〕+ `_strip_bare_url_lines`〔剝整行裸 URL、保圖片行/行內 URL〕殿前注入；真因＝B 軌 vs 原稿比對 p27 字面 `**`〔CJK 緊貼〕+ p6/18/27/35 裸 URL 撐版；RAG 零影響〔merged 取原始 zh_content〕；零後端/四路；9 新 pytest + 真 marked 4/4、全套件 627 passed；⚠️ slides golden 併批次、baron E2E p27）
-- ✅ ~~PIPE-SLIDES-HOTFIX-3c 簡報「標題+重點」節奏正規化（保留原始符號·硬換行收緊）~~（已落地；`pipelines/slide_pipeline.py` 新增 `_tighten_point_groups`〔連續行首箭頭合併硬換行〔保 `→`、不轉 bullet〕+ 相鄰清單 loose→tight〕殿後注入 `_page_source_md`/`_deliver`；真因＝Vision 每頁吐不同「標題+重點」結構〔頁 A `*` loose / 頁 B `→` 散段落〕節奏不一；RAG 零影響〔merged 取原始 zh_content、未套 tighten〕；零後端/DB/四路；9 新 pytest、全套件 618 passed；⚠️ slides golden 併批次首捕、baron E2E Ch37）
+- ✅ ~~PIPE-SLIDES-HOTFIX-3c 簡報「標題+重點」節奏正規化（保留原始符號·硬換行收緊）~~（已落地；`pipelines/slide_pipeline.py` 新增 `_tighten_point_groups`〔連續行首箭頭合併硬換行〔保 `→`、不轉 bullet〕+ 相鄰清單 loose→tight〕殿後注入 `_page_source_md`/`_deliver`；真因＝Vision 每頁吐不同「標題+重點」結構〔頁 A `*` loose / 頁 B `→` 散段落〕節奏不一；RAG 零影響〔merged 取原始 zh_content、未套 tighten〕；零後端/DB/四路；9 新 pytest、全套件 618 passed；⚠️ slides golden 併批次首捕、baron E2E Ch37）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 - ✅ ~~PIPE-SLIDES-HOTFIX-3b top-level 清單凸排修補（HOTFIX-3 二補完）~~（已落地；`static/index.html` base CSS 單 hunk：HOTFIX-3「二」selector 前置 `#paper-content ul/ol`〔top-level〕、`padding-left:1.5em` 不變；真因＝L79 全域 reset 歸零 top-level ul/ol padding、`list-style:outside` 下第一層 bullet 凸排、HOTFIX-3 二只補巢狀；不動 themes〔四主題 grep 0 命中、結構歸主檔、含自訂主題受益〕；零 .py、全套件 605 passed〔僅 env flake〕；⚠️ baron E2E ALi 第一層不凸排+四主題一致+巢狀未退化）
-- ✅ ~~PIPE-SLIDES-HOTFIX-3 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）~~（已落地；一-a 圖在上 + C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線、用主題 divider 變數〕+ A/B/C 升 h3〔非孤兒 h4〕+ 二 base 巢狀縮排；design/docs 設計對齊、RAG 零改；40 測試、全套件 605 passed；⚠️ slides golden 待 fixture 補齊後首捕）
-- ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）
+- ✅ ~~PIPE-SLIDES-HOTFIX-3 簡報閱讀視圖排版打磨（圖序/副標併標題塊/子標題/縮排）~~（已落地；一-a 圖在上 + C 副標併 .slide-head 標題塊〔順帶解 一-b 夾線、用主題 divider 變數〕+ A/B/C 升 h3〔非孤兒 h4〕+ 二 base 巢狀縮排；design/docs 設計對齊、RAG 零改；40 測試、全套件 605 passed；⚠️ slides golden 待 fixture 補齊後首捕）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
+- ✅ ~~PIPE-SLIDES-HOTFIX-2 alt 破圖/母片重複日期/F4 條列鬆散（B+E+F）~~（已落地；B _safe_alt 括號全形根除破圖+圖說洩漏 / E _strip_master_date 母片日期 ≥2 頁洗〔補 dedup 格式變異漏網〕/ F _normalize_paragraph_breaks list-aware〔修 HOTFIX-1 F4 條列鬆散回歸〕；A 撤案、C/D 留 META-NORM；3 測試、全套件 588 passed；⚠️ slides golden 落地後一次首捕）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 - ✅ ~~PIPE-SLIDES-HOTFIX-1b F2 譯題旁路格式修補~~（已落地；裸 str→三欄 dict 對齊 upsert_paper/web_server 契約、影子寫庫復活；同式消費測試堵盲區；全套件 585 passed）
-- ✅ ~~PIPE-SLIDES-HOTFIX-1 B 軌簡報三缺陷緊急修補~~（已落地；F1 去標題回聲〔原文層〕+ F2 接譯題〔複用 P3 譯題穿旁路〕+ F4 段落正規化移植 + F3 並列顯式不修；4 回歸測試、全套件 584 passed；⚠️ slides golden 落地後一次首捕）
+- ✅ ~~PIPE-SLIDES-HOTFIX-1 B 軌簡報三缺陷緊急修補~~（已落地；F1 去標題回聲〔原文層〕+ F2 接譯題〔複用 P3 譯題穿旁路〕+ F4 段落正規化移植 + F3 並列顯式不修；4 回歸測試、全套件 584 passed；⚠️ slides golden 落地後一次首捕）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕
 - ✅ ~~PIPE-SLIDES SlidePipeline簡報策略管線~~（已落地、C1 `31dab5a` + C2 `941eed7` + C3 `f8a24d7` + C4 `4d7684c` + C5 `dbf90bd` + C6 `cb5e2bd` + C7 Checkout 收官；原 PIPE-VISUAL 改名；四 Phase 全落地〔P1 存圖+Vision temp=0+封面+去重 / P2 六步 key=`p{N}_{原文頁標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除 / P4 rag_indexer 四產物〕+ §7.2 key-changing 整合測試正面達標；24 測試、全套件 580 passed；⚠️ baron 影子 E2E + B 軌 golden 另捕〔Q8 改善豁免〕）
 
 ### PIPE-RESUME (✅ 已完成·PIPE 縱向五路絞殺第 1 路)
