@@ -11,11 +11,21 @@
 
 ## ✅ 已完成
 
+### BE-Hotfix PIPE-SLIDES-HOTFIX-5 — 有標題過場頁未踢除（is_blank 跳過放寬 + Vision prompt 釐清）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-5 | `pipelines/slide_pipeline.py`〔`# === [PIPE-SLIDES-HOTFIX-5] ===` 包裹〕P1 `_process` ④ **跳過放寬**：`is_blank 且 title+content 皆空`→**`is_blank 且 markdown_content 空`**〔容許 title/figure_description 非空、安全網＝有實質正文則不跳防誤殺〕+ `_VISION_PROMPT` 第5條釐清〔純過場/章節分隔/裝飾頁即使有「過場/Transition」標題仍 is_blank=true;保留「含真實圖表/資料/條列正文一律 is_blank=false」防誤踢真圖頁〕;真因＝HOTFIX-4 雙保險「title 須空」對 Vision 給了標題之過場頁（Ch37 page-32 生態球）漏網、figure_description 非空使三欄規則亦不跳;過場頁與純圖表頁結構同型〔title+figure_description+無正文〕唯 is_blank 可分;RAG 隔離〔ctx.rag_sections/merged 不碰〕、四路/web_server 零碰、保留三欄全空後盾;SOP logging+database 無命中（合規）;5 新回歸測試〔過場跳/裝飾跳/真圖保留/有正文保留/舊無欄相容〕+ 既有 HOTFIX-4 四測試不退化、slide 67 passed、全套件 636 passed〔基線+5、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-14_PIPE-SLIDES-HOTFIX-5_hotfix.md`
+> **動因**：RAG-12-HOTFIX-1 後 baron 比對 Ch37 發現 page-32 生態球過場頁未踢除;Vision 給了標題「過場投影片 (Transition Slide)」→ HOTFIX-4 跳過條件「is_blank 且 title+content 皆空」不成立 → 漏網。
+> **⚠️ golden + baron E2E（非 commit）**：改 Vision prompt → slides golden 須重捕、**搭既有待捕批次**〔HOTFIX-1/1b/2/3/3b/3c/3d/4 + META-NORM C3/C4〕一次首捕;影子重傳 Ch37 → page-32 不產頁、頁序順移、真圖表頁（氮循環/土壤剖面/PCoA）未誤踢。
+
 ### FE-Hotfix RAG-12-HOTFIX-1 — 圖片 alt 內 LaTeX 破版（renderMarkdownWithMath 抽 math 前保護圖片整段）
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| RAG-12-HOTFIX-1 | `static/index.html` `renderMarkdownWithMath`〔`// === [RAG-12-HOTFIX-1] ===` 包裹〕新增 imgBlocks + 步驟 1.5 抽 markdown 圖片整段 `![...](...)`→`__IMG_PLACEHOLDER_N__`（同 code 保護手法）+ 步驟 5〔marked.parse 前〕還原；真因＝步驟 4 不分場合抽 `$...$`〔含圖片 alt 內、如氮循環圖 figure_description 之 `$N_2$`/`$\text{NH}_4^+$`〕→ 步驟 7 把 `katex.renderToString` 的 `<span class="katex">`〔含 `"`/`<>`〕回填進 `alt="…"`→引號提前閉合、`<img>` 炸穿、後續 HTML 全吞→「後續排版全部錯誤」+ 圖說直排亂碼；修法使 alt 內 `$` 永不進 math 管線〔留字面、不可見、無害〕、`<img>` 不再被炸；A 軌〔.figure/.ph 不塞 markdown alt〕+ 履歷〔圖說無 LaTeX〕皆正常→證 FE-RHYTHM-UNIFY CSS 無辜；通用解所有文體圖說含 `$`；純前端、零後端/管線/.py、零 golden 重捕；node spike 4/4 PASS〔圖片 LaTeX alt 受保護/正文 math 不受影響/混合僅正文進/一般圖等價〕、全套件 631 passed〔基線維持、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+| RAG-12-HOTFIX-1 | `static/index.html` `renderMarkdownWithMath`〔`// === [RAG-12-HOTFIX-1] ===` 包裹〕新增 imgBlocks + 步驟 1.5 抽 markdown 圖片整段 `![...](...)`→`__IMG_PLACEHOLDER_N__`（同 code 保護手法）+ 步驟 5〔marked.parse 前〕還原；真因＝步驟 4 不分場合抽 `$...$`〔含圖片 alt 內、如氮循環圖 figure_description 之 `$N_2$`/`$\text{NH}_4^+$`〕→ 步驟 7 把 `katex.renderToString` 的 `<span class="katex">`〔含 `"`/`<>`〕回填進 `alt="…"`→引號提前閉合、`<img>` 炸穿、後續 HTML 全吞→「後續排版全部錯誤」+ 圖說直排亂碼；修法使 alt 內 `$` 永不進 math 管線〔留字面、不可見、無害〕、`<img>` 不再被炸；A 軌〔.figure/.ph 不塞 markdown alt〕+ 履歷〔圖說無 LaTeX〕皆正常→證 FE-RHYTHM-UNIFY CSS 無辜；通用解所有文體圖說含 `$`；純前端、零後端/管線/.py、零 golden 重捕；node spike 4/4 PASS〔圖片 LaTeX alt 受保護/正文 math 不受影響/混合僅正文進/一般圖等價〕、全套件 631 passed〔基線維持、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `88578dd` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-14_RAG-12-HOTFIX-1_hotfix.md`
 > **動因**：baron 掃 Ch37_Plant-Nutrition_shadow（B 軌簡報）發現「空白頁沒踢除 + 後續排版全部錯誤」；經多輪證據診斷（A 軌/履歷正常證 CSS 無辜、source markdown 結構乾淨證非空白頁結構崩壞）鎖定真因＝氮循環圖(page-30)圖說 alt 含 LaTeX → renderMarkdownWithMath 步驟 7 KaTeX HTML 注入 alt 炸 `<img>` 級聯。

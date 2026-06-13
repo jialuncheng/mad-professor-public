@@ -54,12 +54,9 @@ _VISION_PROMPT = """你是簡報忠實轉錄器。請將這一頁簡報的內容
 2. markdown_content 用 markdown 保留階層/條列/表格；表格儲存格（cell）內嚴禁使用 ### 等標題語法。
 3. 圖表/示意圖/照片：用一兩句話描述放 figure_description 欄，嚴禁混入 markdown_content。
 4. 頁面有明確標題放 title；沒有就空字串。
-# === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4 START] ===（HOTFIX-5 釐清第 5 條：過場/分隔頁納入 is_blank=true）
-5. is_blank：若整頁**無任何實質教學內容** → is_blank=true；否則 false。涵蓋：
-   (a) 空白頁、僅裝飾性橫條/分隔線/純背景/頁碼；
-   (b) 純過場/章節分隔/裝飾頁（僅一張裝飾圖、或僅「過場/Transition/Section」之類字樣，無條列正文與實質資料）
-       —— **即使你判讀出『過場投影片』之類標題，這類頁仍 is_blank=true**。
-   **含真實圖表/照片/示意圖/資料/條列正文之頁一律 is_blank=false**（勿把有資訊的圖表頁誤判為過場）。
+# === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4 START] ===
+5. is_blank：若整頁**無任何實質內容**（空白頁、僅裝飾性橫條/分隔線/純背景/頁碼，無標題無正文
+   無有意義圖表）→ is_blank=true；否則 false。**含真實圖表/照片/示意圖/資料之頁一律 is_blank=false。**
 只輸出 JSON：
 {"title": "", "subtitle": "", "markdown_content": "", "figure_description": "", "is_blank": true|false}
 # === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4 END] ===
@@ -170,14 +167,12 @@ class SlidePipeline(DocumentStrategy):
         for img, r in zip(page_images, results):
             if not r:
                 continue
-            # === [PIPE-SLIDES-HOTFIX-5 HOTFIX-5 START] === 放寬：is_blank 且「無條列正文」即跳
-            #   真因：過場/分隔頁被 Vision 賦予標題（如「過場投影片」）→ HOTFIX-4「title 須空」不成立 → 漏網。
-            #   改為僅看 markdown_content 空（容許 title/figure_description 非空，過場頁特徵＝裝飾圖+可能標題、無正文）。
-            #   安全網：is_blank 但有 markdown_content 實質正文（自相矛盾）→ 不跳，防誤殺；
-            #   真圖表/資料頁依 prompt is_blank=false → 第一項即不成立、不跳；舊 golden 無 is_blank → None falsy → 不跳。
-            if r.get("is_blank") and not (r.get("markdown_content") or "").strip():
+            # === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4] === Vision 判空白 + 無實質文字 → 跳
+            #   雙保險：僅當 is_blank 且 title/content 皆空才跳（防 Vision 誤判有內容頁被丟）；
+            #   合法純圖頁 is_blank=false 不受影響；舊 golden 無 is_blank → None falsy → 向後相容不跳。
+            if r.get("is_blank") and not ((r.get("title") or "").strip()
+                                          or (r.get("markdown_content") or "").strip()):
                 continue
-            # === [PIPE-SLIDES-HOTFIX-5 HOTFIX-5 END] ===
             if not (r.get("title") or r.get("markdown_content")
                     or r.get("figure_description")):
                 continue  # 空白頁跳過（A 軌同款、既有三欄全空）

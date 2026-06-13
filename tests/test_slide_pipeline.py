@@ -1032,3 +1032,64 @@ def test_p1_legacy_no_is_blank_field(monkeypatch, tmp_path):
     }
     spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf4d')
     assert len(spec.tiles) == 3                        # 無 is_blank → 走既有三欄判定（figure_description 非空）保留
+
+
+# === [PIPE-SLIDES-HOTFIX-5 HOTFIX-5] === 有標題過場頁未踢除（is_blank 跳過放寬 + prompt 釐清）
+def test_hf5_transition_slide_skipped_with_title(monkeypatch, tmp_path):
+    """過場頁：is_blank=true、有標題（過場投影片）、無 markdown_content、figure_description 描述裝飾圖
+       → 放寬後被跳過（HOTFIX-4 因 title 非空漏網之治本）。"""
+    responses = {
+        b'p0': _resp('首頁', '- 內容', '', cover=False),
+        b'p1': _resp_blank(True, '過場投影片 (Transition Slide)', '', '深藍底生態球裝飾圖、無教學內容'),
+        b'p2': _resp('尾頁', '- 結論', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5a')
+    assert len(spec.tiles) == 2                        # 過場頁（有標題）被跳過
+    assert [u['page'] for u in spec.tiles] == [1, 2]   # 頁序連續重編
+    assert all('過場' not in (u['title'] or '') for u in spec.tiles)
+
+
+def test_hf5_decorative_blank_skipped(monkeypatch, tmp_path):
+    """純裝飾空白頁：is_blank=true、三欄除 figure_description 外皆空 → 跳過（沿用 HOTFIX-4 案）。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp_blank(True, '', '', '僅裝飾性黑色橫條'),
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5b')
+    assert len(spec.tiles) == 2
+
+
+def test_hf5_real_figure_page_kept(monkeypatch, tmp_path):
+    """真圖表內容頁：is_blank=false、有標題、無正文、figure_description 真內容 → 保留（不誤踢）。
+       與過場頁結構同型（title+figure_description+無正文），唯 is_blank 區分。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp_blank(False, '系統架構', '', '資料中心架構示意圖：SST 驅動 800VDC 拓撲'),
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5c')
+    assert len(spec.tiles) == 3                        # is_blank=false → 第一項不成立、保留
+    assert any(u['title'] == '系統架構' for u in spec.tiles)
+
+
+def test_hf5_is_blank_but_has_content_kept(monkeypatch, tmp_path):
+    """安全網：is_blank=true 但有 markdown_content 實質正文（自相矛盾）→ 不跳、保留（防誤殺）。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp_blank(True, '', '* 真實條列內容', '某圖'),
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5d')
+    assert len(spec.tiles) == 3                        # markdown_content 非空 → 安全網保留
+
+
+def test_hf5_legacy_no_is_blank_kept(monkeypatch, tmp_path):
+    """向後相容：無 is_blank 欄（舊 golden）→ falsy → 第一項不成立、不跳。"""
+    responses = {
+        b'p0': _resp('首', '- a', '', cover=False),
+        b'p1': _resp('過場投影片', '', '某裝飾圖'),       # 無 is_blank 欄
+        b'p2': _resp('尾', '- b', ''),
+    }
+    spec, _, _ = _run_p1(monkeypatch, tmp_path, responses, paper_id='hf5e')
+    assert len(spec.tiles) == 3                        # 無 is_blank → 三欄判定（title/desc 非空）保留
