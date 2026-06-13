@@ -907,33 +907,20 @@
     padding-left: 1.5em;
   }
   /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] === */
-  /* === [FE-RHYTHM-UNIFY C2 START] === 閱讀視圖垂直節奏統一（取代 FE-RHYTHM-1 逐交界補丁）
-     單一 margin-top flow 模型：間距由「與上一個兄弟之關係」單向供給，根治
-     「base 只用 margin-bottom + L83 reset 歸零清單 margin」之不對稱（清單前寬後窄黑洞）。
-     主題垂直 margin 已移交 base（見各主題 FE-RHYTHM-UNIFY 標記）；塊級 margin-bottom 由 L83 reset 歸零、
-     故 margin-top 為單一節奏來源。完全消滅 :has()（清單改看「上一個」兄弟＝相鄰選擇器、相容 Safari 14+）。
-     token 由 C1 spike 凍結（基準流 4 / 區段斷點 6 / 標題後 2 / 標籤→清單 1）。
-     互斥：A 為標題→只走「標題→*」；A 非標題且 B 標題→只走「非標題→標題」（結構互斥、不依賴 source order）。 */
-  #paper-content > * + * {
-    margin-top: var(--space-4);                                  /* 基準流：內文↔內文、清單→下段 */
+  /* === [FE-RHYTHM-1 FE-RHYTHM-1 START] === 閱讀視圖清單垂直節奏治本（全文體共用 base）
+     根因：base 只用 margin-bottom 做節奏 + L79 reset 歸零清單 margin →
+     清單「前寬（吃前段 mb）後窄（自身 0、後段無 mt）」。
+     僅修「段落↔清單」交界、不碰巢狀清單與「清單接標題」（最小波及）：
+     並順帶解 #2（slide 末條列 → 下張圖 <p><img> 之 ul:has(+ p) 留白、不黏母片日期）。 */
+  #paper-content p:has(+ ul),
+  #paper-content p:has(+ ol) {
+    margin-bottom: var(--space-1);   /* 標籤段落貼緊其下清單（收窄過寬） */
   }
-  #paper-content > :not(:is(h1,h2,h3,h4)) + :is(h1,h2,h3,h4) {
-    margin-top: var(--space-6);                                  /* 非標題→標題：區段斷點大留白（保區段分隔、不縮）*/
+  #paper-content ul:has(+ p),
+  #paper-content ol:has(+ p) {
+    margin-bottom: var(--space-4);   /* 清單與後續段落/標籤間補留白（補足過窄） */
   }
-  #paper-content > :is(h1,h2,h3,h4) + * {
-    margin-top: var(--space-2);                                  /* 標題→其內文/子標題：貼緊（含 h→h、取代擬議 FE-RHYTHM-2）*/
-  }
-  #paper-content > p + :is(ul,ol) {
-    margin-top: var(--space-1);                                  /* 標籤段落→其清單：最貼（收編 FE-RHYTHM-1）*/
-  }
-  /* 特殊塊 margin-top 明列（置於 flow 之後、贏同特異度 tie；防 flow 覆寫其原間距）。
-     margin-top 與 flow 同屬性＝級聯非疊加；各塊 border/overflow/padding/margin-bottom 由其既有規則保留。
-     h1:first-child 由既有 #paper-content > h1:first-child 規則處理（:first-child 永不被 *+* 命中、不重列）。 */
-  #paper-content > .slide-head { margin-top: var(--space-6); }       /* 投影片標題塊（其 border/padding/margin-bottom 由既有 .slide-head 規則保留）*/
-  #paper-content > .paper-header-meta { margin-top: var(--space-4); } /* 學術扉頁（緊接 h1 時防被「標題→*」收成 space-2）*/
-  #paper-content > .katex-display { margin-top: var(--space-2); }    /* 顯示式（若為直接子代）*/
-  #paper-content > .figure { margin-top: var(--space-4); }
-  /* === [FE-RHYTHM-UNIFY C2 END] === */
+  /* === [FE-RHYTHM-1 FE-RHYTHM-1 END] === */
   #paper-content img {
     max-width: 100%;
     height: auto;
