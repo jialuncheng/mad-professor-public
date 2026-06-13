@@ -54,12 +54,8 @@ _VISION_PROMPT = """你是簡報忠實轉錄器。請將這一頁簡報的內容
 2. markdown_content 用 markdown 保留階層/條列/表格；表格儲存格（cell）內嚴禁使用 ### 等標題語法。
 3. 圖表/示意圖/照片：用一兩句話描述放 figure_description 欄，嚴禁混入 markdown_content。
 4. 頁面有明確標題放 title；沒有就空字串。
-# === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4 START] ===
-5. is_blank：若整頁**無任何實質內容**（空白頁、僅裝飾性橫條/分隔線/純背景/頁碼，無標題無正文
-   無有意義圖表）→ is_blank=true；否則 false。**含真實圖表/照片/示意圖/資料之頁一律 is_blank=false。**
 只輸出 JSON：
-{"title": "", "subtitle": "", "markdown_content": "", "figure_description": "", "is_blank": true|false}
-# === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4 END] ===
+{"title": "", "subtitle": "", "markdown_content": "", "figure_description": ""}
 其中 title 放頁面**大標題**、subtitle 放緊接其下的**次級小標題**（如有；無則空字串）；
 正文（條列/段落/表格）一律放 markdown_content、不要把小標題塞進正文。"""
 
@@ -167,15 +163,9 @@ class SlidePipeline(DocumentStrategy):
         for img, r in zip(page_images, results):
             if not r:
                 continue
-            # === [PIPE-SLIDES-HOTFIX-4 HOTFIX-4] === Vision 判空白 + 無實質文字 → 跳
-            #   雙保險：僅當 is_blank 且 title/content 皆空才跳（防 Vision 誤判有內容頁被丟）；
-            #   合法純圖頁 is_blank=false 不受影響；舊 golden 無 is_blank → None falsy → 向後相容不跳。
-            if r.get("is_blank") and not ((r.get("title") or "").strip()
-                                          or (r.get("markdown_content") or "").strip()):
-                continue
             if not (r.get("title") or r.get("markdown_content")
                     or r.get("figure_description")):
-                continue  # 空白頁跳過（A 軌同款、既有三欄全空）
+                continue  # 空白頁跳過（A 軌同款）
             n = len(units) + 1
             img_file = f"page-{n:02d}.jpg"
             (images_dir / img_file).write_bytes(img)
