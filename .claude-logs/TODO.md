@@ -11,13 +11,24 @@
 
 ## ✅ 已完成
 
+### FE-Hotfix RAG-12-HOTFIX-1 — 圖片 alt 內 LaTeX 破版（renderMarkdownWithMath 抽 math 前保護圖片整段）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| RAG-12-HOTFIX-1 | `static/index.html` `renderMarkdownWithMath`〔`// === [RAG-12-HOTFIX-1] ===` 包裹〕新增 imgBlocks + 步驟 1.5 抽 markdown 圖片整段 `![...](...)`→`__IMG_PLACEHOLDER_N__`（同 code 保護手法）+ 步驟 5〔marked.parse 前〕還原；真因＝步驟 4 不分場合抽 `$...$`〔含圖片 alt 內、如氮循環圖 figure_description 之 `$N_2$`/`$\text{NH}_4^+$`〕→ 步驟 7 把 `katex.renderToString` 的 `<span class="katex">`〔含 `"`/`<>`〕回填進 `alt="…"`→引號提前閉合、`<img>` 炸穿、後續 HTML 全吞→「後續排版全部錯誤」+ 圖說直排亂碼；修法使 alt 內 `$` 永不進 math 管線〔留字面、不可見、無害〕、`<img>` 不再被炸；A 軌〔.figure/.ph 不塞 markdown alt〕+ 履歷〔圖說無 LaTeX〕皆正常→證 FE-RHYTHM-UNIFY CSS 無辜；通用解所有文體圖說含 `$`；純前端、零後端/管線/.py、零 golden 重捕；node spike 4/4 PASS〔圖片 LaTeX alt 受保護/正文 math 不受影響/混合僅正文進/一般圖等價〕、全套件 631 passed〔基線維持、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-14_RAG-12-HOTFIX-1_hotfix.md`
+> **動因**：baron 掃 Ch37_Plant-Nutrition_shadow（B 軌簡報）發現「空白頁沒踢除 + 後續排版全部錯誤」；經多輪證據診斷（A 軌/履歷正常證 CSS 無辜、source markdown 結構乾淨證非空白頁結構崩壞）鎖定真因＝氮循環圖(page-30)圖說 alt 含 LaTeX → renderMarkdownWithMath 步驟 7 KaTeX HTML 注入 alt 炸 `<img>` 級聯。
+> **⚠️ baron E2E（非 commit）**：重整 Ch37 簡報〔無需重跑管線、final_zh 不變、重整即生效〕→ 氮循環圖正常、其後排版全恢復；正文真 math 仍渲染；A 軌/履歷不受影響。
+> **後續未竟**：B2 過場頁（HOTFIX-4 對有標題過場頁抓不到）已開 `PIPE-SLIDES-HOTFIX-5`〔baton 待 Run、改 Vision prompt 須搭 golden 重捕、次要〕。
+
 ### FE-Refactor FE-RHYTHM-UNIFY 閱讀視圖垂直節奏統一（單一 margin-top flow 模型·完全消滅 :has·收編 FE-RHYTHM-1）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | Spike & 模型凍結（垂直節奏 spike）：worktree harness + 碼審驗三假設〔A1 直接子代＝`#paper-content.innerHTML=renderMarkdownWithMath()`(marked 輸出)、`normalizeAcademicHeader` 只改 `.paper-header-meta` 不重構頂層 / A2 巢狀清單〔li 內〕非直接子代、`>`不誤撐 / A3 `:is`/`:not`/`+` Safari 14+·Dia 支援〕+ 凍結模型 9 條〔4 flow + 5 特殊塊〕+ token(4/6/2/1) + 逐 adjacency 互斥/特異度/margin 摺疊證明 + `:has` 可完全消滅結論；零 production diff | `1ecdc5c` |
 | C2 | 統一垂直節奏模型落地（atomic 模型替換）：`static/index.html` 移除 FE-RHYTHM-1 兩條 `:has` + 新增 4 條 flow〔`> *+*` 基準流 space-4 / `> :not(:is(h1-4))+:is(h1-4)` 非標題→標題 space-6 區段斷點 / `> :is(h1-4)+*` 標題→其內文 space-2〔含 h→h、取代擬議 FE-RHYTHM-2〕 / `> p+:is(ul,ol)` 標籤→清單 space-1〕+ 特殊塊 margin-top 明列〔.slide-head/.paper-header-meta/.katex-display/.figure 置 flow 後贏 tie 防覆寫〕；4 主題〔kahn/kandinsky/mies/nara〕移除 p/h1/h2/h3 垂直 margin〔保 border/padding/色票/字族〕；5 檔 + 5 .bak 原子；grep 舊 :has 0 / `:has()` 選擇器 0 / 四主題真 margin 殘留 0；零 .py diff、全套件 631 passed〔基線維持、唯一 fail＝既有 `.env LOG_FORMAT` flake〕 | `a9f2c3a` |
-| C3 | Checkout 收官：Conformance 五維度〔目標規格 U1-U10〔U8 視覺 E2E 列 baron〕/ tasks §6 grep+pytest / 不可動〔零 .py、chat/正規化層未碰〕/ 提示詞五階段稽核 / msg 草稿完整〕全綠 + §7.2 不適用〔單一前端 CSS、無 code handoff、E2E 為驗收主軸〕+ baton 一次性歸檔〔plan/tasks/C1-C3 報告→plans//tasks//executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C3 | Checkout 收官：Conformance 五維度〔目標規格 U1-U10〔U8 視覺 E2E 列 baron〕/ tasks §6 grep+pytest / 不可動〔零 .py、chat/正規化層未碰〕/ 提示詞五階段稽核 / msg 草稿完整〕全綠 + §7.2 不適用〔單一前端 CSS、無 code handoff、E2E 為驗收主軸〕+ baton 一次性歸檔〔plan/tasks/C1-C3 報告→plans//tasks//executions/〕+ TODO 結案 + hash 自癒 | `b727161` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-13_FE-RHYTHM-UNIFY_閱讀視圖垂直節奏統一_plan_v1.md`（v2、九 OQ 全定案、§9.1 凍結模型；tasks §9 Q-A baron 拍板 C2 atomic）
 > **動因**：閱讀視圖垂直間距原由散落主題 CSS + base reset + FE-RHYTHM-1/擬 FE-RHYTHM-2 逐交界補丁治理，根因＝「只用 margin-bottom + L83 reset 歸零清單 margin」之單向偶然 → 清單「前寬後窄」黑洞 + 連續標題過寬 + 同視覺兩機制（`###` vs `X：`）+ 打地鼠;審計確認無硬衝突但疊床架屋 → baron 選一次性統一重構。

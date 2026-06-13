@@ -352,6 +352,9 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_run_提示詞.md`（RAG-12-HOTFIX-1 Run·圖片 alt 內 LaTeX 破版落地：抽 math 前保護圖片整段、grep+node spike+pytest）
+- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_doc_提示詞.md`（B2 過場頁·hotfix 文件產出：放寬跳過為 is_blank 且 markdown_content 空 + Vision prompt 釐清過場頁 is_blank=true）
+- 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_doc_提示詞.md`（圖片 alt 內 LaTeX 破版·hotfix 文件產出：renderMarkdownWithMath 抽 math 前保護圖片整段、alt 內 $ 不進 KaTeX 管線）
 - 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Check_提示詞.md`（Check·Conformance 五維度驗收 + baton 歸檔結案）
 - 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C2_run_提示詞.md`（C2 統一垂直節奏模型落地·atomic：index.html 4 條 flow + 移 FE-RHYTHM-1 + 4 主題清 margin）
 - 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C1_run_提示詞.md`（C1 Spike & 模型凍結·驗 3 假設+凍結 token/特殊塊·零 production diff）
@@ -364,6 +367,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_Check_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C6_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C5_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md`

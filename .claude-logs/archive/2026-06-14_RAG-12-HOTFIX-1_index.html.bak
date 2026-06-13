@@ -1623,22 +1623,12 @@
   function renderMarkdownWithMath(raw) {
     if (raw == null) raw = '';
     const MO = '\uE000', MC = '\uE001';     // math 佔位哨兵（Unicode PUA、marked 原樣穿透）
-    const codeBlocks = [], mathBlocks = [], imgBlocks = [];
+    const codeBlocks = [], mathBlocks = [];
     let t = String(raw);
     // 1. 抽 code（fenced + inline）→ 佔位（步驟 5 還原、不穿透 marked）
     t = t.replace(/(```[\s\S]*?```|`[^`\n]+?`)/g, function (m) {
       codeBlocks.push(m); return '__CODE_PLACEHOLDER_' + (codeBlocks.length - 1) + '__';
     });
-    // === [RAG-12-HOTFIX-1 START] === 1.5 抽 markdown 圖片整段 → 佔位（步驟 5 還原、marked.parse 前）
-    //   真因：圖說（figure_description）整段塞進 ![alt](url) 之 alt；alt 內若含 $...$（如氮循環圖
-    //   $N_2$/$\text{NH}_4^+$），步驟 4 會抽成 math 佔位 → 步驟 7 把 katex.renderToString 的
-    //   <span class="katex">…（含 " 與 <>）回填進 alt="…" → 引號提前閉合、<img> 標籤炸穿、
-    //   後續 HTML 全被吞 →「後續排版全部錯誤」。保護圖片整段使 alt 內 $ 永不進 math 管線
-    //   （步驟 5 marked.parse 前還原；alt 留字面 $、不可見、無害）。
-    t = t.replace(/!\[[^\]]*\]\([^)]*\)/g, function (m) {
-      imgBlocks.push(m); return '__IMG_PLACEHOLDER_' + (imgBlocks.length - 1) + '__';
-    });
-    // === [RAG-12-HOTFIX-1 END] ===
     // 2. 護跳脫 \$（split 法、無 lookbehind）→ 使步驟 3/4 之 $ 必為真 math
     t = t.split('\\$').join('__ESC_DOLLAR__');
     // 3. 抽 block math（$$ 先於 $；[\s\S] 跨行、不用 dotAll s 旗標）→ PUA 佔位
@@ -1652,8 +1642,6 @@
     // 5. 還原 code 與 \$（僅 tempText；math 仍佔位）
     t = t.replace(/__CODE_PLACEHOLDER_(\d+)__/g, function (m, i) { return codeBlocks[i]; });
     t = t.split('__ESC_DOLLAR__').join('\\$');
-    // === [RAG-12-HOTFIX-1] === 還原圖片（marked.parse 前；alt 內 $ 已不在 math 佔位、留字面、不被步驟 7 注入）
-    t = t.replace(/__IMG_PLACEHOLDER_(\d+)__/g, function (m, i) { return imgBlocks[i]; });
     // 6. marked.parse（math PUA 佔位穿透）
     let html = marked.parse(t);
     // 7. 回填 math：先還原公式內 __ESC_DOLLAR__→\$（步驟 7 鐵律），再 katex 渲染、壞式優雅降級
