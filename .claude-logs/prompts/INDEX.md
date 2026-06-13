@@ -20,6 +20,7 @@
   - `2026-06-11_META-NORM_plan_提示詞.md` — plan（baron 構想：LLM 開放抽取封面 meta + 第二次 LLM 比對既有欄位統一＝DOMAIN-NORM 飛輪搬到 metadata 欄名；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 三步飛輪 + P1 開放抽取/封面判定放寬 + subtitle〔D〕併入 + 前端通用 key-value 渲染；§9 八 OQ；A 撤案、B/E/F 歸 HOTFIX-2；不寫碼純規格）
 
 ### PIPE-SLIDES 系列
+  - `2026-06-13_PIPE-SLIDES-HOTFIX-3d_HOTFIX-3d_run_提示詞.md` — HOTFIX-3d Run（slide 渲染層清洗：行內 `**X**`→`<strong>`〔繞 CommonMark CJK emphasis〕+ 剝整行裸 URL〔保圖片行/行內 URL〕;殿前注入 promote→inline_bold→strip_url→normalize→tighten;RAG 旁路不碰;≥8 pytest）
   - `2026-06-13_PIPE-SLIDES-HOTFIX-3c_HOTFIX-3c_run_提示詞.md` — HOTFIX-3c Run（簡報標題+重點節奏正規化：_tighten_point_groups 連續行首箭頭合併硬換行〔保 →〕+ 相鄰清單 loose→tight；殿後注入 _page_source_md/_deliver；RAG 旁路不碰；≥6 pytest）
   - `2026-06-12_PIPE-SLIDES-HOTFIX-3d_doc_提示詞.md` — HOTFIX-3d 文件產出（B 軌 vs 原稿比對後修 #2：行內 `**X**`→`<strong>`〔解 CJK 緊貼 `**` 未渲染粗體〕+ 剝除整行裸 URL〔解 p6/18/27/35 破版〕；slide 渲染層、RAG 旁路不碰；baton 暫存待 Run）
   - `2026-06-12_PIPE-SLIDES-HOTFIX-3b_HOTFIX-3b_run_提示詞.md` — HOTFIX-3b Run（top-level 清單凸排修補執行：HOTFIX-3 二 selector 前置 `#paper-content ul/ol`；備份+grep+pytest 驗收；TODO 標 ✅ + hash 自癒 + baton 移出歸檔）

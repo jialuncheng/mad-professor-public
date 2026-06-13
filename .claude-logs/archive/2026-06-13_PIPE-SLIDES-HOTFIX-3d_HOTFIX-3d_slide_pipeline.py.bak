@@ -810,33 +810,6 @@ class SlidePipeline(DocumentStrategy):
         return "\n".join(out)
     # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c END] ===
 
-    # === [PIPE-SLIDES-HOTFIX-3d HOTFIX-3d START] ===
-    @staticmethod
-    def _render_inline_bold(text: str) -> str:
-        """行內 **X** → <strong>X</strong>（raw HTML、繞過 CommonMark CJK emphasis 失效）。
-
-        真因：閉合 `**` 前接全形標點、後接中文字（非空白非標點）→ CommonMark 不認 closer →
-        字面星號。轉 raw <strong> 後 marked 原樣輸出、不論 CJK 緊貼皆正確粗體。
-        於 _promote_subheadings 之後跑（整行 **X** 已升 ### → 此處只剩行內 span）；非貪婪成對匹配、
-        落單 `**` 保留原樣。只動渲染 body、不碰 rag_sections。
-        """
-        if not text:
-            return text
-        return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-
-    @staticmethod
-    def _strip_bare_url_lines(text: str) -> str:
-        """剝除『整行僅一個 URL』之行（投影片來源/縮圖網址、破版噪聲）。
-
-        僅匹配整行純 URL（前後容空白、容 <...> autolink 括號）；行內 URL（同行有其他文字）
-        與 ![alt](images/…) 圖片行（非 http 開頭）一律保留。只動渲染 body、不碰 rag_sections。
-        """
-        if not text:
-            return text
-        url_line = re.compile(r"^\s*<?https?://\S+>?\s*\r?$")
-        return "\n".join(ln for ln in text.split("\n") if not url_line.match(ln))
-    # === [PIPE-SLIDES-HOTFIX-3d HOTFIX-3d END] ===
-
     @staticmethod
     def _page_source_md(u: dict) -> str:
         """單頁原文 markdown（en 版還原與整檔 fallback 共用；alt=原文 description、單點呈現）。"""
@@ -851,9 +824,6 @@ class SlidePipeline(DocumentStrategy):
         if (u.get("content") or "").strip():
             # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、zh/en 對稱）
             body = SlidePipeline._promote_subheadings(u["content"].strip())
-            # === [PIPE-SLIDES-HOTFIX-3d HOTFIX-3d] === 行內粗體轉 <strong> + 剝除整行裸 URL
-            body = SlidePipeline._render_inline_bold(body)
-            body = SlidePipeline._strip_bare_url_lines(body)
             body = SlidePipeline._normalize_paragraph_breaks(body)
             # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c] === 重點群收緊（殿後、硬換行不被 normalize 拆）
             body = SlidePipeline._tighten_point_groups(body)
@@ -949,9 +919,6 @@ class SlidePipeline(DocumentStrategy):
                 if zh_content:
                     # A/B/C 子標題升 h3 → 段落正規化（HOTFIX-1 F4、soft break 黏段根除）
                     body = self._promote_subheadings(zh_content)
-                    # === [PIPE-SLIDES-HOTFIX-3d HOTFIX-3d] === 行內粗體轉 <strong> + 剝除整行裸 URL
-                    body = self._render_inline_bold(body)
-                    body = self._strip_bare_url_lines(body)
                     body = self._normalize_paragraph_breaks(body)
                     # === [PIPE-SLIDES-HOTFIX-3c HOTFIX-3c] === 重點群收緊（殿後、硬換行不被 normalize 拆）
                     body = self._tighten_point_groups(body)
