@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### FE-Refactor FE-RHYTHM-UNIFY 閱讀視圖垂直節奏統一（單一 margin-top flow 模型·完全消滅 :has·收編 FE-RHYTHM-1）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Spike & 模型凍結（垂直節奏 spike）：worktree harness + 碼審驗三假設〔A1 直接子代＝`#paper-content.innerHTML=renderMarkdownWithMath()`(marked 輸出)、`normalizeAcademicHeader` 只改 `.paper-header-meta` 不重構頂層 / A2 巢狀清單〔li 內〕非直接子代、`>`不誤撐 / A3 `:is`/`:not`/`+` Safari 14+·Dia 支援〕+ 凍結模型 9 條〔4 flow + 5 特殊塊〕+ token(4/6/2/1) + 逐 adjacency 互斥/特異度/margin 摺疊證明 + `:has` 可完全消滅結論；零 production diff | `1ecdc5c` |
+| C2 | 統一垂直節奏模型落地（atomic 模型替換）：`static/index.html` 移除 FE-RHYTHM-1 兩條 `:has` + 新增 4 條 flow〔`> *+*` 基準流 space-4 / `> :not(:is(h1-4))+:is(h1-4)` 非標題→標題 space-6 區段斷點 / `> :is(h1-4)+*` 標題→其內文 space-2〔含 h→h、取代擬議 FE-RHYTHM-2〕 / `> p+:is(ul,ol)` 標籤→清單 space-1〕+ 特殊塊 margin-top 明列〔.slide-head/.paper-header-meta/.katex-display/.figure 置 flow 後贏 tie 防覆寫〕；4 主題〔kahn/kandinsky/mies/nara〕移除 p/h1/h2/h3 垂直 margin〔保 border/padding/色票/字族〕；5 檔 + 5 .bak 原子；grep 舊 :has 0 / `:has()` 選擇器 0 / 四主題真 margin 殘留 0；零 .py diff、全套件 631 passed〔基線維持、唯一 fail＝既有 `.env LOG_FORMAT` flake〕 | `a9f2c3a` |
+| C3 | Checkout 收官：Conformance 五維度〔目標規格 U1-U10〔U8 視覺 E2E 列 baron〕/ tasks §6 grep+pytest / 不可動〔零 .py、chat/正規化層未碰〕/ 提示詞五階段稽核 / msg 草稿完整〕全綠 + §7.2 不適用〔單一前端 CSS、無 code handoff、E2E 為驗收主軸〕+ baton 一次性歸檔〔plan/tasks/C1-C3 報告→plans//tasks//executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-13_FE-RHYTHM-UNIFY_閱讀視圖垂直節奏統一_plan_v1.md`（v2、九 OQ 全定案、§9.1 凍結模型；tasks §9 Q-A baron 拍板 C2 atomic）
+> **動因**：閱讀視圖垂直間距原由散落主題 CSS + base reset + FE-RHYTHM-1/擬 FE-RHYTHM-2 逐交界補丁治理，根因＝「只用 margin-bottom + L83 reset 歸零清單 margin」之單向偶然 → 清單「前寬後窄」黑洞 + 連續標題過寬 + 同視覺兩機制（`###` vs `X：`）+ 打地鼠;審計確認無硬衝突但疊床架屋 → baron 選一次性統一重構。
+> **解法**：單一 margin-top flow 模型（基準流 + 三檔 + 一條最貼）取代逐交界補丁、收編 FE-RHYTHM-1、取消擬議 FE-RHYTHM-2；margin-top 制使清單看「上一個」兄弟＝相鄰選擇器 → **完全消滅 `:has()`**（相容 Safari 14+）;主題垂直 margin 移交 base（principles.md 間距=結構歸 base）。
+> **⚠️ baron 運維（非 commit）**：三軌（履歷/論文/簡報）× 四主題（kahn/mies/kandinsky/nara）視覺 E2E〔尤論文連續 h2→h3 貼緊、巢狀清單未誤撐、簡報引擎頁 h→h 與施肥頁 p→list 節奏一致、.slide-head 無雙重間距〕+ chat（`.msg-ai`）不受影響;無 golden 重捕（純 CSS、final_zh byte 不變）。
+
+
 ### FE-Refactor RAG-12 前端 KaTeX 數學渲染（自託管 KaTeX + 三階段順序佔位）
 
 | Commit | 內容 | Hash |
@@ -20,7 +34,7 @@
 | C3 | 接線六處 marked.parse 消費端（paper L2864 + chat 5 處 → renderMarkdownWithMath;函式內步驟6 marked.parse 保留;grep rMWM=7/marked.parse=1;數學渲染 LIVE） | `0ea0cf8` |
 | C4 | producer 契約 pytest（`tests/test_latex_preservation.py` 4 測試:formula 塊 `$$\tag`/text 行內 `$P_base$`/_preserve_pipe_table/_write_to_md 逐字;鎖 academic A-rail **RestoreProcessor** 不截斷轉義 `$$`/`$`;零業務碼 diff、609 passed） | `a4b4b3f` |
 | C5 | 文件同步（README 前端 vendored 依賴段 + api-integration renderMarkdownWithMath 雙端整合 + dom-reference .katex/.katex-display DOM+CSS+降級;3 .bak、純 .md） | `f3d48eb` |
-| C6 | Checkout 收官：Conformance 五維度全綠〔目標規格 U1-U12 / tasks §6 grep+pytest / 不可動業務碼零 diff / 提示詞 8 份 / msg 完整〕+ §7.2 整合〔producer pytest 4 passed 達成 + consumer 同碼 spike 9/9 實證;真瀏覽器 E2E 列 baron 運維〕+ baton 一次性歸檔〔plan v1-v7/tasks/C1-C6 報告;slide 3c/3d 非本任務留 baton〕+ 執行期 deviation 補註 plan/tasks §99.2 | `待 baron 回填` |
+| C6 | Checkout 收官：Conformance 五維度全綠〔目標規格 U1-U12 / tasks §6 grep+pytest / 不可動業務碼零 diff / 提示詞 8 份 / msg 完整〕+ §7.2 整合〔producer pytest 4 passed 達成 + consumer 同碼 spike 9/9 實證;真瀏覽器 E2E 列 baron 運維〕+ baton 一次性歸檔〔plan v1-v7/tasks/C1-C6 報告;slide 3c/3d 非本任務留 baton〕+ 執行期 deviation 補註 plan/tasks §99.2 | `c1c2a72` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-12_RAG-12_前端KaTeX數學渲染_plan_v7.md`（七輪 review + 三次 spike 實證、無 lookbehind、步驟7 ESC 還原、Unicode PUA 佔位）
 > **動因**：含真二維 LaTeX（`\frac`/`\mathrm`/`\tag`）之論文（2601 800VDC 資料中心 / byz 拜占庭 / 2412 TradingAgents）前端呈現字面 `$$`/`$` 原始碼、無法二維排版；Unicode 上下標無法表達分數/積分故必須引入渲染引擎。
@@ -63,7 +77,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| FE-RHYTHM-1 | `static/index.html` base CSS（`#paper-content` 區）新增兩條 `:has()`、**僅打「段落↔清單」交界**:`p:has(+ ul/ol){margin-bottom:var(--space-1)}`〔標籤段落貼緊其下清單·收窄過寬〕+ `ul/ol:has(+ p){margin-bottom:var(--space-4)}`〔清單與後續段落/標籤間補留白·補足過窄〕;**巢狀清單**〔後接 `<li>` 非 `<p>`〕**與「清單接標題」**〔後接 `<h>` 非 `<p>`〕**不中、波及最小**;真因＝base 垂直節奏只靠 `margin-bottom`〔`#paper-content p` 無 `margin-top`〕+ `index.html:79` 全域 reset 歸零 `ul/ol` margin、四主題 0 補 → 清單「前有間距〔吃前段 mb〕後無間距〔自身 0、後段無 mt〕」單向黑洞;Vision 把區段標籤吐成純段落緊接清單且交替重複 → 顯「標籤→清單寬、清單→下個標籤窄」反轉〔Ch37 施肥頁〕;**全文體共用閱讀視圖一次治本**〔履歷/論文/書籍/litedoc/簡報〕、**chat（`.msg-ai`）不受影響**、不動 themes;**同時解 #2**〔slide 末條列→下張圖 `<p><img>` 之 `ul:has(+ p)` 補 space-4 → 不黏烤進右上的母片日期;採 (a) 不額外加 CSS、純圖頁邊角暫留〕;`:has()` 相容 Safari 15.4+/Chromium 105+〔Dia OK〕、舊版整條忽略降級現況;grep 兩規則命中 + themes 0 + 零 .py、全套件 631 passed | `待 baron 回填` |
+| FE-RHYTHM-1 | `static/index.html` base CSS（`#paper-content` 區）新增兩條 `:has()`、**僅打「段落↔清單」交界**:`p:has(+ ul/ol){margin-bottom:var(--space-1)}`〔標籤段落貼緊其下清單·收窄過寬〕+ `ul/ol:has(+ p){margin-bottom:var(--space-4)}`〔清單與後續段落/標籤間補留白·補足過窄〕;**巢狀清單**〔後接 `<li>` 非 `<p>`〕**與「清單接標題」**〔後接 `<h>` 非 `<p>`〕**不中、波及最小**;真因＝base 垂直節奏只靠 `margin-bottom`〔`#paper-content p` 無 `margin-top`〕+ `index.html:79` 全域 reset 歸零 `ul/ol` margin、四主題 0 補 → 清單「前有間距〔吃前段 mb〕後無間距〔自身 0、後段無 mt〕」單向黑洞;Vision 把區段標籤吐成純段落緊接清單且交替重複 → 顯「標籤→清單寬、清單→下個標籤窄」反轉〔Ch37 施肥頁〕;**全文體共用閱讀視圖一次治本**〔履歷/論文/書籍/litedoc/簡報〕、**chat（`.msg-ai`）不受影響**、不動 themes;**同時解 #2**〔slide 末條列→下張圖 `<p><img>` 之 `ul:has(+ p)` 補 space-4 → 不黏烤進右上的母片日期;採 (a) 不額外加 CSS、純圖頁邊角暫留〕;`:has()` 相容 Safari 15.4+/Chromium 105+〔Dia OK〕、舊版整條忽略降級現況;grep 兩規則命中 + themes 0 + 零 .py、全套件 631 passed | `3428581` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-13_FE-RHYTHM-1_hotfix.md`
 > **代號**：**非 slide 專屬**——由 PIPE-SLIDES QA（Ch37 施肥頁）暴露、但根因在全文體共用 base CSS 之垂直節奏、治本歸此通用代號。
@@ -75,7 +89,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-4 | `pipelines/slide_pipeline.py` P1：`_VISION_PROMPT` 基底加 `is_blank` 欄 + 第 5 條判定指引〔整頁無實質內容/僅裝飾橫條→true、含真實圖表→false;因 `_COVER_PROMPT = _VISION_PROMPT + …` 所有頁含封面皆得〕+ `_process` ④ 單位過濾**雙保險跳過**〔僅當 `is_blank` **且** title/content 皆空才跳——防 Vision 誤判有內容頁被丟;合法純圖頁 `is_blank=false` 不受影響;舊 golden 無 `is_blank`→None falsy→**向後相容不跳**〕;既有「三欄全空」保留為第二道;與既有 `is_cover` 同模式對稱;真因＝Ch37 第 16 張空白投影片〔僅裝飾黑橫條〕無 title/content 但 Vision 回非空 figure_description〔描述空白〕→ 通過舊三欄判定→產空框黑條 reading 頁;**RAG/渲染層/四路零碰**〔只動 P1 prompt + 過濾〕;SOP logging+database 無命中（合規）;is_blank grep 6 + HOTFIX-4 3 命中 + is_cover 未動;4 新 pytest〔空白跳過/雙保險保留有內容/純圖頁保留/舊無欄相容〕、slide 62 passed、全套件 631 passed | `待 baron 回填` |
+| HOTFIX-4 | `pipelines/slide_pipeline.py` P1：`_VISION_PROMPT` 基底加 `is_blank` 欄 + 第 5 條判定指引〔整頁無實質內容/僅裝飾橫條→true、含真實圖表→false;因 `_COVER_PROMPT = _VISION_PROMPT + …` 所有頁含封面皆得〕+ `_process` ④ 單位過濾**雙保險跳過**〔僅當 `is_blank` **且** title/content 皆空才跳——防 Vision 誤判有內容頁被丟;合法純圖頁 `is_blank=false` 不受影響;舊 golden 無 `is_blank`→None falsy→**向後相容不跳**〕;既有「三欄全空」保留為第二道;與既有 `is_cover` 同模式對稱;真因＝Ch37 第 16 張空白投影片〔僅裝飾黑橫條〕無 title/content 但 Vision 回非空 figure_description〔描述空白〕→ 通過舊三欄判定→產空框黑條 reading 頁;**RAG/渲染層/四路零碰**〔只動 P1 prompt + 過濾〕;SOP logging+database 無命中（合規）;is_blank grep 6 + HOTFIX-4 3 命中 + is_cover 未動;4 新 pytest〔空白跳過/雙保險保留有內容/純圖頁保留/舊無欄相容〕、slide 62 passed、全套件 631 passed | `91ad0b6` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-13_PIPE-SLIDES-HOTFIX-4_hotfix.md`
 > **動因**：baron 比對原稿 `Ch37_Plant-Nutrition.pdf` 第 16 張空白投影片，B 軌仍產空框黑條 reading 頁;現有 P1 空白跳過僅「三欄全空」、Vision 對空白頁回非空 figure_description 漏網。
@@ -87,7 +101,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-3d | `pipelines/slide_pipeline.py` 新增 `_render_inline_bold`〔行內 `**X**`→`<strong>X</strong>` raw HTML、**繞過 CommonMark CJK emphasis 失效**——閉合 `**` 前接全形標點、後接中文字非 closer 致字面星號；marked 不 sanitize 原樣輸出〕+ `_strip_bare_url_lines`〔剝除整行純 URL；**行內 URL 與 `![](images/…)` 圖片行保留**〕;`_page_source_md`/`_deliver` 於 `_promote_subheadings` 後注入〔promote→inline_bold→strip_url→normalize→tighten[3c]〕;真因＝B 軌 vs 原稿 Ch37 比對——p27 根圈 `**互利共生**中` 字面星號〔原稿英文 `**bold** ` 後空白無症、翻中 CJK 緊貼才觸發〕、p6/p18/p27/p35 投影片來源/縮圖網址被 Vision 轉錄成整行裸連結 gfm 自動連結 + 超長無斷點撐破 `#paper-content`;**RAG 零影響**〔`rag_sections` content＝原始 `zh_content`〔merged L962〕、未套 3d〕;零後端/DB/models/static/四路;SOP logging+database 無命中（合規）;helper grep 6 + HOTFIX-3d 4;9 新 pytest〔行內粗體/CJK 緊貼/落單 `**` 保留/整行 `**` 升標題/剝整行 URL/行內 URL 保留/圖片行保留/RAG 隔離〔真 P3〕/p27 端到端〕+ 端到端真 marked 4/4、slide 58 passed、全套件 627 passed | `待 baron 回填` |
+| HOTFIX-3d | `pipelines/slide_pipeline.py` 新增 `_render_inline_bold`〔行內 `**X**`→`<strong>X</strong>` raw HTML、**繞過 CommonMark CJK emphasis 失效**——閉合 `**` 前接全形標點、後接中文字非 closer 致字面星號；marked 不 sanitize 原樣輸出〕+ `_strip_bare_url_lines`〔剝除整行純 URL；**行內 URL 與 `![](images/…)` 圖片行保留**〕;`_page_source_md`/`_deliver` 於 `_promote_subheadings` 後注入〔promote→inline_bold→strip_url→normalize→tighten[3c]〕;真因＝B 軌 vs 原稿 Ch37 比對——p27 根圈 `**互利共生**中` 字面星號〔原稿英文 `**bold** ` 後空白無症、翻中 CJK 緊貼才觸發〕、p6/p18/p27/p35 投影片來源/縮圖網址被 Vision 轉錄成整行裸連結 gfm 自動連結 + 超長無斷點撐破 `#paper-content`;**RAG 零影響**〔`rag_sections` content＝原始 `zh_content`〔merged L962〕、未套 3d〕;零後端/DB/models/static/四路;SOP logging+database 無命中（合規）;helper grep 6 + HOTFIX-3d 4;9 新 pytest〔行內粗體/CJK 緊貼/落單 `**` 保留/整行 `**` 升標題/剝整行 URL/行內 URL 保留/圖片行保留/RAG 隔離〔真 P3〕/p27 端到端〕+ 端到端真 marked 4/4、slide 58 passed、全套件 627 passed | `7d6170d` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3d_hotfix.md`
 > **動因**：baron 掃 `植物營養 (Plant Nutrition) (測試).pdf` 40 頁 + 比對原稿 `Ch37_Plant-Nutrition.pdf`，#2 兩類渲染破版（字面 `**`〔p27〕+ 裸 URL〔p6/18/27/35〕、原稿無 B 軌引入）；baron 拍板開為獨立 BE-Hotfix。
@@ -99,7 +113,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-3c | `pipelines/slide_pipeline.py` 新增私有 `_tighten_point_groups`〔① 連續行首箭頭 `→`/`->` 合併單一段落 + 兩空格硬換行〔`<br>`〕→ tight 群、**箭頭原樣保留為文字不轉 bullet**、群內空行跳過、孤行不變、行中箭頭（連接詞）不碰；② `- * + • / 數字.` 相鄰清單項空行收緊 loose→tight、清單↔標題/圖/段落邊界留白；`\r?` 相容 CRLF〕+ `_page_source_md`/`_deliver` 渲染 body **殿後注入**〔於 `_promote_subheadings`+`_normalize_paragraph_breaks` 之後、硬換行不被 normalize 單 `\n`→`\n\n` 拆回段落〕;真因＝Vision 對「標題+重點群」每頁吐不同結構〔頁 A `*` loose list 母項下大縫·子項貼母項 / 頁 B `###`+`→` 散段落標題貼首項·項目散〕、CSS 對 loose `<p>`/tight `<li>`/散段落給不同 margin → 每頁節奏不一;**RAG 零影響**〔`rag_sections` content＝原始 `zh_content`〔merged L929〕、未套 tighten;slides RAG 走 `ctx.rag_sections` 旁路、不從 final_zh 切〕;零後端/DB/models/static/其餘四路改動;SOP logging+database 皆無命中（合規）;helper grep 3 命中 + HOTFIX-3c 4 命中 + merged 仍原始;9 新 pytest〔箭頭硬換行群/群內空行/行中不碰/孤行不變/loose 收緊/邊界留白/CRLF/RAG 隔離〔真 P3〕/頁 B 端到端〕、slide 49 passed、全套件 618 passed | `待 baron 回填` |
+| HOTFIX-3c | `pipelines/slide_pipeline.py` 新增私有 `_tighten_point_groups`〔① 連續行首箭頭 `→`/`->` 合併單一段落 + 兩空格硬換行〔`<br>`〕→ tight 群、**箭頭原樣保留為文字不轉 bullet**、群內空行跳過、孤行不變、行中箭頭（連接詞）不碰；② `- * + • / 數字.` 相鄰清單項空行收緊 loose→tight、清單↔標題/圖/段落邊界留白；`\r?` 相容 CRLF〕+ `_page_source_md`/`_deliver` 渲染 body **殿後注入**〔於 `_promote_subheadings`+`_normalize_paragraph_breaks` 之後、硬換行不被 normalize 單 `\n`→`\n\n` 拆回段落〕;真因＝Vision 對「標題+重點群」每頁吐不同結構〔頁 A `*` loose list 母項下大縫·子項貼母項 / 頁 B `###`+`→` 散段落標題貼首項·項目散〕、CSS 對 loose `<p>`/tight `<li>`/散段落給不同 margin → 每頁節奏不一;**RAG 零影響**〔`rag_sections` content＝原始 `zh_content`〔merged L929〕、未套 tighten;slides RAG 走 `ctx.rag_sections` 旁路、不從 final_zh 切〕;零後端/DB/models/static/其餘四路改動;SOP logging+database 皆無命中（合規）;helper grep 3 命中 + HOTFIX-3c 4 命中 + merged 仍原始;9 新 pytest〔箭頭硬換行群/群內空行/行中不碰/孤行不變/loose 收緊/邊界留白/CRLF/RAG 隔離〔真 P3〕/頁 B 端到端〕、slide 49 passed、全套件 618 passed | `a486585` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-12_PIPE-SLIDES-HOTFIX-3c_hotfix.md`（v3、保 `→` 硬換行版；四輪對話收斂——白名單→texmath 否決→保符號硬換行）
 > **動因**：META-NORM/HOTFIX-3 後 baron 掃 `植物營養 (Plant Nutrition) (測試).pdf` 40 頁 + 比對原稿 `Ch37`，發現「標題+重點」兩頁兩種不一致節奏（頁 A 土壤顆粒清單 loose / 頁 B 氮素形態 `→` 散段落）；baron 拍板「保 `→` 原始符號、硬換行收緊」（非轉 bullet、非 CSS 全域 margin 滲論文）。
@@ -1100,6 +1114,10 @@
 ### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
 - ✅ ~~FE-AESTHETICS HOTFIX-1 前端學術扉頁自癒與排版靠左優化~~（已落地、C2-hotfix `bf3c14b` + Check 收官）
+
+### FE-RHYTHM (✅ 已完成)
+- ✅ ~~FE-RHYTHM-UNIFY 閱讀視圖垂直節奏統一~~（已落地、C1 `1ecdc5c` + C2 `a9f2c3a` + C3 Checkout 收官；單一 margin-top flow 模型〔基準流 4/非標題→標題 6/標題→* 2/p→清單 1〕取代逐交界補丁、**完全消滅 `:has()`**〔相容 Safari 14+〕、收編 FE-RHYTHM-1、取消擬議 FE-RHYTHM-2、4 主題垂直 margin 移交 base；零 .py、631 passed；⚠️ baron 三軌×四主題視覺 E2E、無 golden 重捕）
+- ✅ ~~FE-RHYTHM-1 閱讀視圖「清單前寬後窄」垂直節奏治本~~（已落地、`3428581`；2 條 `:has()` p↔清單交界補丁；後由 FE-RHYTHM-UNIFY 收編為統一 flow 模型）
 
 ### RAG-13 (✅ 已完成)
 - ✅ ~~RAG-13 自訂主題動態清單與選單優化~~（已落地、C1 `9e041ed` + C2 `d842008` + Check 收官）

@@ -352,6 +352,11 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Check_提示詞.md`（Check·Conformance 五維度驗收 + baton 歸檔結案）
+- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C2_run_提示詞.md`（C2 統一垂直節奏模型落地·atomic：index.html 4 條 flow + 移 FE-RHYTHM-1 + 4 主題清 margin）
+- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C1_run_提示詞.md`（C1 Spike & 模型凍結·驗 3 假設+凍結 token/特殊塊·零 production diff）
+- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Tasks_提示詞.md`（閱讀視圖垂直節奏統一·拆 commit 產 tasks）
+- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_plan_提示詞.md`（閱讀視圖垂直節奏統一 FE-Refactor plan 產出）
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_HOTFIX-2_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_doc_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md`
@@ -362,8 +367,3 @@
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C6_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C5_run_提示詞.md`
 - 2026-06-11 — `2026-06-11_PIPE-SLIDES_C4_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C3_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C2_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SYNC-2_Check_提示詞.md`
