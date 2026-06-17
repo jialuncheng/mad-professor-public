@@ -62,7 +62,6 @@
 ```
 CLAUDE.md                                              # 核心規範與契約（已自動載入）
 .claude-logs/ref/WORKFLOW_SOP.md                       # 工作流規範（已自動載入）
-<plan.md 路徑>                                         # 全局策略 z（StraTA conditioning re-inject·WORKFLOW-4 C2 U1）
 <tasks.md 路徑>                                        # 本次執行的依據 tasks（§8 實作細節）
 <若工作流類別為 BE-Refactor / BE-Hotfix，必讀：>
 .claude-logs/sop/2026-05-23_logging_SOP_手冊.md

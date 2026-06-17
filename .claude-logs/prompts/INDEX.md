@@ -103,6 +103,7 @@
 
 ### WORKFLOW 系列（流程治理）
 - 🟡 **WORKFLOW-4（2026-06-14 plan v2 → Tasks → C1…·DOC-Refactor·StraTA 任務成功率原理移植進文件治理模板）**
+  - `2026-06-18_WORKFLOW-4_C2_run_提示詞.md` — C2 Run（Execution 側 Conditioning + 雙軸自評：template_prompt_for_run 強制讀檔清單加 `plan.md`〔U1·策略 z re-inject〕 + template_execution §1 加「與全局策略對齊」欄〔U2〕+ §6 後新增 §自評三問〔U3·(a)越界?(b)無關/違規?(c)推進哪個 U-N?·正向軸防做白工〕；2 .bak 入 git add；C2 報告暫存 baton 嚴禁 git add）
   - `2026-06-18_WORKFLOW-4_C1_run_提示詞.md` — C1 Run（Plan 側 Diverse Rollout：template_plan §2 後插選用 §2.5 候選方案〔U4·高風險才列 ≥2 語意分散方案+trade-offs+否決留痕〕 + template_prompt_for_plan 撰寫原則加多候選條 + Q5 校正「套用模板結構」表對齊 template_plan 實際章；2 .bak 入 git add；C1 報告暫存 baton 嚴禁 git add；純文件 grep 驗收）
   - `2026-06-18_WORKFLOW-4_Tasks_提示詞.md` — Tasks（依 plan v2〔六 OQ 全定案〕自主拆 DOC-Refactor commit：5 模板輕量加法——prompt_for_run〔U1 讀 plan re-inject 策略 z〕/ execution〔U2 對齊欄 + U3 雙軸自評·含正向「推進哪個 U-N」〕/ template_plan〔U4 §2.5 候選方案·高風險才觸發〕/ prompt_for_plan〔U4 + Q5 stale 結構表校正〕/ prompt_for_check〔U5 Check 減負前移·非省略〕；U5 依 U3 先定義；六階段骨架不動、不重寫 Conformance 維度；各 C 產報告暫存 baton、最後 checkout 一次性歸檔；純文件 grep 驗收；含 §0.5 + §8 六維度表）
 - ✅ **WORKFLOW-3（2026-06-08 plan v3 → Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor·補流程治本）**
@@ -355,6 +356,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_WORKFLOW-4_C2_run_提示詞.md`（C2 Run·Execution 側：prompt_for_run 讀檔加 plan〔U1 策略 z〕+ execution §1 對齊欄〔U2〕+ §自評三問〔U3·含正向軸〕）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C1_run_提示詞.md`（C1 Run·Plan 側：template_plan §2.5 候選方案〔U4〕+ prompt_for_plan U4 撰寫原則 + Q5 stale 結構表校正）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_Tasks_提示詞.md`（WORKFLOW-4 拆 commit：5 模板輕量加法移植 StraTA·U1-U6·自主拆分 + checkout）
 - 2026-06-14 — `2026-06-14_WORKFLOW-4_plan_提示詞.md`（StraTA 任務成功率原理移植進文件治理模板·DOC-Refactor plan 產出：conditioning re-inject / 條件化多候選 / 逐 commit 雙軸自評 / Check 減負前移）
@@ -369,4 +371,3 @@
 - 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_run_提示詞.md`（RAG-12-HOTFIX-1 Run·圖片 alt 內 LaTeX 破版落地：抽 math 前保護圖片整段、grep+node spike+pytest）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_doc_提示詞.md`（B2 過場頁·hotfix 文件產出：放寬跳過為 is_blank 且 markdown_content 空 + Vision prompt 釐清過場頁 is_blank=true）
 - 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_doc_提示詞.md`（圖片 alt 內 LaTeX 破版·hotfix 文件產出：renderMarkdownWithMath 抽 math 前保護圖片整段、alt 內 $ 不進 KaTeX 管線）
-- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Check_提示詞.md`（Check·Conformance 五維度驗收 + baton 歸檔結案）
