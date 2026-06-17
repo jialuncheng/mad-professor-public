@@ -1,6 +1,6 @@
 # 提示詞資料庫索引
 
-最後更新：2026-06-06（MODEL-11 Tasks）
+最後更新：2026-06-18（WORKFLOW-4 Check 收官）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
@@ -102,7 +102,8 @@
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### WORKFLOW 系列（流程治理）
-- 🟡 **WORKFLOW-4（2026-06-14 plan v2 → Tasks → C1…·DOC-Refactor·StraTA 任務成功率原理移植進文件治理模板）**
+- ✅ **WORKFLOW-4（2026-06-14 plan v2 → Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor·StraTA 任務成功率原理移植進文件治理模板）**
+  - `2026-06-18_WORKFLOW-4_Check_提示詞.md` — Check（C4 Checkout 收官：5 維度 Conformance〔目標規格 plan §2 U1-U6 / tasks §6 grep〔含 C1-C3〕/ 不可動 tasks §7 + pytest 旁證 / 提示詞歸檔稽核 plan/tasks/C1/C2/C3/Check / msg.txt 各 §8〕→ 全綠後 TODO 結案〔Tasks/C1-C4 完成表 + git log 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan→plans/ + tasks→tasks/ + 5 報告→executions/〕+ INDEX 補登/連結正式路徑；§7.2 DOC 豁免；不自發 commit；WORKFLOW-4 全案結案）
   - `2026-06-18_WORKFLOW-4_C3_run_提示詞.md` — C3 Run（Check 側減負前移：template_prompt_for_check 加註「不可動〔維度三〕+ msg〔維度五〕由各 Run §自評〔U3〕前移分攤、Check 減負非省略、仍為總閘門·聚焦跨 commit U-coverage + §7.2 整合」〔U5〕；嚴禁重寫 WORKFLOW_SOP §4 維度定義；1 .bak 入 git add；C3 報告暫存 baton 嚴禁 git add）
   - `2026-06-18_WORKFLOW-4_C2_run_提示詞.md` — C2 Run（Execution 側 Conditioning + 雙軸自評：template_prompt_for_run 強制讀檔清單加 `plan.md`〔U1·策略 z re-inject〕 + template_execution §1 加「與全局策略對齊」欄〔U2〕+ §6 後新增 §自評三問〔U3·(a)越界?(b)無關/違規?(c)推進哪個 U-N?·正向軸防做白工〕；2 .bak 入 git add；C2 報告暫存 baton 嚴禁 git add）
   - `2026-06-18_WORKFLOW-4_C1_run_提示詞.md` — C1 Run（Plan 側 Diverse Rollout：template_plan §2 後插選用 §2.5 候選方案〔U4·高風險才列 ≥2 語意分散方案+trade-offs+否決留痕〕 + template_prompt_for_plan 撰寫原則加多候選條 + Q5 校正「套用模板結構」表對齊 template_plan 實際章；2 .bak 入 git add；C1 報告暫存 baton 嚴禁 git add；純文件 grep 驗收）
@@ -357,6 +358,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_WORKFLOW-4_Check_提示詞.md`（Check·C4 Checkout 收官：5 維度 Conformance〔目標規格 U1-U6 / tasks §6 grep / 不可動 + pytest / 提示詞稽核 / msg §8〕+ TODO 結案〔Tasks/C1-C4 + hash 自癒〕+ baton 一次性歸檔 + §7.2 DOC 豁免）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C3_run_提示詞.md`（C3 Run·Check 側：template_prompt_for_check 加減負前移註〔U5·維度三/五前移分攤、減負非省略、總閘門聚焦 U-coverage + §7.2〕）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C2_run_提示詞.md`（C2 Run·Execution 側：prompt_for_run 讀檔加 plan〔U1 策略 z〕+ execution §1 對齊欄〔U2〕+ §自評三問〔U3·含正向軸〕）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C1_run_提示詞.md`（C1 Run·Plan 側：template_plan §2.5 候選方案〔U4〕+ prompt_for_plan U4 撰寫原則 + Q5 stale 結構表校正）
@@ -371,4 +373,3 @@
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_doc_提示詞.md`（殘留母片日期單頁清除 + golden 重捕說明回溯更正·hotfix 文件產出：_strip_master_date 加單頁純日期清空 + 8 份文件 A/B 軌 golden 更正）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_run_提示詞.md`（HOTFIX-5 Run·有標題過場頁未踢除落地：is_blank 過濾放寬〔且 markdown_content 空〕+ Vision prompt 釐清 + 5 回歸測試）
 - 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_run_提示詞.md`（RAG-12-HOTFIX-1 Run·圖片 alt 內 LaTeX 破版落地：抽 math 前保護圖片整段、grep+node spike+pytest）
-- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_doc_提示詞.md`（B2 過場頁·hotfix 文件產出：放寬跳過為 is_blank 且 markdown_content 空 + Vision prompt 釐清過場頁 is_blank=true）

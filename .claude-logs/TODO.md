@@ -11,6 +11,21 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Plan 側 Diverse Rollout（U4）：`template_plan` §2 後插**選用** `§2.5 候選方案（Diverse Rollout）`〔高風險/模糊/架構級才觸發·≥2 語意分散方案+trade-offs+否決留痕、低風險明說單案〕+ `template_prompt_for_plan` 撰寫原則 #5 多候選 + Q5 stale 校正〔#4 §7→§9 + 「套用模板結構」表對齊 template_plan 實際章 §4 跨Phase/§5 變動風險/§9 OQ/+§2.5、stale 0〕;零業務代碼、640 passed 基線 | `44659be` |
+| C2 | Execution 側 Conditioning + 雙軸自評（U1/U2/U3）：`template_prompt_for_run` 強制讀檔清單加 `plan.md`〔U1·全局策略 z re-inject、StraTA §4.1 prepend z;fence 內改行內 marker〕 + `template_execution §1` 加「與全局策略對齊」欄〔U2〕+ §6 後新增 `§自評`〔U3·雙軸：(a)越界?(b)無關/違規?(c)推進哪個 U-N?·正向軸防做白工〕;C2 報告就地 dogfood;零業務代碼、640 passed 基線 | `0e8cb77` |
+| C3 | Check 側減負前移（U5）：`template_prompt_for_check` Conformance 維度表後加註——不可動〔維度三〕+ msg〔維度五〕由各 Run §自評〔U3〕前移分攤、Check **減負非省略**、仍為**最後總閘門**·聚焦跨 Commit U-coverage（總驗收）+ §7.2 跨 Phase 整合;**嚴禁重寫 WORKFLOW_SOP §4 五維度定義**〔grep 證不在 diff〕;零業務代碼、640 passed 基線 | `757dee6` |
+| C4 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6 跨 commit 全覆蓋〔U1/U2/U3=C2·U4=C1·U5=C3·U6=五模板 marker+StraTA 誠實前提註〕/ tasks §6 grep / 不可動〔零業務代碼·WORKFLOW_SOP §4 未動·640 passed〕/ 提示詞 6 份齊 / msg §8 完整〕+ §7.2 純 DOC-Refactor 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/〕+ TODO 結案 + 全量 hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-14_WORKFLOW-4_StraTA原理移植文件治理模板_plan_v1.md`（v2、U1-U6、§9 六 OQ 全定案）
+> **動因**：StraTA（arXiv 2605.06642v1）提高任務成功率四原理——① 固定策略 z 自初始狀態抽樣、每步 conditioning ② 階層 ③ diverse strategy rollout（farthest-point）④ critical self-judgment（逐步：是否依策略 / 是否推進任務）——可移植進文件治理流程治本「Run 偏離 plan 全局策略 / 設計單線無多候選 / 做白工（scope creep）/ Check 人肉重跑」。
+> **移植映射（U1-U6）**：U1 run 讀 plan＝conditioning re-inject;U2 execution 對齊欄＝顯式宣告 conditioned-on;U3 §自評雙軸（負向防錯 + **正向「推進哪個 U-N」防做白工**）＝credit assignment;U4 template_plan §2.5 條件化多候選（高風險才觸發·語意分散非同案變體）＝diverse rollout;U5 check 減負前移＝step-level credit assignment 收官聚焦。
+> **誠實前提**：移植「文件治理原理」非「RL 演算法本體」;各模板 marker 帶 StraTA 註說明。
+> **§7.2 豁免**：純 DOC-Refactor、5 模板 .md、零業務代碼、無 Phase handoff（同 WORKFLOW-3 立規者先例）。
+
 ### DOC-Refactor PIPE-SYNC-3 slides 路落地經驗回灌母 plan 與 SPEC
 
 | Commit | 內容 | Hash |
@@ -905,14 +920,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板**（`.claude-logs/baton/2026-06-18_WORKFLOW-4_StraTA原理移植文件治理模板_tasks.md`、plan `baton/2026-06-14_WORKFLOW-4_..._plan_v1.md` v2 六 OQ 全定案）
-  - [x] ✅ 已完成: C1 — Plan 側 Diverse Rollout（template_plan §2.5 候選方案〔高風險才觸發·≥2 語意分散方案〕+ template_prompt_for_plan U4 撰寫原則 #5 + Q5 校正〔#4 §7→§9 + 結構表對齊 §4 跨Phase/§5 變動風險/§9 OQ/+§2.5、stale 0〕;零業務代碼、640 passed 基線）
-  - [x] ✅ 已完成: C2 — Execution 側 Conditioning + 雙軸自評（template_prompt_for_run U1 讀檔加 plan=策略 z〔行內 marker·fence 內〕 + template_execution U2 §1 對齊欄 + U3 §自評三問〔越界?/無關?/推進哪個 U-N?·正向軸〕;C2 報告就地 dogfood;零業務代碼、640 passed 基線）
-  - [x] ✅ 已完成: C3 — Check 側減負前移（template_prompt_for_check U5 維度三/五前移分攤註·減負非省略·總閘門聚焦 U-coverage+§7.2;WORKFLOW_SOP §4 維度定義未動;零業務代碼、640 passed 基線）
-  - [/] 🟡 WIP: C4 — checkout 收官（Conformance 五維度 + §7.2 DOC 豁免 + baton 一次性歸檔 + TODO 結案 + hash 自癒〔回填 C1 44659be 等〕）
-  - 工時：4 個 commits（純文件模板加法）
-  - 依賴：無（DOC-Refactor、5 模板輕量加法、六階段骨架不動、不重寫 Conformance 維度;C3 依 C2）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1162,6 +1169,7 @@
 - ✅ ~~WORKFLOW-1 流程簡化與文件治理~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試~~（已落地、C1 `2e4d4c9` + C2 `386c1ce` + C3 `f14dcd9` + C4 收官；DOC-Refactor 治本 RAG-ASYNC #1 接縫缺陷——WORKFLOW_SOP §7 跨 Phase 接縫契約〔含 worked example〕+ 收官前整合測試〔key-changing transform、Checkout 必驗、顯式豁免〕+ §4.2 A6 / template_plan 升 plan 結構 SSOT / framework §4.1 改引用 template〔消滅 doc-drift〕；自身 DOC 無 handoff 整合測試豁免；plan v1/v2/v3 三版保留作 §1.9 軌跡）
+- ✅ ~~WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板~~（已落地、C1 `44659be` + C2 `0e8cb77` + C3 `757dee6` + C4 收官；DOC-Refactor 移植 StraTA〔2605.06642v1〕四原理進 5 治理模板——U1 prompt_for_run 讀 plan〔conditioning re-inject 策略 z〕/ U2 execution §1 對齊欄 / U3 execution §自評雙軸〔負向防錯 + 正向「推進哪個 U-N」防做白工〕/ U4 template_plan §2.5 條件化多候選〔diverse rollout·高風險才觸發·語意分散〕+ prompt_for_plan 同步 + Q5 stale 校正 / U5 prompt_for_check 減負前移〔維度三/五前移分攤·非省略·聚焦 U-coverage+§7.2〕/ U6 五模板 marker+StraTA 誠實前提註；**WORKFLOW_SOP §4 五維度定義未動**；§7.2 純 DOC 顯式豁免；零業務代碼、640 passed 基線；見 ✅ 完成區）
 
 ### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
