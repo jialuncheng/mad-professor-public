@@ -908,8 +908,8 @@
 - 🟡 **WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板**（`.claude-logs/baton/2026-06-18_WORKFLOW-4_StraTA原理移植文件治理模板_tasks.md`、plan `baton/2026-06-14_WORKFLOW-4_..._plan_v1.md` v2 六 OQ 全定案）
   - [x] ✅ 已完成: C1 — Plan 側 Diverse Rollout（template_plan §2.5 候選方案〔高風險才觸發·≥2 語意分散方案〕+ template_prompt_for_plan U4 撰寫原則 #5 + Q5 校正〔#4 §7→§9 + 結構表對齊 §4 跨Phase/§5 變動風險/§9 OQ/+§2.5、stale 0〕;零業務代碼、640 passed 基線）
   - [x] ✅ 已完成: C2 — Execution 側 Conditioning + 雙軸自評（template_prompt_for_run U1 讀檔加 plan=策略 z〔行內 marker·fence 內〕 + template_execution U2 §1 對齊欄 + U3 §自評三問〔越界?/無關?/推進哪個 U-N?·正向軸〕;C2 報告就地 dogfood;零業務代碼、640 passed 基線）
-  - [/] 🟡 WIP: C3 — Check 側減負前移（template_prompt_for_check U5 維度三/五前移分攤註·減負非省略;依 C2）
-  - [ ] ⬜ 未開始: C4 — checkout 收官（Conformance 五維度 + §7.2 DOC 豁免 + baton 一次性歸檔 + TODO 結案 + hash 自癒）
+  - [x] ✅ 已完成: C3 — Check 側減負前移（template_prompt_for_check U5 維度三/五前移分攤註·減負非省略·總閘門聚焦 U-coverage+§7.2;WORKFLOW_SOP §4 維度定義未動;零業務代碼、640 passed 基線）
+  - [/] 🟡 WIP: C4 — checkout 收官（Conformance 五維度 + §7.2 DOC 豁免 + baton 一次性歸檔 + TODO 結案 + hash 自癒〔回填 C1 44659be 等〕）
   - 工時：4 個 commits（純文件模板加法）
   - 依賴：無（DOC-Refactor、5 模板輕量加法、六階段骨架不動、不重寫 Conformance 維度;C3 依 C2）
 

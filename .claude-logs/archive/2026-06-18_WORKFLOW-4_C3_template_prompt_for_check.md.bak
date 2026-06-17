@@ -87,12 +87,6 @@ CLAUDE.md                                              # 核心規範與契約�
 | **提示詞歸檔稽核** | `.claude-logs/prompts/` 物理目錄 | 執行 `ls .claude-logs/prompts/ \| grep "<任務編碼>"`，確認 plan / tasks / run(s) / check 各階段 .md 實體存在；若缺失則立即補建自癒後繼續 |
 | **msg.txt 草稿完整性** | 本任務各執行報告 §8 | 確認每份執行報告 §8 含完整 msg.txt 草稿展示（含 `cat > /tmp/...` 寫入指令 + 草稿全文）；缺失則列出清單要求補完 |
 
-<!-- === [WORKFLOW-4 C3 U5] === StraTA step-level credit assignment 移植：減負前移、非省略 -->
-> **⚙️ Check 減負前移（WORKFLOW-4 U5）**：**不可動清單（維度三）+ msg.txt 草稿完整性（維度五）** 之審計，已由各 Run 階段執行報告的 **§自評（策略對齊自我審查、U3）前移分攤**——髒代碼 / 越界 / 做白工於各 Commit 當下即被自 flag 清理（Run-level critical self-judgment 效率最高）。
-> Check 階段因而 **減負，但非省略**：Check 仍為**最後總閘門**，必須聚焦審計 **① 跨 Commit「目標規格 U-coverage」（所有 commit 疊加是否 100% 實現 `plan §2` 全部 U-N、總驗收）+ ② §7.2 跨 Phase 整合**——此二者為單 Commit §自評涵蓋不到、唯收官可驗者。
-> **嚴禁**據此跳過任何維度或重寫 `WORKFLOW_SOP §4` 五維度定義；前移＝分攤而非取消。
-<!-- === [WORKFLOW-4 C3 U5 END] === -->
-
 **第二步：產出 Conformance 驗收報告**
 
 ```markdown
