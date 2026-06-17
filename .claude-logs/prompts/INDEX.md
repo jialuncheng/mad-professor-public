@@ -102,6 +102,9 @@
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### WORKFLOW 系列（流程治理）
+- 🟡 **WORKFLOW-4（2026-06-14 plan v2 → Tasks → C1…·DOC-Refactor·StraTA 任務成功率原理移植進文件治理模板）**
+  - `2026-06-18_WORKFLOW-4_C1_run_提示詞.md` — C1 Run（Plan 側 Diverse Rollout：template_plan §2 後插選用 §2.5 候選方案〔U4·高風險才列 ≥2 語意分散方案+trade-offs+否決留痕〕 + template_prompt_for_plan 撰寫原則加多候選條 + Q5 校正「套用模板結構」表對齊 template_plan 實際章；2 .bak 入 git add；C1 報告暫存 baton 嚴禁 git add；純文件 grep 驗收）
+  - `2026-06-18_WORKFLOW-4_Tasks_提示詞.md` — Tasks（依 plan v2〔六 OQ 全定案〕自主拆 DOC-Refactor commit：5 模板輕量加法——prompt_for_run〔U1 讀 plan re-inject 策略 z〕/ execution〔U2 對齊欄 + U3 雙軸自評·含正向「推進哪個 U-N」〕/ template_plan〔U4 §2.5 候選方案·高風險才觸發〕/ prompt_for_plan〔U4 + Q5 stale 結構表校正〕/ prompt_for_check〔U5 Check 減負前移·非省略〕；U5 依 U3 先定義；六階段骨架不動、不重寫 Conformance 維度；各 C 產報告暫存 baton、最後 checkout 一次性歸檔；純文件 grep 驗收；含 §0.5 + §8 六維度表）
 - ✅ **WORKFLOW-3（2026-06-08 plan v3 → Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor·補流程治本）**
   - `2026-06-08_WORKFLOW-3_Check_提示詞.md` — Check（C4 Checkout 收官：Conformance 五維度驗收〔目標規格 plan_v3 U1-U5 / tasks §6 grep / 不可動清單 / 提示詞稽核 / 整合測試豁免聲明〕→ 全綠後 TODO 結案〔C1-C4 完成表 + 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan v1/v2/v3→plans/ + tasks→tasks/ + C1-C3 報告→executions/〕+ C4 報告直寫 executions/；整合測試豁免〔DOC-Refactor 無 code handoff、§7.2 + plan Q2-Q3〕明載；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；WORKFLOW-3 全案結案）
   - `2026-06-08_WORKFLOW-3_C3_run_提示詞.md` — C3 Run（framework §4.1 計畫檔結構契約 自列八章節 → 改引用 template_plan.md 為 plan 結構 SSOT〔保留「不寫程式碼純分析」哲學句 + 模板含哪些章 + 跨 Phase 接縫契約唯一源引用 WORKFLOW_SOP §7〕；不刪 §4.2 執行報告契約及其他章；§99.2 v4；改前 .bak + 兩條 grep 驗收；執行報告暫存 baton 嚴禁 mv、C4 才歸檔；msg 寫 /tmp〔Opus 4.8 1M〕、不自發 commit；C3=最後內容 commit、下一步 C4 Checkout）
@@ -352,6 +355,14 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_WORKFLOW-4_C1_run_提示詞.md`（C1 Run·Plan 側：template_plan §2.5 候選方案〔U4〕+ prompt_for_plan U4 撰寫原則 + Q5 stale 結構表校正）
+- 2026-06-18 — `2026-06-18_WORKFLOW-4_Tasks_提示詞.md`（WORKFLOW-4 拆 commit：5 模板輕量加法移植 StraTA·U1-U6·自主拆分 + checkout）
+- 2026-06-14 — `2026-06-14_WORKFLOW-4_plan_提示詞.md`（StraTA 任務成功率原理移植進文件治理模板·DOC-Refactor plan 產出：conditioning re-inject / 條件化多候選 / 逐 commit 雙軸自評 / Check 減負前移）
+- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Check_提示詞.md`（Check·Conformance 三維度驗收 + baton 歸檔結案〔SPEC 就地、master plan/任務 plan/tasks/C1-C3 報告歸檔〕）
+- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C2_run_提示詞.md`（C2 Run·master plan 補註⁸：§8.5「B 軌另捕」措辭修正 + 補註⁸不 bump 主版本）
+- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C1_run_提示詞.md`（C1 Run·SPEC v7 同步：D1 slides P3 drift / D2 golden A/B 軌 / D3 alt LaTeX / D4 is_blank / D6 rag_sections §1.1.2 / D7 rag_tree_json / D5 / bump v7）
+- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Tasks_提示詞.md`（slides 回灌·拆 commit 產 tasks：C1 SPEC v7 同步 + C2 master plan 補註⁸ + C3 Checkout）
+- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_plan_提示詞.md`（slides 路落地經驗回灌母 plan 與 SPEC·DOC-Refactor plan 產出：D1 SPEC slides P3 drift / D2 A/B 軌 golden 釐清 / D3 alt LaTeX 契約 / D4 is_blank / D5 清洗層）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_run_提示詞.md`（HOTFIX-6 Run·殘留母片日期單頁清除落地 + 8 份歷史文件 golden 誤述 banner 作廢 + TODO 尾註）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_doc_提示詞.md`（殘留母片日期單頁清除 + golden 重捕說明回溯更正·hotfix 文件產出：_strip_master_date 加單頁純日期清空 + 8 份文件 A/B 軌 golden 更正）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_run_提示詞.md`（HOTFIX-5 Run·有標題過場頁未踢除落地：is_blank 過濾放寬〔且 markdown_content 空〕+ Vision prompt 釐清 + 5 回歸測試）
@@ -359,11 +370,3 @@
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_doc_提示詞.md`（B2 過場頁·hotfix 文件產出：放寬跳過為 is_blank 且 markdown_content 空 + Vision prompt 釐清過場頁 is_blank=true）
 - 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_doc_提示詞.md`（圖片 alt 內 LaTeX 破版·hotfix 文件產出：renderMarkdownWithMath 抽 math 前保護圖片整段、alt 內 $ 不進 KaTeX 管線）
 - 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Check_提示詞.md`（Check·Conformance 五維度驗收 + baton 歸檔結案）
-- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C2_run_提示詞.md`（C2 統一垂直節奏模型落地·atomic：index.html 4 條 flow + 移 FE-RHYTHM-1 + 4 主題清 margin）
-- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_C1_run_提示詞.md`（C1 Spike & 模型凍結·驗 3 假設+凍結 token/特殊塊·零 production diff）
-- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_Tasks_提示詞.md`（閱讀視圖垂直節奏統一·拆 commit 產 tasks）
-- 2026-06-13 — `2026-06-13_FE-RHYTHM-UNIFY_plan_提示詞.md`（閱讀視圖垂直節奏統一 FE-Refactor plan 產出）
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_HOTFIX-2_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-2_doc_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_run_提示詞.md`
-- 2026-06-11 — `2026-06-11_PIPE-SLIDES-HOTFIX-1b_doc_提示詞.md`

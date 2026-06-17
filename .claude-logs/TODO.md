@@ -11,11 +11,24 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor PIPE-SYNC-3 slides 路落地經驗回灌母 plan 與 SPEC
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | SPEC v7 同步（SPEC 真理源回灌：D1 slides P3 drift〔100% Bypass→逐頁翻譯〕/ D2 golden A/B 軌釐清〔§1.3.1〕/ D3 alt LaTeX 跨軌契約〔R3.2〕/ D4 is_blank 頁面類型判定〔§1.3.1 第4原則+§1.2 指回〕/ D6 rag_sections §1.1.2 旁路登記〔對稱 raw_metadata〕/ D7 rag_tree_json 點名 / D5 清洗層一行;bump v7;7 處 grep 全綠、640 passed 基線、零代碼 diff、四凍結合約型別欄位零變動） | `隨 C3`〔SPEC 長駐 baton、就地 git add 於 Checkout〕 |
+| C2 | master plan 補註⁸（母 plan 回灌：§8.5「B 軌另捕」措辭修正為「capture 捕 A 軌正本基準/B 軌走 shadow diff + 改善豁免」+ §99.2 補註⁸不 bump 主版本;grep B 軌另捕 0 殘留〔唯一命中 changelog〕、640 passed、零代碼） | `e15a7aa` |
+| C3 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D7 / tasks §6 grep+pytest / 不可動〔零代碼·contracts.py 未動·其他路次未動〕/ 提示詞五階段稽核 / msg 完整〕+ §7.2 DOC 豁免 + baton 一次性歸檔〔PIPE-SYNC-3 plan/master plan v10→plans/、tasks→tasks/、C1-C3 報告→executions/;SPEC 本體就地 git add〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-14_PIPE-SYNC-3_slides路落地經驗回灌母plan與SPEC_plan_v1.md`（v3、D1-D7、§9 六 OQ 全定案）
+> **動因**：slides 路 7 次 hotfix（HOTFIX-1~6 + RAG-12-HOTFIX-1）落地後，兩真理源 2 錯誤（D1 SPEC slides P3 仍寫 100% Bypass、D2「B 軌另捕」A/B 軌 golden 混淆）+ 4 缺口 + 1 可選 → 不回灌則 PIPE-ACADEMIC 等下一路被誤導;同 PIPE-SYNC-2 對 resume 之回灌。
+> **四層交接稽核結論**：contracts.py 四凍結合約「型別欄位」皆最新（venue/doi/section_summaries/domain_name）無 drift;旁路登記補對稱（raw_metadata §1.1.1 已有 + **rag_sections §1.1.2 本案補**;pdf_path/owner_id 為編排輸入不需登記）。
+> **版控先例**：SPEC 本體長駐 baton 不入版控、就地 git add（同 PIPE-SYNC-2 195e12b）;master plan v10 自補註⁷ 已入 plans/ 版控。
+
 ### BE-Hotfix PIPE-SLIDES-HOTFIX-6 — 殘留母片日期單頁清除 + golden 重捕說明回溯更正
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-6 | **Part A**〔`pipelines/slide_pipeline.py` `# === [PIPE-SLIDES-HOTFIX-6] ===` 包裹〕`_strip_master_date` 加「整頁 content 僅純日期行 → 清空」單頁 pass〔無論幾頁、運行 P1 譯前〕——真因＝HOTFIX-2 ≥2 頁門檻對「Vision 僅單頁吐母片頁尾日期」漏網〔Ch37 都市農業頁 `4/28/2026` 留存、P3 譯重排成 `2026/4/28`、全檔唯一日期行〕;真內容頁日期與其他行並存→`all()` False→不清〔不誤殺時間軸〕、與 HOTFIX-2 正交;**Part B**〔文件回溯更正〕釐清 `capture slides` 捕 A 軌〔PipelineCore/slides_processor〕非 B 軌→B 軌 hotfix 不需 A 軌 golden 重捕、驗證走影子 E2E;8 份 hotfix 文件〔HOTFIX-1/1b/2/3/3c/3d/4/5〕「slides golden 須重捕」誤述加更正 banner 作廢〔原句保留作審計〕+ TODO 14 行 slide-golden 尾註〔含 META-NORM C4 同誤;resume golden 6 行未動·A 軌共用本即正確〕;RAG-12-HOTFIX-1「零 golden 重捕」正確不改;RAG 隔離、四路零碰;SOP logging+database 無命中（合規）;4 新回歸測試〔單頁純日期清空/單頁日期夾內容保留/多頁 HOTFIX-2 不退化/一般不動〕、slide 71 passed、全套件 640 passed〔基線+4、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `待 baron 回填` |
+| HOTFIX-6 | **Part A**〔`pipelines/slide_pipeline.py` `# === [PIPE-SLIDES-HOTFIX-6] ===` 包裹〕`_strip_master_date` 加「整頁 content 僅純日期行 → 清空」單頁 pass〔無論幾頁、運行 P1 譯前〕——真因＝HOTFIX-2 ≥2 頁門檻對「Vision 僅單頁吐母片頁尾日期」漏網〔Ch37 都市農業頁 `4/28/2026` 留存、P3 譯重排成 `2026/4/28`、全檔唯一日期行〕;真內容頁日期與其他行並存→`all()` False→不清〔不誤殺時間軸〕、與 HOTFIX-2 正交;**Part B**〔文件回溯更正〕釐清 `capture slides` 捕 A 軌〔PipelineCore/slides_processor〕非 B 軌→B 軌 hotfix 不需 A 軌 golden 重捕、驗證走影子 E2E;8 份 hotfix 文件〔HOTFIX-1/1b/2/3/3c/3d/4/5〕「slides golden 須重捕」誤述加更正 banner 作廢〔原句保留作審計〕+ TODO 14 行 slide-golden 尾註〔含 META-NORM C4 同誤;resume golden 6 行未動·A 軌共用本即正確〕;RAG-12-HOTFIX-1「零 golden 重捕」正確不改;RAG 隔離、四路零碰;SOP logging+database 無命中（合規）;4 新回歸測試〔單頁純日期清空/單頁日期夾內容保留/多頁 HOTFIX-2 不退化/一般不動〕、slide 71 passed、全套件 640 passed〔基線+4、唯一 fail＝既有 .env LOG_FORMAT flake〕 | `84c0825` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-14_PIPE-SLIDES-HOTFIX-6_hotfix.md`
 > **動因**：HOTFIX-5 後 baron 發現 Ch37 都市農業頁殘留母片日期 `2026/4/28`（被翻譯重排）;並釐清 `capture slides` 捕 A 軌、先前 8 份 hotfix 文件「golden 須重捕」為 A/B 軌混淆誤述。
@@ -892,6 +905,14 @@
 
 ### 🔴 高優先
 
+- 🟡 **WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板**（`.claude-logs/baton/2026-06-18_WORKFLOW-4_StraTA原理移植文件治理模板_tasks.md`、plan `baton/2026-06-14_WORKFLOW-4_..._plan_v1.md` v2 六 OQ 全定案）
+  - [x] ✅ 已完成: C1 — Plan 側 Diverse Rollout（template_plan §2.5 候選方案〔高風險才觸發·≥2 語意分散方案〕+ template_prompt_for_plan U4 撰寫原則 #5 + Q5 校正〔#4 §7→§9 + 結構表對齊 §4 跨Phase/§5 變動風險/§9 OQ/+§2.5、stale 0〕;零業務代碼、640 passed 基線）
+  - [/] 🟡 WIP: C2 — Execution 側 Conditioning + 雙軸自評（template_prompt_for_run U1 讀檔加 plan=策略 z + template_execution U2 §1 對齊欄 + U3 §自評三問〔越界?/無關?/推進哪個 U-N?〕）
+  - [ ] ⬜ 未開始: C3 — Check 側減負前移（template_prompt_for_check U5 維度三/五前移分攤註·減負非省略;依 C2）
+  - [ ] ⬜ 未開始: C4 — checkout 收官（Conformance 五維度 + §7.2 DOC 豁免 + baton 一次性歸檔 + TODO 結案 + hash 自癒）
+  - 工時：4 個 commits（純文件模板加法）
+  - 依賴：無（DOC-Refactor、5 模板輕量加法、六階段骨架不動、不重寫 Conformance 維度;C3 依 C2）
+
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1172,7 +1193,8 @@
 ### PIPE-CORE (✅ 已完成)
 - ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check `13c1dcb`；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
 
-### PIPE-SYNC (✅ 已完成·第 2 路前置)
+### PIPE-SYNC (✅ 已完成·真理源回灌)
+- ✅ ~~PIPE-SYNC-3 slides 路落地經驗回灌母 plan 與 SPEC~~（已落地、C1 SPEC v7〔D1 slides P3 drift/D2 golden A/B 軌/D3 alt LaTeX/D4 is_blank/D6 rag_sections §1.1.2/D7 rag_tree_json/D5〕 + C2 master plan 補註⁸〔§8.5「B 軌另捕」措辭修正〕 + C3 Checkout 收官；slides 路 7 hotfix 回灌兩真理源、四層交接+旁路全對稱〔D6 補 rag_sections 旁路登記〕；§7.2 DOC 豁免、零代碼 640 passed；SPEC 就地版控、master plan v10 plans/）
 - ✅ ~~PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC~~（已落地、C1 `c54327c` + C2 `9666b20` + C3 `29f13ca` + C4 Checkout 收官；母 plan 補註⁶〔U1 矛盾/U2 stale/U3 key 母句/U8/U5 指標〕+ SPEC v6〔key 契約凍結/zh 路/§1.3.1 Vision 共用規格/-001 樣例/rag_tree 歸屬/三註〕+ sop 四檔去誤導〔model_recommendations -001🔴/guide 勘誤/doc_type banner+v1v2 歸檔/mineru RELEASE_ON_UPLOAD〕；§7.2 DOC 豁免；PIPE-VISUAL 開 plan 前置完成）
 
 ### PIPE-SCAFFOLD (✅ 已完成·階段一建)

@@ -70,29 +70,23 @@ CLAUDE.md                                              # 核心規範與契約�
 1. **純規格原則**：plan.md 只記錄「現況 + 問題 + 解法 + 驗證」，嚴禁混入設計脈絡、演進過程、拍板記錄
 2. **What it should be**：描述目標狀態，不含 Why（Why 屬於設計決策，由 baron 主導）
 3. **證據驅動**：所有「現況盤點」必須附 grep 指令 + 真實行號，不依賴記憶
-4. **Open Questions 三欄**：plan §9 Open Questions 必含「問題 + 推薦答案 + 理由」三欄，baron 拍板後才進 execution
-<!-- === [WORKFLOW-4 C1 U4/Q5] === -->
-5. **候選方案（Diverse Rollout、選用）**：**高風險 / 模糊 / 架構級**決策須於 §2.5 列 **≥2 個語意分散（非同案變體）候選方案 + trade-offs**、由 baron 擇優（StraTA §4.2 移植）；低風險常規改動明寫「單一方案、無多方案需求」即可（避免形式主義）。
+4. **Open Questions 三欄**：plan §7 Open Questions 必含「問題 + 推薦答案 + 理由」三欄，baron 拍板後才進 execution
 
 ### 📄 套用模板結構
 
-請嚴格套用 `.claude-logs/templates/template_plan.md` 的結構，產出 plan 必須包含以下章節（對齊 template_plan 現狀、WORKFLOW-3 §4 接縫契約 + WORKFLOW-4 §2.5）：
+請嚴格套用 `.claude-logs/templates/template_plan.md` 的結構，產出 plan 必須包含以下章節：
 
 | 章節 | 要求 |
 |---|---|
 | **頂部元數據** | 任務編碼 / 日期 / 工作流類別 / 狀態 |
 | **§1 TL;DR** | 挑戰（三行內）/ 解法摘要 / 影響範圍 / 不可動清單指引 |
 | **§2 目標規格** | 最終狀態的可驗證描述（無 why） |
-| **§2.5 候選方案（Diverse Rollout、選用）** | 高風險決策列 ≥2 語意分散候選 + trade-offs + 擇優 + 否決留痕；低風險寫「單一方案」 |
 | **§3 現況與證據** | grep 指令 + 真實行號；代碼 snippet（若有）|
-| **§4 跨 Phase 接縫契約** | 跨 ≥2 Phase/模組任務必填 producer/consumer/key 同基準；否則標「無」（WORKFLOW_SOP §7）|
-| **§5 變動風險與相容性評估** | 風險 + 等級 + 緩解（對齊 framework §4.1）|
-| **§6 不可動清單** | 明確列出禁止改動的檔案 / 函式 / API |
-| **§7 規格依據** | 引用 SOP / 框架章節 / 既有 plan |
-| **§8 驗證計畫** | pytest 指令 + E2E 手動核查步驟 + grep 驗收條件 |
-| **§9 Open Questions** | 問題 + 推薦答案 + 理由（三欄表格）|
+| **§4 不可動清單** | 明確列出禁止改動的檔案 / 函式 / API |
+| **§5 規格依據** | 引用 SOP / 框架章節 / 既有 plan |
+| **§6 驗證計畫** | pytest 指令 + E2E 手動核查步驟 + grep 驗收條件 |
+| **§7 Open Questions** | 問題 + 推薦答案 + 理由（三欄表格）|
 | **§99 治理規格** | 套用 template_file_governance.md 格式 |
-<!-- === [WORKFLOW-4 C1 U4/Q5 END] === -->
 
 ### 📁 產出規格
 
