@@ -140,7 +140,8 @@
   - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
 
 ### PIPE-LITEDOC 系列（PIPE 縱向五路第 3 路·news/web/unknown）
-- 🟡 **PIPE-LITEDOC LiteDocPipeline 策略管線（2026-06-18 plan v3 → Tasks → C1…C6 → C7…·BE-Refactor）**
+- ✅ **PIPE-LITEDOC LiteDocPipeline 策略管線（2026-06-18 plan v3 → Tasks → C1-C7 → C8 Checkout 收官·BE-Refactor）**
+  - `2026-06-19_PIPE-LITEDOC_C8_check_提示詞.md` — Check（C8 Checkout 收官：5 維度 Conformance〔目標規格 U1-U9+U2.1/U5b/U5c 跨 C1-C7 全覆蓋 / tasks §6 grep+pytest 686 / 不可動 / 提示詞稽核 / msg §8〕+ §7.2 不豁免達標〔C7 key-changing 整合〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C8 報告→executions/〕+ TODO 結案〔hash 自癒 C2-C7〕;litedoc 全案結案）
   - `2026-06-19_PIPE-LITEDOC_C7_run_提示詞.md` — C7 Run（單元與接縫整合測試·雙鎖：補 **§7.2 P2→P3→P4 key-changing 整合測試**〔_KeyChangeTr 真把 Intro→ZH::Intro、斷言 P2 section_summaries key 與 P3 rag_sections summary_key 譯後仍同基準=原文標題 path、P4 消費同份 + 下游 match·堵 RAG-ASYNC-HOTFIX-1〕;純測試零業務改動、25 passed、全套件 686）
   - `2026-06-19_PIPE-LITEDOC_C6_run_提示詞.md` — C6 Run（P4 Async RAG·rag_indexer ≥10 + 雙語標題：run_phase4 呼共用 rag_indexer.index 傳 'litedoc'+title+translated_title〔讀 P3 旁路〕、門檻走預設 ≥10〔litedoc 不入 ≥3 tuple·**rag_indexer 零改**〕、四產物、異常拋出 Orchestrator 標 failed;24 passed、全套件 685）
   - `2026-06-19_PIPE-LITEDOC_C5_run_提示詞.md` — C5 Run（P3 size-gate 翻譯與 HTML 扉頁還原·含雙語標題鏈：run_phase3 size-gate〔<15k 一鍵 translate_whole·≥15k restore_sections_markdown〕+ heading 退化 fallback + U5c translated_title 三路〔zh/分段/一鍵〕+ render_meta_header_html HTML 扉頁〔zh 譯題/en 原題〕+ collect_rag_sections + zh edge + translated_title 旁路傳 P4;22 passed、全套件 683）
@@ -380,6 +381,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C8_check_提示詞.md`（Check·C8 Checkout 收官：5 維度 Conformance〔U1-U9+U2.1/U5b/U5c / pytest 686 / 不可動 / 提示詞 / msg〕+ §7.2 不豁免〔C7 key-changing〕+ baton 一次性歸檔 + TODO 結案〔hash 自癒 C2-C7〕;litedoc 全案結案）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C7_run_提示詞.md`（C7 Run·BE-Refactor：補 §7.2 P2→P3→P4 key-changing 整合測試〔_KeyChangeTr 真改 title、斷言 section_summaries key 與 rag_sections summary_key 同基準=原文標題 path、P4 消費同份·堵 RAG-ASYNC-HOTFIX-1〕;純測試、25 passed、全套件 686）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C6_run_提示詞.md`（C6 Run·BE-Refactor：P4 run_phase4 呼共用 rag_indexer.index 傳 'litedoc'+雙語標題〔translated_title 讀 P3 旁路〕、門檻預設 ≥10〔rag_indexer 零改〕、四產物、異常拋出標 failed;24 passed、全套件 685）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C5_run_提示詞.md`（C5 Run·BE-Refactor：P3 size-gate〔<15k 一鍵/≥15k section〕+ heading 退化 + U5c translated_title 三路 + render_meta_header_html HTML 扉頁〔zh 譯題/en 原題〕+ rag 旁路 + zh edge + translated_title 旁路傳 P4;22 passed、全套件 683）
@@ -394,4 +396,3 @@
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C3_run_提示詞.md`（C3 Run·BE-Refactor：rag 旁路 collect_rag_sections/single_container_sections 搬入 section_engine〔summary_key=原文標題 path〕+ render_meta_header 重構純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata·U3.1〕、resume 改 delegate;final byte 等價）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md`（C2 Run·BE-Refactor：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/normalize_paragraph_breaks/is_heading_degraded〕原值搬入 section_engine·並行+限流+退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)、translator/inj 注入、resume 改 delegate;行為等價 final byte 等價）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md`（C1 Run·BE-Refactor：新建 section_engine.py + 摘要簇〔collect_summary_targets/build_section_summaries/parse_indexed〕原值搬入純函式·llm 注入·吃任意子樹、resume 改 delegate;行為等價 resume 測試鎖死）
-- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 5 Commit〔C1 摘要 / C2 翻譯+排版還原 / C3 rag 旁路+meta header 純格式化器 / C4 引擎單元+key-changing 整合測試雙鎖 / C5 Checkout〕;行為等價、每 Run resume 測試鎖死、Run baton 暫存）

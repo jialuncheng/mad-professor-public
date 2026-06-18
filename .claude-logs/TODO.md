@@ -11,6 +11,28 @@
 
 ## ✅ 已完成
 
+### BE-Refactor PIPE-LITEDOC LiteDocPipeline 策略管線（PIPE 縱向五路第 3 路·news/web/unknown·首個 section_engine 跨 consumer 驗證）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | section_engine HTML 扉頁 formatter（純加法 `render_meta_header_html`〔paper-header-meta div·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有;既有 17+42 不退化、全套件 661）| `b1012bc` |
+| C2 | LiteDoc 骨架與三 key 註冊（`@register('litedoc'/'news'/'web')` 三裝飾器 + 四 Phase strict stub + rag_char_threshold=10 + `__init__` import;分派 4 路測試、9 passed、670）| `18e47c1` |
+| C3 | P1 MinerU 攝入與 metadata 旁路（PDFProcessor + 強制 md_cleaner + DocAnalyzer **U2.1 映射**〔news/web 原樣·其餘→'web' 防 fallback academic〕+ tiling + **B 軌原生 cover-prompt** 抽 title/authors/date/publisher/url〔**URL→publisher 解碼**〕+ venue 承接 publisher + raw_metadata 旁路;16 passed、677）| `3570476` |
+| C4 | P2 六步（①全文摘要 ②normalize_to_lcc ③Glossary 級聯自癒 ④Translator DEEP_THINK + lcc→domain_name ⑤⑥ `section_engine.build_section_summaries`〔key=原文標題 path〕→ GlossaryReadySpec;LLM 全交易外;17 passed、678）| `f8940cd` |
+| C5 | P3 size-gate 翻譯與 HTML 扉頁還原（**size-gate**〔<15k 一鍵 translate_whole·≥15k restore_sections_markdown〕+ heading 退化 fallback + **U5c translated_title 三路** + `render_meta_header_html` HTML 扉頁〔zh 譯題/en 原題〕+ collect_rag_sections + zh edge + translated_title 旁路傳 P4;22 passed、683）| `424ee93` |
+| C6 | P4 Async RAG（呼共用 `rag_indexer.index(…, 'litedoc', …, title, translated_title)`·**門檻預設 ≥10**〔litedoc 不入 ≥3 tuple·**rag_indexer 零改**〕+ translated_title 讀 P3 旁路 + 四產物 + 異常拋出標 failed 不阻 reading_ready;24 passed、685）| `469f982` |
+| C7 | 單元與接縫整合測試（**§7.2 P2→P3→P4 key-changing 整合**：`_KeyChangeTr` 真改 title、斷言 P2 section_summaries key 與 P3 rag_sections summary_key 譯後同基準=原文標題 path、P4 消費同份+下游 match·堵 RAG-ASYNC-HOTFIX-1;純測試、25 passed、686）| `ff16271` |
+| C8 | Checkout 收官：5 維度 Conformance 全綠〔U1-U9+U2.1/U5b/U5c 跨 C1-C7 全覆蓋 / tasks §6 grep+pytest 686 / 不可動〔rag_indexer/contracts/其他策略/A 軌零碰〕/ 提示詞 10 份 / msg §8〕+ §7.2 不豁免達標〔C7 key-changing〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C8 報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-18_PIPE-LITEDOC_litedoc路策略管線_plan_v1.md`（v3、§9 七 OQ 全 🟢 定案）
+> **動因**：PIPE 縱向五路第 3 路 litedoc（news/web/unknown）;PIPE-SECTION-BASE（第 4 共用真理源 section_engine）落地後、litedoc 為 resume 以外**首個 consumer**，驗證引擎泛化。
+> **設計**：academic-lite——P1 MinerU 文字攝入（非 Vision）、P2-P4 全消費共用真理源（section_engine + DomainNormalizer/Glossary/Translator + rag_indexer）、**零造輪、rag_indexer 零改**。
+> **§2.5 方案 A**：P1 metadata 採 B 軌原生 cover-prompt（不耦合即將絞殺的 A 軌 metadata_extractor）。
+> **Q4 分歧（顯式聲明）**：technical 排除本路、歸深結構家族（academic/book）;與母 plan v10 L72「litedoc 含 technical」分歧、**待 PIPE-SYNC 回灌**。
+> **Q7 銳化**：section_engine C1 純加法補 HTML 扉頁 formatter（update 本 plan 不另開、academic/book/technical 後續共用、消滅未來重造）。
+> **⚠️ baron 運維（非 commit）**：`.env LLM_USE_META_NORM=true` 漸進開 + 影子上傳 news/web → 驗 HTML 扉頁 publisher/date、chunks ≥10、unknown fallback;與 A 軌 golden diff（改善豁免）。
+> **⚠️ 後續（非本案）**：PIPE-SYNC-4 回灌母 plan（litedoc + technical 分歧 + section_engine formatter）;academic/technical/book 路;slides 重複副本收編。
+
 ### BE-Refactor PIPE-SECTION-BASE 共用 section 機制抽取（第 4 共用真理源·litedoc/academic/technical/book 先行）
 
 | Commit | 內容 | Hash |
@@ -938,18 +960,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-LITEDOC LiteDocPipeline 策略管線**（PIPE 縱向五路第 3 路·news/web/unknown;`.claude-logs/baton/2026-06-18_PIPE-LITEDOC_litedoc路策略管線_plan_v1.md` v3、§9 七 OQ 全 🟢）
-  - [x] ✅ 已完成: C1 — section_engine HTML 扉頁 formatter（純加法新增 `render_meta_header_html`〔paper-header-meta div·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有;既有 17+42 不退化、新 4 測試、全套件 661 passed、SOP 合規）
-  - [x] ✅ 已完成: C2 — LiteDoc 骨架與三 key 註冊（新建 `pipelines/litedoc_pipeline.py`·`@register('litedoc'/'news'/'web')` 三裝飾器疊加 + 四 Phase strict stub〔NotImplementedError〕+ rag_char_threshold=10 + `__init__` 註冊 import;分派測試 4 路〔litedoc/news/web + unknown→fallback〕;9 passed、全套件 670 passed、SOP 合規）
-  - [x] ✅ 已完成: C3 — P1 MinerU 攝入與 metadata 旁路（run_phase1：PDFProcessor MinerU + 強制 md_cleaner + DocAnalyzer〔**U2.1 映射** news/web 原樣·其餘→'web' 防 fallback academic〕+ md2json/json/tiling tiles + **B 軌原生 cover-prompt** 抽 title/authors/date/publisher/url〔含 **URL→publisher 解碼**〕+ venue 承接 publisher + date/url/org→raw_metadata 旁路〔meta_normalizer〕;16 passed、全套件 677、SOP 合規）
-  - [x] ✅ 已完成: C4 — P2 六步（run_phase2：①全文摘要 ②normalize_to_lcc〔內容判定〕③Glossary 級聯自癒〔旗標、交易外〕④Translator DEEP_THINK 譯摘要+lcc→domain_name ⑤⑥ `section_engine.build_section_summaries`〔key=原文標題 path〕→ GlossaryReadySpec;消費三真理源+section_engine、LLM 全交易外;17 passed〔含 section_summaries key 斷言〕、全套件 678、SOP 合規）
-  - [x] ✅ 已完成: C5 — P3 size-gate 翻譯與 HTML 扉頁還原（run_phase3：**size-gate**〔<15k/無 section/退化→translate_whole 一鍵·≥15k→restore_sections_markdown 逐 section〕+ heading 退化 fallback + **U5c translated_title 三路**〔zh→title / 分段→頂層 title slot 譯後 / 一鍵→translate_unit〕+ `render_meta_header_html` HTML 扉頁〔zh 譯題/en 原題〕+ collect_rag_sections→ctx.rag_sections + zh edge 不重譯 + translated_title 旁路傳 P4 → BilingualMarkdownSpec;22 passed〔size-gate×2/譯題×2/HTML 扉頁/zh edge〕、全套件 683、SOP 合規）
-  - [x] ✅ 已完成: C6 — P4 Async RAG（run_phase4：呼共用 `rag_indexer.index(ctx.rag_sections, section_summaries, 'litedoc', vectors_dir, paper_db_id, rag_tree_path, title, translated_title)`·**門檻走預設 ≥10**〔litedoc 不入 ≥3 tuple·**rag_indexer 零改**〕+ translated_title 讀 P3 旁路〔非 resume 捷徑〕+ 四產物 + 異常拋出 Orchestrator 標 failed 不阻 reading_ready;24 passed〔傳 'litedoc'/雙語標題/門檻 else/引擎未改/失敗拋出〕、全套件 685、SOP 合規）
-  - [x] ✅ 已完成: C7 — 單元與接縫整合測試（補 **§7.2 P2→P3→P4 key-changing 整合測試**：`_KeyChangeTr` 真把 Intro→ZH::Intro、斷言 P2 section_summaries key 與 P3 rag_sections summary_key 譯後仍同基準=原文標題 path、P4 消費同份 section_summaries + 下游 match·堵 RAG-ASYNC-HOTFIX-1;純測試零業務改動、litedoc 25 passed、全套件 686）
-  - [/] 🟡 WIP: C8 — Checkout 收官
-  - 工時：8 個 commits（BE-Refactor、全消費 section_engine + 三真理源 + rag_indexer、零改引擎）
-  - 依賴：無（PIPE-SECTION-BASE 已落地;technical 排除本路·與母 plan v10 L72 分歧待 PIPE-SYNC 回灌）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1252,6 +1262,9 @@
 
 ### META-NORM (✅ 已完成·PIPE 共用真理源家族第 4 員)
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
+
+### PIPE-LITEDOC (✅ 已完成·PIPE 縱向五路第 3 路)
+- ✅ ~~PIPE-LITEDOC LiteDocPipeline 策略管線~~（已落地、C1 `b1012bc` + C2 `18e47c1` + C3 `3570476` + C4 `f8940cd` + C5 `424ee93` + C6 `469f982` + C7 `ff16271` + C8 收官；第 3 路 news/web/unknown〔factory fallback〕;academic-lite——P1 MinerU 文字攝入〔非 Vision〕+ DocAnalyzer U2.1 映射 + B 軌原生 cover-prompt〔URL→publisher 解碼〕、P2-P4 **全消費共用真理源**〔section_engine + DomainNormalizer/Glossary/Translator + rag_indexer〕、size-gate〔<15k 一鍵/≥15k section〕+ HTML 扉頁〔render_meta_header_html·C1 純加法補〕+ U5c 雙語標題鏈 + 門檻 ≥10〔**rag_indexer 零改**〕;§7.2 key-changing 整合達標、litedoc 25 + 全套件 686 passed;**首個 section_engine 跨 consumer 驗證**;Q4 technical 排除〔母 plan v10 L72 分歧待 PIPE-SYNC 回灌〕;⚠️ baron 影子 E2E + golden 改善豁免）
 
 ### PIPE-SECTION-BASE (✅ 已完成·第 4 共用真理源·section 機制)
 - ✅ ~~PIPE-SECTION-BASE 共用 section 機制抽取~~（已落地、C1 `e400789` + C2 `24db977` + C3 `4078a9e` + C4 `6bd8705` + C5 收官；resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag 旁路/meta header」抽成零 doc_type 耦合純函式 `pipelines/section_engine.py`〔§2.5 方案 A·llm/translator/prompt 注入·引擎零 doc_type 字面量·U3.1 meta header 純格式化器零讀 raw_metadata·U3.2 DFS 吃任意子樹〕、resume 改 delegate;行為等價〔RESUME-PERF-1 C1 範式·resume 42 passed〕+ tests/test_section_engine.py 17 測試〔含 base 層 key-changing 整合·堵 RAG-ASYNC-HOTFIX-1〕、全套件 657 passed;§7.2 不豁免達標;Q2 slide 重複不收編留後續;⚠️ 後續 litedoc plan 建於本引擎上）
