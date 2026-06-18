@@ -140,7 +140,9 @@
   - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
 
 ### PIPE-SECTION-BASE 系列（共用 section 機制·第 4 共用真理源）
-- 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1 → C2 → C3…·BE-Refactor）**
+- 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1-C4 → C5 Checkout·BE-Refactor）**
+  - `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md` — Check（C5 Checkout 收官：5 維度 Conformance〔目標規格 U1-U6+U3.1 / tasks §6 grep+pytest / 不可動 / 提示詞稽核 / msg §8〕→ 全綠後 TODO 結案〔C1-C5 完成表 + git log hash 自癒〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/〕+ 7 提示詞 git add;§7.2 整合測試免豁免〔C4 key-changing + resume 既有〕;不自發 commit;全案結案）
+  - `2026-06-18_PIPE-SECTION-BASE_C4_run_提示詞.md` — C4 Run（引擎單元測試 + 接縫整合測試雙鎖·U5/Q6：新建 tests/test_section_engine.py 覆蓋 DFS 走訪/摘要保序/並行 byte 等拍+限流+退原文/heading 退化/meta header 純格式化 + base 層 P2→P3→P4 key-changing 整合測試〔Mock Translator 改 key、斷言 summary_key 與 collect_summary_targets key 同基準·堵 RAG-ASYNC-HOTFIX-1〕;純新增測試零業務改動）
   - `2026-06-18_PIPE-SECTION-BASE_C3_run_提示詞.md` — C3 Run（rag 旁路 + meta header 純格式化器·U3.1 Zero Schema Coupling：collect_rag_sections/single_container_sections 原值搬入 section_engine〔summary_key=原文標題 path〕+ render_meta_header 重構為純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata、resume 呼叫端抽欄+lang label 後傳入〕、resume 改 delegate;final byte 等價;包裹 C3 START/END + .bak）
   - `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md` — C2 Run（翻譯與排版還原機制：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/t/normalize_paragraph_breaks/is_heading_degraded/flatten_sections/own_text_len〕原值搬入 section_engine·ThreadPoolExecutor 並行+限流+單 unit 失敗退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)〔HEADING-HOTFIX-1〕、translator/inj 注入、resume 改 delegate;行為等價 + final byte 等價;包裹 C2 START/END + .bak）
   - `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md` — C1 Run（section_engine 骨架 + 摘要簇：新建 `pipelines/section_engine.py` + 摘要區塊〔_collect_summary_targets/_build_section_summaries/_generate/_translate/_parse_indexed〕原值搬入純函式·llm 注入·collect 吃任意子樹〔U3.2〕、resume 改 delegate;行為等價〔resume 測試鎖死〕;包裹 C1 START/END + .bak）
@@ -366,6 +368,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md`（Check·C5 Checkout 收官：5 維度 Conformance〔U1-U6+U3.1 / tasks §6 / 不可動 / 提示詞稽核 / msg §8〕+ TODO 結案〔C1-C5 + hash 自癒〕+ baton 一次性歸檔 + §7.2 免豁免〔C4 key-changing〕;全案結案）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C4_run_提示詞.md`（C4 Run·BE-Refactor：新建 tests/test_section_engine.py 覆蓋 DFS/摘要保序/並行 byte 等拍+限流+退原文/heading 退化/meta header 純格式化 + base 層 key-changing 整合測試〔堵 RAG-ASYNC-HOTFIX-1〕;純新增測試）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C3_run_提示詞.md`（C3 Run·BE-Refactor：rag 旁路 collect_rag_sections/single_container_sections 搬入 section_engine〔summary_key=原文標題 path〕+ render_meta_header 重構純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata·U3.1〕、resume 改 delegate;final byte 等價）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md`（C2 Run·BE-Refactor：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/normalize_paragraph_breaks/is_heading_degraded〕原值搬入 section_engine·並行+限流+退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)、translator/inj 注入、resume 改 delegate;行為等價 final byte 等價）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md`（C1 Run·BE-Refactor：新建 section_engine.py + 摘要簇〔collect_summary_targets/build_section_summaries/parse_indexed〕原值搬入純函式·llm 注入·吃任意子樹、resume 改 delegate;行為等價 resume 測試鎖死）
@@ -379,5 +383,3 @@
 - 2026-06-14 — `2026-06-14_WORKFLOW-4_plan_提示詞.md`（StraTA 任務成功率原理移植進文件治理模板·DOC-Refactor plan 產出：conditioning re-inject / 條件化多候選 / 逐 commit 雙軸自評 / Check 減負前移）
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Check_提示詞.md`（Check·Conformance 三維度驗收 + baton 歸檔結案〔SPEC 就地、master plan/任務 plan/tasks/C1-C3 報告歸檔〕）
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C2_run_提示詞.md`（C2 Run·master plan 補註⁸：§8.5「B 軌另捕」措辭修正 + 補註⁸不 bump 主版本）
-- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C1_run_提示詞.md`（C1 Run·SPEC v7 同步：D1 slides P3 drift / D2 golden A/B 軌 / D3 alt LaTeX / D4 is_blank / D6 rag_sections §1.1.2 / D7 rag_tree_json / D5 / bump v7）
-- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Tasks_提示詞.md`（slides 回灌·拆 commit 產 tasks：C1 SPEC v7 同步 + C2 master plan 補註⁸ + C3 Checkout）
