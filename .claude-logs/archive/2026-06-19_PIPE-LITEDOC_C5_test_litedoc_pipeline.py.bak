@@ -32,9 +32,9 @@ def test_litedoc_rag_char_threshold_is_10():
     assert LiteDocPipeline().rag_char_threshold == 10
 
 
-@pytest.mark.parametrize("phase", ["run_phase4"])
+@pytest.mark.parametrize("phase", ["run_phase3", "run_phase4"])
 def test_litedoc_phases_are_strict_stub(phase):
-    """C2 骨架：P4 仍為 strict stub（C6 才實作；P1/P2/P3 已於 C3/C4/C5 實作）。"""
+    """C2 骨架：P3-P4 仍為 strict stub（C5-C6 才實作；P1/P2 已於 C3/C4 實作）。"""
     strat = LiteDocPipeline()
     with pytest.raises(NotImplementedError):
         getattr(strat, phase)(None)
@@ -235,105 +235,3 @@ def test_p2_section_summaries_key_is_original_title_path(monkeypatch, tmp_path):
     assert isinstance(spec.section_summaries, dict)
     assert set(spec.section_summaries.keys()) == {"Intro", "Detail"}   # 原文標題 path
     assert all(v.startswith("摘要") for v in spec.section_summaries.values())
-
-
-# ──────────────────────────────────────────────────────────────────────────
-# C5：P3 size-gate 翻譯與 HTML 扉頁還原（含雙語標題鏈）
-# ──────────────────────────────────────────────────────────────────────────
-from pipelines.contracts import BilingualMarkdownSpec, GlossaryReadySpec as _GR
-
-
-class _DetTr3:
-    """確定性翻譯器：text → ZH::text（用於 byte/key-changing 驗證）。"""
-    def __init__(self, *a, **k):
-        self.calls = 0
-    def translate(self, text, ctx, mode, text_type="content"):
-        self.calls += 1
-        return f"ZH::{text}"
-
-
-def _setup_p3_mocks(monkeypatch, tmp_path, full_text):
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path / "out")
-    monkeypatch.setattr(settings, "LLM_MAX_CONCURRENT", 4)
-    monkeypatch.setattr(LiteDocPipeline, "_read_source_text", lambda self, ctx: full_text)
-    tr = _DetTr3()
-    monkeypatch.setattr(lp, "Translator", lambda *a, **k: tr)
-    return tr
-
-
-def _p3_ctx(tiles, source_lang="en", doc_type="news", title="Headline",
-            authors=None, venue="CNN", date="2026-06-19"):
-    ctx = PipelineContext(doc_type=doc_type, paper_id="p3", pdf_path="/x/in.pdf", owner_id=1)
-    ctx.ingestion = _Ing(title=title, authors=authors or ["A Author"], venue=venue,
-                         source_lang=source_lang, tiles=tiles)
-    ctx.glossary_ready = _GR(abstract="a", lcc="general", glossary={},
-                             translated_abstract="譯摘要", section_summaries={}, domain_name="News")
-    ctx.raw_metadata = {"date": {"value": date}}
-    return ctx
-
-
-def _tiles_p3():
-    def _s(t, c):
-        return {"title": t, "content": [{"type": "text", "content": c}], "children": []}
-    return [_s("Sec1", "body one"), _s("Sec2", "body two")]
-
-
-def test_p3_size_gate_whole(monkeypatch, tmp_path):
-    """size-gate：full_text < 15k → 一鍵 translate_whole；rag_sections 為單一容器。"""
-    tr = _setup_p3_mocks(monkeypatch, tmp_path, "short body")
-    ctx = _p3_ctx(_tiles_p3())
-    spec = LiteDocPipeline().run_phase3(ctx)
-    assert isinstance(spec, BilingualMarkdownSpec)
-    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-    assert "ZH::short body" in zh                          # 整檔翻譯
-    assert len(ctx.rag_sections) == 1                       # 單一容器
-
-
-def test_p3_size_gate_section(monkeypatch, tmp_path):
-    """size-gate：full_text ≥ 15k → 逐 section restore；rag_sections 逐節點。"""
-    tr = _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
-    ctx = _p3_ctx(_tiles_p3())
-    LiteDocPipeline().run_phase3(ctx)
-    keys = {s["summary_key"] for s in ctx.rag_sections}
-    assert keys == {"Sec1", "Sec2"}                         # 逐 section、summary_key=原文標題 path
-
-
-def test_p3_translated_title_whole(monkeypatch, tmp_path):
-    """U5c ③：一鍵路 → translated_title 由 translate_unit(title) 取得，存 raw_metadata 旁路。"""
-    _setup_p3_mocks(monkeypatch, tmp_path, "short")
-    ctx = _p3_ctx(_tiles_p3(), title="Big Headline")
-    LiteDocPipeline().run_phase3(ctx)
-    assert ctx.raw_metadata["translated_title"]["value"] == "ZH::Big Headline"
-
-
-def test_p3_translated_title_section(monkeypatch, tmp_path):
-    """U5c ②：分段路 → translated_title 取頂層 title slot 譯後文字。"""
-    _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
-    ctx = _p3_ctx(_tiles_p3())
-    LiteDocPipeline().run_phase3(ctx)
-    assert ctx.raw_metadata["translated_title"]["value"] == "ZH::Sec1"   # 頂層 title slot
-
-
-def test_p3_html_meta_header(monkeypatch, tmp_path):
-    """⑤ HTML 扉頁：final_zh/en 含 paper-header-meta；zh 用譯題、en 用原題。"""
-    _setup_p3_mocks(monkeypatch, tmp_path, "short")
-    ctx = _p3_ctx(_tiles_p3(), title="Orig Title")
-    spec = LiteDocPipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-    en = Path(spec.final_en_path).read_text(encoding="utf-8")
-    assert zh.startswith("# ZH::Orig Title")                # zh 譯題
-    assert en.startswith("# Orig Title")                    # en 原題
-    assert '<div class="paper-header-meta">' in zh and '<div class="paper-header-meta">' in en
-    assert '<div class="header-venue-date">CNN · 2026-06-19</div>' in en
-
-
-def test_p3_zh_source_no_retranslate(monkeypatch, tmp_path):
-    """zh edge：source_lang zh* → 不重譯（final_zh=原文）、translated_title=原題、per-section rag。"""
-    tr = _setup_p3_mocks(monkeypatch, tmp_path, "原文中文內容")
-    ctx = _p3_ctx(_tiles_p3(), source_lang="zh-TW", title="中文標題")
-    spec = LiteDocPipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-    assert "原文中文內容" in zh                              # 不重譯
-    assert "ZH::" not in zh                                  # 確無翻譯前綴
-    assert ctx.raw_metadata["translated_title"]["value"] == "中文標題"
-    assert {s["summary_key"] for s in ctx.rag_sections} == {"Sec1", "Sec2"}

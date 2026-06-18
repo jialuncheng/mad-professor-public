@@ -943,8 +943,8 @@
   - [x] ✅ 已完成: C2 — LiteDoc 骨架與三 key 註冊（新建 `pipelines/litedoc_pipeline.py`·`@register('litedoc'/'news'/'web')` 三裝飾器疊加 + 四 Phase strict stub〔NotImplementedError〕+ rag_char_threshold=10 + `__init__` 註冊 import;分派測試 4 路〔litedoc/news/web + unknown→fallback〕;9 passed、全套件 670 passed、SOP 合規）
   - [x] ✅ 已完成: C3 — P1 MinerU 攝入與 metadata 旁路（run_phase1：PDFProcessor MinerU + 強制 md_cleaner + DocAnalyzer〔**U2.1 映射** news/web 原樣·其餘→'web' 防 fallback academic〕+ md2json/json/tiling tiles + **B 軌原生 cover-prompt** 抽 title/authors/date/publisher/url〔含 **URL→publisher 解碼**〕+ venue 承接 publisher + date/url/org→raw_metadata 旁路〔meta_normalizer〕;16 passed、全套件 677、SOP 合規）
   - [x] ✅ 已完成: C4 — P2 六步（run_phase2：①全文摘要 ②normalize_to_lcc〔內容判定〕③Glossary 級聯自癒〔旗標、交易外〕④Translator DEEP_THINK 譯摘要+lcc→domain_name ⑤⑥ `section_engine.build_section_summaries`〔key=原文標題 path〕→ GlossaryReadySpec;消費三真理源+section_engine、LLM 全交易外;17 passed〔含 section_summaries key 斷言〕、全套件 678、SOP 合規）
-  - [/] 🟡 WIP: C5 — P3 size-gate 翻譯與 HTML 扉頁還原（含雙語標題鏈）
-  - [ ] ⬜ 未開始: C6 — P4 Async RAG（rag_indexer ≥10 + 雙語標題）
+  - [x] ✅ 已完成: C5 — P3 size-gate 翻譯與 HTML 扉頁還原（run_phase3：**size-gate**〔<15k/無 section/退化→translate_whole 一鍵·≥15k→restore_sections_markdown 逐 section〕+ heading 退化 fallback + **U5c translated_title 三路**〔zh→title / 分段→頂層 title slot 譯後 / 一鍵→translate_unit〕+ `render_meta_header_html` HTML 扉頁〔zh 譯題/en 原題〕+ collect_rag_sections→ctx.rag_sections + zh edge 不重譯 + translated_title 旁路傳 P4 → BilingualMarkdownSpec;22 passed〔size-gate×2/譯題×2/HTML 扉頁/zh edge〕、全套件 683、SOP 合規）
+  - [/] 🟡 WIP: C6 — P4 Async RAG（rag_indexer ≥10 + 雙語標題）
   - [ ] ⬜ 未開始: C7 — 單元與接縫整合測試（雙鎖）
   - [ ] ⬜ 未開始: C8 — Checkout 收官
   - 工時：8 個 commits（BE-Refactor、全消費 section_engine + 三真理源 + rag_indexer、零改引擎）
