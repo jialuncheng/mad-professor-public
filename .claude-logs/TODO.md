@@ -11,6 +11,24 @@
 
 ## ✅ 已完成
 
+### BE-Refactor PIPE-SECTION-BASE 共用 section 機制抽取（第 4 共用真理源·litedoc/academic/technical/book 先行）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | section_engine 骨架與摘要機制：新建 `pipelines/section_engine.py` 零 doc_type 耦合純函式引擎·摘要簇〔collect_summary_targets 吃任意子樹 U3.2 / node_content_text / parse_indexed / generate / translate / build_section_summaries·llm+prompt+model 注入〕、resume 摘要簇 5 私有 method 移除改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規 | `e400789` |
+| C2 | 翻譯與排版還原機制：render/restore 簇〔collect_render_slots〔key=原文標題 path·level=min(2+depth,6)〕/ restore_sections_markdown〔ThreadPoolExecutor 並行+保序+單 unit 退原文·max_workers 注入·**回傳 (md,slots,zh_by_index)、引擎不知 rag**〕/ normalize_paragraph_breaks / translate_unit / translate_whole / is_heading_degraded / flatten_sections / own_text_len〕原值搬入、resume 改 delegate + 清 dead import;行為等價 resume 42 passed、640 基線、SOP 合規 | `24db977` |
+| C3 | rag 旁路與 meta header 純格式化器：collect_rag_sections〔summary_key=原文標題 path〕/ single_container_sections〔title 參數化、引擎不讀 ctx〕原值搬入 + **render_meta_header 重構為純格式化器**〔收 (Label,Value) tuples、引擎零讀 raw_metadata/ctx·U3.1 Zero Schema Coupling〕、resume 抽欄+lang label 後 delegate;行為等價 resume 42 passed〔含 meta header byte 斷言〕、640 基線、SOP 合規 | `4078a9e` |
+| C4 | 引擎單元測試與接縫整合測試〔雙鎖·U5/Q6〕：新建 `tests/test_section_engine.py` 17 測試〔DFS 走訪+子樹 / 批次摘要保序+非致命+zh skip / restore byte 序+並行限流+單 unit 退原文 / heading 退化×3 / meta header 純格式化×3 + **base 層 P2→P3→P4 key-changing 整合**〔_DetTr 真改 title、斷言 summary_key 與 collect_summary_targets key 同基準=原文標題 path·堵 RAG-ASYNC-HOTFIX-1〕〕;純新增測試、全套件 657 passed〔640+17〕 | `6bd8705` |
+| C5 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6+U3.1+Q6 / tasks §6 grep+pytest 657 / 不可動〔僅 section_engine/resume_pipeline/test 變動·slide/contracts/rag_indexer 零碰·final byte 等價〕/ 提示詞 7 份齊 / msg §8 完整〕+ **§7.2 不豁免達標**〔C4 key-changing 整合 + resume 既有整合雙鎖〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-18_PIPE-SECTION-BASE_共用section機制抽取_plan_v1.md`（v2、§9 六 OQ 全 🟢 定案）
+> **動因**：resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag 旁路/meta header」section 機制為 litedoc/academic/technical/book 共同骨幹（`_normalize_paragraph_breaks`/`_translate_whole` 已在 slides 重複一份、litedoc 將成第三份）→ baron 拍板「選二·共用真理源先行」：先抽 base、再做 litedoc。
+> **設計（§2.5 方案 A）**：pure-function 模組 + translator/llm/doc_type/prompt 全注入、引擎零 doc_type 字面量；對齊 rag_indexer/domain_normalizer 既有共用真理源範式（非 mixin/base class 繼承耦合）。
+> **U3.1 銳化（baron review）**：render_meta_header 收 (Label,Value) tuples、引擎零讀 raw_metadata → 各文體欄位/語系差異全留呼叫端（Zero Schema Coupling）。U3.2：DFS 吃任意子樹供 book 未來 rolling 組合。
+> **行為等價鐵證**：RESUME-PERF-1 C1「解耦先鎖等價」範式——每 Run Commit 後 resume 既有 42 測試〔含 RAG-ASYNC-HOTFIX-1 key-changing 整合〕全綠。
+> **Q2 不收編**：slide_pipeline 2 份重複副本〔已 ship+golden〕留後續、不在本案。
+> **⚠️ 後續（非本案）**：litedoc plan（news/web/unknown、建於本引擎上）；slides 收編。
+
 ### DOC-Refactor WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板
 
 | Commit | 內容 | Hash |
@@ -920,14 +938,17 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-SECTION-BASE — 共用 section 機制抽取**（`.claude-logs/baton/2026-06-18_PIPE-SECTION-BASE_共用section機制抽取_plan_v1.md` v2、§9 六 OQ 全 🟢）
-  - [x] ✅ 已完成: C1 — section_engine 骨架與摘要機制（新建 `pipelines/section_engine.py` 純函式引擎·摘要簇〔collect_summary_targets 吃任意子樹 U3.2 / build/generate/translate_section_summaries·llm+prompt+model 注入〕、resume 改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規）
-  - [x] ✅ 已完成: C2 — 翻譯與排版還原機制（render/restore 簇〔collect_render_slots/restore_sections_markdown〔回傳 md+slots+zh_by_index、引擎不知 rag〕/normalize_paragraph_breaks/translate_unit/translate_whole/is_heading_degraded/flatten_sections/own_text_len〕原值搬入 section_engine·ThreadPoolExecutor 並行+限流〔max_workers 注入·測試 patch 仍生效〕+ level=min(2+depth,6)、resume 改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規）
-  - [x] ✅ 已完成: C3 — rag 旁路與 meta header 純格式化器（collect_rag_sections〔summary_key=原文標題 path〕/single_container_sections〔title 參數化〕原值搬入 section_engine + render_meta_header 重構為純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata/ctx·U3.1 Zero Schema Coupling〕、resume 抽欄+lang label 後 delegate;行為等價 resume 42 passed〔含 meta_header byte 斷言〕、全套件 640 基線、SOP 合規）
-  - [x] ✅ 已完成: C4 — 引擎單元測試與接縫整合測試（新建 `tests/test_section_engine.py` 17 測試：DFS 走訪+子樹/parse_indexed 保序/build_section_summaries 批次非N+非致命/zh skip/restore byte 序+並行限流+單unit退原文/heading 退化×3/render_meta_header 純格式化×3 + **base 層 P2→P3→P4 key-changing 整合**〔_DetTr 真改 title、斷言 summary_key 與 collect_summary_targets key 同基準=原文標題 path·堵 RAG-ASYNC-HOTFIX-1〕;純新增測試、全套件 657 passed〔640+17〕）
-  - [/] 🟡 WIP: C5 — Checkout 收官（Conformance + baton 歸檔 + hash 自癒）
-  - 工時：5 個 commits（BE-Refactor、行為等價抽取、resume 既有測試鎖死）
-  - 依賴：無（共用真理源先行·選二；litedoc plan 後續建於本案之上）
+- 🟡 **PIPE-LITEDOC LiteDocPipeline 策略管線**（PIPE 縱向五路第 3 路·news/web/unknown;`.claude-logs/baton/2026-06-18_PIPE-LITEDOC_litedoc路策略管線_plan_v1.md` v3、§9 七 OQ 全 🟢）
+  - [x] ✅ 已完成: C1 — section_engine HTML 扉頁 formatter（純加法新增 `render_meta_header_html`〔paper-header-meta div·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有;既有 17+42 不退化、新 4 測試、全套件 661 passed、SOP 合規）
+  - [/] 🟡 WIP: C2 — LiteDoc 骨架與三 key 註冊（策略分派）
+  - [ ] ⬜ 未開始: C3 — P1 MinerU 攝入與 metadata 旁路（DocAnalyzer 映射 + URL publisher 解碼）
+  - [ ] ⬜ 未開始: C4 — P2 六步（消費 section_engine + 三真理源）
+  - [ ] ⬜ 未開始: C5 — P3 size-gate 翻譯與 HTML 扉頁還原（含雙語標題鏈）
+  - [ ] ⬜ 未開始: C6 — P4 Async RAG（rag_indexer ≥10 + 雙語標題）
+  - [ ] ⬜ 未開始: C7 — 單元與接縫整合測試（雙鎖）
+  - [ ] ⬜ 未開始: C8 — Checkout 收官
+  - 工時：8 個 commits（BE-Refactor、全消費 section_engine + 三真理源 + rag_indexer、零改引擎）
+  - 依賴：無（PIPE-SECTION-BASE 已落地;technical 排除本路·與母 plan v10 L72 分歧待 PIPE-SYNC 回灌）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -1231,6 +1252,9 @@
 
 ### META-NORM (✅ 已完成·PIPE 共用真理源家族第 4 員)
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
+
+### PIPE-SECTION-BASE (✅ 已完成·第 4 共用真理源·section 機制)
+- ✅ ~~PIPE-SECTION-BASE 共用 section 機制抽取~~（已落地、C1 `e400789` + C2 `24db977` + C3 `4078a9e` + C4 `6bd8705` + C5 收官；resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag 旁路/meta header」抽成零 doc_type 耦合純函式 `pipelines/section_engine.py`〔§2.5 方案 A·llm/translator/prompt 注入·引擎零 doc_type 字面量·U3.1 meta header 純格式化器零讀 raw_metadata·U3.2 DFS 吃任意子樹〕、resume 改 delegate;行為等價〔RESUME-PERF-1 C1 範式·resume 42 passed〕+ tests/test_section_engine.py 17 測試〔含 base 層 key-changing 整合·堵 RAG-ASYNC-HOTFIX-1〕、全套件 657 passed;§7.2 不豁免達標;Q2 slide 重複不收編留後續;⚠️ 後續 litedoc plan 建於本引擎上）
 
 ### PIPE-SLIDES (✅ 已完成·PIPE 縱向五路第 2 路)
 - ✅ ~~PIPE-SLIDES-HOTFIX-4 P1 空白頁 Vision 檢測（is_blank 旗標·跳過空白單位）~~（已落地；`_VISION_PROMPT` 基底加 `is_blank` 欄 + 第5條判定〔含封面〕+ `_process` ④ 雙保險跳過〔is_blank 且 title/content 皆空才跳、防誤殺有內容頁、純圖頁 is_blank=false 不跳、舊 golden 無欄向後相容〕;既有三欄全空保留為第二道、與 is_cover 對稱;真因＝Ch37 第16張空白頁 Vision 回非空 figure_description 漏舊判定;RAG/渲染/四路零碰;4 新 pytest、全套件 631 passed;⚠️ 改 Vision prompt → slides golden 併批次重捕、baron E2E 驗第16張不產頁+純圖頁未誤跳）〔更正 HOTFIX-6：capture slides 捕 A 軌、B 軌不需重捕、影子 E2E 驗〕

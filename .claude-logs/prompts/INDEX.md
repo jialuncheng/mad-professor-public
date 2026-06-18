@@ -139,6 +139,12 @@
   - `2026-06-08_RAG-ASYNC_Tasks_提示詞.md` — Tasks（BE-Refactor 依 plan_v2 七定案 D1-D7 拆 commit；C1 規格同步〔母 plan v10 + PIPE-SPEC、含修 §1.3 P3 doc-drift〕不含 Python；代碼段 processor/rag_indexer.py 全重寫零 import rag_processor + GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步 section_summaries + run_phase4 改呼自有模組 + Strategy B/size-cap 子切 + ④ conformance 測試；最後 Checkout 一次性 baton 歸檔；§0.5 成果盤點 + §8 六維度表）
   - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
 
+### PIPE-LITEDOC 系列（PIPE 縱向五路第 3 路·news/web/unknown）
+- 🟡 **PIPE-LITEDOC LiteDocPipeline 策略管線（2026-06-18 plan v3 → Tasks → C1…·BE-Refactor）**
+  - `2026-06-19_PIPE-LITEDOC_C1_run_提示詞.md` — C1 Run（section_engine HTML 扉頁 formatter·純加法首發隔離：新增 `render_meta_header_html(authors,venue,date,doi,keywords,*,is_zh)`〔paper-header-meta div·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490〕、Zero Schema Coupling、嚴禁碰既有;既有 17+42 測試鎖死;包裹 C1 START/END + .bak〔本階段 git add〕;msg 簽名校正 Opus 4.8）
+  - `2026-06-19_PIPE-LITEDOC_Tasks_提示詞.md` — Tasks（拆 8 Commit：C1 section_engine HTML 扉頁 formatter〔純加法首發隔離〕/ C2 骨架三 key 註冊 / C3 P1 MinerU 攝入+DocAnalyzer 映射 U2.1+URL publisher 解碼 / C4 P2 六步 / C5 P3 size-gate+HTML 扉頁+U5c 雙語標題 / C6 P4 rag_indexer ≥10 / C7 §7.2 key-changing 整合 / C8 Checkout;全消費真理源、rag_indexer/contracts 零改;§6.9 SOP;不給 commit 建議自主拆分）
+  - `2026-06-18_PIPE-LITEDOC_plan_提示詞.md` — plan（第 3 路 litedoc=news/web/unknown〔factory fallback〕策略管線·全消費已落地 section_engine + 三真理源 + rag_indexer〔零改引擎〕;P1 MinerU 文字+URL publisher 解碼〔raw_metadata 旁路+META-NORM 飛輪·方案 A B 軌原生〕/P2 六步/P3 size-gate〔<15k 一鍵·≥15k section〕+ meta header 純格式化器/P4 門檻 ≥10;technical 排除〔與母 plan v10 L72 分歧、待 PIPE-SYNC 回灌〕;§7.2 不豁免;不給 commit 建議）
+
 ### PIPE-SECTION-BASE 系列（共用 section 機制·第 4 共用真理源）
 - 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1-C4 → C5 Checkout·BE-Refactor）**
   - `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md` — Check（C5 Checkout 收官：5 維度 Conformance〔目標規格 U1-U6+U3.1 / tasks §6 grep+pytest / 不可動 / 提示詞稽核 / msg §8〕→ 全綠後 TODO 結案〔C1-C5 完成表 + git log hash 自癒〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/〕+ 7 提示詞 git add;§7.2 整合測試免豁免〔C4 key-changing + resume 既有〕;不自發 commit;全案結案）
@@ -368,6 +374,9 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C1_run_提示詞.md`（C1 Run·BE-Refactor：section_engine 純加法 render_meta_header_html〔paper-header-meta HTML 扉頁·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有、既有 17+42 測試鎖死）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 8 Commit〔C1 section_engine HTML 扉頁 formatter 純加法首發 / C2 骨架三 key 註冊 / C3 P1 MinerU+DocAnalyzer 映射+URL publisher 解碼 / C4 P2 六步 / C5 P3 size-gate+HTML 扉頁+U5c 雙語標題 / C6 P4 ≥10 / C7 §7.2 整合 / C8 Checkout〕;全消費真理源、零改引擎）
+- 2026-06-18 — `2026-06-18_PIPE-LITEDOC_plan_提示詞.md`（plan·BE-Refactor：第 3 路 litedoc=news/web/unknown·全消費 section_engine+三真理源+rag_indexer〔零改引擎〕;P1 MinerU+URL publisher 解碼/P2 六步/P3 size-gate 15k/P4 ≥10;technical 排除〔母 plan v10 L72 分歧待回灌〕;§7.2 不豁免）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md`（Check·C5 Checkout 收官：5 維度 Conformance〔U1-U6+U3.1 / tasks §6 / 不可動 / 提示詞稽核 / msg §8〕+ TODO 結案〔C1-C5 + hash 自癒〕+ baton 一次性歸檔 + §7.2 免豁免〔C4 key-changing〕;全案結案）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C4_run_提示詞.md`（C4 Run·BE-Refactor：新建 tests/test_section_engine.py 覆蓋 DFS/摘要保序/並行 byte 等拍+限流+退原文/heading 退化/meta header 純格式化 + base 層 key-changing 整合測試〔堵 RAG-ASYNC-HOTFIX-1〕;純新增測試）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C3_run_提示詞.md`（C3 Run·BE-Refactor：rag 旁路 collect_rag_sections/single_container_sections 搬入 section_engine〔summary_key=原文標題 path〕+ render_meta_header 重構純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata·U3.1〕、resume 改 delegate;final byte 等價）
@@ -380,6 +389,3 @@
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C2_run_提示詞.md`（C2 Run·Execution 側：prompt_for_run 讀檔加 plan〔U1 策略 z〕+ execution §1 對齊欄〔U2〕+ §自評三問〔U3·含正向軸〕）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C1_run_提示詞.md`（C1 Run·Plan 側：template_plan §2.5 候選方案〔U4〕+ prompt_for_plan U4 撰寫原則 + Q5 stale 結構表校正）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_Tasks_提示詞.md`（WORKFLOW-4 拆 commit：5 模板輕量加法移植 StraTA·U1-U6·自主拆分 + checkout）
-- 2026-06-14 — `2026-06-14_WORKFLOW-4_plan_提示詞.md`（StraTA 任務成功率原理移植進文件治理模板·DOC-Refactor plan 產出：conditioning re-inject / 條件化多候選 / 逐 commit 雙軸自評 / Check 減負前移）
-- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Check_提示詞.md`（Check·Conformance 三維度驗收 + baton 歸檔結案〔SPEC 就地、master plan/任務 plan/tasks/C1-C3 報告歸檔〕）
-- 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C2_run_提示詞.md`（C2 Run·master plan 補註⁸：§8.5「B 軌另捕」措辭修正 + 補註⁸不 bump 主版本）
