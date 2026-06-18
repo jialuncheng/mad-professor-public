@@ -19,7 +19,7 @@
 | C2 | 翻譯與排版還原機制：render/restore 簇〔collect_render_slots〔key=原文標題 path·level=min(2+depth,6)〕/ restore_sections_markdown〔ThreadPoolExecutor 並行+保序+單 unit 退原文·max_workers 注入·**回傳 (md,slots,zh_by_index)、引擎不知 rag**〕/ normalize_paragraph_breaks / translate_unit / translate_whole / is_heading_degraded / flatten_sections / own_text_len〕原值搬入、resume 改 delegate + 清 dead import;行為等價 resume 42 passed、640 基線、SOP 合規 | `24db977` |
 | C3 | rag 旁路與 meta header 純格式化器：collect_rag_sections〔summary_key=原文標題 path〕/ single_container_sections〔title 參數化、引擎不讀 ctx〕原值搬入 + **render_meta_header 重構為純格式化器**〔收 (Label,Value) tuples、引擎零讀 raw_metadata/ctx·U3.1 Zero Schema Coupling〕、resume 抽欄+lang label 後 delegate;行為等價 resume 42 passed〔含 meta header byte 斷言〕、640 基線、SOP 合規 | `4078a9e` |
 | C4 | 引擎單元測試與接縫整合測試〔雙鎖·U5/Q6〕：新建 `tests/test_section_engine.py` 17 測試〔DFS 走訪+子樹 / 批次摘要保序+非致命+zh skip / restore byte 序+並行限流+單 unit 退原文 / heading 退化×3 / meta header 純格式化×3 + **base 層 P2→P3→P4 key-changing 整合**〔_DetTr 真改 title、斷言 summary_key 與 collect_summary_targets key 同基準=原文標題 path·堵 RAG-ASYNC-HOTFIX-1〕〕;純新增測試、全套件 657 passed〔640+17〕 | `6bd8705` |
-| C5 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6+U3.1+Q6 / tasks §6 grep+pytest 657 / 不可動〔僅 section_engine/resume_pipeline/test 變動·slide/contracts/rag_indexer 零碰·final byte 等價〕/ 提示詞 7 份齊 / msg §8 完整〕+ **§7.2 不豁免達標**〔C4 key-changing 整合 + resume 既有整合雙鎖〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C5 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6+U3.1+Q6 / tasks §6 grep+pytest 657 / 不可動〔僅 section_engine/resume_pipeline/test 變動·slide/contracts/rag_indexer 零碰·final byte 等價〕/ 提示詞 7 份齊 / msg §8 完整〕+ **§7.2 不豁免達標**〔C4 key-changing 整合 + resume 既有整合雙鎖〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/〕+ TODO 結案 + hash 自癒 | `b1012bc` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-18_PIPE-SECTION-BASE_共用section機制抽取_plan_v1.md`（v2、§9 六 OQ 全 🟢 定案）
 > **動因**：resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag 旁路/meta header」section 機制為 litedoc/academic/technical/book 共同骨幹（`_normalize_paragraph_breaks`/`_translate_whole` 已在 slides 重複一份、litedoc 將成第三份）→ baron 拍板「選二·共用真理源先行」：先抽 base、再做 litedoc。
@@ -50,7 +50,7 @@
 |---|---|---|
 | C1 | SPEC v7 同步（SPEC 真理源回灌：D1 slides P3 drift〔100% Bypass→逐頁翻譯〕/ D2 golden A/B 軌釐清〔§1.3.1〕/ D3 alt LaTeX 跨軌契約〔R3.2〕/ D4 is_blank 頁面類型判定〔§1.3.1 第4原則+§1.2 指回〕/ D6 rag_sections §1.1.2 旁路登記〔對稱 raw_metadata〕/ D7 rag_tree_json 點名 / D5 清洗層一行;bump v7;7 處 grep 全綠、640 passed 基線、零代碼 diff、四凍結合約型別欄位零變動） | `隨 C3`〔SPEC 長駐 baton、就地 git add 於 Checkout〕 |
 | C2 | master plan 補註⁸（母 plan 回灌：§8.5「B 軌另捕」措辭修正為「capture 捕 A 軌正本基準/B 軌走 shadow diff + 改善豁免」+ §99.2 補註⁸不 bump 主版本;grep B 軌另捕 0 殘留〔唯一命中 changelog〕、640 passed、零代碼） | `e15a7aa` |
-| C3 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D7 / tasks §6 grep+pytest / 不可動〔零代碼·contracts.py 未動·其他路次未動〕/ 提示詞五階段稽核 / msg 完整〕+ §7.2 DOC 豁免 + baton 一次性歸檔〔PIPE-SYNC-3 plan/master plan v10→plans/、tasks→tasks/、C1-C3 報告→executions/;SPEC 本體就地 git add〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C3 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D7 / tasks §6 grep+pytest / 不可動〔零代碼·contracts.py 未動·其他路次未動〕/ 提示詞五階段稽核 / msg 完整〕+ §7.2 DOC 豁免 + baton 一次性歸檔〔PIPE-SYNC-3 plan/master plan v10→plans/、tasks→tasks/、C1-C3 報告→executions/;SPEC 本體就地 git add〕+ TODO 結案 + hash 自癒 | `f9c261b`〔補做收官·見註〕 |
 
 > **修法依據**：`.claude-logs/plans/2026-06-14_PIPE-SYNC-3_slides路落地經驗回灌母plan與SPEC_plan_v1.md`（v3、D1-D7、§9 六 OQ 全定案）
 > **動因**：slides 路 7 次 hotfix（HOTFIX-1~6 + RAG-12-HOTFIX-1）落地後，兩真理源 2 錯誤（D1 SPEC slides P3 仍寫 100% Bypass、D2「B 軌另捕」A/B 軌 golden 混淆）+ 4 缺口 + 1 可選 → 不回灌則 PIPE-ACADEMIC 等下一路被誤導;同 PIPE-SYNC-2 對 resume 之回灌。
@@ -495,7 +495,7 @@
 |---|---|---|
 | C1 | `pipelines/resume_pipeline.py` 收集-組裝解耦：新增 `_collect_render_slots`〔遞迴鏡像 DFS pre-order、不翻譯、append title/content/raw slot、title 記 `level=min(2+depth,6)`〕+ 重構 `_restore_sections_markdown`〔collect→**序列**翻譯→按序組裝〕+ 移除無外部引用 `_restore_one_section`；仍序列、輸出 byte 等價〔既有 29 resume 測試全綠為鐵證〕；HEADING/PARA/META 邏輯原值搬移不改；`# === [RESUME-PERF-1 C1] ===` 包裹 | `b110742` |
 | C2 | `resume_pipeline.py` 翻譯段序列→`ThreadPoolExecutor(max_workers=LLM_MAX_CONCURRENT)` 受限並行、`{future:index}` 保序回填〔實際 API 併發受**既有** `LLMClient._api_semaphore`(6) 限、不新增鎖〕+ 單 unit future 拋例外→退原文 `slot["text"]`+`logger.warning(event=resume_translate_unit_fallback)` 異常隔離保交付；組裝/退化/zh* 不動；resume 29 passed〔行為等價〕、全套件 504 passed | `d5abdf0` |
-| C3 | `tests/test_resume_pipeline.py` 追加 4 並行專屬測試〔`order_byte_equal` 多層 byte 等拍保序 / `concurrency_capped` patch `LLM_MAX_CONCURRENT=2` lock 計數驗峰值 ≤ 2 / `unit_error_isolated` 單 unit 拋例外退原文 spec 仍交付 / `degraded_single_call` 退化 `_translate_whole` calls==1 不並行〕；resume 33 passed、全套件 508 passed | `待 baron 回填` |
+| C3 | `tests/test_resume_pipeline.py` 追加 4 並行專屬測試〔`order_byte_equal` 多層 byte 等拍保序 / `concurrency_capped` patch `LLM_MAX_CONCURRENT=2` lock 計數驗峰值 ≤ 2 / `unit_error_isolated` 單 unit 拋例外退原文 spec 仍交付 / `degraded_single_call` 退化 `_translate_whole` calls==1 不並行〕；resume 33 passed、全套件 508 passed | `be49abe`〔併入 C4 收官 commit〕 |
 | C4 | Checkout：Conformance 三維度驗收全綠（目標規格 U1-U7〔U2 限流/U3 等價/U4 保序/U5 異常隔離/U6 退化不變 由 C3 測試自證；效能 wall-clock 屬 baron E2E〕/ tasks §6 grep+全套件 508 passed / 不可動清單 git 證據〔C1-C2 僅 resume_pipeline.py、C3 僅 test_resume_pipeline.py〕）+ SOP 核查（logging/database 合規）+ 提示詞 6 份稽核 + msg 完整性 + baton 一次性歸檔（plan_v1/tasks/C1-C4 報告 → plans//tasks//executions/）+ hash 全量自癒 | `be49abe` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-06_RESUME-PERF-1_run_phase3逐section翻譯並行化_plan_v1.md`（§99.2 v2、§7 OQ Q1-Q7 核准）
@@ -529,7 +529,7 @@
 > **根因**：`gemini-embedding-2` 為多模態交錯模型——SDK 特例 `t_contents()` 把 `contents=[N 段]` 併成 1 向量 → 批次永遠退逐筆（慢、log 誤標 429）；且不支援 task_type → query/doc 向量同質、RAG 召回非對稱性喪失（品質打折非僅效能）。Dev API 探針鋼證：`gemini-embedding-001 embeddings=3`（真批次）vs `gemini-embedding-2 embeddings=1`（融合）。
 > **PIPE 對齊**：基建 embedding 層——換文字 embedding GA 模型恢復真批次 + task_type 非對稱；承 MODEL-9-OPT 韌性框架（`_api_semaphore`/`retry_call`/`_l2_normalize`/768 MRL 不變）。
 > **⚠️ 行為變更 + 運維（baron 各環境手動、非 commit）**：① `.env` `EMBEDDING_MODEL=gemini-embedding-001`〔C1 預設換、但 runtime 受 .env override pin〕② `venv/bin/python tools/regen_rag.py --all` 全量重嵌〔向量值改變、新舊不可混庫〕③ `venv/bin/python tools/golden_baseline.py capture resume --force`〔僅 resume 單路重捕、其餘四路無 B 軌免捕〕。
-> **流程註**：C4 驗收時 baron 已逐一 commit C1-C3，依框架 §2.2 回填 git log 實證 hash；C4 自身待 baron 回填。
+> **流程註**：C4 驗收時 baron 已逐一 commit C1-C3，依框架 §2.2 回填 git log 實證 hash；C4 自身落於 `be49abe`（C3 並行測試亦併入該收官 commit、無獨立 C3 commit）。
 
 ### BE-Refactor MODEL-9-OPT Embedding連線與限流框架優化
 
@@ -538,7 +538,7 @@
 | C1 | `settings.py` 新增 `EMBEDDING_MAX_CONCURRENT`（預設 5、env 可調）；純新增常數、C2 才消費、行為等價 | `8feaa12` |
 | C2 | `config.py` EmbeddingModel 引入 class-level `_api_semaphore=threading.Semaphore(EMBEDDING_MAX_CONCURRENT)` + `embed_query/embed_image/_embed_batch〔新〕/_embed_one` 套 `@retry_call`〔Full Jitter 指數退避〕+ `with semaphore` + 重構 `embed_documents` 批次降級逐筆〔移除手動 time.sleep linear〕+ 429 extra_fields 觀測 log；`_embed_one` fallback retries=2；同步 `tiling_processor.py` 過時退避註解；embed_content 參數/_l2_normalize 不變→向量值不變→不觸發 Golden 重捕 | `9a44d41` |
 | C3 | 新建 `tests/test_embedding_retry.py` 4 測試（embed_query 429 退避 / embed_image 503 重試 / embed_documents 批次降級保序+warning / Semaphore 併發上限）；4 passed、全套件 490 passed | `e86ced9` |
-| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 / tasks §6 grep+pytest / 不可動清單 git 證據）+ SOP 核查 + 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan/tasks/C1-C3 報告 → plans//tasks//executions/）+ hash 全量自癒 | `待 baron 回填` |
+| C4 | Checkout：Conformance 三維度驗收全綠（目標規格 / tasks §6 grep+pytest / 不可動清單 git 證據）+ SOP 核查 + 提示詞 5 份稽核 + msg 完整性 + baton 一次性歸檔（plan/tasks/C1-C3 報告 → plans//tasks//executions/）+ hash 全量自癒 | `61d0f69`〔C4 收官併入該 commit〕 |
 
 > **修法依據**：`.claude-logs/plans/2026-06-05_MODEL-9-OPT_Embedding連線與限流框架優化_plan.md`（§99.2 v3、review 5 點補強定稿）
 > **PIPE 對齊**：基建韌性層——EmbeddingModel 接入 `llm/retry.py` 統一彈性框架（與 LLMClient 機制一致、各自獨立 Semaphore 避免跨模組死鎖）；根治高頻 Embedding 削爆全域配額連帶拖垮 LLM。**不改向量值、不觸發 Golden Baseline 重捕、可獨立先做**（排序 hotfix → MODEL-9-OPT → RESUME-P3）。
@@ -940,8 +940,8 @@
 
 - 🟡 **PIPE-LITEDOC LiteDocPipeline 策略管線**（PIPE 縱向五路第 3 路·news/web/unknown;`.claude-logs/baton/2026-06-18_PIPE-LITEDOC_litedoc路策略管線_plan_v1.md` v3、§9 七 OQ 全 🟢）
   - [x] ✅ 已完成: C1 — section_engine HTML 扉頁 formatter（純加法新增 `render_meta_header_html`〔paper-header-meta div·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有;既有 17+42 不退化、新 4 測試、全套件 661 passed、SOP 合規）
-  - [/] 🟡 WIP: C2 — LiteDoc 骨架與三 key 註冊（策略分派）
-  - [ ] ⬜ 未開始: C3 — P1 MinerU 攝入與 metadata 旁路（DocAnalyzer 映射 + URL publisher 解碼）
+  - [x] ✅ 已完成: C2 — LiteDoc 骨架與三 key 註冊（新建 `pipelines/litedoc_pipeline.py`·`@register('litedoc'/'news'/'web')` 三裝飾器疊加 + 四 Phase strict stub〔NotImplementedError〕+ rag_char_threshold=10 + `__init__` 註冊 import;分派測試 4 路〔litedoc/news/web + unknown→fallback〕;9 passed、全套件 670 passed、SOP 合規）
+  - [/] 🟡 WIP: C3 — P1 MinerU 攝入與 metadata 旁路（DocAnalyzer 映射 + URL publisher 解碼）
   - [ ] ⬜ 未開始: C4 — P2 六步（消費 section_engine + 三真理源）
   - [ ] ⬜ 未開始: C5 — P3 size-gate 翻譯與 HTML 扉頁還原（含雙語標題鏈）
   - [ ] ⬜ 未開始: C6 — P4 Async RAG（rag_indexer ≥10 + 雙語標題）

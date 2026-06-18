@@ -43,10 +43,3 @@ from pipelines import resume_pipeline  # noqa: E402,F401
 # （C7-hotfix 教訓：runtime 不 import 具體策略 → get_strategy('slides') 回 NullStrategy 阻斷）。
 from pipelines import slide_pipeline  # noqa: E402,F401
 # === [PIPE-SLIDES C1 END] ===
-
-# === [PIPE-LITEDOC C2 START] ===
-# 第 3 路註冊觸發：import litedoc_pipeline 使其 @PipelineFactory.register('litedoc'/'news'/'web')
-# 三裝飾器執行（C7-hotfix 教訓：runtime 不 import 具體策略 → get_strategy 回 NullStrategy 阻斷）；
-# unknown doc_type 經 factory fallback 承接 litedoc。
-from pipelines import litedoc_pipeline  # noqa: E402,F401
-# === [PIPE-LITEDOC C2 END] ===
