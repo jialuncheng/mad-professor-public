@@ -140,7 +140,8 @@
   - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
 
 ### PIPE-SECTION-BASE 系列（共用 section 機制·第 4 共用真理源）
-- 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1…·BE-Refactor）**
+- 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1 → C2…·BE-Refactor）**
+  - `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md` — C2 Run（翻譯與排版還原機制：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/t/normalize_paragraph_breaks/is_heading_degraded/flatten_sections/own_text_len〕原值搬入 section_engine·ThreadPoolExecutor 並行+限流+單 unit 失敗退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)〔HEADING-HOTFIX-1〕、translator/inj 注入、resume 改 delegate;行為等價 + final byte 等價;包裹 C2 START/END + .bak）
   - `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md` — C1 Run（section_engine 骨架 + 摘要簇：新建 `pipelines/section_engine.py` + 摘要區塊〔_collect_summary_targets/_build_section_summaries/_generate/_translate/_parse_indexed〕原值搬入純函式·llm 注入·collect 吃任意子樹〔U3.2〕、resume 改 delegate;行為等價〔resume 測試鎖死〕;包裹 C1 START/END + .bak）
   - `2026-06-18_PIPE-SECTION-BASE_Tasks_提示詞.md` — Tasks（拆 5 Commit：C1 摘要機制 / C2 翻譯與排版還原 / C3 rag 旁路 + meta header 純格式化器〔U3.1 Zero Schema Coupling〕/ C4 引擎單元 + base 層 key-changing 整合測試〔雙鎖·Q6〕/ C5 Checkout;行為等價 RESUME-PERF-1 C1 範式、每 Run Commit resume 測試鎖死;Run baton 暫存、Checkout 才歸檔;不給 commit 建議自主拆分）
   - `2026-06-18_PIPE-SECTION-BASE_plan_提示詞.md` — plan（將 resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag section 旁路」抽成零 doc_type 耦合共用引擎·供 litedoc/academic/technical/book 消費;行為等價〔resume 既有測試鎖死、RESUME-PERF-1 C1 範式〕;選二定序〔共用真理源先行〕;§規格依據對齊三類 consumer;不收編 slides 重複副本〔§9 Q2〕;不給 commit 建議）
@@ -364,6 +365,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md`（C2 Run·BE-Refactor：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/normalize_paragraph_breaks/is_heading_degraded〕原值搬入 section_engine·並行+限流+退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)、translator/inj 注入、resume 改 delegate;行為等價 final byte 等價）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md`（C1 Run·BE-Refactor：新建 section_engine.py + 摘要簇〔collect_summary_targets/build_section_summaries/parse_indexed〕原值搬入純函式·llm 注入·吃任意子樹、resume 改 delegate;行為等價 resume 測試鎖死）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 5 Commit〔C1 摘要 / C2 翻譯+排版還原 / C3 rag 旁路+meta header 純格式化器 / C4 引擎單元+key-changing 整合測試雙鎖 / C5 Checkout〕;行為等價、每 Run resume 測試鎖死、Run baton 暫存）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_plan_提示詞.md`（plan·BE-Refactor：resume section 機制〔標題樹走訪/逐節點摘要/並行翻譯/排版還原/rag 旁路〕抽零 doc_type 耦合共用引擎、供 litedoc/academic/technical/book;行為等價、選二定序、對齊三類 consumer、不收編 slides 重複）
@@ -378,4 +380,3 @@
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_C1_run_提示詞.md`（C1 Run·SPEC v7 同步：D1 slides P3 drift / D2 golden A/B 軌 / D3 alt LaTeX / D4 is_blank / D6 rag_sections §1.1.2 / D7 rag_tree_json / D5 / bump v7）
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Tasks_提示詞.md`（slides 回灌·拆 commit 產 tasks：C1 SPEC v7 同步 + C2 master plan 補註⁸ + C3 Checkout）
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_plan_提示詞.md`（slides 路落地經驗回灌母 plan 與 SPEC·DOC-Refactor plan 產出：D1 SPEC slides P3 drift / D2 A/B 軌 golden 釐清 / D3 alt LaTeX 契約 / D4 is_blank / D5 清洗層）
-- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_run_提示詞.md`（HOTFIX-6 Run·殘留母片日期單頁清除落地 + 8 份歷史文件 golden 誤述 banner 作廢 + TODO 尾註）

@@ -76,9 +76,8 @@ from processor.translator import InjectionContext, TranslateMode, Translator
 # （原 PIPE-RESUME C5 `from processor.rag_processor import RagProcessor` 已移除；B 軌全鏈零依賴 A 軌）
 # === [RAG-ASYNC C6 END] ===
 # === [RESUME-PERF-1 C2 START] 逐 section 翻譯受限並行（受既有 LLMClient._api_semaphore 限流）===
-# === [PIPE-SECTION-BASE C2 START] ThreadPoolExecutor 已移至 section_engine、resume 不再直接用 ===
-from settings import LLM_MAX_CONCURRENT  # delegate 傳 max_workers 注入 section_engine.restore_sections_markdown
-# === [PIPE-SECTION-BASE C2 END] ===
+from concurrent.futures import ThreadPoolExecutor
+from settings import LLM_MAX_CONCURRENT
 # === [RESUME-PERF-1 C2 END] ===
 
 logger = logging.getLogger(__name__)
@@ -632,24 +631,68 @@ class ResumePipeline(DocumentStrategy):
     # ── P3 私有逐單元翻譯與還原（pipelines 內重建、不耦合 A 軌即將棄用的逐段翻譯處理器）──
 
     # === [RESUME-PERF-1 C1 START] 收集-組裝解耦（仍序列；C2 將「翻譯」改受限並行）===
-    # === [PIPE-SECTION-BASE C2 START] _restore_sections_markdown 抽至 section_engine、改 delegate ===
-    # （render slot 收集 + 並行翻譯 + 排版組裝邏輯〔RESUME-PERF-1 C1/C2〕已搬入 section_engine；
-    #   引擎回傳 (markdown, slots, zh_by_index)、不知 rag；rag_sink 旁路由本 delegate 以回傳之
-    #   slots+zh_by_index 呼 _collect_rag_sections〔C3 簇仍在 resume〕自建。max_workers 注入 resume
-    #   模組之 LLM_MAX_CONCURRENT〔測試 patch rp.LLM_MAX_CONCURRENT 仍生效〕。行為等價、final byte 不變。）
     def _restore_sections_markdown(
         self, sections: List[Dict[str, Any]], inj: "InjectionContext",
         tr: "Translator", translate: bool,
         rag_sink: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
-        """逐 section：收集有序 render slot → 並行翻譯 → 按序組裝（實作見 section_engine）。"""
-        markdown, slots, zh_by_index = section_engine.restore_sections_markdown(
-            sections, inj, tr, translate, max_workers=LLM_MAX_CONCURRENT,
-        )
+        """逐 section：收集有序 render slot → 翻譯 → 按序組裝，重組為單一字串。
+
+        RESUME-PERF-1 C1：將原「邊遞迴邊翻邊組」拆為三段——① `_collect_render_slots`
+        序列收集有序 slot（title/content/raw）；② 逐 slot 翻譯（C1 仍序列、C2 換 ThreadPool）；
+        ③ 按 slot 原序組裝（title 套 HEADING 層級、content 套 PARA 正規化、raw 原文）。
+        輸出與序列版 byte 等價（slot 順序 = 原 DFS pre-order；翻譯/後處理邏輯不變）。
+        """
+        slots: List[Dict[str, Any]] = []
+        self._collect_render_slots(sections, 0, slots)
+
+        # === [RESUME-PERF-1 C2 START] ② 並行翻譯（受限並行、保序回填、單 unit 異常隔離）===
+        # 對 title/content slot 提交 _t 至執行緒池（max_workers=LLM_MAX_CONCURRENT）；實際 API
+        # 併發再受既有 LLMClient._api_semaphore 限流（不新增鎖）。結果以 slot index 保序回填（raw 不翻）。
+        # 單 slot future 拋例外 → 退回原文 slot["text"] + warning，不污染其餘、保 BilingualMarkdownSpec 交付。
+        zh_by_index: Dict[int, str] = {}
+        if translate:
+            todo = [
+                (i, slot, "title" if slot["kind"] == "title" else "content")
+                for i, slot in enumerate(slots)
+                if slot["kind"] in ("title", "content")
+            ]
+            if todo:
+                with ThreadPoolExecutor(max_workers=max(1, LLM_MAX_CONCURRENT)) as ex:
+                    fut_to_idx = {
+                        ex.submit(self._t, slot["text"], inj, tr, ttype): i
+                        for i, slot, ttype in todo
+                    }
+                    for fut, i in fut_to_idx.items():
+                        try:
+                            zh_by_index[i] = fut.result()
+                        except Exception as exc:  # noqa: BLE001 — 單 unit 隔離、退原文保交付
+                            zh_by_index[i] = slots[i]["text"]
+                            logger.warning(
+                                "[RESUME-PERF-1] 單元翻譯失敗、退回原文",
+                                extra={'extra_fields': {
+                                    'event': 'resume_translate_unit_fallback',
+                                    'reason': str(exc)[:200],
+                                }},
+                            )
+        # ③ 按 slot 原序組裝（title → HEADING 層級前綴；content → PARA 正規化；raw → 原文）
+        rendered: List[str] = []
+        for i, slot in enumerate(slots):
+            kind = slot["kind"]
+            if kind == "raw":
+                rendered.append(slot["text"])
+                continue
+            zh = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
+            if kind == "title":
+                rendered.append(f"{'#' * slot['level']} {zh}")
+            else:
+                rendered.append(self._normalize_paragraph_breaks(zh))
+        # === [RAG-ASYNC C6 START] 旁路封存譯後 section 結構（用同一 slots+zh_by_index；不改 return）===
         if rag_sink is not None:
             self._collect_rag_sections(slots, zh_by_index, translate, rag_sink)
-        return markdown
-    # === [PIPE-SECTION-BASE C2 END] ===
+        # === [RAG-ASYNC C6 END] ===
+        return ("\n\n".join(p for p in rendered if p)).strip() + "\n"
+        # === [RESUME-PERF-1 C2 END] ===
 
     # === [RAG-ASYNC C6 START] P3→P4 旁路：譯後 section 結構建構 ===
     @staticmethod
@@ -691,22 +734,76 @@ class ResumePipeline(DocumentStrategy):
         }]
     # === [RAG-ASYNC C6 END] ===
 
-    # === [PIPE-SECTION-BASE C2 START] _collect_render_slots / _translate_whole 抽至 section_engine、改 delegate ===
-    # （_t 單元翻譯併入 section_engine.translate_unit、僅 restore 內部用故 resume 不留 delegate。
-    #   _collect_render_slots 保留 out-param 簽名〔run_phase3 is_zh 路 L 呼叫端不變〕。）
     def _collect_render_slots(
         self, sections: List[Dict[str, Any]], depth: int, out: List[Dict[str, Any]],
+        # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
         path_prefix: str = "",
+        # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
     ) -> None:
-        """遞迴收集有序 render slot（不翻譯；實作見 section_engine.collect_render_slots）。"""
-        out.extend(section_engine.collect_render_slots(sections, depth, path_prefix))
+        """遞迴收集有序 render slot（不翻譯）。順序＝原 `_restore_one_section` 的 DFS pre-order。
+
+        slot 型態：
+        - title  ：{"kind":"title","text":標題,"level":HEADING 層級,"key":原文標題 path}（HEADING-HOTFIX-1 邏輯、值不變）
+        - content：{"kind":"content","text":待翻正文}（組裝時套 PARA-HOTFIX-1 正規化）
+        - raw    ：{"kind":"raw","text":原文}（formula/figure/table，不翻、passthrough）
+
+        RAG-ASYNC-HOTFIX-1：title slot 附加 `key`＝原文標題 path（slot 在翻譯前收集、text 即原文），
+        與 P2 `_collect_summary_targets` 之 node_key **同式同基準**，供 P4 跨譯查 section_summaries。
+        """
+        for sec in sections or []:
+            if not isinstance(sec, dict):
+                continue
+            title = (sec.get("title") or "").strip()
+            # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
+            node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
+            # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
+            if title:
+                # HEADING-HOTFIX-1：頂層 h2、每下潛 children +1、上限 h6（值不變、僅由此處記錄）
+                out.append({
+                    "kind": "title", "text": title, "level": min(2 + depth, 6),
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
+                    "key": node_key,  # 原文標題 path，譯後 title 另存於組裝端 "title" 供顯示
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
+                })
+
+            for item in sec.get("content", []) or []:
+                if isinstance(item, dict):
+                    itype = item.get("type")
+                    content = item.get("content", "") or ""
+                    if itype == "text":
+                        out.append({"kind": "content", "text": content})
+                    else:
+                        # formula / figure / table 等：保留原文結構、不翻
+                        if content:
+                            out.append({"kind": "raw", "text": content})
+                else:
+                    # 容錯：content 為純字串 list（md_processor 原始型態）
+                    txt = str(item).strip()
+                    if txt:
+                        out.append({"kind": "content", "text": txt})
+
+            for child in sec.get("children", []) or []:
+                if isinstance(child, dict):
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
+                    self._collect_render_slots([child], depth + 1, out, node_key)
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
+    # === [RESUME-PERF-1 C1 END] ===
 
     def _translate_whole(
         self, full_text: str, inj: "InjectionContext", tr: "Translator", translate: bool,
     ) -> str:
-        """退化 fallback 基礎：整檔一次翻譯（實作見 section_engine.translate_whole）。"""
-        return section_engine.translate_whole(full_text, inj, tr, translate)
-    # === [PIPE-SECTION-BASE C2 END] ===
+        """退化 fallback 基礎：整檔一次翻譯（C4 接此為單一巨 section 降級路徑）。"""
+        if not translate:
+            return full_text
+        return tr.translate(full_text, inj, TranslateMode.NORMAL, "content")
+
+    @staticmethod
+    def _t(text: str, inj: "InjectionContext", tr: "Translator", text_type: str) -> str:
+        """單元翻譯（空白略過、不浪費呼叫）。"""
+        t = (text or "").strip()
+        if not t:
+            return text
+        return tr.translate(t, inj, TranslateMode.NORMAL, text_type)
 
     # === [RESUME-P3 META-HOTFIX-1 START] ===
     @staticmethod
@@ -754,26 +851,89 @@ class ResumePipeline(DocumentStrategy):
         return "\n".join(lines).rstrip("\n") + "\n\n"
     # === [RESUME-P3 META-HOTFIX-1 END] ===
 
-    # === [PIPE-SECTION-BASE C2 START] _normalize_paragraph_breaks 抽至 section_engine、改 delegate ===
+    # === [RESUME-P3 PARA-HOTFIX-1 START] ===
     @staticmethod
     def _normalize_paragraph_breaks(text: str) -> str:
-        """段落邊界正規化（實作見 section_engine.normalize_paragraph_breaks）。"""
-        return section_engine.normalize_paragraph_breaks(text)
-    # === [PIPE-SECTION-BASE C2 END] ===
+        """段落邊界正規化（pipe-table-safe 單 \\n → \\n\\n）。
+
+        移植自 A 軌既有的 pipe-table-safe 段落正規化邏輯、於 pipelines/ 內重建、
+        **不 import、不耦合 A 軌 restore 處理器**（RESUME-P3「pipelines/ 內重建、不耦合即將棄用 A 軌」原則）。
+        真因：B 軌逐 section 還原只在不同 part 間放 \\n\\n，段內單 \\n 不處理 →
+        CommonMark soft break → 兩段黏一起（A 軌靠 _write_to_md 補 \\n\\n + 本邏輯升級單 \\n）。
+
+        規則：一般段落單 \\n 升級 \\n\\n（製造段落空行）；pipe table 區塊
+        （以 | 開頭連續行）rows 之間單 \\n 保留（否則 table 渲染破碎）。
+        """
+        import re
+        if not text:
+            return text
+        lines = text.split("\n")
+        out_lines: List[str] = []
+        in_table = False
+        for line in lines:
+            is_table_row = bool(re.match(r"^\s*\|", line))
+            if is_table_row:
+                if not in_table and out_lines and out_lines[-1].strip():
+                    out_lines.append("")          # 進 table 前補空行作 paragraph 邊界
+                in_table = True
+                out_lines.append(line)
+            elif in_table:
+                in_table = False
+                if line.strip():
+                    out_lines.append("")          # table 結束補空行作分隔
+                out_lines.append(line)
+            else:
+                out_lines.append(line)
+        text = "\n".join(out_lines)
+        # table 區塊外一般 paragraph：單 \n 轉 \n\n（避開 | 開頭行）
+        text = re.sub(r"(?<!\|)(?<!\n)\n(?![\n\|])", "\n\n", text)
+        return text
+    # === [RESUME-P3 PARA-HOTFIX-1 END] ===
     # === [RESUME-P3 C3 END] ===
 
-    # === [PIPE-SECTION-BASE C2 START] _is_heading_degraded 抽至 section_engine、改 delegate ===
-    # （_flatten_sections / _own_text_len 併入 section_engine、僅 is_heading_degraded 內部用故
-    #   resume 不留 delegate。）
+    # === [RESUME-P3 C4 START] heading 退化偵測（單一巨 section 降級防護）===
     @staticmethod
     def _is_heading_degraded(
         sections: List[Dict[str, Any]],
         ratio_threshold: float = 0.85,
         min_sections: int = 2,
     ) -> bool:
-        """heading 退化判定（實作見 section_engine.is_heading_degraded）。"""
-        return section_engine.is_heading_degraded(sections, ratio_threshold, min_sections)
-    # === [PIPE-SECTION-BASE C2 END] ===
+        """heading 退化判定（plan v3 Q9）：
+
+        攤平所有 heading（top + children 遞迴），以每個 heading **自身** content 文字長度計：
+        - heading 總數 < min_sections（履歷幾乎無 # 標題、結構塌陷）→ 退化
+        - 單一 heading 自身文字佔全部文字 > ratio_threshold（全文塞進單一巨 section）→ 退化
+        """
+        flat: List[Dict[str, Any]] = []
+        ResumePipeline._flatten_sections(sections, flat)
+        if len(flat) < min_sections:
+            return True
+        sizes = [ResumePipeline._own_text_len(s) for s in flat]
+        total = sum(sizes)
+        if total <= 0:
+            return False
+        return (max(sizes) / total) > ratio_threshold
+
+    @staticmethod
+    def _flatten_sections(sections: List[Dict[str, Any]], out: List[Dict[str, Any]]) -> None:
+        """遞迴攤平 sections（含 children）至 out。"""
+        for sec in sections or []:
+            if isinstance(sec, dict):
+                out.append(sec)
+                ResumePipeline._flatten_sections(sec.get("children", []) or [], out)
+
+    @staticmethod
+    def _own_text_len(sec: Dict[str, Any]) -> int:
+        """單一 section **自身**（不含 children）的 text item 文字長度累加。"""
+        n = 0
+        for item in sec.get("content", []) or []:
+            if isinstance(item, dict):
+                if item.get("type") == "text":
+                    n += len(item.get("content", "") or "")
+            else:
+                n += len(str(item))
+        return n
+    # === [RESUME-P3 C4 END] ===
     # === [PIPE-RESUME C4 END] ===
 
     # === [PIPE-RESUME C5 START] P4 Async RAG（門檻 ≥3 技能詞保護）===

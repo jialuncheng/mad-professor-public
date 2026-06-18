@@ -190,4 +190,205 @@ def build_section_summaries(
         }},
     )
     return zh_by_key
+
+
+# === [PIPE-SECTION-BASE C2 START] 翻譯與排版還原機制 ===
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402 — C2 局部 import 便於審計/移除
+from processor.translator import TranslateMode  # noqa: E402 — 翻譯模式 enum（翻譯契約耦合、非 doc_type）
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# render slot 收集（純結構、不翻譯；DFS pre-order）
+# ──────────────────────────────────────────────────────────────────────────
+def collect_render_slots(
+    sections: List[Dict[str, Any]], depth: int = 0, path_prefix: str = "",
+) -> List[Dict[str, Any]]:
+    """遞迴收集有序 render slot（不翻譯）。順序＝原 DFS pre-order。
+
+    slot 型態：
+    - title  ：{"kind":"title","text":標題,"level":HEADING 層級,"key":原文標題 path}
+    - content：{"kind":"content","text":待翻正文}（組裝時套段落正規化）
+    - raw    ：{"kind":"raw","text":原文}（formula/figure/table，不翻、passthrough）
+
+    title slot `key`＝原文標題 path（RAG-ASYNC-HOTFIX-1、slot 翻譯前收集故 text 即原文）；
+    `level`＝min(2+depth,6)（HEADING-HOTFIX-1，頂層 h2、每下潛 +1、上限 h6）。
+    可吃任意子樹（plan U3.2）。
+    """
+    out: List[Dict[str, Any]] = []
+    for sec in sections or []:
+        if not isinstance(sec, dict):
+            continue
+        title = (sec.get("title") or "").strip()
+        node_key = f"{path_prefix}/{title}" if (path_prefix and title) else (title or path_prefix)
+        if title:
+            out.append({
+                "kind": "title", "text": title, "level": min(2 + depth, 6),
+                "key": node_key,  # 原文標題 path，譯後 title 另存於組裝端 "title" 供顯示
+            })
+        for item in sec.get("content", []) or []:
+            if isinstance(item, dict):
+                itype = item.get("type")
+                content = item.get("content", "") or ""
+                if itype == "text":
+                    out.append({"kind": "content", "text": content})
+                else:
+                    # formula / figure / table 等：保留原文結構、不翻
+                    if content:
+                        out.append({"kind": "raw", "text": content})
+            else:
+                # 容錯：content 為純字串 list（md_processor 原始型態）
+                txt = str(item).strip()
+                if txt:
+                    out.append({"kind": "content", "text": txt})
+        for child in sec.get("children", []) or []:
+            if isinstance(child, dict):
+                out.extend(collect_render_slots([child], depth + 1, node_key))
+    return out
+
+
+def normalize_paragraph_breaks(text: str) -> str:
+    """段落邊界正規化（pipe-table-safe 單 \\n → \\n\\n）。
+
+    一般段落單 \\n 升級 \\n\\n（製造段落空行）；pipe table 區塊（以 | 開頭連續行）rows 之間
+    單 \\n 保留（否則 table 渲染破碎）。移植自 RESUME-P3 PARA-HOTFIX-1、不耦合 A 軌。
+    """
+    if not text:
+        return text
+    lines = text.split("\n")
+    out_lines: List[str] = []
+    in_table = False
+    for line in lines:
+        is_table_row = bool(re.match(r"^\s*\|", line))
+        if is_table_row:
+            if not in_table and out_lines and out_lines[-1].strip():
+                out_lines.append("")          # 進 table 前補空行作 paragraph 邊界
+            in_table = True
+            out_lines.append(line)
+        elif in_table:
+            in_table = False
+            if line.strip():
+                out_lines.append("")          # table 結束補空行作分隔
+            out_lines.append(line)
+        else:
+            out_lines.append(line)
+    text = "\n".join(out_lines)
+    # table 區塊外一般 paragraph：單 \n 轉 \n\n（避開 | 開頭行）
+    text = re.sub(r"(?<!\|)(?<!\n)\n(?![\n\|])", "\n\n", text)
+    return text
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 單元 / 整檔翻譯（translator 注入）
+# ──────────────────────────────────────────────────────────────────────────
+def translate_unit(text: str, inj: Any, tr: Any, text_type: str) -> str:
+    """單元翻譯（空白略過、不浪費呼叫）。"""
+    t = (text or "").strip()
+    if not t:
+        return text
+    return tr.translate(t, inj, TranslateMode.NORMAL, text_type)
+
+
+def translate_whole(full_text: str, inj: Any, tr: Any, translate: bool) -> str:
+    """退化 fallback 基礎：整檔一次翻譯（單一巨 section 降級路徑）。"""
+    if not translate:
+        return full_text
+    return tr.translate(full_text, inj, TranslateMode.NORMAL, "content")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# heading 退化偵測（單一巨 section 降級防護）
+# ──────────────────────────────────────────────────────────────────────────
+def flatten_sections(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """遞迴攤平 sections（含 children）。"""
+    out: List[Dict[str, Any]] = []
+    for sec in sections or []:
+        if isinstance(sec, dict):
+            out.append(sec)
+            out.extend(flatten_sections(sec.get("children", []) or []))
+    return out
+
+
+def own_text_len(sec: Dict[str, Any]) -> int:
+    """單一 section **自身**（不含 children）的 text item 文字長度累加。"""
+    n = 0
+    for item in sec.get("content", []) or []:
+        if isinstance(item, dict):
+            if item.get("type") == "text":
+                n += len(item.get("content", "") or "")
+        else:
+            n += len(str(item))
+    return n
+
+
+def is_heading_degraded(
+    sections: List[Dict[str, Any]],
+    ratio_threshold: float = 0.85,
+    min_sections: int = 2,
+) -> bool:
+    """heading 退化判定：heading 總數 < min_sections，或單一 heading 自身文字佔比 > ratio_threshold。"""
+    flat = flatten_sections(sections)
+    if len(flat) < min_sections:
+        return True
+    sizes = [own_text_len(s) for s in flat]
+    total = sum(sizes)
+    if total <= 0:
+        return False
+    return (max(sizes) / total) > ratio_threshold
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 排版還原（收集 slot → 並行翻譯 → 按序組裝）
+# ──────────────────────────────────────────────────────────────────────────
+def restore_sections_markdown(
+    sections: List[Dict[str, Any]], inj: Any, tr: Any, translate: bool, *,
+    max_workers: int,
+) -> Tuple[str, List[Dict[str, Any]], Dict[int, str]]:
+    """逐 section：收集有序 render slot → 並行翻譯 → 按序組裝，回 (markdown, slots, zh_by_index)。
+
+    RESUME-PERF-1：① `collect_render_slots` 序列收集有序 slot；② 受限並行翻譯
+    （max_workers＝呼叫端注入、實際 API 併發再受 LLMClient._api_semaphore 限流）、`{future:index}`
+    保序回填、單 unit 失敗退原文異常隔離；③ 按 slot 原序組裝（title 套 HEADING 層級、content
+    套段落正規化、raw 原文）。
+    **rag section 旁路**由呼叫端以回傳之 slots+zh_by_index 自建（引擎不知 rag、Zero coupling）。
+    """
+    slots = collect_render_slots(sections, 0, "")
+    zh_by_index: Dict[int, str] = {}
+    if translate:
+        todo = [
+            (i, slot, "title" if slot["kind"] == "title" else "content")
+            for i, slot in enumerate(slots)
+            if slot["kind"] in ("title", "content")
+        ]
+        if todo:
+            with ThreadPoolExecutor(max_workers=max(1, max_workers)) as ex:
+                fut_to_idx = {
+                    ex.submit(translate_unit, slot["text"], inj, tr, ttype): i
+                    for i, slot, ttype in todo
+                }
+                for fut, i in fut_to_idx.items():
+                    try:
+                        zh_by_index[i] = fut.result()
+                    except Exception as exc:  # noqa: BLE001 — 單 unit 隔離、退原文保交付
+                        zh_by_index[i] = slots[i]["text"]
+                        logger.warning(
+                            "[PIPE-SECTION-BASE] 單元翻譯失敗、退回原文",
+                            extra={'extra_fields': {
+                                'event': 'resume_translate_unit_fallback',
+                                'reason': str(exc)[:200],
+                            }},
+                        )
+    rendered: List[str] = []
+    for i, slot in enumerate(slots):
+        kind = slot["kind"]
+        if kind == "raw":
+            rendered.append(slot["text"])
+            continue
+        zh = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
+        if kind == "title":
+            rendered.append(f"{'#' * slot['level']} {zh}")
+        else:
+            rendered.append(normalize_paragraph_breaks(zh))
+    markdown = ("\n\n".join(p for p in rendered if p)).strip() + "\n"
+    return markdown, slots, zh_by_index
+# === [PIPE-SECTION-BASE C2 END] ===
 # === [PIPE-SECTION-BASE END] ===
