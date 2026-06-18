@@ -391,4 +391,77 @@ def restore_sections_markdown(
     markdown = ("\n\n".join(p for p in rendered if p)).strip() + "\n"
     return markdown, slots, zh_by_index
 # === [PIPE-SECTION-BASE C2 END] ===
+
+
+# === [PIPE-SECTION-BASE C3 START] rag section 旁路 + meta header 純格式化器 ===
+def collect_rag_sections(
+    slots: List[Dict[str, Any]], zh_by_index: Dict[int, str],
+    translate: bool, sink: List[Dict[str, Any]],
+) -> None:
+    """由（已翻譯）slots 重組扁平譯後 section 清單供 rag_indexer：title slot 起新 section，
+    其後 content/raw slot 歸入該 section.content（type=text/raw）。不重譯、複用 zh_by_index。
+
+    title section 之 `summary_key`＝原文標題 path（slot["key"]、RAG-ASYNC-HOTFIX-1）；
+    P4 以此跨譯查 section_summaries（與 P2 同基準）。
+    """
+    cur: Optional[Dict[str, Any]] = None
+    for i, slot in enumerate(slots):
+        kind = slot["kind"]
+        text = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
+        if kind == "title":
+            cur = {
+                "title": text, "level": slot.get("level", 2),
+                # 原文標題 path（譯後 title 仍存於 "title" 供顯示）；P4 以此跨譯查 section_summaries
+                "summary_key": slot.get("key", ""),
+                "content": [], "children": [],
+            }
+            sink.append(cur)
+        else:
+            if cur is None:  # 容錯：標題前的內容 → 匿名容器
+                cur = {"title": "", "level": 2, "content": [], "children": []}
+                sink.append(cur)
+            cur["content"].append(
+                {"type": ("raw" if kind == "raw" else "text"), "content": text}
+            )
+
+
+def single_container_sections(text: str, title: str) -> List[Dict[str, Any]]:
+    """is_zh / 退化 fallback：整檔為單一容器 section（size-cap 由 rag_indexer 子切）。
+
+    `title` 由呼叫端傳入（含各文體之 fallback、引擎不讀 ctx、不寫死文體預設）。
+    """
+    return [{
+        "title": title or "", "level": 2,
+        "content": [{"type": "text", "content": text or ""}], "children": [],
+    }]
+
+
+def render_meta_header(
+    title: str, items: List[Tuple[str, str]], sep: str = "：",
+) -> str:
+    """meta header **純格式化器**（Zero Schema Coupling、plan U3.1）。
+
+    收**已抽好 + 已做語系 label 對照**之 `(Label, Value)` 清單，產 `# 標題` + 無序列表
+    （每欄 `- **Label**{sep}Value`、CommonMark 規範保證各自一行）。
+    **引擎零讀 `raw_metadata` / `PipelineContext`**——欄位抽取與 zh/en label 對照全留呼叫端
+    （resume 取 phone/email/domain、litedoc 取 date/publisher 等，各自處理）。
+
+    - 空 value 之欄位略過；title 空則無 `# 標題`；整包空 → 回 ''。
+    """
+    lines: List[str] = []
+    t = (title or "").strip()
+    if t:
+        lines.append(f"# {t}")
+        lines.append("")
+    rendered = [
+        f"- **{label}**{sep}{value}"
+        for label, value in items if str(value).strip()
+    ]
+    if rendered:
+        lines.extend(rendered)
+        lines.append("")
+    if not lines:
+        return ""
+    return "\n".join(lines).rstrip("\n") + "\n\n"
+# === [PIPE-SECTION-BASE C3 END] ===
 # === [PIPE-SECTION-BASE END] ===

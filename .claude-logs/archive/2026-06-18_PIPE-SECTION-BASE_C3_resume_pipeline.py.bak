@@ -651,23 +651,45 @@ class ResumePipeline(DocumentStrategy):
         return markdown
     # === [PIPE-SECTION-BASE C2 END] ===
 
-    # === [PIPE-SECTION-BASE C3 START] rag 旁路抽至 section_engine、改 delegate ===
-    # （_collect_rag_sections / _single_container_sections 原值搬入 section_engine;
-    #   single_container 之 title fallback「履歷全文」留呼叫端〔引擎不寫死文體預設〕。）
+    # === [RAG-ASYNC C6 START] P3→P4 旁路：譯後 section 結構建構 ===
     @staticmethod
     def _collect_rag_sections(
         slots: List[Dict[str, Any]], zh_by_index: Dict[int, str],
         translate: bool, sink: List[Dict[str, Any]],
     ) -> None:
-        """譯後 section 結構建構（實作見 section_engine.collect_rag_sections）。"""
-        section_engine.collect_rag_sections(slots, zh_by_index, translate, sink)
+        """由（已翻譯）slots 重組扁平譯後 section 清單供 rag_indexer：title slot 起新 section，
+        其後 content/raw slot 歸入該 section.content（type=text/raw）。不重譯、複用 zh_by_index。"""
+        cur: Optional[Dict[str, Any]] = None
+        for i, slot in enumerate(slots):
+            kind = slot["kind"]
+            text = zh_by_index.get(i, slot["text"]) if translate else slot["text"]
+            if kind == "title":
+                cur = {
+                    "title": text, "level": slot.get("level", 2),
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 START] ===
+                    # 原文標題 path（譯後 title 仍存於 "title" 供顯示）；P4 以此跨譯查 section_summaries
+                    "summary_key": slot.get("key", ""),
+                    # === [RAG-ASYNC-HOTFIX-1 HOTFIX-1 END] ===
+                    "content": [], "children": [],
+                }
+                sink.append(cur)
+            else:
+                if cur is None:  # 容錯：標題前的內容 → 匿名容器
+                    cur = {"title": "", "level": 2, "content": [], "children": []}
+                    sink.append(cur)
+                cur["content"].append(
+                    {"type": ("raw" if kind == "raw" else "text"), "content": text}
+                )
 
     @staticmethod
     def _single_container_sections(text: str, ctx: PipelineContext) -> List[Dict[str, Any]]:
-        """is_zh / 退化 fallback：整檔單一容器 section（實作見 section_engine.single_container_sections）。"""
+        """is_zh / 退化 fallback：整檔為單一容器 section（size-cap 由 rag_indexer 子切）。"""
         title = (ctx.ingestion.title if ctx.ingestion else "") or "履歷全文"
-        return section_engine.single_container_sections(text, title)
-    # === [PIPE-SECTION-BASE C3 END] ===
+        return [{
+            "title": title, "level": 2,
+            "content": [{"type": "text", "content": text or ""}], "children": [],
+        }]
+    # === [RAG-ASYNC C6 END] ===
 
     # === [PIPE-SECTION-BASE C2 START] _collect_render_slots / _translate_whole 抽至 section_engine、改 delegate ===
     # （_t 單元翻譯併入 section_engine.translate_unit、僅 restore 內部用故 resume 不留 delegate。
@@ -686,17 +708,22 @@ class ResumePipeline(DocumentStrategy):
         return section_engine.translate_whole(full_text, inj, tr, translate)
     # === [PIPE-SECTION-BASE C2 END] ===
 
-    # === [PIPE-SECTION-BASE C3 START] _render_meta_header 重構：欄位抽取留 resume、渲染交 section_engine 純格式化器（U3.1 Zero Schema Coupling）===
+    # === [RESUME-P3 META-HOTFIX-1 START] ===
     @staticmethod
     def _render_meta_header(
         ctx: PipelineContext, gspec: "GlossaryReadySpec", *, lang: str
     ) -> str:
         """組文件開頭 meta header：`# 姓名` + 領域/機構/電話/Email 無序列表。
 
-        render 缺口治標（META-HOTFIX-1）：P1 抽的 meta 走 ctx.raw_metadata 旁路 + ctx.ingestion.title。
-        **本 helper 負責欄位抽取 + zh/en label 對照**（resume 專屬 schema）；組出 `(Label, Value)` 清單後
-        交 `section_engine.render_meta_header` **純格式化器**渲染（引擎對 metadata 結構零認知、U3.1）。
-        讀取源未來由 INFRA-4 從 ctx.raw_metadata 轉為 spec 擴展欄（本 helper 唯一改動點）。
+        render 缺口治標（META-HOTFIX-1）：P1 抽的 meta 原本只到 DB（raw_metadata 旁路終點），
+        本 helper 在 P3 渲染端**讀同一條現有旁路 ctx.raw_metadata + ctx.ingestion.title**，
+        組出文件 header 讓 final 立刻有 meta（不動凍結合約；合約轉正屬 INFRA-4 遠期）。
+
+        - lang='zh'|'en' 控制 label 語言與分隔符；缺項靜默省略；整包空 → 回 ''。
+        - meta 採**無序列表（`- `）**：每欄為獨立 list item、CommonMark 規範保證各自一行，
+          不依賴行尾空格 / 不怕 strip、根治 RAG-10 類軟換行（取代脆弱的 blockquote+尾隨空格）。
+        - 姓名沿用 ctx.ingestion.title 原值（含影子 ' (測試)' 後綴、便於觀察、不另去除）。
+        - 讀取源未來由 INFRA-4 從 ctx.raw_metadata 轉為 spec 擴展欄（本 helper 唯一改動點）。
         """
         raw = ctx.raw_metadata or {}
         title = ((ctx.ingestion.title if ctx.ingestion else "") or "").strip()
@@ -711,13 +738,21 @@ class ResumePipeline(DocumentStrategy):
             "en": {"domain": "Domain", "org": "Organization", "phone": "Phone", "email": "Email"},
         }[lang]
         sep = "：" if lang == "zh" else ": "
-        # 抽欄 + label 對照後組 (Label, Value) 清單（空值由引擎略過）；渲染交純格式化器
-        items = [
-            (label["domain"], domain), (label["org"], org),
-            (label["phone"], phone), (label["email"], email),
-        ]
-        return section_engine.render_meta_header(title, items, sep)
-    # === [PIPE-SECTION-BASE C3 END] ===
+        lines: List[str] = []
+        if title:
+            lines.append(f"# {title}")
+            lines.append("")
+        items: List[str] = []
+        for key, val in (("domain", domain), ("org", org), ("phone", phone), ("email", email)):
+            if str(val).strip():
+                items.append(f"- **{label[key]}**{sep}{val}")   # 無序列表：規範保證每欄獨立一行
+        if items:
+            lines.extend(items)
+            lines.append("")
+        if not lines:
+            return ""
+        return "\n".join(lines).rstrip("\n") + "\n\n"
+    # === [RESUME-P3 META-HOTFIX-1 END] ===
 
     # === [PIPE-SECTION-BASE C2 START] _normalize_paragraph_breaks 抽至 section_engine、改 delegate ===
     @staticmethod

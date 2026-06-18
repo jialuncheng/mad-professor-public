@@ -923,8 +923,8 @@
 - 🟡 **PIPE-SECTION-BASE — 共用 section 機制抽取**（`.claude-logs/baton/2026-06-18_PIPE-SECTION-BASE_共用section機制抽取_plan_v1.md` v2、§9 六 OQ 全 🟢）
   - [x] ✅ 已完成: C1 — section_engine 骨架與摘要機制（新建 `pipelines/section_engine.py` 純函式引擎·摘要簇〔collect_summary_targets 吃任意子樹 U3.2 / build/generate/translate_section_summaries·llm+prompt+model 注入〕、resume 改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規）
   - [x] ✅ 已完成: C2 — 翻譯與排版還原機制（render/restore 簇〔collect_render_slots/restore_sections_markdown〔回傳 md+slots+zh_by_index、引擎不知 rag〕/normalize_paragraph_breaks/translate_unit/translate_whole/is_heading_degraded/flatten_sections/own_text_len〕原值搬入 section_engine·ThreadPoolExecutor 並行+限流〔max_workers 注入·測試 patch 仍生效〕+ level=min(2+depth,6)、resume 改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規）
-  - [/] 🟡 WIP: C3 — rag 旁路與 meta header 純格式化器（Zero Schema Coupling·U3.1）
-  - [ ] ⬜ 未開始: C4 — 引擎單元測試與接縫整合測試（雙鎖·U5/Q6）
+  - [x] ✅ 已完成: C3 — rag 旁路與 meta header 純格式化器（collect_rag_sections〔summary_key=原文標題 path〕/single_container_sections〔title 參數化〕原值搬入 section_engine + render_meta_header 重構為純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata/ctx·U3.1 Zero Schema Coupling〕、resume 抽欄+lang label 後 delegate;行為等價 resume 42 passed〔含 meta_header byte 斷言〕、全套件 640 基線、SOP 合規）
+  - [/] 🟡 WIP: C4 — 引擎單元測試與接縫整合測試（雙鎖·U5/Q6）
   - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance + baton 歸檔 + hash 自癒）
   - 工時：5 個 commits（BE-Refactor、行為等價抽取、resume 既有測試鎖死）
   - 依賴：無（共用真理源先行·選二；litedoc plan 後續建於本案之上）
