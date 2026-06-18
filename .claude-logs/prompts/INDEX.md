@@ -139,6 +139,12 @@
   - `2026-06-08_RAG-ASYNC_Tasks_提示詞.md` — Tasks（BE-Refactor 依 plan_v2 七定案 D1-D7 拆 commit；C1 規格同步〔母 plan v10 + PIPE-SPEC、含修 §1.3 P3 doc-drift〕不含 Python；代碼段 processor/rag_indexer.py 全重寫零 import rag_processor + GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步 section_summaries + run_phase4 改呼自有模組 + Strategy B/size-cap 子切 + ④ conformance 測試；最後 Checkout 一次性 baton 歸檔；§0.5 成果盤點 + §8 六維度表）
   - `2026-06-07_RAG-ASYNC_plan_提示詞.md` — plan（針對 B 軌 P4 chunks=1 退化 + 偏離 SPEC §1.4/R4.3 之根因，建 P4 共用真理源：新模組自生 Strategy B chunk-md〔# + Context + Chapter Summary + content〕、不 import rag_processor、吐凍結 RagDbSpec；section_summaries 全 P2 同步產〔並行/非致命/可量測三鎖〕；含母 plan v10 §U2/§U6 + PIPE-SPEC §1.1②/§1.4/§1.3〔順手修 resume P3「100% Bypass」doc-drift〕同步；不含 commit 拆分；依 template_plan 產 baton/）
 
+### PIPE-SECTION-BASE 系列（共用 section 機制·第 4 共用真理源）
+- 🟡 **PIPE-SECTION-BASE 共用 section 機制抽取（2026-06-18 plan v2 → Tasks → C1…·BE-Refactor）**
+  - `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md` — C1 Run（section_engine 骨架 + 摘要簇：新建 `pipelines/section_engine.py` + 摘要區塊〔_collect_summary_targets/_build_section_summaries/_generate/_translate/_parse_indexed〕原值搬入純函式·llm 注入·collect 吃任意子樹〔U3.2〕、resume 改 delegate;行為等價〔resume 測試鎖死〕;包裹 C1 START/END + .bak）
+  - `2026-06-18_PIPE-SECTION-BASE_Tasks_提示詞.md` — Tasks（拆 5 Commit：C1 摘要機制 / C2 翻譯與排版還原 / C3 rag 旁路 + meta header 純格式化器〔U3.1 Zero Schema Coupling〕/ C4 引擎單元 + base 層 key-changing 整合測試〔雙鎖·Q6〕/ C5 Checkout;行為等價 RESUME-PERF-1 C1 範式、每 Run Commit resume 測試鎖死;Run baton 暫存、Checkout 才歸檔;不給 commit 建議自主拆分）
+  - `2026-06-18_PIPE-SECTION-BASE_plan_提示詞.md` — plan（將 resume 的「遞迴標題樹走訪→逐節點摘要/並行翻譯/排版還原/rag section 旁路」抽成零 doc_type 耦合共用引擎·供 litedoc/academic/technical/book 消費;行為等價〔resume 既有測試鎖死、RESUME-PERF-1 C1 範式〕;選二定序〔共用真理源先行〕;§規格依據對齊三類 consumer;不收編 slides 重複副本〔§9 Q2〕;不給 commit 建議）
+
 ### PIPE 大改版系列
 - 🟡 **GOLDEN-BASELINE 黃金基準存盤與退化比對（2026-06-02 Tasks）**
   - `2026-06-02_GOLDEN-BASELINE_Tasks_提示詞.md` — Tasks（OP-N 執行階段拆分、不給 commit；OP-1 Checkout plan baton→plans 保留 _v2、OP-2 五路黃金基準物理存盤、OP-3 自動化 Regression Diff 比對腳本 + 同步 TODO.md）
@@ -358,6 +364,9 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md`（C1 Run·BE-Refactor：新建 section_engine.py + 摘要簇〔collect_summary_targets/build_section_summaries/parse_indexed〕原值搬入純函式·llm 注入·吃任意子樹、resume 改 delegate;行為等價 resume 測試鎖死）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 5 Commit〔C1 摘要 / C2 翻譯+排版還原 / C3 rag 旁路+meta header 純格式化器 / C4 引擎單元+key-changing 整合測試雙鎖 / C5 Checkout〕;行為等價、每 Run resume 測試鎖死、Run baton 暫存）
+- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_plan_提示詞.md`（plan·BE-Refactor：resume section 機制〔標題樹走訪/逐節點摘要/並行翻譯/排版還原/rag 旁路〕抽零 doc_type 耦合共用引擎、供 litedoc/academic/technical/book;行為等價、選二定序、對齊三類 consumer、不收編 slides 重複）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_Check_提示詞.md`（Check·C4 Checkout 收官：5 維度 Conformance〔目標規格 U1-U6 / tasks §6 grep / 不可動 + pytest / 提示詞稽核 / msg §8〕+ TODO 結案〔Tasks/C1-C4 + hash 自癒〕+ baton 一次性歸檔 + §7.2 DOC 豁免）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C3_run_提示詞.md`（C3 Run·Check 側：template_prompt_for_check 加減負前移註〔U5·維度三/五前移分攤、減負非省略、總閘門聚焦 U-coverage + §7.2〕）
 - 2026-06-18 — `2026-06-18_WORKFLOW-4_C2_run_提示詞.md`（C2 Run·Execution 側：prompt_for_run 讀檔加 plan〔U1 策略 z〕+ execution §1 對齊欄〔U2〕+ §自評三問〔U3·含正向軸〕）
@@ -370,6 +379,3 @@
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_Tasks_提示詞.md`（slides 回灌·拆 commit 產 tasks：C1 SPEC v7 同步 + C2 master plan 補註⁸ + C3 Checkout）
 - 2026-06-14 — `2026-06-14_PIPE-SYNC-3_plan_提示詞.md`（slides 路落地經驗回灌母 plan 與 SPEC·DOC-Refactor plan 產出：D1 SPEC slides P3 drift / D2 A/B 軌 golden 釐清 / D3 alt LaTeX 契約 / D4 is_blank / D5 清洗層）
 - 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_run_提示詞.md`（HOTFIX-6 Run·殘留母片日期單頁清除落地 + 8 份歷史文件 golden 誤述 banner 作廢 + TODO 尾註）
-- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-6_doc_提示詞.md`（殘留母片日期單頁清除 + golden 重捕說明回溯更正·hotfix 文件產出：_strip_master_date 加單頁純日期清空 + 8 份文件 A/B 軌 golden 更正）
-- 2026-06-14 — `2026-06-14_PIPE-SLIDES-HOTFIX-5_run_提示詞.md`（HOTFIX-5 Run·有標題過場頁未踢除落地：is_blank 過濾放寬〔且 markdown_content 空〕+ Vision prompt 釐清 + 5 回歸測試）
-- 2026-06-14 — `2026-06-14_RAG-12-HOTFIX-1_run_提示詞.md`（RAG-12-HOTFIX-1 Run·圖片 alt 內 LaTeX 破版落地：抽 math 前保護圖片整段、grep+node spike+pytest）

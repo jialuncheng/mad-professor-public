@@ -18,7 +18,7 @@
 | C1 | Plan 側 Diverse Rollout（U4）：`template_plan` §2 後插**選用** `§2.5 候選方案（Diverse Rollout）`〔高風險/模糊/架構級才觸發·≥2 語意分散方案+trade-offs+否決留痕、低風險明說單案〕+ `template_prompt_for_plan` 撰寫原則 #5 多候選 + Q5 stale 校正〔#4 §7→§9 + 「套用模板結構」表對齊 template_plan 實際章 §4 跨Phase/§5 變動風險/§9 OQ/+§2.5、stale 0〕;零業務代碼、640 passed 基線 | `44659be` |
 | C2 | Execution 側 Conditioning + 雙軸自評（U1/U2/U3）：`template_prompt_for_run` 強制讀檔清單加 `plan.md`〔U1·全局策略 z re-inject、StraTA §4.1 prepend z;fence 內改行內 marker〕 + `template_execution §1` 加「與全局策略對齊」欄〔U2〕+ §6 後新增 `§自評`〔U3·雙軸：(a)越界?(b)無關/違規?(c)推進哪個 U-N?·正向軸防做白工〕;C2 報告就地 dogfood;零業務代碼、640 passed 基線 | `0e8cb77` |
 | C3 | Check 側減負前移（U5）：`template_prompt_for_check` Conformance 維度表後加註——不可動〔維度三〕+ msg〔維度五〕由各 Run §自評〔U3〕前移分攤、Check **減負非省略**、仍為**最後總閘門**·聚焦跨 Commit U-coverage（總驗收）+ §7.2 跨 Phase 整合;**嚴禁重寫 WORKFLOW_SOP §4 五維度定義**〔grep 證不在 diff〕;零業務代碼、640 passed 基線 | `757dee6` |
-| C4 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6 跨 commit 全覆蓋〔U1/U2/U3=C2·U4=C1·U5=C3·U6=五模板 marker+StraTA 誠實前提註〕/ tasks §6 grep / 不可動〔零業務代碼·WORKFLOW_SOP §4 未動·640 passed〕/ 提示詞 6 份齊 / msg §8 完整〕+ §7.2 純 DOC-Refactor 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/〕+ TODO 結案 + 全量 hash 自癒 | `待 baron 回填` |
+| C4 | Checkout 收官：5 維度 Conformance 全綠〔目標規格 U1-U6 跨 commit 全覆蓋〔U1/U2/U3=C2·U4=C1·U5=C3·U6=五模板 marker+StraTA 誠實前提註〕/ tasks §6 grep / 不可動〔零業務代碼·WORKFLOW_SOP §4 未動·640 passed〕/ 提示詞 6 份齊 / msg §8 完整〕+ §7.2 純 DOC-Refactor 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/〕+ TODO 結案 + 全量 hash 自癒 | `8892bcd` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-14_WORKFLOW-4_StraTA原理移植文件治理模板_plan_v1.md`（v2、U1-U6、§9 六 OQ 全定案）
 > **動因**：StraTA（arXiv 2605.06642v1）提高任務成功率四原理——① 固定策略 z 自初始狀態抽樣、每步 conditioning ② 階層 ③ diverse strategy rollout（farthest-point）④ critical self-judgment（逐步：是否依策略 / 是否推進任務）——可移植進文件治理流程治本「Run 偏離 plan 全局策略 / 設計單線無多候選 / 做白工（scope creep）/ Check 人肉重跑」。
@@ -919,6 +919,15 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **PIPE-SECTION-BASE — 共用 section 機制抽取**（`.claude-logs/baton/2026-06-18_PIPE-SECTION-BASE_共用section機制抽取_plan_v1.md` v2、§9 六 OQ 全 🟢）
+  - [x] ✅ 已完成: C1 — section_engine 骨架與摘要機制（新建 `pipelines/section_engine.py` 純函式引擎·摘要簇〔collect_summary_targets 吃任意子樹 U3.2 / build/generate/translate_section_summaries·llm+prompt+model 注入〕、resume 改 delegate;行為等價 resume 42 passed、全套件 640 基線、SOP 合規）
+  - [/] 🟡 WIP: C2 — 翻譯與排版還原機制（render slots + 並行翻譯 + level 還原）
+  - [ ] ⬜ 未開始: C3 — rag 旁路與 meta header 純格式化器（Zero Schema Coupling·U3.1）
+  - [ ] ⬜ 未開始: C4 — 引擎單元測試與接縫整合測試（雙鎖·U5/Q6）
+  - [ ] ⬜ 未開始: C5 — Checkout 收官（Conformance + baton 歸檔 + hash 自癒）
+  - 工時：5 個 commits（BE-Refactor、行為等價抽取、resume 既有測試鎖死）
+  - 依賴：無（共用真理源先行·選二；litedoc plan 後續建於本案之上）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
