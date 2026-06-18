@@ -550,65 +550,7 @@ class LiteDocPipeline(DocumentStrategy):
         return zh, en
     # === [PIPE-LITEDOC C5 END] ===
 
-    # === [PIPE-LITEDOC C6 START] P4 Async RAG（消費共用 rag_indexer ≥10 + 雙語標題）===
     def run_phase4(self, ctx: PipelineContext) -> RagDbSpec:
-        """P4 Async RAG：向量化落庫（合約④、非阻塞、plan U6）。
-
-        流程（消費 B 軌共用 rag_indexer、零依賴 A 軌、零改引擎）：
-          ① 輸入＝P3 旁路 `ctx.rag_sections` + P2 `ctx.glossary_ready.section_summaries`。
-          ② `rag_indexer.index(rag_sections, section_summaries, 'litedoc', vectors_dir, paper_db_id,
-             rag_tree_path, title, translated_title)`——**門檻走 is_chunk_meaningful 預設 ≥10**
-             （litedoc 不在 resume/slides ≥3 tuple、rag_indexer 零改）；四產物。
-          ③ 雙語標題：title=ctx.ingestion.title、translated_title 讀 P3 旁路 raw_metadata["translated_title"]。
-          ④ 交付 RagDbSpec。
-
-        錯誤隔離（plan U6 / database SOP）：異常 logger.warning(exc_info=True) 後**拋出**，
-        交 Orchestrator 標 rag_status='failed'、**絕不阻塞 reading_ready**；Embedding 於 DB 交易外、
-        paper_db_id None → rag_indexer 內部優雅降級。
-        """
-        if ctx.bilingual is None:
-            raise ValueError("PIPE-LITEDOC P4：ctx.bilingual 缺失（P3 未交付）")
-        from processor import rag_indexer  # 惰性 import（B 軌自有、零 rag_processor）
-
-        rag_sections = ctx.rag_sections or []
-        section_summaries = (
-            ctx.glossary_ready.section_summaries if ctx.glossary_ready else None
-        ) or {}
-        vectors_dir = paper_manager.vectors_path(settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-        rag_tree_path = paper_manager.rag_tree_path(settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-
-        # 雙語標題（U5c/U6）：title=原文標題、translated_title 讀 P3 旁路（非 resume 捷徑同取）
-        title = (ctx.ingestion.title if ctx.ingestion else None) or ctx.paper_id
-        _tt = (ctx.raw_metadata or {}).get("translated_title")
-        translated_title = (_tt.get("value") if isinstance(_tt, dict) else _tt) or title
-
-        paper_db_id = paper_manager.get_paper_db_id(ctx.owner_id, ctx.paper_id)
-        if paper_db_id is None:
-            logger.warning(
-                "[PIPE-LITEDOC P4] %s paper_db_id 未取得（DB 寫入降級、僅 FAISS + index_meta）",
-                ctx.paper_id,
-            )
-
-        try:
-            spec = rag_indexer.index(
-                rag_sections, section_summaries, "litedoc", vectors_dir,
-                paper_db_id=paper_db_id,
-                rag_tree_path=str(rag_tree_path),
-                title=title, translated_title=translated_title,
-            )
-            logger.info(
-                "[PIPE-LITEDOC P4] %s RAG 完成 chunks=%d paper_chunks=%d vectors=%s "
-                "title=%r translated_title=%r",
-                ctx.paper_id, int(spec.index_meta.get("chunks_total", 0)),
-                spec.paper_chunk_count, vectors_dir.name, title, translated_title,
-            )
-            return spec
-        except Exception as exc:  # noqa: BLE001 — 拋出由 Orchestrator 標 rag_status='failed'
-            logger.warning(
-                "[PIPE-LITEDOC P4] %s RAG 向量化失敗（不阻主鏈、Orchestrator 將標 "
-                "rag_status='failed'）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            raise
-    # === [PIPE-LITEDOC C6 END] ===
+        """P4 Async RAG（C6 實作）。"""
+        raise NotImplementedError(self._STUB_MSG)
 # === [PIPE-LITEDOC C2 END] ===
