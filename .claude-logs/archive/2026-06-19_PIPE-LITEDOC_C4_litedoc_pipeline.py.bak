@@ -42,13 +42,6 @@ from processor.tiling_processor import TilingProcessor
 from processor import meta_normalizer
 # === [PIPE-LITEDOC C3 END] ===
 
-# === [PIPE-LITEDOC C4 START] P2 六步所需（三真理源 + section_engine）===
-from pipelines import section_engine
-from processor.domain_normalizer import normalize_to_lcc
-from processor.glossary_extractor import GlossaryManager
-from processor.translator import InjectionContext, TranslateMode, Translator
-# === [PIPE-LITEDOC C4 END] ===
-
 logger = logging.getLogger(__name__)
 
 # === [PIPE-LITEDOC C3 START] 啟發式常數 + 原生 metadata cover-prompt（方案 A、不耦合 A 軌）===
@@ -78,28 +71,6 @@ def _strip_json_fence(text: str) -> str:
     s = re.sub(r"\s*```$", "", s)
     return s.strip()
 # === [PIPE-LITEDOC C3 END] ===
-
-# === [PIPE-LITEDOC C4 START] P2 常數 ===
-_TARGET_LANG = "zh-tw"           # 系統固定目標語（繁中；GlobalGlossary 聯合鍵）
-_ABSTRACT_MAX_CHARS = 8000       # 摘要輸入截斷（防 token 爆）
-_ABSTRACT_FALLBACK_CHARS = 600   # 摘要 LLM 失敗的原文截斷兜底
-_SECTION_SUMMARY_INPUT_CHARS = 1500
-
-_LITEDOC_SUMMARY_SYSTEM_PROMPT = (
-    "你是專業文件摘要器。請將以下新聞／網頁文章濃縮為一段精簡摘要，"
-    "保留原文語言、涵蓋主旨與重點；只輸出摘要本文，不要任何前言或標題。"
-)
-# 節點摘要 prompt 通用（非文體專屬、與 resume 同款語意、litedoc 自有副本不跨 import）。
-_SECTION_SUMMARY_SYSTEM_PROMPT = (
-    "你是文件分析助手。下面是一份文件的多個區塊，每個區塊以「[編號] 標題」開頭、其後為內文。"
-    "請為每個區塊產生一句精簡的「原文語言」摘要（捕捉該區塊核心、約 30-60 字）。"
-    "嚴格逐行輸出，每行格式為「[編號] 摘要」，編號與輸入對應，不要任何額外說明或前後綴。"
-)
-_SECTION_SUMMARY_TRANSLATE_SYSTEM_PROMPT = (
-    "你是專業翻譯。將下列各區塊摘要翻譯為流暢的繁體中文，專有名詞與術語沿用慣例、風格與所給全文摘要一致。"
-    "嚴格逐行輸出，每行格式為「[編號] 繁體中文摘要」，編號與輸入對應，不要任何額外說明或前後綴。"
-)
-# === [PIPE-LITEDOC C4 END] ===
 
 
 @PipelineFactory.register("litedoc")
@@ -275,148 +246,9 @@ class LiteDocPipeline(DocumentStrategy):
         return "en"
     # === [PIPE-LITEDOC C3 END] ===
 
-    # === [PIPE-LITEDOC C4 START] P2 六步（消費 section_engine + 三真理源）===
     def run_phase2(self, ctx: PipelineContext) -> GlossaryReadySpec:
-        """P2 Glossary & Context Prep：摘要 / LCC / Glossary 自癒 / 摘要翻譯 / 節點摘要（合約②）。
-
-        六步（plan U4、消費三大共用真理源 + section_engine）：
-          ① 全文摘要（原文 abstract）② normalize_to_lcc（context=全文、內容判定）
-          ③ Glossary 級聯自癒（旗標 LLM_USE_GLOSSARY_ALIGN 閘門）④ Translator(DEEP_THINK) 翻 abstract
-          → translated_abstract（雙用：交付 + glossary 抽詞樣本）⑤ lcc→Domains.name → domain_name
-          ⑥ section_engine.build_section_summaries → section_summaries（key=原文標題 path）
-
-        交易邊界（database SOP）：所有 LLM 呼叫皆在 DB 交易外；domain_name 為 Domains PK 唯讀檢索。
-        """
-        from llm.client import LLMClient  # 惰性 import
-
-        source_lang = (ctx.ingestion.source_lang if ctx.ingestion else None) or "en"
-        full_text = self._read_source_text(ctx)
-
-        # ① 全文摘要（原文）
-        abstract = self._make_summary(full_text) or full_text[:_ABSTRACT_FALLBACK_CHARS]
-        # ② LCC（litedoc 無 P1 domain 欄、raw_domain="" → normalize_to_lcc 以全文內容判定）
-        lcc = normalize_to_lcc("", context_text=full_text) or "general"
-
-        # ④ 翻摘要（DEEP_THINK）→ translated_abstract（雙用：交付 + ③ glossary 抽詞樣本）
-        translator = Translator()
-        summary_ctx = InjectionContext(lcc=lcc, glossary={}, doc_type=ctx.doc_type or "litedoc")
-        translated_abstract = translator.translate(
-            abstract, summary_ctx, TranslateMode.DEEP_THINK, "abstract"
-        )
-
-        # ③ Glossary 自癒（旗標閘門；LLM 在 DB 交易外、upsert 冪等）
-        glossary: Dict[str, str] = {}
-        if settings.LLM_USE_GLOSSARY_ALIGN:
-            glossary = self._heal_glossary(
-                source_lang, _TARGET_LANG, lcc, abstract, translated_abstract
-            )
-
-        # ⑤ lcc → Domains.name（PK 唯讀免交易）
-        domain_name = self._resolve_domain_name(lcc)
-
-        # ⑥ 節點摘要（消費共用 section_engine、key=原文標題 path、三安全鎖、LLM 交易外）
-        section_summaries = section_engine.build_section_summaries(
-            (ctx.ingestion.tiles if ctx.ingestion else []) or [],
-            llm=LLMClient.get_instance(),
-            abstract=abstract,
-            source_lang=source_lang,
-            summary_model=settings.LLM_DOMAIN_MODEL,
-            translate_model=settings.TRANSLATE_MODEL,
-            summary_system_prompt=_SECTION_SUMMARY_SYSTEM_PROMPT,
-            translate_system_prompt=_SECTION_SUMMARY_TRANSLATE_SYSTEM_PROMPT,
-            input_chars_cap=_SECTION_SUMMARY_INPUT_CHARS,
-            max_chars=_ABSTRACT_MAX_CHARS,
-            paper_id=ctx.paper_id,
-        )
-
-        spec = GlossaryReadySpec(
-            abstract=abstract,
-            lcc=lcc,
-            glossary=glossary,
-            translated_abstract=translated_abstract,
-            section_summaries=section_summaries or None,
-            domain_name=domain_name,
-        )
-        logger.info(
-            "[PIPE-LITEDOC P2] %s lcc=%r glossary=%d domain_name=%r abstract=%dchars "
-            "translated=%dchars section_summaries=%d",
-            ctx.paper_id, lcc, len(glossary), domain_name,
-            len(abstract), len(translated_abstract or ""), len(section_summaries or {}),
-        )
-        return spec
-
-    # ── P2 私有輔助 ──
-    def _read_source_text(self, ctx: PipelineContext) -> str:
-        """讀 P1 產出原文 markdown；失敗 fallback 由 tiles 重組。"""
-        output_dir = paper_manager.paper_dir(settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id)
-        md_path = output_dir / f"{Path(ctx.pdf_path).stem}.md"
-        try:
-            return md_path.read_text(encoding="utf-8")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "[PIPE-LITEDOC P2] 讀原文 md 失敗，改由 tiles 重組: %s", exc, exc_info=True
-            )
-            return self._tiles_to_text(ctx.ingestion.tiles if ctx.ingestion else [])
-
-    @staticmethod
-    def _tiles_to_text(tiles: List[Dict[str, Any]]) -> str:
-        """由 Tiles 重組純文字（fallback）。"""
-        parts: List[str] = []
-        for sec in tiles or []:
-            if isinstance(sec, dict):
-                for item in sec.get("content", []) or []:
-                    if isinstance(item, dict) and item.get("type") == "text":
-                        parts.append(str(item.get("content", "")))
-        return "\n".join(parts)
-
-    def _make_summary(self, full_text: str) -> str:
-        """全文摘要（原文語言、LLM、交易外；失敗回空 → 兜底原文截斷）。"""
-        from llm.client import LLMClient
-
-        messages = [
-            {"role": "system", "content": _LITEDOC_SUMMARY_SYSTEM_PROMPT},
-            {"role": "user", "content": full_text[:_ABSTRACT_MAX_CHARS]},
-        ]
-        try:
-            out = LLMClient.get_instance().chat(
-                messages=messages, temperature=0.2, stream=False, model=settings.LLM_DOMAIN_MODEL,
-            )
-            return (out or "").strip()
-        except Exception as exc:  # noqa: BLE001 — 摘要失敗不阻斷
-            logger.warning("[PIPE-LITEDOC P2] 全文摘要失敗（兜底截斷）: %s", exc, exc_info=True)
-            return ""
-
-    def _heal_glossary(
-        self, source_lang: str, target_lang: str, lcc: str,
-        abstract: str, translated_abstract: str,
-    ) -> Dict[str, str]:
-        """Glossary 級聯查詢 + 缺詞自癒（LLM 在 DB 交易外、upsert 冪等回寫）。"""
-        gm = GlossaryManager()
-        existing = gm.query_cascade(source_lang, target_lang, domain=lcc)
-        if existing:
-            return existing
-        pairs = gm.extract_terms(abstract, translated_abstract, source_lang, target_lang, domain=lcc)
-        if pairs:
-            gm.upsert_terms(pairs, source_lang, target_lang, domain=lcc)
-        return {key: val for key, val in pairs}
-
-    def _resolve_domain_name(self, lcc: str) -> Optional[str]:
-        """lcc → Domains.name（PK 唯讀檢索、無寫交易；database SOP）。"""
-        if not lcc:
-            return None
-        try:
-            from db import SessionLocal
-            from models import Domains
-
-            with SessionLocal() as session:  # 唯讀
-                row = session.get(Domains, lcc)
-                return row.name if row else None
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "[PIPE-LITEDOC P2] Domains.name 解析失敗（domain_name=None）: %s", exc, exc_info=True
-            )
-            return None
-    # === [PIPE-LITEDOC C4 END] ===
+        """P2 Glossary & Context Prep（C4 實作）。"""
+        raise NotImplementedError(self._STUB_MSG)
 
     def run_phase3(self, ctx: PipelineContext) -> BilingualMarkdownSpec:
         """P3 Translation & Restore（C5 實作）。"""

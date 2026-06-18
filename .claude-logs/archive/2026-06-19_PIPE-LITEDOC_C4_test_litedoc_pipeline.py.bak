@@ -32,9 +32,9 @@ def test_litedoc_rag_char_threshold_is_10():
     assert LiteDocPipeline().rag_char_threshold == 10
 
 
-@pytest.mark.parametrize("phase", ["run_phase3", "run_phase4"])
+@pytest.mark.parametrize("phase", ["run_phase2", "run_phase3", "run_phase4"])
 def test_litedoc_phases_are_strict_stub(phase):
-    """C2 骨架：P3-P4 仍為 strict stub（C5-C6 才實作；P1/P2 已於 C3/C4 實作）。"""
+    """C2 骨架：P2-P4 仍為 strict stub、拋 NotImplementedError（C4-C6 才實作；P1 已於 C3 實作）。"""
     strat = LiteDocPipeline()
     with pytest.raises(NotImplementedError):
         getattr(strat, phase)(None)
@@ -167,71 +167,3 @@ def test_p1_shadow_title_suffix(monkeypatch, tmp_path):
     _setup_p1_mocks(monkeypatch, tmp_path, llm_json='{"title":"News X","authors":[]}')
     spec = LiteDocPipeline().run_phase1(_p1_ctx(tmp_path, paper_id="p1_shadow"))
     assert spec.title == "News X (測試)"
-
-
-# ──────────────────────────────────────────────────────────────────────────
-# C4：P2 六步（消費 section_engine + 三真理源）
-# ──────────────────────────────────────────────────────────────────────────
-from pipelines.contracts import GlossaryReadySpec, IngestionMetadataSpec as _Ing
-
-
-class _FakeP2LLM:
-    """chat：節點摘要回 `[i] 摘要i`；全文摘要回固定句。"""
-    def chat(self, messages=None, **kw):
-        import re
-        user = (messages or [{}])[-1].get("content", "")
-        idxs = sorted({int(m) for m in re.findall(r"\[(\d+)\]", user)})
-        if idxs:                                  # 節點摘要批次
-            return "\n".join(f"[{i}] 摘要{i}" for i in idxs)
-        return "全文摘要句"                        # _make_summary
-
-
-def _setup_p2_mocks(monkeypatch, tmp_path, tiles):
-    monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path / "out")
-    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)   # glossary skip
-    # normalize_to_lcc / Translator / domain_name patch（隔離三真理源 LLM/DB）
-    monkeypatch.setattr(lp, "normalize_to_lcc", lambda raw, context_text=None: "general")
-
-    class _FakeTr:
-        def __init__(self, *a, **k): pass
-        def translate(self, text, ctx, mode, text_type="content"):
-            return f"譯：{text}"
-
-    monkeypatch.setattr(lp, "Translator", _FakeTr)
-    monkeypatch.setattr(LiteDocPipeline, "_resolve_domain_name", lambda self, lcc: "News")
-    monkeypatch.setattr(LiteDocPipeline, "_read_source_text", lambda self, ctx: "EN FULL TEXT")
-    import llm.client
-    monkeypatch.setattr(llm.client.LLMClient, "get_instance", classmethod(lambda cls: _FakeP2LLM()))
-
-
-def _p2_ctx(tiles, source_lang="en", doc_type="news"):
-    ctx = PipelineContext(doc_type=doc_type, paper_id="p2", pdf_path="/x/in.pdf", owner_id=1)
-    ctx.ingestion = _Ing(title="Headline", source_lang=source_lang, tiles=tiles)
-    ctx.raw_metadata = {}
-    return ctx
-
-
-def _tiles_2():
-    def _s(t, c):
-        return {"title": t, "content": [{"type": "text", "content": c}], "children": []}
-    return [_s("Intro", "intro body"), _s("Detail", "detail body")]
-
-
-def test_p2_delivers_glossary_ready_spec(monkeypatch, tmp_path):
-    """P2 交付 GlossaryReadySpec：abstract / lcc / translated_abstract / domain_name。"""
-    _setup_p2_mocks(monkeypatch, tmp_path, _tiles_2())
-    spec = LiteDocPipeline().run_phase2(_p2_ctx(_tiles_2()))
-    assert isinstance(spec, GlossaryReadySpec)
-    assert spec.abstract == "全文摘要句"
-    assert spec.lcc == "general"
-    assert spec.translated_abstract == "譯：全文摘要句"
-    assert spec.domain_name == "News"
-
-
-def test_p2_section_summaries_key_is_original_title_path(monkeypatch, tmp_path):
-    """⑥ section_summaries key 完全對齊**原文標題 path**（接縫基準、繼承 section_engine）。"""
-    _setup_p2_mocks(monkeypatch, tmp_path, _tiles_2())
-    spec = LiteDocPipeline().run_phase2(_p2_ctx(_tiles_2(), source_lang="en"))
-    assert isinstance(spec.section_summaries, dict)
-    assert set(spec.section_summaries.keys()) == {"Intro", "Detail"}   # 原文標題 path
-    assert all(v.startswith("摘要") for v in spec.section_summaries.values())
