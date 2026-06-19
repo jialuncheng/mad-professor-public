@@ -46,6 +46,12 @@
   - `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md` — C1 Run（Skeleton & Register：新建 `pipelines/slide_pipeline.py`〔`@register('slides')` + DocumentStrategy 四方法 stub + `rag_char_threshold=3`〕+ `pipelines/__init__.py` 補 import〔`# === [PIPE-SLIDES C1] ===` 包裹、C7-hotfix 教訓〕+ 新建 `tests/test_slide_pipeline.py` 分派測試〔_registry 含 'slides'、get_strategy 非 NullStrategy〕；僅三檔；.bak；msg /tmp、不自發 commit）
   - `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.1 八 OQ 全結清〕拆 commit：新建 `pipelines/slide_pipeline.py`〔P1 每頁存圖+Vision temp=0+封面判定+統計去重 / P2 六步 key=`p{N}_{標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除+rag_sections / P4 rag_indexer 照抄〕+ `__init__` 註冊 + `tests/test_slide_pipeline.py`〔含 §7.2 key-changing 整合測試〕；末 commit Checkout 含母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名同步〔Q6/Q7〕；工作範圍硬限三檔）
 
+### PIPE-SYNC-4 系列（litedoc + section_engine 落地回灌真理源）
+- 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（2026-06-19 plan v3 → Tasks → C1…·DOC-Refactor）**
+  - `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md` — C1 Run（master plan v10 回灌·D1-D4：L72 technical 排除矯正〔news/web/未知·technical 歸深結構家族〕+ L260 LiteDoc ✅+hash+順序 + L18/L74/§8.4 三大→共用真理源家族〔roster 補 META-NORM+section_engine〕+ L86/L222/L253 絞殺順序實況註 + §99.2 Revision;就地補註·包裹 C1 marker·.bak→archive·版控直接 git add）
+  - `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md` — Tasks（拆 4 Commit：C1 master plan v10 回灌〔D1-D4〕/ C2 PIPE-SPEC〔D5 section_engine §1.2.5 + D5b MetaNormalizer §1.2.4 + D6 litedoc 旁路 + D7 家族 + D8 v8、D8.1 不改項〕/ C3 HOW_TO_ADD〔D9 B 軌範式+A/B 對比+U2.1 映射〕/ C4 Checkout;純 DOC 零業務碼、SPEC baton 就地不版控〔.bak→archive〕、§7.2 豁免;不給 commit 建議自主拆分）
+  - `2026-06-19_PIPE-SYNC-4_plan_提示詞.md` — plan（回灌 PIPE-SECTION-BASE + PIPE-LITEDOC 落地經驗：master plan v10〔D1 technical 排除矯正·D2 LiteDoc ✅+順序·D3 三大→共用真理源家族〔含 META-NORM+section_engine〕·D4 絞殺順序註〕+ PIPE-SPEC〔D5 section_engine 共用契約章·D6 litedoc raw_metadata 旁路登記·D7 家族措辭·D8 bump v8·D8.1 不改項〕+ HOW_TO_ADD〔D9 B 軌加 doc_type 範式〕;§9 五 OQ〔META-NORM 深度/HOW_TO_ADD 納入/資料流程 doc 非目標/§7.2 豁免/不 bump 主版本〕;SPEC 就地 git add·零業務代碼;不給 commit 建議）
+
 ### PIPE-SYNC-2 系列
 - ✅ **PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC（2026-06-11 Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor）**
   - `2026-06-11_PIPE-SYNC-2_Check_提示詞.md` — Check（C4 Checkout：Conformance 五維度〔plan §2 U1-U14 / tasks §6.1 六+§6.2 七+§6.3 五條 grep / 不可動〔業務碼/凍結合約欄位/Slides Bypass〕/ 提示詞稽核 / msg 完整〕+ **§7.2 豁免顯式聲明〔DOC、無 code handoff、Q4〕** → 全綠後 TODO 結案 + baton 歸檔〔plan→plans/ + tasks→tasks/ + C1-C4 報告→executions/；**兩長駐真理源 2026-06-01_PIPE* 嚴禁動**〕；msg /tmp、不自發 commit；PIPE-SYNC-2 全案結案、PIPE-VISUAL 前置完成）
@@ -381,6 +387,9 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md`（C1 Run·DOC-Refactor：master plan v10 回灌 D1-D4〔L72 technical 排除矯正 / L260 LiteDoc ✅+hash+順序 / L18/L74/§8.4 三大→共用真理源家族〔補 META-NORM+section_engine〕/ L86 絞殺順序實況註〕;就地補註·版控直接 git add·.bak→archive）
+- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md`（Tasks·DOC-Refactor：拆 4 Commit〔C1 master plan v10 回灌 / C2 PIPE-SPEC〔section_engine §1.2.5 + MetaNormalizer §1.2.4 + litedoc 旁路 + v8〕/ C3 HOW_TO_ADD B 軌範式 / C4 Checkout〕;純 DOC 零業務碼、SPEC baton 就地不版控、§7.2 豁免）
+- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_plan_提示詞.md`（plan·DOC-Refactor：litedoc + section_engine 落地回灌 master plan v10〔technical 排除/LiteDoc ✅/三大→家族〕+ PIPE-SPEC〔section_engine 契約章/litedoc 旁路登記/bump v8〕+ HOW_TO_ADD〔B 軌範式〕;§9 五 OQ、SPEC 就地 git add、零業務代碼）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C8_check_提示詞.md`（Check·C8 Checkout 收官：5 維度 Conformance〔U1-U9+U2.1/U5b/U5c / pytest 686 / 不可動 / 提示詞 / msg〕+ §7.2 不豁免〔C7 key-changing〕+ baton 一次性歸檔 + TODO 結案〔hash 自癒 C2-C7〕;litedoc 全案結案）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C7_run_提示詞.md`（C7 Run·BE-Refactor：補 §7.2 P2→P3→P4 key-changing 整合測試〔_KeyChangeTr 真改 title、斷言 section_summaries key 與 rag_sections summary_key 同基準=原文標題 path、P4 消費同份·堵 RAG-ASYNC-HOTFIX-1〕;純測試、25 passed、全套件 686）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C6_run_提示詞.md`（C6 Run·BE-Refactor：P4 run_phase4 呼共用 rag_indexer.index 傳 'litedoc'+雙語標題〔translated_title 讀 P3 旁路〕、門檻預設 ≥10〔rag_indexer 零改〕、四產物、異常拋出標 failed;24 passed、全套件 685）
@@ -393,6 +402,3 @@
 - 2026-06-18 — `2026-06-18_PIPE-LITEDOC_plan_提示詞.md`（plan·BE-Refactor：第 3 路 litedoc=news/web/unknown·全消費 section_engine+三真理源+rag_indexer〔零改引擎〕;P1 MinerU+URL publisher 解碼/P2 六步/P3 size-gate 15k/P4 ≥10;technical 排除〔母 plan v10 L72 分歧待回灌〕;§7.2 不豁免）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md`（Check·C5 Checkout 收官：5 維度 Conformance〔U1-U6+U3.1 / tasks §6 / 不可動 / 提示詞稽核 / msg §8〕+ TODO 結案〔C1-C5 + hash 自癒〕+ baton 一次性歸檔 + §7.2 免豁免〔C4 key-changing〕;全案結案）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C4_run_提示詞.md`（C4 Run·BE-Refactor：新建 tests/test_section_engine.py 覆蓋 DFS/摘要保序/並行 byte 等拍+限流+退原文/heading 退化/meta header 純格式化 + base 層 key-changing 整合測試〔堵 RAG-ASYNC-HOTFIX-1〕;純新增測試）
-- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C3_run_提示詞.md`（C3 Run·BE-Refactor：rag 旁路 collect_rag_sections/single_container_sections 搬入 section_engine〔summary_key=原文標題 path〕+ render_meta_header 重構純格式化器〔收 (Label,Value) tuples、引擎零讀 raw_metadata·U3.1〕、resume 改 delegate;final byte 等價）
-- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C2_run_提示詞.md`（C2 Run·BE-Refactor：render/restore 簇〔collect_render_slots/restore_sections_markdown/translate_whole/normalize_paragraph_breaks/is_heading_degraded〕原值搬入 section_engine·並行+限流+退原文〔RESUME-PERF-1〕+ level=min(2+depth,6)、translator/inj 注入、resume 改 delegate;行為等價 final byte 等價）
-- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C1_run_提示詞.md`（C1 Run·BE-Refactor：新建 section_engine.py + 摘要簇〔collect_summary_targets/build_section_summaries/parse_indexed〕原值搬入純函式·llm 注入·吃任意子樹、resume 改 delegate;行為等價 resume 測試鎖死）

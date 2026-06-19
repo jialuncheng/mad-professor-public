@@ -22,7 +22,7 @@
 | C5 | P3 size-gate 翻譯與 HTML 扉頁還原（**size-gate**〔<15k 一鍵 translate_whole·≥15k restore_sections_markdown〕+ heading 退化 fallback + **U5c translated_title 三路** + `render_meta_header_html` HTML 扉頁〔zh 譯題/en 原題〕+ collect_rag_sections + zh edge + translated_title 旁路傳 P4;22 passed、683）| `424ee93` |
 | C6 | P4 Async RAG（呼共用 `rag_indexer.index(…, 'litedoc', …, title, translated_title)`·**門檻預設 ≥10**〔litedoc 不入 ≥3 tuple·**rag_indexer 零改**〕+ translated_title 讀 P3 旁路 + 四產物 + 異常拋出標 failed 不阻 reading_ready;24 passed、685）| `469f982` |
 | C7 | 單元與接縫整合測試（**§7.2 P2→P3→P4 key-changing 整合**：`_KeyChangeTr` 真改 title、斷言 P2 section_summaries key 與 P3 rag_sections summary_key 譯後同基準=原文標題 path、P4 消費同份+下游 match·堵 RAG-ASYNC-HOTFIX-1;純測試、25 passed、686）| `ff16271` |
-| C8 | Checkout 收官：5 維度 Conformance 全綠〔U1-U9+U2.1/U5b/U5c 跨 C1-C7 全覆蓋 / tasks §6 grep+pytest 686 / 不可動〔rag_indexer/contracts/其他策略/A 軌零碰〕/ 提示詞 10 份 / msg §8〕+ §7.2 不豁免達標〔C7 key-changing〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C8 報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C8 | Checkout 收官：5 維度 Conformance 全綠〔U1-U9+U2.1/U5b/U5c 跨 C1-C7 全覆蓋 / tasks §6 grep+pytest 686 / 不可動〔rag_indexer/contracts/其他策略/A 軌零碰〕/ 提示詞 10 份 / msg §8〕+ §7.2 不豁免達標〔C7 key-changing〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C8 報告→executions/〕+ TODO 結案 + hash 自癒 | `2a9b2e3` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-18_PIPE-LITEDOC_litedoc路策略管線_plan_v1.md`（v3、§9 七 OQ 全 🟢 定案）
 > **動因**：PIPE 縱向五路第 3 路 litedoc（news/web/unknown）;PIPE-SECTION-BASE（第 4 共用真理源 section_engine）落地後、litedoc 為 resume 以外**首個 consumer**，驗證引擎泛化。
@@ -959,6 +959,14 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC**（DOC-Refactor;`.claude-logs/baton/2026-06-19_PIPE-SYNC-4_litedoc與section_engine落地回灌母plan與SPEC_plan_v1.md` v3、§9 五 OQ 全 🟢）
+  - [x] ✅ 已完成: C1 — master plan v10 回灌（就地補註 D1-D4：L72 LiteDoc 排除 technical〔歸深結構家族〕+ §8.5 表 PIPE-LITEDOC ⬜→✅〔C1-C8 hash·實際先於 academic〕+ §U8 三大→共用真理源家族〔roster 補 MetaNormalizer 第 4 / section_engine 第 5、契約見 SPEC §1.2.4/§1.2.5〕+ 絞殺順序實況註 + §99.2 v6;零業務代碼、純 .md 補註、原文只增不刪）
+  - [/] 🟡 WIP: C2 — PIPE-SPEC 回灌（section_engine §1.2.5 + MetaNormalizer §1.2.4 兩契約章 + litedoc 旁路 + 家族 + v8）
+  - [ ] ⬜ 未開始: C3 — HOW_TO_ADD B 軌範式（裝飾器機制 + A/B 對比 + U2.1 映射）
+  - [ ] ⬜ 未開始: C4 — Checkout 收官
+  - 工時：4 個 commits（純 DOC-Refactor、零業務代碼、SPEC baton 就地不版控）
+  - 依賴：無（PIPE-SECTION-BASE + PIPE-LITEDOC 已落地）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
