@@ -962,8 +962,8 @@
 
 - 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC**（DOC-Refactor;`.claude-logs/baton/2026-06-19_PIPE-SYNC-4_litedoc與section_engine落地回灌母plan與SPEC_plan_v1.md` v3、§9 五 OQ 全 🟢）
   - [x] ✅ 已完成: C1 — master plan v10 回灌（就地補註 D1-D4：L72 LiteDoc 排除 technical〔歸深結構家族〕+ §8.5 表 PIPE-LITEDOC ⬜→✅〔C1-C8 hash·實際先於 academic〕+ §U8 三大→共用真理源家族〔roster 補 MetaNormalizer 第 4 / section_engine 第 5、契約見 SPEC §1.2.4/§1.2.5〕+ 絞殺順序實況註 + §99.2 v6;零業務代碼、純 .md 補註、原文只增不刪）
-  - [/] 🟡 WIP: C2 — PIPE-SPEC 回灌（section_engine §1.2.5 + MetaNormalizer §1.2.4 兩契約章 + litedoc 旁路 + 家族 + v8）
-  - [ ] ⬜ 未開始: C3 — HOW_TO_ADD B 軌範式（裝飾器機制 + A/B 對比 + U2.1 映射）
+  - [x] ✅ 已完成: C2 — PIPE-SPEC 回灌（就地補註 D5-D8.1：§1.2.5 section_engine 契約章〔三簇介面+四鐵律+consumer〕+ §1.2.4 MetaNormalizer 契約章〔normalize_fields 三路分流 BS1/Q9/BS4 + schema + 交易邊界 + 為 INFRA-4 鋪規格〕+ §1.1.1 litedoc 旁路登記〔date/url/publisher/translated_title〕+ §1.2/§0 三大→共用真理源家族 + §99.2 v8;D8.1 §1.3 L140〔news/web/未知〕+ §3.3 15k + §2 ≥10 + 四凍結合約結構未動;SPEC baton 就地不版控、.bak→archive、零業務代碼）
+  - [/] 🟡 WIP: C3 — HOW_TO_ADD B 軌範式（裝飾器機制 + A/B 對比 + U2.1 映射）
   - [ ] ⬜ 未開始: C4 — Checkout 收官
   - 工時：4 個 commits（純 DOC-Refactor、零業務代碼、SPEC baton 就地不版控）
   - 依賴：無（PIPE-SECTION-BASE + PIPE-LITEDOC 已落地）

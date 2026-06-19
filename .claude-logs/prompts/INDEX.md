@@ -48,6 +48,7 @@
 
 ### PIPE-SYNC-4 系列（litedoc + section_engine 落地回灌真理源）
 - 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（2026-06-19 plan v3 → Tasks → C1…·DOC-Refactor）**
+  - `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md` — C2 Run（PIPE-SPEC 回灌·D5-D8.1：D5 新增 §1.2.5 section_engine 契約章〔9 介面 + 鐵律 + consumer 列表〕/ D5b 新增 §1.2.4 MetaNormalizer 契約章〔normalize_fields + 三路分流 + schema 表 + 交易邊界〕/ D6 §1.1.1 登記 LiteDoc 旁路欄位〔date/url/publisher/translated_title〕/ D7 三大→共用真理源家族 / D8 §99.2 v8 / D8.1 確認 §1.3 L140+四凍結合約結構未改;SPEC baton 就地不版控·僅 .bak→archive git add）
   - `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md` — C1 Run（master plan v10 回灌·D1-D4：L72 technical 排除矯正〔news/web/未知·technical 歸深結構家族〕+ L260 LiteDoc ✅+hash+順序 + L18/L74/§8.4 三大→共用真理源家族〔roster 補 META-NORM+section_engine〕+ L86/L222/L253 絞殺順序實況註 + §99.2 Revision;就地補註·包裹 C1 marker·.bak→archive·版控直接 git add）
   - `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md` — Tasks（拆 4 Commit：C1 master plan v10 回灌〔D1-D4〕/ C2 PIPE-SPEC〔D5 section_engine §1.2.5 + D5b MetaNormalizer §1.2.4 + D6 litedoc 旁路 + D7 家族 + D8 v8、D8.1 不改項〕/ C3 HOW_TO_ADD〔D9 B 軌範式+A/B 對比+U2.1 映射〕/ C4 Checkout;純 DOC 零業務碼、SPEC baton 就地不版控〔.bak→archive〕、§7.2 豁免;不給 commit 建議自主拆分）
   - `2026-06-19_PIPE-SYNC-4_plan_提示詞.md` — plan（回灌 PIPE-SECTION-BASE + PIPE-LITEDOC 落地經驗：master plan v10〔D1 technical 排除矯正·D2 LiteDoc ✅+順序·D3 三大→共用真理源家族〔含 META-NORM+section_engine〕·D4 絞殺順序註〕+ PIPE-SPEC〔D5 section_engine 共用契約章·D6 litedoc raw_metadata 旁路登記·D7 家族措辭·D8 bump v8·D8.1 不改項〕+ HOW_TO_ADD〔D9 B 軌加 doc_type 範式〕;§9 五 OQ〔META-NORM 深度/HOW_TO_ADD 納入/資料流程 doc 非目標/§7.2 豁免/不 bump 主版本〕;SPEC 就地 git add·零業務代碼;不給 commit 建議）
@@ -387,6 +388,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md`（C2 Run·DOC-Refactor：PIPE-SPEC 回灌 D5-D8.1〔D5 §1.2.5 section_engine 契約章 / D5b §1.2.4 MetaNormalizer 契約章 / D6 §1.1.1 LiteDoc 旁路登記 / D7 三大→家族 / D8 v8 / D8.1 不改 §1.3+四凍結合約〕;SPEC baton 就地不版控·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md`（C1 Run·DOC-Refactor：master plan v10 回灌 D1-D4〔L72 technical 排除矯正 / L260 LiteDoc ✅+hash+順序 / L18/L74/§8.4 三大→共用真理源家族〔補 META-NORM+section_engine〕/ L86 絞殺順序實況註〕;就地補註·版控直接 git add·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md`（Tasks·DOC-Refactor：拆 4 Commit〔C1 master plan v10 回灌 / C2 PIPE-SPEC〔section_engine §1.2.5 + MetaNormalizer §1.2.4 + litedoc 旁路 + v8〕/ C3 HOW_TO_ADD B 軌範式 / C4 Checkout〕;純 DOC 零業務碼、SPEC baton 就地不版控、§7.2 豁免）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_plan_提示詞.md`（plan·DOC-Refactor：litedoc + section_engine 落地回灌 master plan v10〔technical 排除/LiteDoc ✅/三大→家族〕+ PIPE-SPEC〔section_engine 契約章/litedoc 旁路登記/bump v8〕+ HOW_TO_ADD〔B 軌範式〕;§9 五 OQ、SPEC 就地 git add、零業務代碼）
@@ -401,4 +403,3 @@
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 8 Commit〔C1 section_engine HTML 扉頁 formatter 純加法首發 / C2 骨架三 key 註冊 / C3 P1 MinerU+DocAnalyzer 映射+URL publisher 解碼 / C4 P2 六步 / C5 P3 size-gate+HTML 扉頁+U5c 雙語標題 / C6 P4 ≥10 / C7 §7.2 整合 / C8 Checkout〕;全消費真理源、零改引擎）
 - 2026-06-18 — `2026-06-18_PIPE-LITEDOC_plan_提示詞.md`（plan·BE-Refactor：第 3 路 litedoc=news/web/unknown·全消費 section_engine+三真理源+rag_indexer〔零改引擎〕;P1 MinerU+URL publisher 解碼/P2 六步/P3 size-gate 15k/P4 ≥10;technical 排除〔母 plan v10 L72 分歧待回灌〕;§7.2 不豁免）
 - 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_Check_提示詞.md`（Check·C5 Checkout 收官：5 維度 Conformance〔U1-U6+U3.1 / tasks §6 / 不可動 / 提示詞稽核 / msg §8〕+ TODO 結案〔C1-C5 + hash 自癒〕+ baton 一次性歸檔 + §7.2 免豁免〔C4 key-changing〕;全案結案）
-- 2026-06-18 — `2026-06-18_PIPE-SECTION-BASE_C4_run_提示詞.md`（C4 Run·BE-Refactor：新建 tests/test_section_engine.py 覆蓋 DFS/摘要保序/並行 byte 等拍+限流+退原文/heading 退化/meta header 純格式化 + base 層 key-changing 整合測試〔堵 RAG-ASYNC-HOTFIX-1〕;純新增測試）
