@@ -47,7 +47,8 @@
   - `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.1 八 OQ 全結清〕拆 commit：新建 `pipelines/slide_pipeline.py`〔P1 每頁存圖+Vision temp=0+封面判定+統計去重 / P2 六步 key=`p{N}_{標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除+rag_sections / P4 rag_indexer 照抄〕+ `__init__` 註冊 + `tests/test_slide_pipeline.py`〔含 §7.2 key-changing 整合測試〕；末 commit Checkout 含母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名同步〔Q6/Q7〕；工作範圍硬限三檔）
 
 ### PIPE-SYNC-4 系列（litedoc + section_engine 落地回灌真理源）
-- 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（2026-06-19 plan v3 → Tasks → C1…·DOC-Refactor）**
+- ✅ **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（2026-06-19 plan v3 → Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor）**
+  - `2026-06-19_PIPE-SYNC-4_Check_提示詞.md` — Check（C4 Checkout：Conformance 三維度〔目標規格 plan §2 D1-D9〔含 D5b〕/ tasks §6 grep〔C1-C3〕/ 不可動〔業務碼/測試/contracts.py 全未觸碰〕〕→ 全綠後 TODO 結案〔§ DOC-Refactor PIPE-SYNC-4 完成表 + 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan→plans/ + tasks→tasks/ + C1-C4 報告→executions/;SPEC 本體長駐 baton 不版控、.bak 已於 C2 入 archive〕+ §7.2 純 DOC 顯式豁免;msg /tmp〔Opus 4.8 1M〕、不自發 commit;PIPE-SYNC-4 全案結案）
   - `2026-06-19_PIPE-SYNC-4_C3_run_提示詞.md` — C3 Run（HOW_TO_ADD B 軌範式·D9：補一節「B 軌加 doc_type」〔@PipelineFactory.register + __init__ import 觸發 + 四 Phase 消費共用真理源〔section_engine + DomainNormalizer/Glossary/Translator + rag_indexer〕+ raw_metadata 旁路 + §7.2 key-changing 整合〕+ A/B 機制對比〔下游嚴禁寫 A 軌 pipeline_core.py 硬分支〕+ U2.1 DocAnalyzer 映射規範〔扁平短文安全映射避 fallback academic〕;A 軌既有章不動·包裹 C3 marker·版控直接 git add+.bak）
   - `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md` — C2 Run（PIPE-SPEC 回灌·D5-D8.1：D5 新增 §1.2.5 section_engine 契約章〔9 介面 + 鐵律 + consumer 列表〕/ D5b 新增 §1.2.4 MetaNormalizer 契約章〔normalize_fields + 三路分流 + schema 表 + 交易邊界〕/ D6 §1.1.1 登記 LiteDoc 旁路欄位〔date/url/publisher/translated_title〕/ D7 三大→共用真理源家族 / D8 §99.2 v8 / D8.1 確認 §1.3 L140+四凍結合約結構未改;SPEC baton 就地不版控·僅 .bak→archive git add）
   - `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md` — C1 Run（master plan v10 回灌·D1-D4：L72 technical 排除矯正〔news/web/未知·technical 歸深結構家族〕+ L260 LiteDoc ✅+hash+順序 + L18/L74/§8.4 三大→共用真理源家族〔roster 補 META-NORM+section_engine〕+ L86/L222/L253 絞殺順序實況註 + §99.2 Revision;就地補註·包裹 C1 marker·.bak→archive·版控直接 git add）
@@ -389,6 +390,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Check_提示詞.md`（Check·C4 Checkout 收官·DOC-Refactor：Conformance 三維度〔D1-D9+D5b / tasks §6 grep / 不可動〕全綠 → TODO 結案〔完成表 + hash 自癒〕+ baton 一次性歸檔〔plan/tasks/C1-C4 報告;SPEC 長駐 baton〕+ §7.2 純 DOC 豁免;PIPE-SYNC-4 全案結案）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C3_run_提示詞.md`（C3 Run·DOC-Refactor：HOW_TO_ADD B 軌範式 D9〔裝飾器機制 @register+__init__ import + 四 Phase 消費共用真理源 + raw_metadata 旁路 + §7.2 整合 / A/B 對比〔嚴禁寫 A 軌硬分支〕/ U2.1 DocAnalyzer 安全映射〕;A 軌既有章不動·版控直接 git add+.bak）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md`（C2 Run·DOC-Refactor：PIPE-SPEC 回灌 D5-D8.1〔D5 §1.2.5 section_engine 契約章 / D5b §1.2.4 MetaNormalizer 契約章 / D6 §1.1.1 LiteDoc 旁路登記 / D7 三大→家族 / D8 v8 / D8.1 不改 §1.3+四凍結合約〕;SPEC baton 就地不版控·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md`（C1 Run·DOC-Refactor：master plan v10 回灌 D1-D4〔L72 technical 排除矯正 / L260 LiteDoc ✅+hash+順序 / L18/L74/§8.4 三大→共用真理源家族〔補 META-NORM+section_engine〕/ L86 絞殺順序實況註〕;就地補註·版控直接 git add·.bak→archive）
@@ -403,4 +405,3 @@
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C2_run_提示詞.md`（C2 Run·BE-Refactor：LiteDoc 骨架三 key 註冊〔litedoc/news/web 三裝飾器 + 四 Phase strict stub + rag_char_threshold=10 + __init__ import〕、分派測試 4 路〔含 unknown fallback〕;9 passed、全套件 670）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C1_run_提示詞.md`（C1 Run·BE-Refactor：section_engine 純加法 render_meta_header_html〔paper-header-meta HTML 扉頁·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有、既有 17+42 測試鎖死）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 8 Commit〔C1 section_engine HTML 扉頁 formatter 純加法首發 / C2 骨架三 key 註冊 / C3 P1 MinerU+DocAnalyzer 映射+URL publisher 解碼 / C4 P2 六步 / C5 P3 size-gate+HTML 扉頁+U5c 雙語標題 / C6 P4 ≥10 / C7 §7.2 整合 / C8 Checkout〕;全消費真理源、零改引擎）
-- 2026-06-18 — `2026-06-18_PIPE-LITEDOC_plan_提示詞.md`（plan·BE-Refactor：第 3 路 litedoc=news/web/unknown·全消費 section_engine+三真理源+rag_indexer〔零改引擎〕;P1 MinerU+URL publisher 解碼/P2 六步/P3 size-gate 15k/P4 ≥10;technical 排除〔母 plan v10 L72 分歧待回灌〕;§7.2 不豁免）

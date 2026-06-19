@@ -11,6 +11,23 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（PIPE-SECTION-BASE + PIPE-LITEDOC 落地後真理源回灌）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | master plan v10 回灌（就地補註 D1-D4：L72 LiteDoc 排除 technical〔歸深結構家族 academic/book·A 軌證非 FLAT/非 SHORT/有 abstract〕+ §8.5 表 PIPE-LITEDOC ⬜→✅〔C1-C8 hash b1012bc…ff16271·實際先於 academic〕+ §U8 三大→共用真理源**家族**〔roster 補 MetaNormalizer 第 4 / section_engine 第 5、契約見 SPEC §1.2.4/§1.2.5〕+ 絞殺順序實況註 + §99.2 v6;就地補註只增不刪、零業務代碼）| `8c49be8` |
+| C2 | PIPE-SPEC 回灌（就地補註 D5-D8.1：**§1.2.5 section_engine 契約章**〔三簇介面+四鐵律〔零 doc_type·接縫 key=原文標題 path·Zero Schema Coupling·restore 不產 rag 副作用〕+consumer〕+ **§1.2.4 MetaNormalizer 契約章**〔normalize_fields 三路分流 BS1/Q9/BS4 + MetaField/MetaFieldAlias schema + LLM 交易外/temp=0 + 為 INFRA-4 鋪規格〕+ §1.1.1 litedoc 旁路登記〔date/url/publisher/translated_title〕+ §1.2/§0 三大→共用真理源家族 + §99.2 v8;**D8.1 §1.3 L140〔news/web/未知〕+ §3.3 15k + §2 ≥10 + 四凍結合約結構未動**;SPEC baton 就地不版控、.bak→archive 審計）| `89e6910` |
+| C3 | HOW_TO_ADD B 軌範式（docs/HOW_TO_ADD_DOC_TYPE.md 補頂部 A/B banner + §1.4〔1.4.1 A/B 機制對比表·🚫 嚴禁 pipeline_core.py 硬分支 / 1.4.2 B 軌五步範式〔@register+__init__ import 觸發 + 四 Phase 消費真理源家族 + raw_metadata 旁路 + 接縫 key 同基準 + §7.2 key-changing 整合〕/ 1.4.3 U2.1 DocAnalyzer 安全映射〔扁平短文避 fallback academic·technical 歸深結構〕〕;A 軌既有 §2-§7 章不動、零業務代碼）| `a0ccb0e` |
+| C4 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D9〔含 D5b〕跨 C1-C3 全覆蓋 / tasks §6 grep〔C1 master plan·C2 SPEC·C3 HOW_TO_ADD 重跑全綠·D8.1 守住〕+ pytest 686 passed〔唯一 fail＝既有 LOG_FORMAT env flake〕/ 不可動〔業務碼/測試/contracts.py 零碰·SPEC §1.3 L140 未動〕/ 提示詞 5 份稽核 / msg §8〕+ **§7.2 純 DOC 顯式豁免**〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/;SPEC 本體長駐 baton、.bak 已於 C2 入 archive〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-19_PIPE-SYNC-4_litedoc與section_engine落地回灌母plan與SPEC_plan_v1.md`（v3、§9 五 OQ 全 🟢 定案）
+> **動因**：PIPE-SECTION-BASE（section_engine 共用真理源）+ PIPE-LITEDOC（第 3 路）落地後，master plan v10 / PIPE-SPEC drift——三大共用真理源漏 MetaNormalizer+section_engine、master plan technical 分歧、section_engine/MetaNormalizer 契約缺、litedoc 旁路未登記;HOW_TO_ADD 為 A 軌時代 doc。同 PIPE-SYNC-2/3 對 resume/slides 之回灌。
+> **回灌三真理源**：① master plan v10〔D1 technical 排除·D2 LiteDoc ✅+順序·D3 三大→家族·D4 順序實況〕② PIPE-SPEC〔D5 section_engine §1.2.5·D5b MetaNormalizer §1.2.4·D6 litedoc 旁路·D7 家族·D8 v8·D8.1 不改項〕③ HOW_TO_ADD〔D9 B 軌範式+A/B 對比+U2.1 映射〕。
+> **共用真理源家族定調**：原始三大（DomainNormalizer/GLOSSARY-CORE/Translator）+ 第 4 MetaNormalizer（META-NORM 飛輪）+ 第 5 section_engine（PIPE-SECTION-BASE）。
+> **版控先例**：SPEC 本體長駐 baton 不版控、.bak→archive 作審計（PIPE-SYNC-2 195e12b）;master plan/HOW_TO_ADD tracked 正常入庫。
+> **§7.2 豁免**：純 DOC-Refactor、3 真理源 .md、零業務代碼、無 Phase handoff（同 WORKFLOW-3/4 立規者先例）。
+> **⚠️ 後續（非本案）**：academic/technical/book 路;slides 重複副本收編。
+
 ### BE-Refactor PIPE-LITEDOC LiteDocPipeline 策略管線（PIPE 縱向五路第 3 路·news/web/unknown·首個 section_engine 跨 consumer 驗證）
 
 | Commit | 內容 | Hash |
@@ -960,14 +977,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC**（DOC-Refactor;`.claude-logs/baton/2026-06-19_PIPE-SYNC-4_litedoc與section_engine落地回灌母plan與SPEC_plan_v1.md` v3、§9 五 OQ 全 🟢）
-  - [x] ✅ 已完成: C1 — master plan v10 回灌（就地補註 D1-D4：L72 LiteDoc 排除 technical〔歸深結構家族〕+ §8.5 表 PIPE-LITEDOC ⬜→✅〔C1-C8 hash·實際先於 academic〕+ §U8 三大→共用真理源家族〔roster 補 MetaNormalizer 第 4 / section_engine 第 5、契約見 SPEC §1.2.4/§1.2.5〕+ 絞殺順序實況註 + §99.2 v6;零業務代碼、純 .md 補註、原文只增不刪）
-  - [x] ✅ 已完成: C2 — PIPE-SPEC 回灌（就地補註 D5-D8.1：§1.2.5 section_engine 契約章〔三簇介面+四鐵律+consumer〕+ §1.2.4 MetaNormalizer 契約章〔normalize_fields 三路分流 BS1/Q9/BS4 + schema + 交易邊界 + 為 INFRA-4 鋪規格〕+ §1.1.1 litedoc 旁路登記〔date/url/publisher/translated_title〕+ §1.2/§0 三大→共用真理源家族 + §99.2 v8;D8.1 §1.3 L140〔news/web/未知〕+ §3.3 15k + §2 ≥10 + 四凍結合約結構未動;SPEC baton 就地不版控、.bak→archive、零業務代碼）
-  - [x] ✅ 已完成: C3 — HOW_TO_ADD B 軌範式（docs/HOW_TO_ADD_DOC_TYPE.md 補頂部 A/B banner + §1.4〔1.4.1 A/B 機制對比表·🚫 嚴禁 pipeline_core.py 硬分支 / 1.4.2 B 軌五步範式〔@register+__init__ import 觸發 + 四 Phase 消費真理源家族 + raw_metadata 旁路 + 接縫 key 同基準 + §7.2 key-changing 整合〕/ 1.4.3 U2.1 DocAnalyzer 安全映射〔扁平短文避 fallback academic·technical 歸深結構〕〕;A 軌既有 §2-§7 章不動·包裹 C3 marker·零業務代碼）
-  - [/] 🟡 WIP: C4 — Checkout 收官
-  - 工時：4 個 commits（純 DOC-Refactor、零業務代碼、SPEC baton 就地不版控）
-  - 依賴：無（PIPE-SECTION-BASE + PIPE-LITEDOC 已落地）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1250,6 +1259,7 @@
 - ✅ ~~PIPE-CORE 三層解耦調度骨架~~（已落地、OP-1 `aa786a1` + OP-2 `effb155` + OP-3 `84b9b30` + Check `13c1dcb`；PIPE 大改版階段 1 骨架，`pipelines/` 六模組）
 
 ### PIPE-SYNC (✅ 已完成·真理源回灌)
+- ✅ ~~PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC~~（已落地、C1 master plan v10 回灌〔D1 technical 排除/D2 LiteDoc ✅+順序/D3 三大→家族/D4 順序註/v6〕+ C2 PIPE-SPEC 回灌〔§1.2.5 section_engine 契約章 + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 家族措辭 + v8;D8.1 §1.3 L140/§3.3 15k/§2 ≥10/四凍結合約未動〕+ C3 HOW_TO_ADD B 軌範式〔頂部 A/B banner + §1.4 裝飾器機制+A/B 對比+U2.1 映射;A 軌 §2-§7 不動〕+ C4 Checkout 收官；共用真理源家族定調〔原始三大 + MetaNormalizer 第 4 + section_engine 第 5〕；§7.2 純 DOC 豁免、零代碼 686 passed；SPEC 本體長駐 baton 不版控、.bak→archive、master plan/HOW_TO_ADD tracked）
 - ✅ ~~PIPE-SYNC-3 slides 路落地經驗回灌母 plan 與 SPEC~~（已落地、C1 SPEC v7〔D1 slides P3 drift/D2 golden A/B 軌/D3 alt LaTeX/D4 is_blank/D6 rag_sections §1.1.2/D7 rag_tree_json/D5〕 + C2 master plan 補註⁸〔§8.5「B 軌另捕」措辭修正〕 + C3 Checkout 收官；slides 路 7 hotfix 回灌兩真理源、四層交接+旁路全對稱〔D6 補 rag_sections 旁路登記〕；§7.2 DOC 豁免、零代碼 640 passed；SPEC 就地版控、master plan v10 plans/）
 - ✅ ~~PIPE-SYNC-2 resume 路落地經驗回灌母 plan 與 SPEC~~（已落地、C1 `c54327c` + C2 `9666b20` + C3 `29f13ca` + C4 Checkout 收官；母 plan 補註⁶〔U1 矛盾/U2 stale/U3 key 母句/U8/U5 指標〕+ SPEC v6〔key 契約凍結/zh 路/§1.3.1 Vision 共用規格/-001 樣例/rag_tree 歸屬/三註〕+ sop 四檔去誤導〔model_recommendations -001🔴/guide 勘誤/doc_type banner+v1v2 歸檔/mineru RELEASE_ON_UPLOAD〕；§7.2 DOC 豁免；PIPE-VISUAL 開 plan 前置完成）
 
