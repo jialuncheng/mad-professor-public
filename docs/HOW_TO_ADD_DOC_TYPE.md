@@ -3,6 +3,10 @@
 > 給工程師（含 Claude Code）：新增一個文件類型（doc_type）必須同步
 > 更新 **7 個註冊點**，否則 pipeline / 前端 / AI 對話會出現對齊問題。
 > 本檔列出全部需動的位置、依賴、驗證流程。
+>
+> <!-- === [PIPE-SYNC-4 C3 BANNER] === -->
+> **⚠️ A 軌 / B 軌雙軌過渡期（PIPE 大改版）**：本檔 §2–§7 描述的「7 註冊點 + `pipeline_core.py` 硬分支」為 **A 軌（舊單體、即將絞殺）**。PIPE 大改版後新增 doc_type **應走 B 軌（`pipelines/` 策略管線插件）＝§1.4 範式**——**嚴禁**在 `pipeline_core.py` 新增硬編碼分支。詳見 **§1.4 A 軌 vs B 軌機制對比與 B 軌加 doc_type 範式**。
+> <!-- === [PIPE-SYNC-4 C3 BANNER END] === -->
 
 ---
 
@@ -34,6 +38,49 @@
 | `web` | 網頁存檔 | MinerU | web | **skip** | 自然口語化 | 文章標題 + 內文 |
 | `news` | 新聞文章 | MinerU | news | **skip** | 新聞文體 | 標題 + byline + 段落 |
 | `resume` | 履歷 | MinerU | (Phase 1 reuse academic) | **skip** | 正式商務中文 | 候選人姓名 + Experience/Education/Skills，無 abstract |
+
+---
+
+<!-- === [PIPE-SYNC-4 C3 D9 START] === litedoc + section_engine 落地後回灌 B 軌範式 -->
+## 1.4 A 軌 vs B 軌機制對比與 B 軌加 doc_type 範式（PIPE 五路）
+
+> PIPE 大改版以「策略管線（DocumentStrategy 插件）」取代「`pipeline_core.py` 巨型硬分支」。
+> 現況：resume／slides／litedoc 三路已落地 B 軌（`pipelines/*_pipeline.py`）。新增 doc_type **走 B 軌**。
+
+### 1.4.1 A 軌 vs B 軌機制對比
+
+| 維度 | A 軌（舊單體、即將絞殺）| B 軌（PIPE 策略管線）|
+|---|---|---|
+| 註冊方式 | §2 七處硬分支 + `pipeline_core.py` if/elif `doc_type==` | `@PipelineFactory.register('xxx')` 裝飾器**插件式**、零硬分支 |
+| 處理邏輯 | `pipeline_core.py` / `processor/*` 內聯 | `pipelines/xxx_pipeline.py` 四 Phase 策略類 |
+| 共用邏輯 | 各路複製貼上（LCC/術語/翻譯/section 各自一份）| **消費共用真理源家族**（零造輪）|
+| metadata | 寫死欄位 | `PipelineContext.raw_metadata` 旁路欄（三欄 dict）|
+| 落地驗證 | 手動 E2E | §7.2 key-changing 整合測試（Checkout 必驗）|
+
+> **🚫 鐵律**：PIPE 大改版後新增 doc_type **嚴禁**在 `pipeline_core.py` 新增 `doc_type==` 硬分支（A 軌即將整路絞殺）。下游（academic／book／technical）一律走 B 軌。
+
+### 1.4.2 B 軌加 doc_type 五步範式
+
+1. **裝飾器註冊**：`pipelines/xxx_pipeline.py` 建 `class XxxPipeline(DocumentStrategy)`，以 `@PipelineFactory.register('xxx')` 註冊（可堆疊多 key，如 litedoc `@register('litedoc')/@register('news')/@register('web')`）；設 `rag_char_threshold`（深結構 ≥10、扁平短文如 resume/slides ≥3）。
+2. **import 觸發**：在 `pipelines/__init__.py` 補 `from pipelines import xxx_pipeline`——**觸發裝飾器註冊**（漏 import → `get_strategy('xxx')` 回 NullStrategy、P1 拋 NotImplementedError；PIPE-RESUME C7-hotfix 教訓）。
+3. **四 Phase 消費共用真理源家族**（零造輪）：
+   - **P1 Ingestion**：MinerU（文字攝入）或 Vision（slides 逐頁），寫 `IngestionMetadataSpec` + 原始 meta 走 `raw_metadata` 旁路；DocAnalyzer 呼叫端**安全映射**（見 §1.4.3）。
+   - **P2 Glossary & Context**：`DomainNormalizer.normalize_to_lcc` + `GlossaryManager` 級聯自癒 + `section_engine.build_section_summaries`（key＝原文標題 path）→ `GlossaryReadySpec`；LLM 全在交易外。
+   - **P3 Translation & Restore**：`Translator`（NORMAL/DEEP_THINK）+ `section_engine`（`collect_render_slots`／`restore_sections_markdown`／`render_meta_header*`）；rag 旁路另以 `collect_rag_sections`（`summary_key`＝原文標題 path）寫 `ctx.rag_sections`。
+   - **P4 Async RAG**：呼共用 `rag_indexer.index(...)`（四產物 FAISS＋paper_chunks＋index_meta＋rag_tree；**rag_indexer 零改**）。
+4. **接縫 key 同基準**：P2 產／P3 帶（`summary_key`）／P4 取三方**同為原文標題 path**（譯後 title 僅供顯示、不作 key；對齊 WORKFLOW_SOP §7.1、PIPE-SPEC §1.1②）。
+5. **§7.2 key-changing 整合測試**：建 `tests/test_xxx_pipeline.py`，含 P2→P3→P4 串接、**真 transform 改寫 title**（譯文≠原文 key）、斷言下游仍正確消費（堵 RAG-ASYNC-HOTFIX-1 類靜默退化；純 mock 同 key 兩端不認）。
+
+> 真理源契約見 `PIPE-SPEC §1.2`（家族：DomainNormalizer §1.2.1／GLOSSARY-CORE §1.2.2／Translator §1.2.3／MetaNormalizer §1.2.4／section_engine §1.2.5）；落地範例見 `pipelines/resume_pipeline.py`／`slide_pipeline.py`／`litedoc_pipeline.py`。
+
+### 1.4.3 U2.1 DocAnalyzer 呼叫端 doc_type 安全映射
+
+B 軌 P1 呼叫 `DocAnalyzer` 時，**呼叫端**須對 doc_type 做安全映射，避免短扁平文體被 fallback 成 academic 深結構 prompt：
+
+- **扁平短文家族**（litedoc 之 news／web／unknown）：映射為 `'web'`（或對應扁平 prompt 集）——`analyzer_doc_type = ctx.doc_type if ctx.doc_type in ('news','web') else 'web'`；**嚴禁裸傳 unknown 落入 academic fallback**（litedoc 為首個此映射 consumer）。
+- **深結構家族**（academic／book／technical）：對齊既有 `STRUCTURE_PROMPTS`／`HEADING_FIX_PROMPTS`（§2.4／§2.5）；technical **屬深結構家族**（非扁平短文、非 litedoc 路）。
+- 安全映射屬**呼叫端職責**（DocAnalyzer 本身不改）；新增扁平短文 doc_type 須在 P1 補對應映射分支。
+<!-- === [PIPE-SYNC-4 C3 D9 END] === -->
 
 ---
 
