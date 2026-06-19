@@ -317,3 +317,91 @@ def test_render_meta_header_html_all_empty_returns_empty():
     """全空 → 回 ''（無 paper-header-meta wrap）。"""
     assert se.render_meta_header_html() == ""
     assert se.render_meta_header_html(authors=[], venue="", date="", keywords=[]) == ""
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# PIPE-LITEDOC-HOTFIX-1：二元繁中偵測 + 標題回聲剝除
+# ──────────────────────────────────────────────────────────────────────────
+def test_detect_zh_tw_traditional():
+    """純繁中樣本 → True（可 bypass）。"""
+    assert se.detect_zh_tw("這是一篇關於人工智慧與機器學習的繁體中文文章內容範例")
+
+
+def test_detect_zh_tw_japanese_kana():
+    """含假名日文 → False（修問題二：日文漢字不再誤判 zh）。"""
+    assert not se.detect_zh_tw("ドジャースの大谷翔平が二刀流で復帰し先頭打者ホームランを放った")
+
+
+def test_detect_zh_tw_simplified():
+    """含簡體專有字 → False（修簡體 bypass 潛在 bug）。"""
+    assert not se.detect_zh_tw("这是一个关于人工智能与机器学习的简体中文文章内容范例")
+
+
+def test_detect_zh_tw_english():
+    """ASCII 主導 → False。"""
+    assert not se.detect_zh_tw("This is an English article about LLM knowledge bases and tools")
+
+
+def test_detect_zh_tw_empty_and_cover():
+    """空 / 漢字太少（封面無語境）→ False。"""
+    assert not se.detect_zh_tw("")
+    assert not se.detect_zh_tw("I and Thou\nMartin Buber\n1923")
+
+
+def test_classify_never_returns_zh_prefix_for_nonzh():
+    """🔒 鎖一：ja/ko/簡/en 之回傳皆 not startswith('zh')（堵四處 startswith zh gate 復活 bug）。"""
+    for s in ["大谷翔平が二刀流で復帰した試合", "이것은 한국어 기사입니다 야구",
+              "这是简体中文的国家与东方文化", "English only text here please"]:
+        assert not se.classify_source_lang(s).startswith("zh"), s
+
+
+def test_classify_traditional_returns_zh():
+    """繁中 → 'zh'（下游 startswith('zh') 仍正確 bypass）。"""
+    assert se.classify_source_lang("這是繁體中文的國家與東方文化介紹內容範例足夠長") == "zh"
+
+
+def test_classify_tokens():
+    """分類 token：ja/ko/hans/en。"""
+    assert se.classify_source_lang("大谷翔平が二刀流") == "ja"
+    assert se.classify_source_lang("这是简体国家东方文化") == "hans"
+    assert se.classify_source_lang("Pure english text only") == "en"
+
+
+def test_sample_body_text_skips_cover():
+    """🔒 鎖三：封面稀疏 + 後段內文 → 取到內文（避 I and Thou 封面無語境誤判）。"""
+    tiles = [
+        {"content": [{"type": "text", "content": "I and Thou\nMartin Buber\n1923"}]},
+        {"content": [{"type": "text", "content": "正文" * 500}]},
+    ]
+    sample = se.sample_body_text(tiles, sample_chars=200)
+    assert "正文" in sample
+
+
+def test_sample_body_text_short_fallback():
+    """短文兜底：可用文字不足 → 整篇。"""
+    tiles = [{"content": [{"type": "text", "content": "短文內容"}]}]
+    assert se.sample_body_text(tiles) == "短文內容"
+
+
+def test_strip_title_echo_removes_first_heading_and_byline():
+    """body 首行=title → 剝；連帶剝 byline/日期。"""
+    md = "# Big Headline\nBy Martin Buber, 2026-06-19\n\n正文開始這裡"
+    out = se.strip_title_echo(md, "Big Headline")
+    assert "Big Headline" not in out
+    assert "By Martin Buber" not in out
+    assert "正文開始這裡" in out
+
+
+def test_strip_title_echo_no_false_strip():
+    """非 title 行 → 不誤剝（找不到回聲原樣返回）。"""
+    md = "## 第一章 緒論\n這是正文不是標題回聲"
+    out = se.strip_title_echo(md, "完全不同的標題")
+    assert out == md
+
+
+def test_strip_title_echo_fuzzy_translated():
+    """post-strip：以譯後標題模糊比對命中（譯後 body H1 = 譯後 title）。"""
+    md = "## ZH::Sec1\nZH::body one\n\n## ZH::Sec2\nZH::body two"
+    out = se.strip_title_echo(md, "ZH::Sec1")
+    assert "ZH::Sec1" not in out
+    assert "ZH::body one" in out and "ZH::Sec2" in out

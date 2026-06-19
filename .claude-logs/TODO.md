@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### BE-Hotfix PIPE-LITEDOC-HOTFIX-1 — litedoc 標題回聲剝除 + P1 二元繁中偵測（日文/簡體轉繁）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-1 | `pipelines/section_engine.py` 新增四純函式〔`detect_zh_tw`〔二元繁中：有假名/諺文/簡體專有字/ASCII 主導/漢字太少→非繁〕+ `classify_source_lang`〔繁→'zh'、簡→**'hans'**、ja/ko/en;**簡體嚴禁 zh\* 字串**·鎖一〕+ `sample_body_text`〔tiles 文字節點樣本·跳前段封面 0.15·短文兜底·鎖三〕+ `strip_title_echo`〔_title_sim 範式模糊比對·剝首個 ≈title 標題行+byline/日期·cap 3·找不到不誤剝〕〕;`litedoc_pipeline.py` **F2 P1** 改 `classify_source_lang(sample_body_text(tiles))`〔鎖二共用、一次解 P3 is_zh + P2 section_summaries 雙 gate〕+ **F3 P3 雙剝**〔① pre-strip full_text 原文層·en 全模式+zh whole/is_zh exact / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact·rag_sections 早於定案不受影響〕;扉頁保留〔OQ-b〕;`# === [PIPE-LITEDOC-HOTFIX-1 START/END] ===` 包裹 + 2 .bak;18 新測試〔detect/classify〔含鎖一 not startswith zh〕/sample 跳封面/strip/P3 雙剝 whole+section/P1 日文+簡體接線〕、litedoc+section_engine 64 passed、全套件 **704 passed**〔基線 686+18、唯一 fail＝既有 LOG_FORMAT env flake〕;SOP logging〔新增純函式無 logger·既有 warning 皆 exc_info=True〕+database〔無命中〕合規 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/hotfixes/2026-06-19_PIPE-LITEDOC-HOTFIX-1_hotfix.md`
+> **動因**：PIPE-LITEDOC 落地後 baron QA 三實件（LLM 知識庫 / 環義 Giro / 大谷 NHK + book 封面 I and Thou）暴露雙缺陷——① 標題/Meta 重複〔body 自身標題 H1 與 P3 HTML 扉頁物理共存、litedoc 無去回聲〕② 日文/簡體未翻譯〔`_detect_source_lang` 只數共用漢字區→日文誤判 zh→P3+P2 雙 gate 跳譯;簡體亦誤 bypass 不轉繁〕。
+> **三鎖**：鎖一（簡體不給 `zh*` 字串，四處 `startswith("zh")` gate〔litedoc/section_engine/resume/slide〕零改不復活）/ 鎖二（偵測器放 section_engine 共用，book/academic 同享）/ 鎖三（取 tiles 內文樣本不取封面，解 I and Thou 封面無語境）。
+> **設計演進**：F3 由 v1 單剝 full_text（section 模式漏洞）→ baron review 抓出 → 改 pre+post 雙剝（每模式 exact、消 whole 模式譯文發散風險）。
+> **blast radius**：問題一純閱讀視圖、RAG 不受污染（扉頁不進 chunk）;問題二連帶 P2 節點摘要、源點 P1 一改解雙 gate。
+> **§7.2**：BE-Hotfix 純渲染/偵測層、無新跨 Phase handoff（沿用既有 section_engine key 契約、PIPE-LITEDOC C7 已驗 key-changing）。
+> **⚠️ baron 運維（非 commit）**：① 影子重傳大谷 NHK（日文）→ 扉頁/正文/節點摘要皆繁中、`source_lang=ja`;② 簡體樣本→轉繁;③ LLM 知識庫/Giro→標題僅扉頁一處、body 無重複 H1+byline;④ 真繁中件仍 bypass;⑤ B 軌走影子 E2E + 改善豁免、不需 A 軌 golden 重捕（SPEC §1.3.1 / HOTFIX-6 口徑）。
+
 ### DOC-Refactor PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（PIPE-SECTION-BASE + PIPE-LITEDOC 落地後真理源回灌）
 
 | Commit | 內容 | Hash |
@@ -18,7 +32,7 @@
 | C1 | master plan v10 回灌（就地補註 D1-D4：L72 LiteDoc 排除 technical〔歸深結構家族 academic/book·A 軌證非 FLAT/非 SHORT/有 abstract〕+ §8.5 表 PIPE-LITEDOC ⬜→✅〔C1-C8 hash b1012bc…ff16271·實際先於 academic〕+ §U8 三大→共用真理源**家族**〔roster 補 MetaNormalizer 第 4 / section_engine 第 5、契約見 SPEC §1.2.4/§1.2.5〕+ 絞殺順序實況註 + §99.2 v6;就地補註只增不刪、零業務代碼）| `8c49be8` |
 | C2 | PIPE-SPEC 回灌（就地補註 D5-D8.1：**§1.2.5 section_engine 契約章**〔三簇介面+四鐵律〔零 doc_type·接縫 key=原文標題 path·Zero Schema Coupling·restore 不產 rag 副作用〕+consumer〕+ **§1.2.4 MetaNormalizer 契約章**〔normalize_fields 三路分流 BS1/Q9/BS4 + MetaField/MetaFieldAlias schema + LLM 交易外/temp=0 + 為 INFRA-4 鋪規格〕+ §1.1.1 litedoc 旁路登記〔date/url/publisher/translated_title〕+ §1.2/§0 三大→共用真理源家族 + §99.2 v8;**D8.1 §1.3 L140〔news/web/未知〕+ §3.3 15k + §2 ≥10 + 四凍結合約結構未動**;SPEC baton 就地不版控、.bak→archive 審計）| `89e6910` |
 | C3 | HOW_TO_ADD B 軌範式（docs/HOW_TO_ADD_DOC_TYPE.md 補頂部 A/B banner + §1.4〔1.4.1 A/B 機制對比表·🚫 嚴禁 pipeline_core.py 硬分支 / 1.4.2 B 軌五步範式〔@register+__init__ import 觸發 + 四 Phase 消費真理源家族 + raw_metadata 旁路 + 接縫 key 同基準 + §7.2 key-changing 整合〕/ 1.4.3 U2.1 DocAnalyzer 安全映射〔扁平短文避 fallback academic·technical 歸深結構〕〕;A 軌既有 §2-§7 章不動、零業務代碼）| `a0ccb0e` |
-| C4 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D9〔含 D5b〕跨 C1-C3 全覆蓋 / tasks §6 grep〔C1 master plan·C2 SPEC·C3 HOW_TO_ADD 重跑全綠·D8.1 守住〕+ pytest 686 passed〔唯一 fail＝既有 LOG_FORMAT env flake〕/ 不可動〔業務碼/測試/contracts.py 零碰·SPEC §1.3 L140 未動〕/ 提示詞 5 份稽核 / msg §8〕+ **§7.2 純 DOC 顯式豁免**〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/;SPEC 本體長駐 baton、.bak 已於 C2 入 archive〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| C4 | Checkout 收官：Conformance 三維度全綠〔目標規格 D1-D9〔含 D5b〕跨 C1-C3 全覆蓋 / tasks §6 grep〔C1 master plan·C2 SPEC·C3 HOW_TO_ADD 重跑全綠·D8.1 守住〕+ pytest 686 passed〔唯一 fail＝既有 LOG_FORMAT env flake〕/ 不可動〔業務碼/測試/contracts.py 零碰·SPEC §1.3 L140 未動〕/ 提示詞 5 份稽核 / msg §8〕+ **§7.2 純 DOC 顯式豁免**〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/;SPEC 本體長駐 baton、.bak 已於 C2 入 archive〕+ TODO 結案 + hash 自癒 | `72bcb32` |
 
 > **修法依據**：`.claude-logs/plans/2026-06-19_PIPE-SYNC-4_litedoc與section_engine落地回灌母plan與SPEC_plan_v1.md`（v3、§9 五 OQ 全 🟢 定案）
 > **動因**：PIPE-SECTION-BASE（section_engine 共用真理源）+ PIPE-LITEDOC（第 3 路）落地後，master plan v10 / PIPE-SPEC drift——三大共用真理源漏 MetaNormalizer+section_engine、master plan technical 分歧、section_engine/MetaNormalizer 契約缺、litedoc 旁路未登記;HOW_TO_ADD 為 A 軌時代 doc。同 PIPE-SYNC-2/3 對 resume/slides 之回灌。
@@ -1282,6 +1296,7 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-LITEDOC (✅ 已完成·PIPE 縱向五路第 3 路)
+- ✅ ~~PIPE-LITEDOC-HOTFIX-1 — litedoc 標題回聲剝除 + P1 二元繁中偵測（日文/簡體轉繁）~~（已落地、HOTFIX-1 待 baron 回填；**問題一**標題/Meta 重複→`section_engine.strip_title_echo` 雙剝〔① pre-strip full_text 原文層 exact·en 全模式+zh whole/is_zh / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact〕→扉頁成唯一標題、RAG 不受影響〔rag_sections 早於兩剝定案〕;**問題二**日文/簡體未翻譯→P1 改用 `section_engine.classify_source_lang` 二元「是不是繁中」〔取 tiles 內文樣本跳封面·鎖三〕、非繁回 ja/ko/**hans**/en〔**簡體不給 zh* 字串**·鎖一、四處 startswith("zh") gate 零改不復活〕、偵測器放 section_engine 共用〔book 也用·鎖二〕、一次解 P3 is_zh + P2 section_summaries 雙 gate;只動 litedoc_pipeline+section_engine+測試、18 新測試、全套件 704 passed〔唯一 fail＝既有 LOG_FORMAT flake〕;扉頁保留〔OQ-b·理由 chrome 分層+academic-family 共用 paper-header-meta 結構，非 A 軌 golden 0%〕;⚠️ baron 影子 E2E〔日文/簡體轉繁、標題不重複、真繁中仍 bypass〕+ B 軌走改善豁免不需 A 軌 golden 重捕）
 - ✅ ~~PIPE-LITEDOC LiteDocPipeline 策略管線~~（已落地、C1 `b1012bc` + C2 `18e47c1` + C3 `3570476` + C4 `f8940cd` + C5 `424ee93` + C6 `469f982` + C7 `ff16271` + C8 收官；第 3 路 news/web/unknown〔factory fallback〕;academic-lite——P1 MinerU 文字攝入〔非 Vision〕+ DocAnalyzer U2.1 映射 + B 軌原生 cover-prompt〔URL→publisher 解碼〕、P2-P4 **全消費共用真理源**〔section_engine + DomainNormalizer/Glossary/Translator + rag_indexer〕、size-gate〔<15k 一鍵/≥15k section〕+ HTML 扉頁〔render_meta_header_html·C1 純加法補〕+ U5c 雙語標題鏈 + 門檻 ≥10〔**rag_indexer 零改**〕;§7.2 key-changing 整合達標、litedoc 25 + 全套件 686 passed;**首個 section_engine 跨 consumer 驗證**;Q4 technical 排除〔母 plan v10 L72 分歧待 PIPE-SYNC 回灌〕;⚠️ baron 影子 E2E + golden 改善豁免）
 
 ### PIPE-SECTION-BASE (✅ 已完成·第 4 共用真理源·section 機制)

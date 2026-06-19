@@ -46,6 +46,11 @@
   - `2026-06-11_PIPE-SLIDES_C1_run_提示詞.md` — C1 Run（Skeleton & Register：新建 `pipelines/slide_pipeline.py`〔`@register('slides')` + DocumentStrategy 四方法 stub + `rag_char_threshold=3`〕+ `pipelines/__init__.py` 補 import〔`# === [PIPE-SLIDES C1] ===` 包裹、C7-hotfix 教訓〕+ 新建 `tests/test_slide_pipeline.py` 分派測試〔_registry 含 'slides'、get_strategy 非 NullStrategy〕；僅三檔；.bak；msg /tmp、不自發 commit）
   - `2026-06-11_PIPE-SLIDES_Tasks_提示詞.md` — Tasks（依 plan v1〔v1.1 八 OQ 全結清〕拆 commit：新建 `pipelines/slide_pipeline.py`〔P1 每頁存圖+Vision temp=0+封面判定+統計去重 / P2 六步 key=`p{N}_{標題}` / P3 逐頁並行+alt 對齊雙 Caption 根除+rag_sections / P4 rag_indexer 照抄〕+ `__init__` 註冊 + `tests/test_slide_pipeline.py`〔含 §7.2 key-changing 整合測試〕；末 commit Checkout 含母 plan §8.5 PIPE-VISUAL→PIPE-SLIDES 改名同步〔Q6/Q7〕；工作範圍硬限三檔）
 
+### PIPE-LITEDOC-HOTFIX 系列
+- 🟡 **PIPE-LITEDOC-HOTFIX-1（2026-06-19 doc → HOTFIX-1 Run·BE-Hotfix）**
+  - `2026-06-19_PIPE-LITEDOC-HOTFIX-1_HOTFIX-1_run_提示詞.md` — HOTFIX-1 Run（落地：F1 section_engine 新增 detect_zh_tw/classify_source_lang〔簡體回 hans 非 zh*〕/sample_body_text〔tiles 樣本跳封面〕/strip_title_echo 純函式 + F2 P1 改用 classify_source_lang + F3 P3 雙剝〔① pre-strip full_text + ② post-strip zh_text 補 section 模式〕;補單測、pytest 全綠;SOP §5 grep;單 commit 即收官 mv hotfixes/+executions/;不自發 commit）
+  - `2026-06-19_PIPE-LITEDOC-HOTFIX-1_doc_提示詞.md` — doc 產出（litedoc 雙缺陷：① 標題與 meta 重複〔body 自身標題 H1 與 P3 HTML 扉頁物理共存、litedoc 無去回聲機制〕→ 原文層剝標題/byline 回聲〔複用 _title_sim 範式、section_engine 共用〕/ ② 日文/簡體未翻譯〔`_detect_source_lang` 僅數共用漢字區→日文誤判 zh→P3 is_zh + P2 section_summaries 雙 gate 跳譯;簡體亦誤 bypass 不轉繁〕→ P1 二元「是不是繁中」偵測〔section_engine 共用 helper、取內文樣本非封面〕;三鎖〔簡體不給 zh* 字串避四處 startswith zh gate 復活 / 偵測器 section_engine 共用 book 也用 / 扉頁保留理由＝chrome 分層+academic-family 共用結構非 A 軌 golden 0%〕;doc-only diff 寫進文件、不動實檔、含 commit、存 baton 待 Run）
+
 ### PIPE-SYNC-4 系列（litedoc + section_engine 落地回灌真理源）
 - ✅ **PIPE-SYNC-4 litedoc 與 section_engine 落地回灌母 plan 與 SPEC（2026-06-19 plan v3 → Tasks → C1-C3 → C4 Checkout 收官·DOC-Refactor）**
   - `2026-06-19_PIPE-SYNC-4_Check_提示詞.md` — Check（C4 Checkout：Conformance 三維度〔目標規格 plan §2 D1-D9〔含 D5b〕/ tasks §6 grep〔C1-C3〕/ 不可動〔業務碼/測試/contracts.py 全未觸碰〕〕→ 全綠後 TODO 結案〔§ DOC-Refactor PIPE-SYNC-4 完成表 + 全量 hash 自癒〕+ baton 一次性 mv 歸檔〔plan→plans/ + tasks→tasks/ + C1-C4 報告→executions/;SPEC 本體長駐 baton 不版控、.bak 已於 C2 入 archive〕+ §7.2 純 DOC 顯式豁免;msg /tmp〔Opus 4.8 1M〕、不自發 commit;PIPE-SYNC-4 全案結案）
@@ -390,6 +395,8 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC-HOTFIX-1_HOTFIX-1_run_提示詞.md`（HOTFIX-1 Run·BE-Hotfix：litedoc 雙缺陷落地——F1 section_engine 純函式〔detect_zh_tw/classify_source_lang〔簡體 hans 非 zh*〕/sample_body_text/strip_title_echo〕+ F2 P1 二元繁中偵測 + F3 P3 雙剝〔pre full_text + post zh_text〕;補單測 pytest 全綠 + SOP §5 grep;單 commit 即收官）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC-HOTFIX-1_doc_提示詞.md`（doc 產出·BE-Hotfix：litedoc 雙缺陷 hotfix 文件〔① 標題與 meta 重複→原文層剝回聲 / ② 日文/簡體未翻譯→P1 二元「是不是繁中」偵測〕;三鎖〔簡體不給 zh* 字串避四 gate 復活 / 偵測器放 section_engine 共用 / 扉頁保留理由換 chrome 分層〕;doc-only 程式碼 diff 寫進文件、不動實檔、含 commit、存 baton 待 Run）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Check_提示詞.md`（Check·C4 Checkout 收官·DOC-Refactor：Conformance 三維度〔D1-D9+D5b / tasks §6 grep / 不可動〕全綠 → TODO 結案〔完成表 + hash 自癒〕+ baton 一次性歸檔〔plan/tasks/C1-C4 報告;SPEC 長駐 baton〕+ §7.2 純 DOC 豁免;PIPE-SYNC-4 全案結案）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C3_run_提示詞.md`（C3 Run·DOC-Refactor：HOW_TO_ADD B 軌範式 D9〔裝飾器機制 @register+__init__ import + 四 Phase 消費共用真理源 + raw_metadata 旁路 + §7.2 整合 / A/B 對比〔嚴禁寫 A 軌硬分支〕/ U2.1 DocAnalyzer 安全映射〕;A 軌既有章不動·版控直接 git add+.bak）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md`（C2 Run·DOC-Refactor：PIPE-SPEC 回灌 D5-D8.1〔D5 §1.2.5 section_engine 契約章 / D5b §1.2.4 MetaNormalizer 契約章 / D6 §1.1.1 LiteDoc 旁路登記 / D7 三大→家族 / D8 v8 / D8.1 不改 §1.3+四凍結合約〕;SPEC baton 就地不版控·.bak→archive）
@@ -403,5 +410,3 @@
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C4_run_提示詞.md`（C4 Run·BE-Refactor：P2 六步消費 section_engine+三真理源〔全文摘要/normalize_to_lcc/Glossary 自癒/Translator DEEP_THINK/build_section_summaries key=原文標題 path〕→ GlossaryReadySpec、LLM 交易外;17 passed、全套件 678）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C3_run_提示詞.md`（C3 Run·BE-Refactor：P1 run_phase1 MinerU 攝入+md_cleaner+DocAnalyzer〔U2.1 映射防 fallback academic〕+tiling+B 軌原生 cover-prompt〔title/authors/date/publisher/url·URL→publisher 解碼〕+venue 承接 publisher+raw_metadata 旁路;16 passed、全套件 677）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C2_run_提示詞.md`（C2 Run·BE-Refactor：LiteDoc 骨架三 key 註冊〔litedoc/news/web 三裝飾器 + 四 Phase strict stub + rag_char_threshold=10 + __init__ import〕、分派測試 4 路〔含 unknown fallback〕;9 passed、全套件 670）
-- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C1_run_提示詞.md`（C1 Run·BE-Refactor：section_engine 純加法 render_meta_header_html〔paper-header-meta HTML 扉頁·zh 、/en , 分隔·byte 對齊 A 軌 md_restore:460-490·Zero Schema Coupling〕、嚴禁碰既有、既有 17+42 測試鎖死）
-- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_Tasks_提示詞.md`（Tasks·BE-Refactor：拆 8 Commit〔C1 section_engine HTML 扉頁 formatter 純加法首發 / C2 骨架三 key 註冊 / C3 P1 MinerU+DocAnalyzer 映射+URL publisher 解碼 / C4 P2 六步 / C5 P3 size-gate+HTML 扉頁+U5c 雙語標題 / C6 P4 ≥10 / C7 §7.2 整合 / C8 Checkout〕;全消費真理源、零改引擎）

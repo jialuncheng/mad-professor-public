@@ -165,11 +165,7 @@ class LiteDocPipeline(DocumentStrategy):
         # ⑦ metadata：B 軌原生文字抽取（方案 A）
         meta = self._extract_litedoc_metadata(markdown_text)
         title = self._resolve_title(meta, markdown_text, paper_name)
-        # === [PIPE-LITEDOC-HOTFIX-1 START] 二元繁中偵測（取內文樣本不取封面；簡體不給 zh* 契約）===
-        # 鎖二：偵測器放 section_engine 共用；鎖三：取 tiles 內文樣本（跳封面）；鎖一：非繁回非 zh* token。
-        _lang_sample = section_engine.sample_body_text(tiles) or markdown_text[:2000]
-        source_lang = section_engine.classify_source_lang(_lang_sample)
-        # === [PIPE-LITEDOC-HOTFIX-1 END] ===
+        source_lang = self._detect_source_lang(markdown_text)
         publisher = str(meta.get("publisher") or "").strip()
 
         if ctx.paper_id.endswith("_shadow"):
@@ -444,10 +440,6 @@ class LiteDocPipeline(DocumentStrategy):
         sections = (ctx.ingestion.tiles if ctx.ingestion else []) or []
         full_text = self._read_source_text(ctx)
         title = (ctx.ingestion.title if ctx.ingestion else "") or ""
-        # === [PIPE-LITEDOC-HOTFIX-1 START] ① pre-strip：原文層剝標題回聲（en 全模式 + zh whole/is_zh，exact）===
-        _title_bare = title.replace(" (測試)", "").strip()
-        full_text = section_engine.strip_title_echo(full_text, _title_bare)
-        # === [PIPE-LITEDOC-HOTFIX-1 END] ===
 
         inj = InjectionContext(
             lcc=gspec.lcc,
@@ -495,14 +487,6 @@ class LiteDocPipeline(DocumentStrategy):
 
         en_text = full_text
         ctx.rag_sections = rag_sections
-
-        # === [PIPE-LITEDOC-HOTFIX-1 START] ② post-strip：補 section 模式（zh_text 由 tiles 重建、譯後標題 exact）===
-        # rag_sections 已於上行定案（早於本剝與扉頁 prepend）→ RAG 不受影響。
-        # en_text 已由 ① pre-strip 處理（=full_text）；此處僅補 zh_text。
-        zh_text = section_engine.strip_title_echo(
-            zh_text, (translated_title or "").replace(" (測試)", "").strip()
-        )
-        # === [PIPE-LITEDOC-HOTFIX-1 END] ===
 
         # ⑥ translated_title handoff → P4（既有 raw_metadata 旁路、PIPE-SLIDES-HOTFIX-1b 三欄 dict 範式）
         ctx.raw_metadata["translated_title"] = {

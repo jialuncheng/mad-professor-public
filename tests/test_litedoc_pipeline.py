@@ -459,3 +459,61 @@ def test_seam_p2_p3_p4_key_changing_integration(monkeypatch, tmp_path):
     for s in ctx.rag_sections:
         assert s["summary_key"] in cap["section_summaries"]           # 下游 match 成功
 # === [PIPE-LITEDOC C7 END] ===
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# PIPE-LITEDOC-HOTFIX-1：P3 雙剝標題回聲 + P1 二元繁中偵測接線
+# ──────────────────────────────────────────────────────────────────────────
+def test_p3_dedup_whole_mode(monkeypatch, tmp_path):
+    """① pre-strip：whole 模式 full_text 起首標題回聲剝除 → 標題僅存扉頁一處。"""
+    _setup_p3_mocks(monkeypatch, tmp_path, "# Big Headline\nBy Author, 2026-06-19\n\nactual body here")
+    ctx = _p3_ctx(_tiles_p3(), title="Big Headline")
+    spec = LiteDocPipeline().run_phase3(ctx)
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+    en = Path(spec.final_en_path).read_text(encoding="utf-8")
+    assert zh.count("Big Headline") == 1          # 僅扉頁 ZH::Big Headline、body 回聲已剝
+    assert en.count("Big Headline") == 1
+    assert "actual body here" in zh               # 正文不誤刪
+    assert "By Author" not in en                  # byline 回聲一併剝
+
+
+def test_p3_dedup_section_mode(monkeypatch, tmp_path):
+    """② post-strip：section 模式 zh_text 由 tiles 重建、譯後標題回聲剝除（堵 v1 漏洞）。"""
+    _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
+    ctx = _p3_ctx(_tiles_p3())                    # 頂層 tile=Sec1 → 扉頁譯題=ZH::Sec1、body 首節點亦 ZH::Sec1
+    spec = LiteDocPipeline().run_phase3(ctx)
+    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
+    assert zh.count("ZH::Sec1") == 1              # 僅扉頁、body 首節點回聲已剝
+    assert "ZH::body one" in zh                   # 正文保留
+    assert "ZH::Sec2" in zh                       # 次節點不誤剝
+
+
+def test_p3_dedup_rag_unaffected(monkeypatch, tmp_path):
+    """RAG 隔離：rag_sections 早於兩剝定案 → 不受標題剝除影響。"""
+    _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
+    ctx = _p3_ctx(_tiles_p3())
+    LiteDocPipeline().run_phase3(ctx)
+    keys = {s["summary_key"] for s in ctx.rag_sections}
+    assert keys == {"Sec1", "Sec2"}              # 與 test_p3_size_gate_section 一致、未退化
+
+
+def test_p1_classify_source_lang_japanese(monkeypatch, tmp_path):
+    """P1 二元繁中偵測：日文 tiles → source_lang 非 zh*（進翻譯、不再 bypass）。"""
+    body = "ドジャースの大谷翔平が二刀流で復帰し先頭打者ホームランを放った試合の記事内容" * 5
+    _setup_p1_mocks(monkeypatch, tmp_path, llm_json='{"title":"大谷","authors":[]}')
+    monkeypatch.setattr(LiteDocPipeline, "_build_tiles",
+                        lambda self, *a, **k: [{"content": [{"type": "text", "content": body}]}])
+    spec = LiteDocPipeline().run_phase1(_p1_ctx(tmp_path, paper_id="jp"))
+    assert not spec.source_lang.startswith("zh")  # 日文 → 非 zh*（鎖一、修問題二）
+    assert spec.source_lang == "ja"
+
+
+def test_p1_classify_source_lang_simplified(monkeypatch, tmp_path):
+    """P1：簡體 tiles → source_lang='hans'（非 zh*）→ 進翻譯轉繁（修簡體 bypass 潛在 bug）。"""
+    body = "这是一个关于人工智能与机器学习的简体中文新闻文章内容范例" * 5
+    _setup_p1_mocks(monkeypatch, tmp_path, llm_json='{"title":"AI","authors":[]}')
+    monkeypatch.setattr(LiteDocPipeline, "_build_tiles",
+                        lambda self, *a, **k: [{"content": [{"type": "text", "content": body}]}])
+    spec = LiteDocPipeline().run_phase1(_p1_ctx(tmp_path, paper_id="hans"))
+    assert spec.source_lang == "hans"
+    assert not spec.source_lang.startswith("zh")
