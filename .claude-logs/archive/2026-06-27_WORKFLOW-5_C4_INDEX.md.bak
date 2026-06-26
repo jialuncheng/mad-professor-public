@@ -116,8 +116,7 @@
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### WORKFLOW 系列（流程治理）
-- 🟡 **WORKFLOW-5（2026-06-26 plan v5 → Tasks → C1✅ → C2✅ → C3✅ → C4✅·DOC-Refactor + 治理 hook·ClawVM 混合治理 Hook 落地）**
-  - `2026-06-27_WORKFLOW-5_C4_run_提示詞.md` — C4 Run（截斷守衛腳本：新建 .claude-logs/tools/pre_tool_guard.sh〔PreToolUse·python3 解析 stdin〔C1 修正·無 jq〕·攔截 exit 0+JSON permissionDecision:deny〔C1 修正·非 exit 2〕·保護 plans/sop/ref/CLAUDE.md/TODO.md·>50%且>50行截斷·// BYPASS_TRUNCATION_GUARD 減速帶·fail-open〕+ test_hook_guards.sh〔truncation 8 案例全綠〕;tools/ tracked）
+- 🟡 **WORKFLOW-5（2026-06-26 plan v5 → Tasks → C1✅ → C2✅ → C3✅·DOC-Refactor + 治理 hook·ClawVM 混合治理 Hook 落地）**
   - `2026-06-27_WORKFLOW-5_C3_run_提示詞.md` — C3 Run（Template Fidelity Floor：template_file_governance §99.1 治理規格表新增 Scope〔session-private/project-shared〕/ Provenance〔來源+hash〕/ Fidelity Floor〔降級底線·機器可讀 `fidelity_floor:` 格式·四 Level 殘留鏈 Full→Compressed→Structured→Pointer〕三維度 + Cost-Aware no-degrade〔grep 證據/實測輸出/commit hash 優先不降級〕;§99.2 v2;純文件）
   - `2026-06-26_WORKFLOW-5_C2_run_提示詞.md` — C2 Run（Baton 3-Phase 形式化：baton/README §2 改寫 Staging→Deterministic Validation〔Provenance/Schema/Non-destructive/Scope 四維自檢〕→Scoped Commit + 非破壞性寫入核心鐵律〔唯一不可繞過保證〕+ 對帳 WORKFLOW_SOP §3「Run 嚴禁 mv、Checkout 才歸檔」一次性 mv 鐵律；保留 git mv 禁令/Audit Trail；§99.2 v2；純文件、README tracked 例外可 git add）
   - `2026-06-26_WORKFLOW-5_C1_run_提示詞.md` — C1 Run（SessionEnd Dry-Run·gate：權威裁定 SessionEnd 不能 block→DIRTY-RESET 走 Observable Fault〔Q2 路徑 B〕+ script-level 真測；附帶修正 blocking=exit 0+JSON 非 exit 2、環境無 jq 用 python3；throwaway probe 零永久腳本；TODO C1✅/C2 WIP + hash 自癒 cbc512a）
@@ -402,7 +401,6 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
-- 2026-06-27 — `2026-06-27_WORKFLOW-5_C4_run_提示詞.md`（C4 Run·DOC-Refactor+治理 hook：新建 tools/pre_tool_guard.sh〔PreToolUse 截斷守衛·python3 解析〔無 jq〕·exit 0+JSON deny〔非 exit 2〕·保護 plans/sop/ref/CLAUDE.md/TODO.md·>50%且>50行·BYPASS sentinel 減速帶·fail-open〕+ test_hook_guards.sh truncation 8/8 全綠）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C3_run_提示詞.md`（C3 Run·DOC-Refactor：template_file_governance §99.1 新增 Scope/Provenance/Fidelity Floor 三維度〔降級底線·機器可讀 `fidelity_floor:` 格式·四 Level 殘留鏈〕+ Cost-Aware no-degrade〔grep 證據/實測輸出/commit hash 優先不降級〕;§99.2 v2;純文件）
 - 2026-06-26 — `2026-06-26_WORKFLOW-5_C2_run_提示詞.md`（C2 Run·DOC-Refactor：baton/README §2 形式化 ClawVM 3-Phase〔Staging→Deterministic Validation 四維自檢→Scoped Commit〕+ 非破壞性核心鐵律 + 對帳 WORKFLOW_SOP §3 一次性 mv;§99.2 v2;README tracked 例外）
 - 2026-06-26 — `2026-06-26_WORKFLOW-5_C1_run_提示詞.md`（C1 Run·gate：裁定 SessionEnd 不能 block→DIRTY-RESET Observable Fault〔Q2 路徑 B〕;附帶修正 blocking=exit 0+JSON 非 exit 2、無 jq 用 python3;throwaway probe 零永久腳本;hash 自癒 cbc512a）
@@ -417,3 +415,4 @@
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_plan_提示詞.md`（plan·DOC-Refactor：litedoc + section_engine 落地回灌 master plan v10〔technical 排除/LiteDoc ✅/三大→家族〕+ PIPE-SPEC〔section_engine 契約章/litedoc 旁路登記/bump v8〕+ HOW_TO_ADD〔B 軌範式〕;§9 五 OQ、SPEC 就地 git add、零業務代碼）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C8_check_提示詞.md`（Check·C8 Checkout 收官：5 維度 Conformance〔U1-U9+U2.1/U5b/U5c / pytest 686 / 不可動 / 提示詞 / msg〕+ §7.2 不豁免〔C7 key-changing〕+ baton 一次性歸檔 + TODO 結案〔hash 自癒 C2-C7〕;litedoc 全案結案）
 - 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C7_run_提示詞.md`（C7 Run·BE-Refactor：補 §7.2 P2→P3→P4 key-changing 整合測試〔_KeyChangeTr 真改 title、斷言 section_summaries key 與 rag_sections summary_key 同基準=原文標題 path、P4 消費同份·堵 RAG-ASYNC-HOTFIX-1〕;純測試、25 passed、全套件 686）
+- 2026-06-19 — `2026-06-19_PIPE-LITEDOC_C6_run_提示詞.md`（C6 Run·BE-Refactor：P4 run_phase4 呼共用 rag_indexer.index 傳 'litedoc'+雙語標題〔translated_title 讀 P3 旁路〕、門檻預設 ≥10〔rag_indexer 零改〕、四產物、異常拋出標 failed;24 passed、全套件 685）
