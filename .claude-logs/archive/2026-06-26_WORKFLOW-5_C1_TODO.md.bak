@@ -15,7 +15,7 @@
 
 | Commit | 內容 | Hash |
 |---|---|---|
-| HOTFIX-1 | `pipelines/section_engine.py` 新增四純函式〔`detect_zh_tw`〔二元繁中：有假名/諺文/簡體專有字/ASCII 主導/漢字太少→非繁〕+ `classify_source_lang`〔繁→'zh'、簡→**'hans'**、ja/ko/en;**簡體嚴禁 zh\* 字串**·鎖一〕+ `sample_body_text`〔tiles 文字節點樣本·跳前段封面 0.15·短文兜底·鎖三〕+ `strip_title_echo`〔_title_sim 範式模糊比對·剝首個 ≈title 標題行+byline/日期·cap 3·找不到不誤剝〕〕;`litedoc_pipeline.py` **F2 P1** 改 `classify_source_lang(sample_body_text(tiles))`〔鎖二共用、一次解 P3 is_zh + P2 section_summaries 雙 gate〕+ **F3 P3 雙剝**〔① pre-strip full_text 原文層·en 全模式+zh whole/is_zh exact / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact·rag_sections 早於定案不受影響〕;扉頁保留〔OQ-b〕;`# === [PIPE-LITEDOC-HOTFIX-1 START/END] ===` 包裹 + 2 .bak;18 新測試〔detect/classify〔含鎖一 not startswith zh〕/sample 跳封面/strip/P3 雙剝 whole+section/P1 日文+簡體接線〕、litedoc+section_engine 64 passed、全套件 **704 passed**〔基線 686+18、唯一 fail＝既有 LOG_FORMAT env flake〕;SOP logging〔新增純函式無 logger·既有 warning 皆 exc_info=True〕+database〔無命中〕合規 | `cbc512a` |
+| HOTFIX-1 | `pipelines/section_engine.py` 新增四純函式〔`detect_zh_tw`〔二元繁中：有假名/諺文/簡體專有字/ASCII 主導/漢字太少→非繁〕+ `classify_source_lang`〔繁→'zh'、簡→**'hans'**、ja/ko/en;**簡體嚴禁 zh\* 字串**·鎖一〕+ `sample_body_text`〔tiles 文字節點樣本·跳前段封面 0.15·短文兜底·鎖三〕+ `strip_title_echo`〔_title_sim 範式模糊比對·剝首個 ≈title 標題行+byline/日期·cap 3·找不到不誤剝〕〕;`litedoc_pipeline.py` **F2 P1** 改 `classify_source_lang(sample_body_text(tiles))`〔鎖二共用、一次解 P3 is_zh + P2 section_summaries 雙 gate〕+ **F3 P3 雙剝**〔① pre-strip full_text 原文層·en 全模式+zh whole/is_zh exact / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact·rag_sections 早於定案不受影響〕;扉頁保留〔OQ-b〕;`# === [PIPE-LITEDOC-HOTFIX-1 START/END] ===` 包裹 + 2 .bak;18 新測試〔detect/classify〔含鎖一 not startswith zh〕/sample 跳封面/strip/P3 雙剝 whole+section/P1 日文+簡體接線〕、litedoc+section_engine 64 passed、全套件 **704 passed**〔基線 686+18、唯一 fail＝既有 LOG_FORMAT env flake〕;SOP logging〔新增純函式無 logger·既有 warning 皆 exc_info=True〕+database〔無命中〕合規 | `待 baron 回填` |
 
 > **修法依據**：`.claude-logs/hotfixes/2026-06-19_PIPE-LITEDOC-HOTFIX-1_hotfix.md`
 > **動因**：PIPE-LITEDOC 落地後 baron QA 三實件（LLM 知識庫 / 環義 Giro / 大谷 NHK + book 封面 I and Thou）暴露雙缺陷——① 標題/Meta 重複〔body 自身標題 H1 與 P3 HTML 扉頁物理共存、litedoc 無去回聲〕② 日文/簡體未翻譯〔`_detect_source_lang` 只數共用漢字區→日文誤判 zh→P3+P2 雙 gate 跳譯;簡體亦誤 bypass 不轉繁〕。
@@ -992,8 +992,8 @@
 ### 🔴 高優先
 
 - 🟡 **WORKFLOW-5 ClawVM混合治理Hook落地**（`.claude-logs/baton/2026-06-26_WORKFLOW-5_ClawVM混合治理Hook落地_plan.md`）
-  - [x] ✅ C1 — SessionEnd Dry-Run（阻擋能力實測·gate）〔裁決：SessionEnd 不能 block→DIRTY-RESET 走 Observable Fault·Q2 路徑 B；附帶修正：blocking 機制為 exit 0+JSON 非 exit 2；jq 缺席→腳本用 python3〕
-  - [/] 🟡 WIP: C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）
+  - [/] 🟡 WIP: C1 — SessionEnd Dry-Run（阻擋能力實測·gate）
+  - [ ] ⬜ 未開始: C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）
   - [ ] ⬜ 未開始: C3 — Template Fidelity Floor（§99.1 Scope/Provenance/降級底線三維度）
   - [ ] ⬜ 未開始: C4 — 截斷守衛腳本（PreToolUse pre_tool_guard 截斷偵測 Hard Deny）
   - [ ] ⬜ 未開始: C5 — DIRTY-RESET 守衛腳本（依 C1 結果走攔截或 Observable Fault）
@@ -1308,7 +1308,7 @@
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
 
 ### PIPE-LITEDOC (✅ 已完成·PIPE 縱向五路第 3 路)
-- ✅ ~~PIPE-LITEDOC-HOTFIX-1 — litedoc 標題回聲剝除 + P1 二元繁中偵測（日文/簡體轉繁）~~（已落地、HOTFIX-1 `cbc512a`；**問題一**標題/Meta 重複→`section_engine.strip_title_echo` 雙剝〔① pre-strip full_text 原文層 exact·en 全模式+zh whole/is_zh / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact〕→扉頁成唯一標題、RAG 不受影響〔rag_sections 早於兩剝定案〕;**問題二**日文/簡體未翻譯→P1 改用 `section_engine.classify_source_lang` 二元「是不是繁中」〔取 tiles 內文樣本跳封面·鎖三〕、非繁回 ja/ko/**hans**/en〔**簡體不給 zh* 字串**·鎖一、四處 startswith("zh") gate 零改不復活〕、偵測器放 section_engine 共用〔book 也用·鎖二〕、一次解 P3 is_zh + P2 section_summaries 雙 gate;只動 litedoc_pipeline+section_engine+測試、18 新測試、全套件 704 passed〔唯一 fail＝既有 LOG_FORMAT flake〕;扉頁保留〔OQ-b·理由 chrome 分層+academic-family 共用 paper-header-meta 結構，非 A 軌 golden 0%〕;⚠️ baron 影子 E2E〔日文/簡體轉繁、標題不重複、真繁中仍 bypass〕+ B 軌走改善豁免不需 A 軌 golden 重捕）
+- ✅ ~~PIPE-LITEDOC-HOTFIX-1 — litedoc 標題回聲剝除 + P1 二元繁中偵測（日文/簡體轉繁）~~（已落地、HOTFIX-1 待 baron 回填；**問題一**標題/Meta 重複→`section_engine.strip_title_echo` 雙剝〔① pre-strip full_text 原文層 exact·en 全模式+zh whole/is_zh / ② post-strip zh_text 補 section 模式·同 slot 譯文 exact〕→扉頁成唯一標題、RAG 不受影響〔rag_sections 早於兩剝定案〕;**問題二**日文/簡體未翻譯→P1 改用 `section_engine.classify_source_lang` 二元「是不是繁中」〔取 tiles 內文樣本跳封面·鎖三〕、非繁回 ja/ko/**hans**/en〔**簡體不給 zh* 字串**·鎖一、四處 startswith("zh") gate 零改不復活〕、偵測器放 section_engine 共用〔book 也用·鎖二〕、一次解 P3 is_zh + P2 section_summaries 雙 gate;只動 litedoc_pipeline+section_engine+測試、18 新測試、全套件 704 passed〔唯一 fail＝既有 LOG_FORMAT flake〕;扉頁保留〔OQ-b·理由 chrome 分層+academic-family 共用 paper-header-meta 結構，非 A 軌 golden 0%〕;⚠️ baron 影子 E2E〔日文/簡體轉繁、標題不重複、真繁中仍 bypass〕+ B 軌走改善豁免不需 A 軌 golden 重捕）
 - ✅ ~~PIPE-LITEDOC LiteDocPipeline 策略管線~~（已落地、C1 `b1012bc` + C2 `18e47c1` + C3 `3570476` + C4 `f8940cd` + C5 `424ee93` + C6 `469f982` + C7 `ff16271` + C8 收官；第 3 路 news/web/unknown〔factory fallback〕;academic-lite——P1 MinerU 文字攝入〔非 Vision〕+ DocAnalyzer U2.1 映射 + B 軌原生 cover-prompt〔URL→publisher 解碼〕、P2-P4 **全消費共用真理源**〔section_engine + DomainNormalizer/Glossary/Translator + rag_indexer〕、size-gate〔<15k 一鍵/≥15k section〕+ HTML 扉頁〔render_meta_header_html·C1 純加法補〕+ U5c 雙語標題鏈 + 門檻 ≥10〔**rag_indexer 零改**〕;§7.2 key-changing 整合達標、litedoc 25 + 全套件 686 passed;**首個 section_engine 跨 consumer 驗證**;Q4 technical 排除〔母 plan v10 L72 分歧待 PIPE-SYNC 回灌〕;⚠️ baron 影子 E2E + golden 改善豁免）
 
 ### PIPE-SECTION-BASE (✅ 已完成·第 4 共用真理源·section 機制)
