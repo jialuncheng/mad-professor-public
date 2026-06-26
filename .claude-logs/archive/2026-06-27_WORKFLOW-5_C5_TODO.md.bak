@@ -996,8 +996,8 @@
   - [x] ✅ C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）〔§2 改 Staging→Deterministic Validation→Scoped Commit + 非破壞性鐵律 + 對帳 WORKFLOW_SOP §3 一次性 mv〕
   - [x] ✅ C3 — Template Fidelity Floor（§99.1 Scope/Provenance/降級底線三維度）〔+ Cost-Aware no-degrade + 機器可讀 fidelity_floor: 格式預留〕
   - [x] ✅ C4 — 截斷守衛腳本（PreToolUse pre_tool_guard 截斷偵測 Hard Deny）〔python3 解析·exit 0+JSON deny·sentinel bypass·fail-open·>50%且>50行；test_hook_guards truncation 8/8〕
-  - [x] ✅ C5 — DIRTY-RESET 守衛腳本（依 C1 結果走攔截或 Observable Fault）〔Observable Fault Only·SessionEnd 不能 block；觸發＝TODO Checkout ✅ 但 baton 未歸檔；python3·fail-open；test dirty_reset 4/4〕
-  - [/] 🟡 WIP: C6 — Settings 掛載與部署 SOP（Q1 跨環境同步）
+  - [/] 🟡 WIP: C5 — DIRTY-RESET 守衛腳本（依 C1 結果走攔截或 Observable Fault）〔C1 定案：SessionEnd 不能 block→Observable Fault Only〕
+  - [ ] ⬜ 未開始: C6 — Settings 掛載與部署 SOP（Q1 跨環境同步）
   - [ ] ⬜ 未開始: C7 — Checkout（收官與歸檔）
   - 工時：7 個 commits（DOC-Refactor + 治理 hook 腳本）
   - 依賴：無（C1 dry-run 為 gate，決定 C5 走攔截或 observable）
