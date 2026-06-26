@@ -993,8 +993,8 @@
 
 - 🟡 **WORKFLOW-5 ClawVM混合治理Hook落地**（`.claude-logs/baton/2026-06-26_WORKFLOW-5_ClawVM混合治理Hook落地_plan.md`）
   - [x] ✅ C1 — SessionEnd Dry-Run（阻擋能力實測·gate）〔裁決：SessionEnd 不能 block→DIRTY-RESET 走 Observable Fault·Q2 路徑 B；附帶修正：blocking 機制為 exit 0+JSON 非 exit 2；jq 缺席→腳本用 python3〕
-  - [x] ✅ C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）〔§2 改 Staging→Deterministic Validation→Scoped Commit + 非破壞性鐵律 + 對帳 WORKFLOW_SOP §3 一次性 mv〕
-  - [/] 🟡 WIP: C3 — Template Fidelity Floor（§99.1 Scope/Provenance/降級底線三維度）
+  - [/] 🟡 WIP: C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）
+  - [ ] ⬜ 未開始: C3 — Template Fidelity Floor（§99.1 Scope/Provenance/降級底線三維度）
   - [ ] ⬜ 未開始: C4 — 截斷守衛腳本（PreToolUse pre_tool_guard 截斷偵測 Hard Deny）
   - [ ] ⬜ 未開始: C5 — DIRTY-RESET 守衛腳本（依 C1 結果走攔截或 Observable Fault）
   - [ ] ⬜ 未開始: C6 — Settings 掛載與部署 SOP（Q1 跨環境同步）
