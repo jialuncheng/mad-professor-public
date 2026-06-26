@@ -1,0 +1,26 @@
+{
+  "_comment": "WORKFLOW-5 C6 — Claude Code hook 掛載樣本。將下方 hooks 區塊『合併』進各環境的『專案級』 .claude/settings.json（非全域 ~/.claude/settings.json，以隔離作用域、不污染其他專案）。command 路徑用 $CLAUDE_PROJECT_DIR 變數，跨環境免改絕對路徑。腳本本體於 .claude-logs/tools/ 納入版控；本設定檔僅為樣本，.claude/settings.json 因 .gitignore 排除不入版控、需各環境一次性手動掛載（見 baton/README.md §3）。",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude-logs/tools/pre_tool_guard.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude-logs/tools/dirty_reset_guard.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

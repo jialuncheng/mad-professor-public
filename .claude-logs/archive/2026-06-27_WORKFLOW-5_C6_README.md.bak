@@ -56,29 +56,6 @@ Baton（接力棒）是為了解決多個 AI 工具（如 Antigravity、Claude C
 
 ---
 
-## §3 Hook 跨環境部署 SOP（WORKFLOW-5 治理 hook）
-
-> 治理 hook 腳本（`pre_tool_guard.sh` 截斷守衛 / `dirty_reset_guard.sh` DIRTY-RESET 守衛）位於 `.claude-logs/tools/`、納入版控、隨 git 跨環境同步。
-> 但 Claude Code 的 hook **設定**須寫在 `.claude/settings.json`，而 `.claude/` 被 `.gitignore` 排除（CLAUDE.md §3）→ 設定本身不入版控、**需各環境一次性手動掛載**。
-
-### §3.1 為何「腳本版控 + 專案級指針」（Q1 決策＝方案 a）
-- **腳本邏輯放 `tools/`（版控）**：三環境（Mac OrbStack / Server worktree / GCP）`git pull` 即同步、邏輯不漂移。
-- **設定用「專案級」`.claude/settings.json`**（非全域 `~/.claude/settings.json`）：作用域僅本專案、**不污染其他專案**。
-- **掛載樣本**：`.claude-logs/tools/settings.hooks.sample.json`（`PreToolUse: Write|Edit → pre_tool_guard.sh`、`SessionEnd → dirty_reset_guard.sh`）。
-
-### §3.2 各環境一次性掛載步驟
-1. `git pull`（取得 `tools/` 最新守衛腳本）。
-2. `chmod +x .claude-logs/tools/pre_tool_guard.sh .claude-logs/tools/dirty_reset_guard.sh`。
-3. 將 `settings.hooks.sample.json` 的 `hooks` 區塊**合併**進該環境 `.claude/settings.json`（已有則合併、無則新建；勿覆寫既有其他 hook）。
-4. `command` 路徑用 **`$CLAUDE_PROJECT_DIR`** 變數 → 跨環境免改絕對路徑（守衛腳本亦優先讀此變數定位專案根）。
-5. **重啟 Claude Code session**（hook 於 session 啟動時載入，見 C1 實測；mid-session 改 settings 不保證重載）。
-
-### §3.3 威脅模型 / 限制（誠實標註·呼應 plan §1）
-- **漏裝即靜默失效**（與純文件治理同病）→ 本 SOP 為三道防線生效之前提，部署後建議以 `bash .claude-logs/tools/test_hook_guards.sh all` 驗腳本健康。
-- **強度分級**：`pre_tool_guard`＝防誤觸（agent 可 `// BYPASS_TRUNCATION_GUARD` 繞過）；`dirty_reset_guard`＝僅可觀測（SessionEnd 不能 block）；**唯 §2 baton 3-Phase 為不可繞過之保證**。
-
----
-
 ## §99 治理規格與 Revision
 
 ### §99.1 治理規格表
@@ -98,6 +75,5 @@ Baton（接力棒）是為了解決多個 AI 工具（如 Antigravity、Claude C
 
 ### §99.2 Revision 歷程
 
-- v3 (2026-06-27)：WORKFLOW-5 C6——新增 §3 Hook 跨環境部署 SOP（治理 hook 腳本版控於 tools/、設定用專案級 .claude/settings.json 指向〔Q1 方案 a·作用域隔離〕、$CLAUDE_PROJECT_DIR 跨環境、session 啟動載入、強度分級誠實標註）；掛載樣本 settings.hooks.sample.json
 - v2 (2026-06-26)：WORKFLOW-5 C2——§2 形式化為 ClawVM 3-Phase Writeback（Staging → Deterministic Validation → Scoped Commit）；新增 Phase 2 確定性自檢四維度（Provenance / Schema / Non-destructive / Scope）+ 非破壞性寫入核心鐵律；對帳 WORKFLOW_SOP §3「Run 嚴禁 mv、Checkout 才歸檔」一次性 mv 鐵律；保留 git mv 禁令與 Audit Trail
 - v1 (2026-05-26)：初版發布，對齊計畫書 r11/v11 關於 `mv + git add` 安全移動指令規範
