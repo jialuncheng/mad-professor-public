@@ -17,7 +17,7 @@
 |---|---|---|
 | C1 | SOP Authoring：新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔§2 效能 7 條紅線〔規則+`static/index.html` 反例行號+改法：串流收尾重排/head script defer+自託管/transform 動畫/rAF+passive/字型 preload/Gzip+強快取/KaTeX code-split〕+ §3 渲染正確性陷阱 6 類〔hotfix 溯源 RAG-12-HOTFIX-1/RAG-9/PIPE-SLIDES-HOTFIX-3d/RAG-8/PARA-HOTFIX-1/RAG-10/FE-RHYTHM-UNIFY〕+ §4 驗收檢查表〔對接 template_execution §自評〕+ §5 交叉引用 design/docs+WORKFLOW_SOP §7 + §99.1 重複防護·120 行〕 | `3ec7b3f` |
 | C2 | Workflow Backfill：`ref/WORKFLOW_SOP.md` §1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」→ 手冊路徑 + §99.2 v5〔五類定義本體/命名/§7 接縫契約零改·§1.3 DOC 列刻意保留「—」·.bak 備份〕 | `4fb2248` |
-| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U7 / tasks §6 grep 實檔複驗 / 不可動〔零 .py/static·design/docs 未動·五類定義未動〕 / 提示詞 plan+Tasks+C1+C2+checkout 五份稽核入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U7 / tasks §6 grep 實檔複驗 / 不可動〔零 .py/static·design/docs 未動·五類定義未動〕 / 提示詞 plan+Tasks+C1+C2+checkout 五份稽核入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕+ TODO 結案 + hash 自癒 | `c00604b` |
 
 > **修法依據**：`.claude-logs/plans/2026-07-02_FE-PERF-1_前端效能與渲染SOP建立_plan_v1.md`（v2、§9 六 OQ 全 🟢 定案）
 > **動因**：以 Osmani《How modern browsers work》為標準稽核前端（`baton/frontend_browser_standards_audit.md` 8 findings，已補串流 O(n²) 重排）後，補齊治理不對稱缺口——後端有 logging/database 兩份強制 SOP、前端零；並收斂散落各 hotfix 的渲染正確性教訓為可打勾準則。
