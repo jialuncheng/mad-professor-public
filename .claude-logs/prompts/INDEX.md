@@ -1,11 +1,21 @@
 # 提示詞資料庫索引
 
-最後更新：2026-06-26（WORKFLOW-5 Tasks）
+最後更新：2026-07-02（FE-PERF-1 checkout run）
+
+- 2026-07-02 — `2026-07-02_FE-PERF-1_checkout_run_提示詞.md`（checkout Run·DOC-Refactor：Conformance 五維度驗收全綠〔目標規格 U1-U7 / tasks §6 grep / 不可動 / 提示詞版控稽核 / msg 草稿〕→ TODO 結案〔C1 `3ec7b3f` + C2 `4fb2248` hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕;SOP 手冊已 C1 就地版控）
+- 2026-07-02 — `2026-07-02_FE-PERF-1_C2_run_提示詞.md`（C2 Run·DOC-Refactor：回填 `ref/WORKFLOW_SOP.md` §1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」→ `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md` + §99.2 v5;五類定義本體零改·.bak 備份·git add 僅 WORKFLOW_SOP+.bak·baton 過程檔嚴禁 git add）
+- 2026-07-02 — `2026-07-02_FE-PERF-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔§2 效能 7 條紅線〔規則+static/index.html 反例行號+改法〕 / §3 渲染正確性陷阱〔附 hotfix 代號溯源〕 / §4 落地前驗收檢查表〔對接 template_execution §自評〕 / §5 交叉引用 design/docs+WORKFLOW_SOP §7 / §99.1 重複防護〕;≤260 行·僅 SOP 檔入 git·baton 過程檔嚴禁 git add）
+- 2026-07-02 — `2026-07-02_FE-PERF-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：FE-PERF-1 plan（v2 六 OQ 定案）拆 3 commit〔C1 新建 sop/ 前端效能與渲染 SOP 手冊〔效能 7 條紅線+渲染正確性陷阱+驗收檢查表+§99.1 重複防護〕 / C2 回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP+§99.2 / checkout 收官歸檔〕;過程文件暫存 baton、同步 TODO 🟡 WIP、§7.2 純 DOC 豁免）
+- 2026-07-02 — `2026-07-02_FE-PERF-1_plan_提示詞.md`（plan·DOC-Refactor：以 Osmani《How modern browsers work》為標準稽核前端後，產前端效能與渲染 SOP 建立 plan〔落 baton/·依 template_plan/WORKFLOW_SOP/framework·不含 commit 建議〕;放 sop/ 非 ref/〔workflow-gated·不污染 @path〕、範圍限效能+渲染正確性、回填 WORKFLOW_SOP §1.1/§1.4 FE 兩列必讀 SOP）
 
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### RESCUE-1 系列（遺失治理文件挽救）
+- 🟡 **RESCUE-1 遺失治理文件挽救（2026-07-01 plan v1.2 → Tasks·DOC-Refactor·舊 worktree 刪除致 baton 文件遺失之機械救援）**
+  - `2026-07-01_RESCUE-1_Tasks_提示詞.md` — Tasks（依 plan v1.2 拆 5 commit：C1 QUEUE-1 v2 救回〔逐字保全 + archive .bak 審計〕/ C2 PIPE-SPEC v8 重建〔v7 .bak 基底 + C2 執行報告 D5-D8.1 + 對照現役 section_engine/MetaNormalizer code·D8.1 不改項逐字守·非 byte-identical〕/ C3 MODEL-10 殘留 mv→archive / C4 TODO 失效引用總修正 + 2026-06 遺失清單尾註 / C5 Checkout；工作目錄改主 repo〔授權限 .claude-logs/{baton,archive}+TODO.md〕;Q1-Q6 已定案;§7.2 純 DOC 豁免）
 
 ### META-NORM 系列
 - ✅ **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C6 → C7 收官·BE-Refactor·解 PIPE-SLIDES C+D）**
@@ -116,7 +126,8 @@
   - `2026-06-04_GLOSSARY-CORE_Check_提示詞.md` — Check（C7 收官：三維度 Conformance 驗收 U1-U5/測試 §6.1-§6.6/不可動清單 + 一次性 mv plan_v2/tasks/C1-C7 報告至正式目錄 + TODO 結案 + 歷史 Hash 自癒；不給 commit 建議、msg 寫 tmp/）
 
 ### WORKFLOW 系列（流程治理）
-- 🟡 **WORKFLOW-5（2026-06-26 plan v5 → Tasks → C1✅ → C2✅ → C3✅ → C4✅ → C5✅ → C6✅·DOC-Refactor + 治理 hook·ClawVM 混合治理 Hook 落地）**
+- ✅ **WORKFLOW-5（2026-06-26 plan v5 → Tasks → C1–C6 → C7 Checkout 收官·DOC-Refactor + 治理 hook·ClawVM 混合治理 Hook 落地）**
+  - `2026-06-27_WORKFLOW-5_Check_提示詞.md` — Check（C7 Checkout 收官：Conformance 五維度〔目標規格 plan §2 三項 / tasks §6.1–§6.6 全綠〔含 test_hook_guards all = truncation 8 + dirty_reset 4〕 / 不可動全 ✅ 未觸碰 / 提示詞 plan?+Tasks+C1–C6+Check 入 git 稽核 / msg §8〕全綠 + §7.2 純治理+hook 無 handoff 顯式豁免 → TODO 結案〔C1–C7 完成表 + 全量 hash 自癒〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1–C7 報告→executions/〕;不自發 commit;WORKFLOW-5 全案結案）
   - `2026-06-27_WORKFLOW-5_C6_run_提示詞.md` — C6 Run（Settings 掛載與部署 SOP：新建 .claude-logs/tools/settings.hooks.sample.json〔PreToolUse:Write|Edit→pre_tool_guard / SessionEnd→dirty_reset_guard·$CLAUDE_PROJECT_DIR〕+ baton/README §3 跨環境部署 SOP〔Q1 方案 a：腳本版控 tools/ + 專案級 .claude/settings.json 指針·作用域隔離不污染他案·session 啟動載入·強度分級誠實標註〕;§99.2 v3;README tracked 例外）
   - `2026-06-27_WORKFLOW-5_C5_run_提示詞.md` — C5 Run（DIRTY-RESET 守衛腳本：新建 .claude-logs/tools/dirty_reset_guard.sh〔SessionEnd·**Observable Fault Only**〔C1 定案 SessionEnd 不能 block〕·python3 解析〔無 jq〕·觸發＝baton 仍有某任務暫存檔且該任務 TODO Checkout 子項已 ✅／[x]〔非「baton 非空」避跨 session 誤報〕·stderr 警告+exit 0·fail-open〕+ test_hook_guards.sh 補 dirty_reset 4 案例〔D1 checkout✅未歸檔 WARN／D2 WIP 不報／D3 空不報／D4 未知 code 不報〕全綠;tools/ tracked）
   - `2026-06-27_WORKFLOW-5_C4_run_提示詞.md` — C4 Run（截斷守衛腳本：新建 .claude-logs/tools/pre_tool_guard.sh〔PreToolUse·python3 解析 stdin〔C1 修正·無 jq〕·攔截 exit 0+JSON permissionDecision:deny〔C1 修正·非 exit 2〕·保護 plans/sop/ref/CLAUDE.md/TODO.md·>50%且>50行截斷·// BYPASS_TRUNCATION_GUARD 減速帶·fail-open〕+ test_hook_guards.sh〔truncation 8 案例全綠〕;tools/ tracked）
@@ -404,6 +415,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-07-01 — `2026-07-01_RESCUE-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：舊 worktree 刪除致 baton 文件遺失之機械救援拆 5 commit〔C1 QUEUE-1 v2 救回+archive .bak / C2 PIPE-SPEC v8 重建〔v7 .bak+C2 執行報告 D5-D8.1+對照現役 code〕 / C3 MODEL-10 殘留 mv→archive / C4 TODO 失效引用總修正+遺失清單尾註 / C5 Checkout〕;工作目錄改主 repo·Q1-Q6 定案·§7.2 豁免）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C6_run_提示詞.md`（C6 Run·DOC-Refactor+治理 hook：新建 tools/settings.hooks.sample.json〔PreToolUse:Write|Edit→pre_tool_guard / SessionEnd→dirty_reset·$CLAUDE_PROJECT_DIR〕+ baton/README §3 跨環境部署 SOP〔Q1 方案 a·腳本版控 + 專案級 settings 指針·作用域隔離·強度分級〕;§99.2 v3）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C5_run_提示詞.md`（C5 Run·DOC-Refactor+治理 hook：新建 tools/dirty_reset_guard.sh〔SessionEnd·Observable Fault Only〔C1 定案不能 block〕·python3·觸發＝TODO Checkout ✅ 但 baton 未歸檔〔非 baton 非空〕·stderr 警告+exit 0·fail-open〕+ test_hook_guards.sh 補 dirty_reset 4/4 全綠）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C4_run_提示詞.md`（C4 Run·DOC-Refactor+治理 hook：新建 tools/pre_tool_guard.sh〔PreToolUse 截斷守衛·python3 解析〔無 jq〕·exit 0+JSON deny〔非 exit 2〕·保護 plans/sop/ref/CLAUDE.md/TODO.md·>50%且>50行·BYPASS sentinel 減速帶·fail-open〕+ test_hook_guards.sh truncation 8/8 全綠）
@@ -418,4 +430,3 @@
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md`（C2 Run·DOC-Refactor：PIPE-SPEC 回灌 D5-D8.1〔D5 §1.2.5 section_engine 契約章 / D5b §1.2.4 MetaNormalizer 契約章 / D6 §1.1.1 LiteDoc 旁路登記 / D7 三大→家族 / D8 v8 / D8.1 不改 §1.3+四凍結合約〕;SPEC baton 就地不版控·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md`（C1 Run·DOC-Refactor：master plan v10 回灌 D1-D4〔L72 technical 排除矯正 / L260 LiteDoc ✅+hash+順序 / L18/L74/§8.4 三大→共用真理源家族〔補 META-NORM+section_engine〕/ L86 絞殺順序實況註〕;就地補註·版控直接 git add·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md`（Tasks·DOC-Refactor：拆 4 Commit〔C1 master plan v10 回灌 / C2 PIPE-SPEC〔section_engine §1.2.5 + MetaNormalizer §1.2.4 + litedoc 旁路 + v8〕/ C3 HOW_TO_ADD B 軌範式 / C4 Checkout〕;純 DOC 零業務碼、SPEC baton 就地不版控、§7.2 豁免）
-- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_plan_提示詞.md`（plan·DOC-Refactor：litedoc + section_engine 落地回灌 master plan v10〔technical 排除/LiteDoc ✅/三大→家族〕+ PIPE-SPEC〔section_engine 契約章/litedoc 旁路登記/bump v8〕+ HOW_TO_ADD〔B 軌範式〕;§9 五 OQ、SPEC 就地 git add、零業務代碼）

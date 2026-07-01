@@ -11,6 +11,40 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor FE-PERF-1 前端效能與渲染 SOP 建立（Osmani 瀏覽器渲染稽核→立 sop/ 手冊·補 WORKFLOW_SOP FE 必讀 SOP 缺口）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | SOP Authoring：新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔§2 效能 7 條紅線〔規則+`static/index.html` 反例行號+改法：串流收尾重排/head script defer+自託管/transform 動畫/rAF+passive/字型 preload/Gzip+強快取/KaTeX code-split〕+ §3 渲染正確性陷阱 6 類〔hotfix 溯源 RAG-12-HOTFIX-1/RAG-9/PIPE-SLIDES-HOTFIX-3d/RAG-8/PARA-HOTFIX-1/RAG-10/FE-RHYTHM-UNIFY〕+ §4 驗收檢查表〔對接 template_execution §自評〕+ §5 交叉引用 design/docs+WORKFLOW_SOP §7 + §99.1 重複防護·120 行〕 | `3ec7b3f` |
+| C2 | Workflow Backfill：`ref/WORKFLOW_SOP.md` §1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」→ 手冊路徑 + §99.2 v5〔五類定義本體/命名/§7 接縫契約零改·§1.3 DOC 列刻意保留「—」·.bak 備份〕 | `4fb2248` |
+| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U7 / tasks §6 grep 實檔複驗 / 不可動〔零 .py/static·design/docs 未動·五類定義未動〕 / 提示詞 plan+Tasks+C1+C2+checkout 五份稽核入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免〔無 code handoff〕+ baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕+ TODO 結案 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-07-02_FE-PERF-1_前端效能與渲染SOP建立_plan_v1.md`（v2、§9 六 OQ 全 🟢 定案）
+> **動因**：以 Osmani《How modern browsers work》為標準稽核前端（`baton/frontend_browser_standards_audit.md` 8 findings，已補串流 O(n²) 重排）後，補齊治理不對稱缺口——後端有 logging/database 兩份強制 SOP、前端零；並收斂散落各 hotfix 的渲染正確性教訓為可打勾準則。
+> **§2.5 三候選**：sop/（選定·workflow-gated 不污染 @path）vs ref/ auto-load（否決）vs design/docs（否決·職責混淆）。
+> **§7.2 豁免**：純 DOC-Refactor、無 code handoff（同 WORKFLOW-3/4/5 立規者先例）。
+> **commit 邊界（已淨化）**：歷史經 `pre-fe-rebuild` 備份後重寫為乾淨邊界——WORKFLOW-5 歸檔獨立於 C7 `12564be`、FE-PERF-1 C1 `3ec7b3f` 僅含 SOP 手冊、C2 `4fb2248` 僅含 WORKFLOW_SOP 回填；先前「C1 夾帶 WORKFLOW-5 歸檔」之混檔已消除。
+> **⚠️ baron 手動 commit（非 Claude）**：checkout `git add` prompts〔Tasks/C1/C2/checkout〕+ TODO + 歸檔文件 → `git commit -F /tmp/FE-PERF-1_checkout_msg.txt`。
+
+### DOC-Refactor WORKFLOW-5 ClawVM 混合治理 Hook 落地（純文件約束→真實 Hook harness enforcement·Baton 3-Phase·Fidelity Floor）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | SessionEnd Dry-Run（阻擋能力實測·gate）：權威裁定 SessionEnd **不能 block**→DIRTY-RESET 走 Observable Fault〔plan §9 Q2 路徑 B〕+ script-level 真測;**附帶修正**：blocking 機制＝exit 0+JSON〔permissionDecision:deny / decision:block〕非 exit 2、環境無 jq→腳本用 python3;throwaway probe 零永久腳本 | `6fd2ce2` |
+| C2 | Baton 3-Phase 形式化（baton/README §2）：Staging→Deterministic Validation〔Provenance/Schema/Non-destructive/Scope 四維自檢〕→Scoped Commit + 非破壞性寫入核心鐵律〔唯一不可繞過保證〕+ 對帳 WORKFLOW_SOP §3「Run 嚴禁 mv、Checkout 才歸檔」一次性 mv;§99.2 v2 | `306797a` |
+| C3 | Template Fidelity Floor（template_file_governance §99.1）：新增 Scope〔session-private/project-shared〕/ Provenance〔來源+hash〕/ Fidelity Floor〔降級底線·機器可讀 `fidelity_floor:` 格式·四 Level 殘留鏈 Full→Compressed→Structured→Pointer〕三維度 + Cost-Aware no-degrade〔grep 證據/實測輸出/commit hash 優先不降級〕;§99.2 v2 | `2c14d4a` |
+| C4 | 截斷守衛腳本（`tools/pre_tool_guard.sh`·PreToolUse）：python3 解析 stdin〔無 jq〕+ exit 0+JSON permissionDecision:deny〔非 exit 2〕+ 保護 plans/sop/ref/CLAUDE.md/TODO.md + >50%且>50行截斷 + `// BYPASS_TRUNCATION_GUARD` 減速帶 + fail-open;`test_hook_guards.sh` truncation 8/8 | `c107bfd` |
+| C5 | DIRTY-RESET 守衛腳本（`tools/dirty_reset_guard.sh`·SessionEnd·Observable Fault Only）：觸發＝baton 仍有某任務暫存檔且該任務 TODO Checkout 子項已 ✅〔非「baton 非空」避跨 session 誤報〕·stderr 警告+exit 0·python3·fail-open;test dirty_reset 4/4 | `6ab46b9` |
+| C6 | Settings 掛載與部署 SOP（Q1 跨環境同步）：`tools/settings.hooks.sample.json`〔PreToolUse:Write\|Edit→pre_tool_guard / SessionEnd→dirty_reset·$CLAUDE_PROJECT_DIR〕+ baton/README §3 跨環境部署 SOP〔Q1 方案 a：腳本版控 tools/ + 專案級 .claude/settings.json 指針·作用域隔離·強度分級誠實標註〕;§99.2 v3 | `37f3ded` |
+| C7 | Checkout 收官：Conformance 五維度全綠〔目標規格 plan §2 三項 / tasks §6.1–§6.6 全綠〔test_hook_guards all = truncation 8 + dirty_reset 4 + hook 真實整合對 ref/WORKFLOW_SOP.md 截斷實測 deny〕 / 不可動全 ✅〔零業務碼/前端〕 / 提示詞 Tasks+C1–C6+Check 入 git〔補 git add 漏掉的 Tasks 提示詞〕 / msg §8〕+ §7.2 純治理+hook 無 handoff 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1–C7 報告→executions/〕+ TODO 結案 + hash 自癒 | `12564be` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-26_WORKFLOW-5_ClawVM混合治理Hook落地_plan.md`（v5、§9 兩 OQ：Q1 跨環境同步採 (a) 腳本版控 / Q2 SessionEnd 動工前實測）
+> **動因**：ClawVM 論文（`.claude-logs/baton/2604.10352v1.pdf`）——承認「純文件約束＝discretion」結構性不足，**跨出純文件邊界**用真實 Claude Code Hook（harness enforcement）+ Baton 3-Phase 形式化 + Template Fidelity Floor，治本失憶（DIRTY-RESET）與破壞性截斷（DESTRUCTIVE-WRITE）。
+> **C1 gate 連鎖修正**：SessionEnd 不能 block〔權威文件〕→ DIRTY-RESET 降級 Observable Fault；blocking 機制 exit 0+JSON 非 exit 2；環境無 jq→python3——三點回灌 C4/C5 落地。
+> **三道防線威脅模型（plan §1 誠實標註）**：Baton 3-Phase＝**不可繞過**〔harness 確定性 validation〕/ 截斷守衛＝防誤觸〔agent 可 sentinel 繞過〕/ DIRTY-RESET＝僅可觀測〔SessionEnd 不能 block〕。
+> **§7.2 豁免**：純 DOC-Refactor + 治理 hook 腳本、無業務 Phase handoff（同 WORKFLOW-3/4 立規者先例）。
+> **⚠️ baron 運維（非 commit）**：① 各環境一次性將 `settings.hooks.sample.json` 的 hooks 區塊合併進**專案級** `.claude/settings.json`（`.claude/` 被 gitignore、需手動）→ 重啟 session 生效（hook 啟動載入）;② 部署後 `bash .claude-logs/tools/test_hook_guards.sh all` 驗腳本健康;③ 跨環境部署 SOP 見 `baton/README §3`。
+
 ### BE-Hotfix PIPE-LITEDOC-HOTFIX-1 — litedoc 標題回聲剝除 + P1 二元繁中偵測（日文/簡體轉繁）
 
 | Commit | 內容 | Hash |
@@ -991,17 +1025,15 @@
 
 ### 🔴 高優先
 
-- 🟡 **WORKFLOW-5 ClawVM混合治理Hook落地**（`.claude-logs/baton/2026-06-26_WORKFLOW-5_ClawVM混合治理Hook落地_plan.md`）
-  - [x] ✅ C1 — SessionEnd Dry-Run（阻擋能力實測·gate）〔裁決：SessionEnd 不能 block→DIRTY-RESET 走 Observable Fault·Q2 路徑 B；附帶修正：blocking 機制為 exit 0+JSON 非 exit 2；jq 缺席→腳本用 python3〕
-  - [x] ✅ C2 — Baton 3-Phase 形式化（baton/README 非破壞性寫入契約）〔§2 改 Staging→Deterministic Validation→Scoped Commit + 非破壞性鐵律 + 對帳 WORKFLOW_SOP §3 一次性 mv〕
-  - [x] ✅ C3 — Template Fidelity Floor（§99.1 Scope/Provenance/降級底線三維度）〔+ Cost-Aware no-degrade + 機器可讀 fidelity_floor: 格式預留〕
-  - [x] ✅ C4 — 截斷守衛腳本（PreToolUse pre_tool_guard 截斷偵測 Hard Deny）〔python3 解析·exit 0+JSON deny·sentinel bypass·fail-open·>50%且>50行；test_hook_guards truncation 8/8〕
-  - [x] ✅ C5 — DIRTY-RESET 守衛腳本（依 C1 結果走攔截或 Observable Fault）〔Observable Fault Only·SessionEnd 不能 block；觸發＝TODO Checkout ✅ 但 baton 未歸檔；python3·fail-open；test dirty_reset 4/4〕
-  - [x] ✅ C6 — Settings 掛載與部署 SOP（Q1 跨環境同步）〔settings.hooks.sample.json + baton/README §3 專案級指針·$CLAUDE_PROJECT_DIR·作用域隔離〕
-  - [/] 🟡 WIP: C7 — Checkout（收官與歸檔）
-  - 工時：7 個 commits（DOC-Refactor + 治理 hook 腳本）
-  - 依賴：無（C1 dry-run 為 gate，決定 C5 走攔截或 observable）
-  - 來源：ClawVM 論文（`.claude-logs/baton/2604.10352v1.pdf`）；plan v5 §9 兩 OQ（Q1 採 (a) 腳本版控 / Q2 SessionEnd 實測）待 baron 拍板進 Run
+- 🟡 **RESCUE-1 遺失治理文件挽救**（`.claude-logs/baton/2026-06-28_RESCUE-1_遺失治理文件挽救_plan_v1.md`）
+  - [/] 🟡 WIP: C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）
+  - [ ] ⬜ 未開始: C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）
+  - [ ] ⬜ 未開始: C3 — Purge MODEL-10 Residue（清理已收官殘留）
+  - [ ] ⬜ 未開始: C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）
+  - [ ] ⬜ 未開始: C5 — Checkout（收官與歸檔）
+  - 工時：5 個 commits（DOC-Refactor 純文件挽救）
+  - 依賴：無（C1-C4 各自獨立，C5 收官）
+  - 來源：舊 worktree 刪除致 baton git-ignored 文件遺失；plan v1.2 §9 六 OQ 全定案（工作目錄改主 repo·授權限 `.claude-logs/{baton,archive}`+`TODO.md`）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -1253,6 +1285,10 @@
 - ✅ ~~WORKFLOW-2 流程模板重構與提示詞自動歸檔~~（已落地、C1~C5 六 commits、見 ✅ 完成區）
 - ✅ ~~WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試~~（已落地、C1 `2e4d4c9` + C2 `386c1ce` + C3 `f14dcd9` + C4 收官；DOC-Refactor 治本 RAG-ASYNC #1 接縫缺陷——WORKFLOW_SOP §7 跨 Phase 接縫契約〔含 worked example〕+ 收官前整合測試〔key-changing transform、Checkout 必驗、顯式豁免〕+ §4.2 A6 / template_plan 升 plan 結構 SSOT / framework §4.1 改引用 template〔消滅 doc-drift〕；自身 DOC 無 handoff 整合測試豁免；plan v1/v2/v3 三版保留作 §1.9 軌跡）
 - ✅ ~~WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板~~（已落地、C1 `44659be` + C2 `0e8cb77` + C3 `757dee6` + C4 收官；DOC-Refactor 移植 StraTA〔2605.06642v1〕四原理進 5 治理模板——U1 prompt_for_run 讀 plan〔conditioning re-inject 策略 z〕/ U2 execution §1 對齊欄 / U3 execution §自評雙軸〔負向防錯 + 正向「推進哪個 U-N」防做白工〕/ U4 template_plan §2.5 條件化多候選〔diverse rollout·高風險才觸發·語意分散〕+ prompt_for_plan 同步 + Q5 stale 校正 / U5 prompt_for_check 減負前移〔維度三/五前移分攤·非省略·聚焦 U-coverage+§7.2〕/ U6 五模板 marker+StraTA 誠實前提註；**WORKFLOW_SOP §4 五維度定義未動**；§7.2 純 DOC 顯式豁免；零業務代碼、640 passed 基線；見 ✅ 完成區）
+- ✅ ~~WORKFLOW-5 ClawVM 混合治理 Hook 落地~~（已落地、C1 `6fd2ce2` + C2 `306797a` + C3 `2c14d4a` + C4 `c107bfd` + C5 `6ab46b9` + C6 `37f3ded` + C7 Checkout 收官；ClawVM 論文〔2604.10352v1〕——純文件約束＝discretion 結構性不足、跨出純文件用真實 Hook〔harness enforcement〕；C1 SessionEnd dry-run gate〔裁定不能 block→DIRTY-RESET Observable Fault·連鎖修正 exit 0+JSON 非 exit 2、python3 非 jq〕/ C2 baton 3-Phase 非破壞性寫入〔不可繞過〕/ C3 template Fidelity Floor 三維度〔機器可讀 fidelity_floor:〕/ C4 pre_tool_guard 截斷守衛〔防誤觸·sentinel 可繞過·truncation 8/8〕/ C5 dirty_reset_guard〔僅可觀測·dirty_reset 4/4〕/ C6 settings 掛載樣本+專案級部署 SOP；三道防線威脅模型誠實標註；§7.2 純治理+hook 豁免；零業務代碼；⚠️ baron 各環境手動掛載 .claude/settings.json + 重啟生效；見 ✅ 完成區）
+
+### FE-PERF (✅ 已完成)
+- ✅ ~~FE-PERF-1 前端效能與渲染 SOP 建立~~（已落地、C1 `3ec7b3f` + C2 `4fb2248` + checkout 收官；DOC-Refactor 以 Osmani《How modern browsers work》稽核〔`baton/frontend_browser_standards_audit.md`〕立 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔效能 7 條紅線+渲染正確性陷阱 6 類 hotfix 溯源+驗收檢查表+§99.1 重複防護·120 行〕+ 回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP+§99.2 v5〔補後端有/前端無之治理不對稱缺口〕；§2.5 sop/ 選定〔workflow-gated 不污染 @path〕；§7.2 純 DOC 豁免；零業務碼；歷史經 pre-fe-rebuild 備份後重寫為乾淨 commit 邊界；稽核 7 條實修屬另案）
 
 ### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
 - ✅ ~~FE-AESTHETICS 摘要工具列重構與正文扉頁美化~~（已落地、C1 `3cf8acf` + C2 `b735a94` + Check 收官）
