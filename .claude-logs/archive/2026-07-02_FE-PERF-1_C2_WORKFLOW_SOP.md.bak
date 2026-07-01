@@ -19,7 +19,7 @@
 | 項目 | 內容 |
 |---|---|
 | 觸發條件 | 改動 `static/`、HTML、CSS、JS（非緊急） |
-| 必讀 SOP | `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md` |
+| 必讀 SOP | — |
 | 套用 template | template_plan + template_tasks + template_execution |
 | 驗收要求 | 目標頁面手動 E2E 核查；不得有 console error |
 
@@ -46,7 +46,7 @@
 | 項目 | 內容 |
 |---|---|
 | 觸發條件 | 前端 bug 需立即修補（無法等常規 plan-execution 流程） |
-| 必讀 SOP | `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md` |
+| 必讀 SOP | — |
 | 套用 template | template_hotfix |
 | 驗收要求 | 問題頁面手動核查；hotfix _執行.md 記錄根因 |
 
@@ -228,7 +228,6 @@ grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
 
 ### §99.2 Revision 歷程
 
-- v5 (2026-07-02)：FE-PERF-1 C2——§1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」回填指向 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`（補齊前端工作流強制 SOP 缺口；五類工作流定義本體、命名規則、§7 接縫契約皆未動）
 - v4 (2026-06-08)：WORKFLOW-3 C1——新增 §7 跨 Phase 接縫契約（§7.1 接縫契約 + worked example〔修正版 RAG-ASYNC #1〕+ 反例 / §7.2 收官前跨 Phase 整合測試〔含 key-changing transform、Checkout Conformance 必驗、顯式豁免〕）+ §3 強制規則整合測試前置一行 + §4.2 A6（6 項）+ §99.1 重複防護；治本 RAG-ASYNC #1 接縫缺陷
 - v3 (2026-05-27)：WORKFLOW-2 C3——§3 強制規則新增三段備份/暫存/收官鐵律（R3）
 - v2 (2026-05-26)：WORKFLOW-1 C1.5——§3 強制規則補入「階段 2 同步更新 TODO.md」規則（對齊 plan r11）
