@@ -11,6 +11,20 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor CHECKOUT-GUARD 收官 git-add 白名單鐵律（FE-PERF-1 混檔→立流程守衛·治廣義 git add 掃入他案 + checkout 漏產報告）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Rule Authoring：`WORKFLOW_SOP §3` 新增兩鐵律〔**收官 git-add 白名單鐵律**〔逐檔顯式·嚴禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached --name-only` 自檢 staged＝宣告清單·多/少一檔即停·反例錨 FE-PERF-1 混檔〕+ **checkout 執行報告鐵律**〔必產保存 `executions/…_checkout_執行.md` 含 Conformance 五維度+staged 自檢輸出〕〕+ §99.2 v6·五類定義/文書類別/命名/§7 零改 | `81179d8` |
+| C2 | Template Propagation：三模板落地——`template_prompt_for_run §8`+`template_execution §8` 加「逐檔·禁廣義 add」+ `template_prompt_for_check` 收官新增「第五步 commit 前 staged 自檢」+「第六步 mandate `_checkout_執行.md`」〔既有 Conformance 五維度/三防線/L126 結構零改·3 .bak〕 | `dbd6d24` |
+| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U6 實檔複驗 / tasks §6 grep / 不可動〔零 .py/static·WORKFLOW_SOP §1/§2/§4-7 未動·三模板既有結構未動〕 / 提示詞 plan+Tasks+C1+C2+Check 五份逐檔入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + **首次 dogfood checkout 執行報告鐵律**〔產 `executions/…_checkout_執行.md` 含 staged 自檢輸出·排除 RESCUE-1 未追蹤檔〕+ baton 一次性歸檔 + hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-07-02_CHECKOUT-GUARD_收官git-add白名單鐵律_plan_v1.md`（v2、§9 六 OQ + 範圍補強〔納 run 模板〕+ Q6〔checkout 報告〕全 🟢 定案）
+> **動因**：FE-PERF-1 收官期 WORKFLOW-5 未追蹤歸檔被廣義 `git add` 掃入 C1 commit（跨任務混檔）→ 賴 `pre-fe-rebuild` 備份後歷史重寫方淨化；根因＝WORKFLOW_SOP §3 與三模板 §8 未禁廣義 add、無 commit 前 staged 自檢；並附帶治「checkout 輪有時未產執行報告」（template_execution L126 假設存在、template_prompt_for_check 未 mandate 之落差）。
+> **§2.5 三候選**：純文件鐵律 + 自檢（選定）vs git pre-commit hook enforcement（否決·列 backlog·再犯再升級）vs 放任（否決·即現狀）。
+> **實證流程巧合**：本任務 Check 階段 C2 一度未 commit 即下 checkout → 新鐵律「commit 前 staged 自檢/所有 commit ship 完畢」當場攔下、避免 C2 被 checkout 吞入（dogfood 生效鐵證）。
+> **⚠️ baron 運維（非 commit）**：收官 git-add 白名單鐵律 + checkout 執行報告鐵律自即日對**所有工作流**生效；pre-commit hook 強制化列 backlog（plan §9 Q2）。
+
 ### DOC-Refactor FE-PERF-1 前端效能與渲染 SOP 建立（Osmani 瀏覽器渲染稽核→立 sop/ 手冊·補 WORKFLOW_SOP FE 必讀 SOP 缺口）
 
 | Commit | 內容 | Hash |
@@ -1286,6 +1300,9 @@
 - ✅ ~~WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試~~（已落地、C1 `2e4d4c9` + C2 `386c1ce` + C3 `f14dcd9` + C4 收官；DOC-Refactor 治本 RAG-ASYNC #1 接縫缺陷——WORKFLOW_SOP §7 跨 Phase 接縫契約〔含 worked example〕+ 收官前整合測試〔key-changing transform、Checkout 必驗、顯式豁免〕+ §4.2 A6 / template_plan 升 plan 結構 SSOT / framework §4.1 改引用 template〔消滅 doc-drift〕；自身 DOC 無 handoff 整合測試豁免；plan v1/v2/v3 三版保留作 §1.9 軌跡）
 - ✅ ~~WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板~~（已落地、C1 `44659be` + C2 `0e8cb77` + C3 `757dee6` + C4 收官；DOC-Refactor 移植 StraTA〔2605.06642v1〕四原理進 5 治理模板——U1 prompt_for_run 讀 plan〔conditioning re-inject 策略 z〕/ U2 execution §1 對齊欄 / U3 execution §自評雙軸〔負向防錯 + 正向「推進哪個 U-N」防做白工〕/ U4 template_plan §2.5 條件化多候選〔diverse rollout·高風險才觸發·語意分散〕+ prompt_for_plan 同步 + Q5 stale 校正 / U5 prompt_for_check 減負前移〔維度三/五前移分攤·非省略·聚焦 U-coverage+§7.2〕/ U6 五模板 marker+StraTA 誠實前提註；**WORKFLOW_SOP §4 五維度定義未動**；§7.2 純 DOC 顯式豁免；零業務代碼、640 passed 基線；見 ✅ 完成區）
 - ✅ ~~WORKFLOW-5 ClawVM 混合治理 Hook 落地~~（已落地、C1 `6fd2ce2` + C2 `306797a` + C3 `2c14d4a` + C4 `c107bfd` + C5 `6ab46b9` + C6 `37f3ded` + C7 Checkout 收官；ClawVM 論文〔2604.10352v1〕——純文件約束＝discretion 結構性不足、跨出純文件用真實 Hook〔harness enforcement〕；C1 SessionEnd dry-run gate〔裁定不能 block→DIRTY-RESET Observable Fault·連鎖修正 exit 0+JSON 非 exit 2、python3 非 jq〕/ C2 baton 3-Phase 非破壞性寫入〔不可繞過〕/ C3 template Fidelity Floor 三維度〔機器可讀 fidelity_floor:〕/ C4 pre_tool_guard 截斷守衛〔防誤觸·sentinel 可繞過·truncation 8/8〕/ C5 dirty_reset_guard〔僅可觀測·dirty_reset 4/4〕/ C6 settings 掛載樣本+專案級部署 SOP；三道防線威脅模型誠實標註；§7.2 純治理+hook 豁免；零業務代碼；⚠️ baron 各環境手動掛載 .claude/settings.json + 重啟生效；見 ✅ 完成區）
+
+### CHECKOUT-GUARD (✅ 已完成)
+- ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
 
 ### FE-PERF (✅ 已完成)
 - ✅ ~~FE-PERF-1 前端效能與渲染 SOP 建立~~（已落地、C1 `3ec7b3f` + C2 `4fb2248` + checkout 收官；DOC-Refactor 以 Osmani《How modern browsers work》稽核〔`baton/frontend_browser_standards_audit.md`〕立 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔效能 7 條紅線+渲染正確性陷阱 6 類 hotfix 溯源+驗收檢查表+§99.1 重複防護·120 行〕+ 回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP+§99.2 v5〔補後端有/前端無之治理不對稱缺口〕；§2.5 sop/ 選定〔workflow-gated 不污染 @path〕；§7.2 純 DOC 豁免；零業務碼；歷史經 pre-fe-rebuild 備份後重寫為乾淨 commit 邊界；稽核 7 條實修屬另案）

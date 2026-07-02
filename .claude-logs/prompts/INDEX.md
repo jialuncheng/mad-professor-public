@@ -1,7 +1,12 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-02（FE-PERF-1 checkout run）
+最後更新：2026-07-02（CHECKOUT-GUARD Check）
 
+- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 五維度〔目標規格 U1-U6 / tasks §6 grep 實檔複驗 / 不可動 / 提示詞版控稽核 / msg 草稿〕全綠 → TODO 結案〔C1/C2/checkout hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔;**首次 dogfood checkout 執行報告鐵律**〔產 executions/…_checkout_執行.md 含 staged 自檢輸出〕;CHECKOUT-GUARD 全案結案）
+- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C2_run_提示詞.md`（C2 Run·DOC-Refactor：三模板落地 WORKFLOW_SOP §3 鐵律——`template_prompt_for_run.md §8`+`template_execution.md §8` 加「逐檔·禁 `git add .`/`-A`/`<目錄>`」+ `template_prompt_for_check.md` 收官新增「commit 前 `git diff --cached` staged 自檢」步驟 + mandate 產保存 `_checkout_執行.md`;既有 Conformance 五維度/三防線結構零改·3 .bak·baton 過程檔嚴禁 git add）
+- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C1_run_提示詞.md`（C1 Run·DOC-Refactor：`ref/WORKFLOW_SOP.md §3` 新增兩鐵律〔收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢·反例錨 FE-PERF-1 混檔〕+ checkout 執行報告鐵律〔必產保存 executions/…_checkout_執行.md〕〕+ §99.2 v6;五類定義本體零改·.bak 備份·baton 過程檔嚴禁 git add）
+- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Tasks_提示詞.md`（Tasks·DOC-Refactor：plan v2〔六 OQ + 範圍補強 + Q6 定案〕拆 3 commit〔C1 WORKFLOW_SOP §3 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`〕+ checkout 必產報告鐵律」+§99.2 v6 / C2 三模板落地〔run/check/execution §8 git add 註 + check 收官 staged 自檢步驟 + check mandate checkout 報告〕 / checkout〕;純 DOC·同步 TODO 🟡 WIP·§7.2 豁免）
+- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_plan_提示詞.md`（plan·DOC-Refactor：FE-PERF-1 收官跨任務混檔〔WF5 未追蹤歸檔被廣義 git add 掃入 FE-PERF-1 C1、事後歷史重寫淨化〕→ 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`〕+ commit 前 staged-set 自檢」根治;規範入 WORKFLOW_SOP §3 + template_prompt_for_check;依 template_plan/WORKFLOW_SOP/framework·不含 commit 建議）
 - 2026-07-02 — `2026-07-02_FE-PERF-1_checkout_run_提示詞.md`（checkout Run·DOC-Refactor：Conformance 五維度驗收全綠〔目標規格 U1-U7 / tasks §6 grep / 不可動 / 提示詞版控稽核 / msg 草稿〕→ TODO 結案〔C1 `3ec7b3f` + C2 `4fb2248` hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕;SOP 手冊已 C1 就地版控）
 - 2026-07-02 — `2026-07-02_FE-PERF-1_C2_run_提示詞.md`（C2 Run·DOC-Refactor：回填 `ref/WORKFLOW_SOP.md` §1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」→ `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md` + §99.2 v5;五類定義本體零改·.bak 備份·git add 僅 WORKFLOW_SOP+.bak·baton 過程檔嚴禁 git add）
 - 2026-07-02 — `2026-07-02_FE-PERF-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔§2 效能 7 條紅線〔規則+static/index.html 反例行號+改法〕 / §3 渲染正確性陷阱〔附 hotfix 代號溯源〕 / §4 落地前驗收檢查表〔對接 template_execution §自評〕 / §5 交叉引用 design/docs+WORKFLOW_SOP §7 / §99.1 重複防護〕;≤260 行·僅 SOP 檔入 git·baton 過程檔嚴禁 git add）
