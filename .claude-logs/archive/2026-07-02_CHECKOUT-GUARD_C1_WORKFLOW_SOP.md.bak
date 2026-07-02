@@ -103,8 +103,6 @@ session 必讀核心（跨任務）         → ref/
 - .bak 備份鐵律：修改既有檔案前產出的 .bak 備份，**必須在對應 Run 階段的 `git add` 清單中強制包含**（審計存檔，便於 git show 追溯）
 - baton/ 暫存鐵律：Run 階段產出的執行報告與 plan，**嚴禁在 Run 階段 `mv` 移動或 `git add`**，必須原封不動留在 baton/ 暫存
 - 收官歸檔鐵律：baton/ 下所有暫存文件，**必須且僅能在最後 Check 階段一次性 `mv` + `git add` 歸檔至正式目錄**
-- 收官 git-add 白名單鐵律：任何階段的 `git add` **一律逐檔顯式列名**，**嚴禁** `git add .`／`git add -A`／`git add <目錄>`（防掃入他任務未追蹤檔）；**commit 前**必以 `git diff --cached --name-only` 自檢 staged 集合，須**完全等於**該 commit 之宣告清單（＝對應執行報告 §3 變動檔案 + §8 `git add` 清單〔含 `.bak`〕之聯集），**多一檔／少一檔即停、不得 commit**；跨任務未追蹤檔不得混入。反例錨：FE-PERF-1 收官期 WORKFLOW-5 未追蹤歸檔被廣義 `git add` 掃入 C1 commit → 賴 `pre-fe-rebuild` 備份後歷史重寫方淨化。
-- checkout 執行報告鐵律：checkout（收官）階段**必產並保存** `executions/<YYYY-MM-DD>_<任務編碼>_checkout_執行.md`，內容含 **Conformance 五維度驗收結果** + **staged-set 自檢輸出**（`git diff --cached --name-only` 實貼）+ baton 歸檔確認 + §8 一行 commit 指令；形式沿用 Check 執行報告輕量慣例（§8 僅一行 commit）。
 - 跨 Phase 整合測試前置：跨 ≥2 Phase/模組且有資料 handoff 之任務，收官（階段 6）前必跑 §7.2 跨 Phase 整合測試、Checkout Conformance 必驗（詳見 §7）
 
 ---
@@ -230,7 +228,6 @@ grep -nE "\.commit\(\)" <修改檔.py> | grep -v "with .*session.*begin\(\)"
 
 ### §99.2 Revision 歷程
 
-- v6 (2026-07-02)：CHECKOUT-GUARD C1——§3 強制規則新增兩鐵律〔收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢·反例錨 FE-PERF-1 混檔〕+ checkout 執行報告鐵律〔必產保存 `executions/…_checkout_執行.md`〕〕；五類工作流定義本體、文書類別、命名規則、§7 接縫契約皆未動
 - v5 (2026-07-02)：FE-PERF-1 C2——§1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」回填指向 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`（補齊前端工作流強制 SOP 缺口；五類工作流定義本體、命名規則、§7 接縫契約皆未動）
 - v4 (2026-06-08)：WORKFLOW-3 C1——新增 §7 跨 Phase 接縫契約（§7.1 接縫契約 + worked example〔修正版 RAG-ASYNC #1〕+ 反例 / §7.2 收官前跨 Phase 整合測試〔含 key-changing transform、Checkout Conformance 必驗、顯式豁免〕）+ §3 強制規則整合測試前置一行 + §4.2 A6（6 項）+ §99.1 重複防護；治本 RAG-ASYNC #1 接縫缺陷
 - v3 (2026-05-27)：WORKFLOW-2 C3——§3 強制規則新增三段備份/暫存/收官鐵律（R3）
