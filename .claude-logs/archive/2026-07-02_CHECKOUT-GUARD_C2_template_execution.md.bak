@@ -126,7 +126,7 @@ AI 在跑完測試、產出本報告的最後一步，必須對照 `git diff` �
 > ℹ️ **Check 執行報告的 §8 僅保留以下一行 commit 指令**；所有 mv + git add 已在本報告 §4 完成（見變動檔案清單）。
 
 ```bash
-# git add 清單（⚠️ 逐檔顯式列名，嚴禁 `git add .` / `git add -A` / `git add <目錄>`；commit 前以 `git diff --cached --name-only` 自檢＝本清單。WORKFLOW_SOP §3 收官 git-add 白名單鐵律）
+# git add 清單
 git add [檔案 A]
 git add [檔案 B]
 

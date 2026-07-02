@@ -121,8 +121,6 @@ cp <檔案路徑> .claude-logs/archive/<YYYY-MM-DD>_<任務編碼>_<Commit代號
 # 1. 備份檔案已完成（報告 §3 中已列出）
 
 # 2. git add 清單（所有本次 Commit 涉及的改動）
-# ⚠️ 逐檔顯式列名，嚴禁 `git add .` / `git add -A` / `git add <目錄>`（防掃入他任務未追蹤檔；WORKFLOW_SOP §3 收官 git-add 白名單鐵律）
-# commit 前以 `git diff --cached --name-only` 自檢 staged 集合＝本清單，多/少一檔即停。
 git add <檔案 A>
 git add <檔案 B>
 git add .claude-logs/archive/<備份檔案>

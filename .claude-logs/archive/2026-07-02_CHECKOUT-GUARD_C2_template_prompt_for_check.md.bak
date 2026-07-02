@@ -157,7 +157,6 @@ CLAUDE.md                                              # 核心規範與契約�
 將 baton/ 下所有本任務的暫存文件移至正式目錄：
 
 ```bash
-# ⚠️ 逐檔顯式 git add，嚴禁 `git add .` / `git add -A` / `git add <目錄>`（防掃入他任務未追蹤檔；WORKFLOW_SOP §3 收官 git-add 白名單鐵律）
 # plan（若在 baton/ 下尚未移動）
 mv .claude-logs/baton/<YYYY-MM-DD>_<任務編碼>_<描述>_plan.md \
    .claude-logs/plans/
@@ -189,18 +188,6 @@ ls .claude-logs/baton/
 ls .claude-logs/prompts/ | grep "<任務編碼>"
 # 若有，確認 INDEX.md 中已有對應條目
 ```
-
-**第五步：commit 前 staged 自檢（WORKFLOW_SOP §3 收官 git-add 白名單鐵律）**
-
-```bash
-# staged 集合須完全等於本任務宣告清單（各執行報告 §3 變動檔 + §8 git add 清單〔含 .bak〕之聯集）
-git diff --cached --name-only
-# 逐項比對：多一檔（他任務未追蹤檔混入）／少一檔 → 停、不得 commit，先修正 git add
-```
-
-**第六步：產出並保存 checkout 執行報告（WORKFLOW_SOP §3 checkout 執行報告鐵律）**
-
-收官必產並保存 `executions/<YYYY-MM-DD>_<任務編碼>_checkout_執行.md`，內容含：Conformance 五維度驗收結果 + **第五步 staged 自檢輸出**（`git diff --cached --name-only` 實貼）+ baton 歸檔確認 + §8 一行 commit 指令；形式沿用 Check 執行報告輕量慣例（§8 僅一行 commit）。此報告本身於 checkout commit 一併 `git add`。
 
 ---
 
