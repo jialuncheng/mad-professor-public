@@ -1,7 +1,8 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-07（RESCUE-1 C2 Run）
+最後更新：2026-07-07（RESCUE-1 C3 Run）
 
+- 2026-07-07 — `2026-07-07_RESCUE-1_C3_run_提示詞.md`（C3 Run·DOC-Refactor：RESCUE-1 救援 C3——清理已收官 MODEL-10 baton 殘留:`mv baton/2026-05-27_MODEL-10_…_plan.md → archive/`〔tracked 審計、不直接刪除〕〔U3〕;C3 prompt 與 tasks §8 一致、主 repo 就地 mv、無 deviation;TODO C3→done/C4→WIP + hash 自癒〔0 佔位符〕）
 - 2026-07-07 — `2026-07-07_RESCUE-1_C2_run_提示詞.md`（C2 Run·DOC-Refactor：RESCUE-1 救援 C2——重建 PIPE-SPEC v8〔v7 `.bak` 基底 + C2 執行報告 D5-D8.1 + 對照現役 `section_engine.py`/`meta_normalizer.py`〕:新增 §1.2.5 section_engine 契約章 + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 三大→共用真理源家族 + §99.2 v8;D8.1 不改項〔news/web/未知·15k·≥10·四凍結合約〕逐字守 .bak;本體置 baton〔Q3 長駐不入版控〕+ archive `.bak` tracked 審計;誠實標註**非 byte-identical**〔D5/D5b 重寫〕;deviation：依 tasks §8 主 repo 就地執行;TODO C2→done/C3→WIP）
 - 2026-07-07 — `2026-07-07_RESCUE-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：RESCUE-1 救援 C1——QUEUE-1 v2〔MinerU 雙實例 CFS 物理分流〕存活本體逐字保全留置主 repo baton、新增 `archive/2026-07-01_RESCUE-1_C1_QUEUE-1_v2_plan.md.bak` tracked 審計副本〔U1+U6·防再遺失閘門〕;**deviation**：run 提示詞 paraphrase 稱「複製進 worktree」屬 stale〔worktree 已廢棄〕、改依 tasks.md §8 於主 repo 就地執行、本體不 mv/不改·byte 9890 不變;TODO C1→done/C2→WIP + hash 自癒;執行報告暫存 baton）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 五維度〔目標規格 U1-U6 / tasks §6 grep 實檔複驗 / 不可動 / 提示詞版控稽核 / msg 草稿〕全綠 → TODO 結案〔C1/C2/checkout hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔;**首次 dogfood checkout 執行報告鐵律**〔產 executions/…_checkout_執行.md 含 staged 自檢輸出〕;CHECKOUT-GUARD 全案結案）
@@ -25,6 +26,7 @@
   - `2026-07-01_RESCUE-1_Tasks_提示詞.md` — Tasks（依 plan v1.2 拆 5 commit：C1 QUEUE-1 v2 救回〔逐字保全 + archive .bak 審計〕/ C2 PIPE-SPEC v8 重建〔v7 .bak 基底 + C2 執行報告 D5-D8.1 + 對照現役 section_engine/MetaNormalizer code·D8.1 不改項逐字守·非 byte-identical〕/ C3 MODEL-10 殘留 mv→archive / C4 TODO 失效引用總修正 + 2026-06 遺失清單尾註 / C5 Checkout；工作目錄改主 repo〔授權限 .claude-logs/{baton,archive}+TODO.md〕;Q1-Q6 已定案;§7.2 純 DOC 豁免）
   - `2026-07-07_RESCUE-1_C1_run_提示詞.md` — C1 Run（QUEUE-1 v2 存活本體逐字保全留置主 repo baton + `archive/…C1_QUEUE-1_v2_plan.md.bak` 審計〔U1/U6〕;deviation：run paraphrase「複製進 worktree」stale、依 tasks.md §8 主 repo 就地執行;byte 9890 不變·git check-ignore baton 排除;TODO C1→done/C2→WIP + hash 自癒）
   - `2026-07-07_RESCUE-1_C2_run_提示詞.md` — C2 Run（重建 PIPE-SPEC v8：v7 `.bak` 基底 + D5-D8.1〔§1.2.5 section_engine + §1.2.4 MetaNormalizer + §1.1.1 litedoc 旁路 + 三大→家族 + v8〕對照現役 code;D8.1 不改項逐字守;本體 baton 長駐 + `archive/…C2_PIPE-SPEC_v8.md.bak`;非 byte-identical〔D5/D5b 重寫〕;TODO C2→done/C3→WIP）
+  - `2026-07-07_RESCUE-1_C3_run_提示詞.md` — C3 Run（清理已收官 MODEL-10 殘留：`mv baton/…MODEL-10…_plan.md → archive/`〔tracked 審計·不刪〕〔U3〕;主 repo 就地 mv·無 deviation;TODO C3→done/C4→WIP）
 
 ### META-NORM 系列
 - ✅ **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C6 → C7 收官·BE-Refactor·解 PIPE-SLIDES C+D）**
