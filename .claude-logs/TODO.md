@@ -11,6 +11,25 @@
 
 ## ✅ 已完成
 
+### DOC-Refactor RESCUE-1 遺失治理文件挽救（舊 worktree 刪除致 baton git-ignored 文件遺失·機械救援）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Restore Queue v2：QUEUE-1 v2〔MinerU 雙實例 CFS 物理分流〕存活本體逐字保全留置主 repo baton〔9890 bytes·cmp IDENTICAL·SHA256 一致〕+ 新增 `archive/…C1_QUEUE-1_v2_plan.md.bak` tracked 審計副本〔U1+U6 防再遺失閘門〕;依 tasks §8 主 repo 就地〔run 提示詞 worktree paraphrase 屬 stale·已修正〕 | `5701fb0` |
+| C2 | Rebuild PIPE-SPEC v8：以 v7 `.bak` byte-identical 基底 + PIPE-SYNC-4 C2 執行報告 D5-D8.1 + 對照現役 `section_engine.py`/`meta_normalizer.py` 重建——§1.2.5 section_engine 契約章 + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 三大→共用真理源家族 + §99.2 v8;**D8.1 不改項 line-level diff 證逐字守 v7**;誠實標註 D5/D5b 非 byte-identical;本體 baton 長駐〔Q3〕+ archive `.bak` 審計 | `522002b` |
+| C3 | Purge MODEL-10 Residue：`mv` 已收官 MODEL-10〔17d187b〕baton 殘留〔15313 bytes〕→ archive/〔tracked 審計·不直接刪除·含防覆寫前置檢查〕;baton 無 MODEL-10 | `1df608a` |
+| C4 | TODO Reconciliation：active INFRA-2 取代結案移除 / QUEUE-1 v1 重構性廢除移除 / QUEUE-1 v2 校正指存活本體 / CHAT-STRUCT-1 就地標遺失待重建 / INFRA-4 正名非遺失 + index 同步 + 文末「2026-06 worktree 刪除遺失清單」尾註;**頂部 ✅ 表格與既有 hash git diff 證零刪改**;改前 archive `.bak` 備份 | `d3a6c07` |
+| C5 | Checkout 收官：Conformance 五維度全綠〔目標規格 U1-U6 / tasks §6.1-§6.4 grep / 不可動〔零業務碼〕/ 提示詞 plan〔補建自癒〕+Tasks+C1-C4+Check 稽核 / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/;**PIPE-SPEC v8 + QUEUE-1 v2 本體依 Q3 baton 長駐不歸檔**〕+ checkout 執行報告鐵律〔staged 自檢輸出〕+ hash 自癒 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-06-28_RESCUE-1_遺失治理文件挽救_plan_v1.md`（v1.2、§9 六 OQ 全定案）
+> **動因**：舊 worktree `hopeful-yalow-902c50` 刪除致 git-ignored `baton/` 未收官文件遺失;經權威帳本盤點〔tracked 引用之全部 baton 路徑逐一比對磁碟〕確認真遺失 4 份 + 存活 2 份〔QUEUE-1 v2 / MODEL-10〕+ PIPE-SPEC v8 遺失但可依 v7 `.bak` + PIPE-SYNC-4 C2 執行報告機械重建。
+> **A 類機械救援（本案）**：U1 QUEUE-1 v2 救回 / U2 PIPE-SPEC v8 重建 / U3 MODEL-10 清理 / U4-U5 TODO 修正+遺失審計 / U6 baton 慣例守恆〔archive `.bak` 防再遺失閘門〕。
+> **工作目錄**：baron 拍板覆蓋 CLAUDE.md §3、改主 repo `gemini-refactor`〔授權限 `.claude-logs/{baton,archive}`+`TODO.md`〕。
+> **Q3 落點**：PIPE-SPEC v8 + QUEUE-1 v2 本體維持 baton 長駐不版控、tracked 保險＝archive `.bak`。
+> **§7.2 豁免**：純 DOC-Refactor、零業務代碼、無 Phase handoff（同 WORKFLOW-3/4/5 立規者先例）。
+> **B 類（不在本案·各自獨立後開）**：CHAT-STRUCT-1〔規格骨架存 active〕/ TRANSLATE-BOOK v7〔第 5 路 BookPipeline〕真·重新設計。
+> **⚠️ baron 手動 commit（非 Claude）**：checkout git add〔plan/tasks/C1-C5 報告/plan+Tasks+Check 提示詞/INDEX/TODO〕→ `git commit -F /tmp/RESCUE-1_C5_msg.txt`;C1-C4 已 ship〔5701fb0/522002b/1df608a/d3a6c07〕。
+
 ### DOC-Refactor CHECKOUT-GUARD 收官 git-add 白名單鐵律（FE-PERF-1 混檔→立流程守衛·治廣義 git add 掃入他案 + checkout 漏產報告）
 
 | Commit | 內容 | Hash |
@@ -1039,16 +1058,6 @@
 
 ### 🔴 高優先
 
-- 🟡 **RESCUE-1 遺失治理文件挽救**（`.claude-logs/baton/2026-06-28_RESCUE-1_遺失治理文件挽救_plan_v1.md`）
-  - [x] ✅ C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）〔QUEUE-1 v2 存活本體逐字保全 9890 bytes + archive `.bak` 審計副本;deviation：依 tasks §8 主 repo 就地執行〕
-  - [x] ✅ C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）〔v7 `.bak` 基底 + C2 執行報告 D5-D8.1 + 對照現役 code 重建;§1.2.5 section_engine + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 三大→家族 + §99.2 v8;D8.1 逐字守 .bak;誠實標註非 byte-identical〕
-  - [x] ✅ C3 — Purge MODEL-10 Residue（清理已收官殘留）〔`mv baton→archive`〔15313 bytes·tracked 審計·不直接刪除〕;baton 無 MODEL-10、archive 含之〕
-  - [x] ✅ C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）〔active INFRA-2 取代結案移除/QUEUE-1 v1 廢除移除/QUEUE-1 v2 校正指存活本體/CHAT-STRUCT-1 就地標;index 同步;末尾「2026-06 worktree 刪除遺失清單」尾註〔含 INFRA-4 正名非遺失〕;頂部 ✅ 表格與既有 hash 零刪改〕
-  - [/] 🟡 WIP: C5 — Checkout（收官與歸檔）
-  - 工時：5 個 commits（DOC-Refactor 純文件挽救）
-  - 依賴：無（C1-C4 各自獨立，C5 收官）
-  - 來源：舊 worktree 刪除致 baton git-ignored 文件遺失；plan v1.2 §9 六 OQ 全定案（工作目錄改主 repo·授權限 `.claude-logs/{baton,archive}`+`TODO.md`）
-
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
@@ -1291,6 +1300,9 @@
 - ✅ ~~WORKFLOW-3 跨 Phase 接縫契約與收官前整合測試~~（已落地、C1 `2e4d4c9` + C2 `386c1ce` + C3 `f14dcd9` + C4 收官；DOC-Refactor 治本 RAG-ASYNC #1 接縫缺陷——WORKFLOW_SOP §7 跨 Phase 接縫契約〔含 worked example〕+ 收官前整合測試〔key-changing transform、Checkout 必驗、顯式豁免〕+ §4.2 A6 / template_plan 升 plan 結構 SSOT / framework §4.1 改引用 template〔消滅 doc-drift〕；自身 DOC 無 handoff 整合測試豁免；plan v1/v2/v3 三版保留作 §1.9 軌跡）
 - ✅ ~~WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板~~（已落地、C1 `44659be` + C2 `0e8cb77` + C3 `757dee6` + C4 收官；DOC-Refactor 移植 StraTA〔2605.06642v1〕四原理進 5 治理模板——U1 prompt_for_run 讀 plan〔conditioning re-inject 策略 z〕/ U2 execution §1 對齊欄 / U3 execution §自評雙軸〔負向防錯 + 正向「推進哪個 U-N」防做白工〕/ U4 template_plan §2.5 條件化多候選〔diverse rollout·高風險才觸發·語意分散〕+ prompt_for_plan 同步 + Q5 stale 校正 / U5 prompt_for_check 減負前移〔維度三/五前移分攤·非省略·聚焦 U-coverage+§7.2〕/ U6 五模板 marker+StraTA 誠實前提註；**WORKFLOW_SOP §4 五維度定義未動**；§7.2 純 DOC 顯式豁免；零業務代碼、640 passed 基線；見 ✅ 完成區）
 - ✅ ~~WORKFLOW-5 ClawVM 混合治理 Hook 落地~~（已落地、C1 `6fd2ce2` + C2 `306797a` + C3 `2c14d4a` + C4 `c107bfd` + C5 `6ab46b9` + C6 `37f3ded` + C7 Checkout 收官；ClawVM 論文〔2604.10352v1〕——純文件約束＝discretion 結構性不足、跨出純文件用真實 Hook〔harness enforcement〕；C1 SessionEnd dry-run gate〔裁定不能 block→DIRTY-RESET Observable Fault·連鎖修正 exit 0+JSON 非 exit 2、python3 非 jq〕/ C2 baton 3-Phase 非破壞性寫入〔不可繞過〕/ C3 template Fidelity Floor 三維度〔機器可讀 fidelity_floor:〕/ C4 pre_tool_guard 截斷守衛〔防誤觸·sentinel 可繞過·truncation 8/8〕/ C5 dirty_reset_guard〔僅可觀測·dirty_reset 4/4〕/ C6 settings 掛載樣本+專案級部署 SOP；三道防線威脅模型誠實標註；§7.2 純治理+hook 豁免；零業務代碼；⚠️ baron 各環境手動掛載 .claude/settings.json + 重啟生效；見 ✅ 完成區）
+
+### RESCUE (✅ 已完成)
+- ✅ ~~RESCUE-1 遺失治理文件挽救~~（已落地、C1 `5701fb0` + C2 `522002b` + C3 `1df608a` + C4 `d3a6c07` + C5 checkout 收官；DOC-Refactor 治舊 worktree 刪除致 baton git-ignored 文件遺失——U1 QUEUE-1 v2〔MinerU 雙實例 CFS〕救回 + archive `.bak` / U2 PIPE-SPEC v8 依 v7 `.bak`+執行報告+現役 code 重建〔D8.1 逐字守·D5/D5b 非 byte-identical〕/ U3 MODEL-10 殘留 mv→archive / U4-U5 TODO 失效引用總修正+遺失清單審計〔INFRA-2 取代/QUEUE-1 v1 廢除/INFRA-4 正名非遺失〕/ U6 baton 慣例守恆〔archive `.bak` 防再遺失閘門·Q3 本體長駐〕；工作目錄 baron 拍板覆蓋 §3 改主 repo；§7.2 純 DOC 豁免；零業務碼；B 類 CHAT-STRUCT-1/TRANSLATE-BOOK v7 各自後開）
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
