@@ -1043,23 +1043,32 @@
   - [x] ✅ C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）〔QUEUE-1 v2 存活本體逐字保全 9890 bytes + archive `.bak` 審計副本;deviation：依 tasks §8 主 repo 就地執行〕
   - [x] ✅ C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）〔v7 `.bak` 基底 + C2 執行報告 D5-D8.1 + 對照現役 code 重建;§1.2.5 section_engine + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 三大→家族 + §99.2 v8;D8.1 逐字守 .bak;誠實標註非 byte-identical〕
   - [x] ✅ C3 — Purge MODEL-10 Residue（清理已收官殘留）〔`mv baton→archive`〔15313 bytes·tracked 審計·不直接刪除〕;baton 無 MODEL-10、archive 含之〕
-  - [x] ✅ C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）〔active INFRA-2 取代結案移除/QUEUE-1 v1 廢除移除/QUEUE-1 v2 校正指存活本體/CHAT-STRUCT-1 就地標;index 同步;末尾「2026-06 worktree 刪除遺失清單」尾註〔含 INFRA-4 正名非遺失〕;頂部 ✅ 表格與既有 hash 零刪改〕
-  - [/] 🟡 WIP: C5 — Checkout（收官與歸檔）
+  - [/] 🟡 WIP: C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）
+  - [ ] ⬜ 未開始: C5 — Checkout（收官與歸檔）
   - 工時：5 個 commits（DOC-Refactor 純文件挽救）
   - 依賴：無（C1-C4 各自獨立，C5 收官）
   - 來源：舊 worktree 刪除致 baton git-ignored 文件遺失；plan v1.2 §9 六 OQ 全定案（工作目錄改主 repo·授權限 `.claude-logs/{baton,archive}`+`TODO.md`）
 
-- 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
+- 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（plan 已產、**待 baron 過目 Open Questions → tasks**；`.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md`）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
   - 解法（選 C）：chat 路由層偵測結構化欄位意圖 → 直接從 paper metadata 取值、確定性模板回答、繞過 RAG；缺欄位明確「未提供」不幻覺；零向量/RAG 召回/schema 變動（純讀 metadata）
-  - 狀態：**plan 本體遺失（隨 worktree 刪除）；規格骨架保存於本條目 + RAG-ASYNC #5 溯源 → 從旁證重建（RESCUE-1 B 類·獨立後開）；原 §7 八 OQ〔Q1 意圖機制/Q3 欄位集/Q4 值 pin〕待重建後拍板**
+  - 狀態：**plan 純規格（§7 八項 Open Questions 待拍板，尤 Q1 意圖機制混合/Q3 欄位集/Q4 值 pin）**
   - 性質：跨 chat 模組（AI_professor_chat + ai_router_prompt）；不依賴 #1/#2/#4（與 P4 向量路正交）
 
-- 🔵 **QUEUE-1 v2 MinerU 雙實例 CFS 物理分流與協同避讓調度**（存活本體 `.claude-logs/baton/2026-05-29_QUEUE-1_雙實例CFS物理分流與協同避讓調度_plan.md`·**RESCUE-1 C1 已救回 + archive `.bak` 審計**）
-  - 問題：MinerU 推理層 head-of-line 阻塞——大書（~300 頁）強佔 CPU 推理通道 10-20 分，後續小檔（履歷/論文）即使 Client Queue 拿第一名仍死等
-  - 解法：雙 Docker 實例（`mineru-interactive` Port 8000 `cpu_shares:1024` / `mineru-batch` Port 8001 `cpu_shares:128`·相差 8 倍）+ Linux 內核 CFS 權重時間片搶佔 + Client 端動態頁數檢測雙埠路由 + `mineru_SOP_手冊.md` 運維更新
-  - 與 PIPE 大改版**正交**（非 v1「Thread-level `sleep(2)` 避讓」；v1 已判**重構性廢除**，見文末遺失清單）
-  - 工時：待 plan review（v2 本體存活·可直接進 tasks）
+- 🔵 **QUEUE-1 文件優先權協同避讓調度器**（`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
+  - PipelineCore 實作 class-level 執行緒安全任務註冊表
+  - 依 doc_type 與檔案大小自動計算優先權（1/2/3）
+  - 階段迭代頂端實作 should_yield 協同避讓與 sleep(2) 迴圈
+  - 確保 try...finally 結構保證註冊解除，無死鎖
+  - 新增 tests/test_priority_scheduler.py 驗證協同暫停與恢復
+  - 工時：1-2 個 commits
+  - 依賴：無
+
+- 🔵 **INFRA-2 PipelineCore第一階段切分與定規**（`.claude-logs/baton/2026-05-30_INFRA-2_PipelineCore第一階段切分與定規_plan.md`）
+  - [ ] ⬜ 未開始: 文件一 — 現有架構分析報告（`2026-05-30_INFRA-2_PipelineCore現有架構分析_report.md`）
+  - [ ] ⬜ 未開始: 文件二 — 新流程規劃設計說明書（`2026-05-30_INFRA-2_PipelineCore新流程規劃_design.md`）
+  - [ ] ⬜ 未開始: 文件三 — 數據接口合約 SPEC（`2026-05-30_INFRA-2_PipelineCore接口合約_specification.md`）
+  - 工時：1 個 commit（大改版前置定規規格凍結，無程式碼變動）
   - 依賴：無
 
 - ⬜ **RAG-11 reload SSE 還原**（Bug 6、需獨立 plan 評估）
@@ -1312,13 +1321,12 @@
 ### RAG-13-HOTFIX-1 (✅ 已完成)
 - ✅ ~~RAG-13-HOTFIX-1 自訂主題下拉選單捲軸無作用修復~~（已落地、C1 `6598d2d` + Check 收官）
 
-### INFRA (0 項 active)
-- 🚫 ~~INFRA-2 PipelineCore第一階段切分與定規~~（**遺失·結案**——原 plan 隨 worktree 遺失、產出物已由 PIPE-SPEC + PIPE-CORE 取代；RESCUE-1 C4、見文末遺失清單）
+### INFRA (1 項 active)
+- 🔵 INFRA-2 PipelineCore第一階段切分與定規（高、`.claude-logs/baton/2026-05-30_INFRA-2_PipelineCore第一階段切分與定規_plan.md`）
 - ✅ ~~INFRA-1 MinerU Pipeline 推理卡死修復與 SOP 規格更新~~（已落地、C1 `264dadc` + C2 `9e05466` + Check 收官）
 
 ### QUEUE (1 項 active)
-- 🔵 QUEUE-1 v2 MinerU 雙實例 CFS 物理分流（高、存活本體 `.claude-logs/baton/2026-05-29_QUEUE-1_雙實例CFS物理分流與協同避讓調度_plan.md`·RESCUE-1 C1 救回）
-- 🚫 ~~QUEUE-1 v1 文件優先權協同避讓調度器~~（**遺失·重構性廢除**——PIPE-SPEC §3.1 審計〔Early-Emit + RAG 異步 + API-PERF Semaphore 覆蓋〕；見文末遺失清單）
+- 🔵 QUEUE-1 文件優先權協同避讓調度器（高、`2026-05-23_QUEUE-1_文件佇列與優先權管控_plan.md`）
 
 ### OPTIMIZE (1 項 active)
 - ✅ ~~OPTIMIZE-1 PDF 上傳自動無損優化~~（已落地、C1 `b8892be` + C2 `28f098e` + C3 收官）
@@ -1385,23 +1393,4 @@
 - ✅ ~~RAG-ASYNC-HOTFIX-1 section_summaries 跨譯 key 對位失效 + dead code~~（已落地、`300feb1`；#1 P2 原文 key vs P3 譯文 title vs P4 譯後 node_key 三方不一致 → Chapter Summary 永不進 chunk、Strategy B 靜默退化成 A；穿原文標題 path key 貫穿 P2/P3/P4 + 移除 dead `_load_index_meta`〔#3〕+ 補 P3→P4 接縫整合測試；全套件 528 passed）
 - ✅ ~~RAG-ASYNC-HOTFIX-2 B 軌補產 rag_tree.json（#2·選 B 完整版）~~（已落地、`300feb1`；rag_indexer 新增 `build_rag_tree`+`_walk_tree`〔key_map key=chunk Header=node_key→`/sections/{i}/content/0` + 巢狀 translated_content〕+ `index()` 寫 `final_{paper}_rag_tree.json` + run_phase4 傳路徑/標題；根治 C4 漏產 rag_tree → 章節引用/paper_title/公式相鄰降級；零改 rag_retriever/ai_core；全套件 532 passed；不衝擊 golden）
 - ✅ ~~RAG-ASYNC P4 RAG 索引共用真理源與全 P2 摘要~~（已落地、C1 `195e12b` + C2 `8c76274` + C3 `53755c4` + C4 `a09128e` + C5 `d9b03f4` + C6 `13abdfa` + C7 收官；新建 `processor/rag_indexer.py` B 軌自有索引引擎〔全重寫零 import rag_processor、Strategy B header augment + size-cap 二段子切 + 自實作 is_chunk_meaningful、index() 落庫 byte 相容 ④ 合約〕+ GlossaryReadySpec section_summaries 取代 chapter_summaries + run_phase2 統一六步〔批次產+翻 section_summaries、三安全鎖〕+ run_phase3 旁路封存 ctx.rag_sections + run_phase4 改呼 rag_indexer〔砍 rag_processor 耦合〕+ 母 plan v10/PIPE-SPEC 同步〔含修 §1.3 P3 doc-drift〕；全套件 525 passed；**chunks=1 退化修復、B 軌全鏈零 A 軌依賴**；⚠️ baron 須影子 E2E 驗 chunks 量級 + resume 重捕 Golden；其餘四路 production 隨各自 PIPE-N 跟上）
-
----
-
-## 🗑️ 2026-06 worktree 刪除遺失清單（RESCUE-1 C4 審計）
-
-> 舊 worktree `hopeful-yalow-902c50` 刪除，致 git-ignored `baton/` 內未收官文件遺失。經 RESCUE-1 權威帳本盤點（tracked 文件曾引用之全部 `baton/<檔名>` 逐一比對磁碟），真遺失文件與處置如下（存活救回者見 RESCUE-1 ✅ 表）：
-
-| 遺失文件 | 性質 | 處置 |
-|---|---|---|
-| `CHAT-STRUCT-1` plan_v1 | 履歷聯絡欄位確定性回答（#5·選 C） | **重建**（B 類·規格骨架存 active 條目 + RAG-ASYNC #5 溯源、獨立後開） |
-| `TRANSLATE-BOOK` plan_v5 + v7 | BookPipeline（第 5 路）並行翻譯與雙語故事板 | **重建**（B 類·第 5 路唯一技術依據、獨立後開） |
-| `INFRA-2` plan | PipelineCore 第一階段切分與定規（三文件） | **取代結案**——產出物已由 PIPE-SPEC + PIPE-CORE 涵蓋 |
-| `INFRA-3` plan_v1 | chunking 各路 opt-in 通用化 | **backlog**（遠期·五路收完 + A 軌死後、待重建） |
-| `QUEUE-1 v1` plan（2026-05-23） | 文件佇列 Thread-level `sleep(2)` 避讓 | **廢除**——PIPE-SPEC §3.1 判「重構性廢除」（Early-Emit + RAG 異步 + API-PERF Semaphore 覆蓋其職能） |
-| `YuLun_Wu_CV_chat.md` | baron 診斷匯出 | **放棄**（診斷用、無重建價值） |
-| `工作筆記` | 隨手工作日誌 | **放棄**（無實效） |
-
-> **存活救回（非遺失）**：`QUEUE-1 v2`（MinerU 雙實例 CFS·RESCUE-1 C1 救回 + archive `.bak`）／`PIPE-SPEC v8`（RESCUE-1 C2 依 v7 `.bak` + PIPE-SYNC-4 C2 執行報告重建 + archive `.bak`）／`MODEL-10` plan（已收官殘留·RESCUE-1 C3 `mv`→archive）。
-> **`INFRA-4`（非遺失·從未撰寫）**：合約轉正旁路收合（`raw_metadata` 旁路 → `spec.meta` 凍結合約），全庫僅**概念引用**（見上方 RESUME-P3 META-HOTFIX-1「轉正屬 INFRA-4 遠期」／ PIPE-SYNC-4 C2「為 INFRA-4 鋪規格」），**權威帳本零 `baton/…INFRA-4…` 檔案路徑** → 屬**尚未撰寫之未來任務**、非遺失。
 
