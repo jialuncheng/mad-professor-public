@@ -1041,8 +1041,8 @@
 
 - 🟡 **RESCUE-1 遺失治理文件挽救**（`.claude-logs/baton/2026-06-28_RESCUE-1_遺失治理文件挽救_plan_v1.md`）
   - [x] ✅ C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）〔QUEUE-1 v2 存活本體逐字保全 9890 bytes + archive `.bak` 審計副本;deviation：依 tasks §8 主 repo 就地執行〕
-  - [/] 🟡 WIP: C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）
-  - [ ] ⬜ 未開始: C3 — Purge MODEL-10 Residue（清理已收官殘留）
+  - [x] ✅ C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）〔v7 `.bak` 基底 + C2 執行報告 D5-D8.1 + 對照現役 code 重建;§1.2.5 section_engine + §1.2.4 MetaNormalizer 契約章 + §1.1.1 litedoc 旁路 + 三大→家族 + §99.2 v8;D8.1 逐字守 .bak;誠實標註非 byte-identical〕
+  - [/] 🟡 WIP: C3 — Purge MODEL-10 Residue（清理已收官殘留）
   - [ ] ⬜ 未開始: C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）
   - [ ] ⬜ 未開始: C5 — Checkout（收官與歸檔）
   - 工時：5 個 commits（DOC-Refactor 純文件挽救）

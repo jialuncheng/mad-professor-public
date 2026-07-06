@@ -1,0 +1,358 @@
+# PipelineCore 流程重構架構 — 指南與規格（Specification）
+
+> [!NOTE]
+> 本文件為 **PipelineCore 大改版「物理四 Phase + 三層解耦 + 四份凍結接口合約 + 三大共用真理源」架構**的權威技術規格。
+> 當程式碼實作與本文件不符時，應以本 SPEC 的【介面定義】與【行為合約】為準，並及時同步更新本文件。
+> 本 SPEC 由 `PipelineCore_流程重構_整理版.md`（架構整理與大改版實施戰略）轉制凝煉，作為日後規劃各階段 plan（PIPE-1 ~ PIPE-11）的權威參考原始檔案。
+> 所有流程圖一律使用 Mermaid / ASCII。
+
+---
+
+## §0 用途與概念模型（Mental Model）
+
+### §0.1 用途
+
+本 SPEC 凍結 PipelineCore 大改版的**對外契約面**：四份 Phase 交接合約、三大共用真理源模組契約、策略管線插件契約、RAG 落庫合約。各 Phase / 各管線的內部實作（並行調度、解析引擎、切分策略）可獨立改版重寫，但**不得違反本 SPEC 凍結的介面與行為合約**。規劃任一 PIPE-N 階段 plan 時，以本 SPEC 為唯一介面真理源。
+
+### §0.2 舊流程四大病灶（重構動機，僅供脈絡）
+
+舊 `PipelineCore` 為高度耦合的單體控制器（God Class）：扁平 Main Loop 由 `STAGE_NAMES` 11 階段靜態陣列驅動（`pdf2md ➜ analyze ➜ detect_domain ➜ md2json ➜ json_process ➜ tiling ➜ translate ➜ image_caption ➜ md_restore ➜ extra_info ➜ rag`），混雜工作流調度 / 狀態生命週期 / 業務路由三種職責。四大致命缺陷：
+
+1. **摘要時序悖論**：Stage A（Loop 前）抽不到 Abstract，Stage B（Loop 後）才補齊，時序嚴重滯後，前端先顯示未翻譯原文摘要。
+2. **JSON 樹無元數據保護**：原文 metadata 與衍生語境混雜，五種 doc_type 交付不一致。
+3. **RAG + extra_info 拖累主鏈**：RAG 計算/落庫死鎖或 API 異常會直接令主鏈路 FAILED，閱讀與列印一併卡死。
+4. **Slides 雙 Caption Bug**：圖說同時寫入 alt text 與獨立段落，渲染重複。
+
+### §0.3 新架構概念模型：三層解耦 + 物理四 Phase
+
+**三層解耦職責泳道**：
+
+| 層 | 角色 | 職責 | 嚴禁 |
+|---|---|---|---|
+| Orchestrator（指揮層） | 主幹調度 | 呼叫 `PipelineFactory.get_strategy(doc_type)`、推進四 Phase 狀態機、Early Emit | 不寫任何 doc_type 業務細節 |
+| PipelineContext（狀態層） | Pydantic 資料載體 | 承載各 Phase 凍結產物、跨 Phase 傳遞 | 不含可變全域 dict 黑盒 |
+| Atomic Stages（原子階段層） | 各管線 Phase 內部 stage | 實作具體解析 / 摘要 / 翻譯 / RAG | 不跨 Phase 越界存取 |
+
+**物理四 Phase 主流程**：
+
+```mermaid
+flowchart LR
+    classDef ph fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef c fill:#fff9c4,stroke:#fbc02d,stroke-width:1px;
+
+    P1["Phase 1<br>Ingestion<br>(純解析＋原文元數據)"]:::ph -->|"① IngestionMetadataSpec"| C1["原文 JSON 樹<br>+ Resolved 原文 Metadata<br>(🚫無 Abstract/LCC/Glossary)<br>+ 物理分組 Tiles"]:::c
+    C1 --> P2["Phase 2<br>Glossary & Context Prep"]:::ph
+    P2 -->|"② GlossaryReadySpec"| C2["原文摘要 + 標準 LCC<br>+ 凍結最終 Glossary<br>+ translated_abstract<br>+ domain_name"]:::c
+    C2 --> P3["Phase 3<br>Translation & Restore"]:::ph
+    P3 -->|"③ BilingualMarkdownSpec"| C3["100% 乾淨雙語 Markdown<br>final_zh.md / final_en.md"]:::c
+    C3 --> P4["Phase 4<br>Async RAG & DB"]:::ph
+    P4 -->|"④ RAG/DB 合約"| C4["vectors/ FAISS<br>+ SQLite Paper/PaperChunk<br>+ index_meta.json"]:::c
+```
+
+**三度對稱共用真理源**：五條策略管線（Academic / Book / Slides / Resume / LiteDoc）的「LCC 收斂」「術語自癒」「原子翻譯」三段邏輯完全相同，差異僅在上游 raw 來源與切分調度，故抽離為三大唯一真理源 `DomainNormalizer` / `GLOSSARY-CORE` / `Translator`，各管線只引用 + 指定參數。<!-- === [PIPE-SYNC-4 C2 D7] === --> **共用真理源家族（PIPE-SYNC-4 C2 定調）**：原始三大為核心；PIPE 演進另納 **第 4 員 `MetaNormalizer`**（封面元數據自癒飛輪、契約見 §1.2.4）與 **第 5 員 `section_engine`**（共用 section 機制引擎、契約見 §1.2.5），合稱「共用真理源家族」——同為「各管線只引用 + 指定參數／注入」之零 doc_type 耦合真理源。<!-- === [PIPE-SYNC-4 C2 D7 END] === -->
+
+---
+
+## §1 介面定義（Interface Definitions）
+
+> 本章為 SPEC 核心。以下契約一旦凍結，上下游內部邏輯可獨立重寫。介面欄位變動 / 簽名變更須走 §99.1 改版觸發。
+
+### §1.1 四份 Phase 交接合約（凍結）
+
+| 交接點 | 上游 → 下游 | 數據合約（Schema 要點） |
+|---|---|---|
+| **① `IngestionMetadataSpec`** | P1 → P2 | 根節點含三軸融合 Resolved 完畢的**原文** Title / Author / 出處 / DOI 等基礎欄位（原文＝文件原生語言）；JSON 樹章節 Tiles 已按 Section/Chapter 物理分組完成。🚫 **不含 Abstract / LCC / Glossary、零翻譯**。 |
+| **② `GlossaryReadySpec`** | P2 → P3 | 含**原文摘要 + 標準 LCC 分類碼 + 凍結最終 Glossary（`doc_glossary`/`book_glossary` ⊕ `sqlite_glossary` 融合去重）+ `translated_abstract`（目標語、一次到位）+ `domain_name`（P2 一次性 `lcc→Domains.name` 唯讀解析、供 P3 建構 `InjectionContext` 免再查 DB）**；<!-- === [RAG-ASYNC C1 START] === -->**節點摘要 `section_summaries`（五路通用、`Dict[node_key, str]` 對位巢狀樹、繁中、供 P4 Strategy B 分塊增強）亦於此交付**——取代原 Book 專用 `chapter_summary`（section≡chapter 同為文件樹節點、收斂為單一欄；Book 滾動章節摘要亦填此欄）。<!-- === [RAG-ASYNC C1 END] === --><!-- === [PIPE-SYNC-2 C2 START] === -->**key 接縫契約凍結（RAG-ASYNC-HOTFIX-1 治本）**：key＝**原文標題 path**；P2 產（`_collect_summary_targets`）／P3 帶（slot `key`→`summary_key`）／P4 取（`_walk` 首選 `summary_key`）**三方同基準、不得各自孤立決定**；譯後 title 僅供顯示、不作 key（措辭權威源 WORKFLOW_SOP §7.1 worked example）。<!-- === [PIPE-SYNC-2 C2 END] === --> |
+| **③ `BilingualMarkdownSpec`** | P3 → P4 | 硬碟雙語 Markdown `final_zh.md` / `final_en.md` <!-- === [PIPE-SYNC-3 C1 D7] === -->與對應 JSON 節點（`rag_tree_json` 可選欄、對齊 `contracts.py`）<!-- === [PIPE-SYNC-3 C1 D7 END] === -->；`metadata.translated_abstract` 由 P2 寫入並沿用。 |
+| **④ RAG/DB 合約** | P4 → 外部 | SQLite `Paper` + `PaperChunk` 表結構 + `vectors/` 物理目錄 + `index_meta.json`。 |
+
+> **§1.1.1 `PipelineContext.raw_metadata`（DB 持久化旁路欄、五管線共用、PIPE-RESUME v9 定調）**：四份凍結合約承「Phase 接力結構化欄位」（保純淨）；**完整原始 metadata（含論文 Title/Author/出處/DOI + 履歷專屬 phone/email/domain，含 confidence/source）另走 `PipelineContext.raw_metadata: Dict[str, Any] = {}` 旁路欄**，由 P1 寫入、影子/正式寫庫端讀取組 `Paper.metadata_json`，**對齊 A 軌 `paper_manager.upsert_paper(self._metadata)` 保真度**。此設計**取代**早期「擴 `IngestionMetadataSpec.custom_metadata`」方案（避免污染凍結結構化合約、避免 Schema Bloat）；`raw_metadata` 非凍結合約欄、屬 `PipelineContext` 狀態層可變欄（同 `pdf_path`/`owner_id`）。<!-- === [PIPE-SYNC-4 C2 D6] === --> **旁路欄登記（LiteDoc、PIPE-LITEDOC 定調）**：`LiteDocPipeline` P1 經 B 軌原生 cover-prompt 抽取之 `date` / `url` / `publisher` / `translated_title` 亦走本旁路欄（值為三欄 dict `{value, source, confidence}`、`url→publisher` 解碼、`venue` 承接 `publisher`；三欄 dict 格式契約同 PIPE-SLIDES-HOTFIX-1b、防影子寫庫 `'str' has no attribute 'get'`）。<!-- === [PIPE-SYNC-4 C2 D6 END] === -->
+
+<!-- === [PIPE-SYNC-3 C1 D6 START] === -->
+> **§1.1.2 `PipelineContext.rag_sections`（P3→P4 旁路欄、五路共用、RAG-ASYNC C6 定調）**：合約③ `BilingualMarkdownSpec` 承「P3→P4 之雙語 Markdown 路徑」（reading view 交付）；但 **RAG 索引所需之「譯後 section 結構」另走 `PipelineContext.rag_sections: List[Dict[str, Any]] = []` 旁路欄**——由 **P3 寫入**（每節點含 `summary_key`＝**原文標題 path**〔slides 為 `page_key`＝`p{N:02d}_{原文頁標題}`〕、譯後 title/content）、**P4 `rag_indexer` 消費**自生 Strategy B 分塊（header augment + size-cap 子切，對齊 §1.4.1）。`summary_key` 與 P2 `section_summaries`／P4 chunk node_key **三方同基準**（接縫契約見 §1.1②）。此旁路使「真 P3→P4 RAG 交接物」不污染凍結合約③（合約③ 保 reading view 純淨）；`rag_sections` 非凍結合約欄、屬 `PipelineContext` 狀態層可變欄（同 `raw_metadata`/`pdf_path`/`owner_id`）。
+<!-- === [PIPE-SYNC-3 C1 D6 END] === -->
+
+### §1.2 共用真理源家族模組契約
+
+#### §1.2.1 `DomainNormalizer`（領域收斂與註冊，五管線共用）
+
+```python
+DomainNormalizer.normalize_to_lcc(raw_domain: str, context_text: str | None = None) -> LCCCode
+```
+
+收斂與註冊步驟：
+1. **實質內容領域判定**：接收任意 raw 領域字串與可選的特徵上下文文本 `context_text`；對於複合類型文件（如履歷），必須根據 `context_text` 的技能關鍵字自動判定並分派其對應學科/技術的標準 LCC 代碼（如：「投放/社群」對齊至 `"HF"`；「Python/LLM」對齊至 `"QA"`），嚴禁粗暴歸類為 `"resume"` 等類型。
+2. **本地快取檢索**：優先檢索 `DomainMapping` 本地快取表（以 raw 領域 lowercase + strip 正規化後為鍵）；命中則 **0ms 立即回傳**、免去 LLM 呼叫。
+3. **LLM 收斂分類**：快取未命中時，使用 LLM（cheap model, Temp=0.0）將 raw domain 或 context_text 內容自動收斂分派為標準雙字母 LCCCode 以及領域名稱。
+4. **領域動態註冊**：取得 `LCCCode` 後，優先查詢 SQLite 中的 `Domains` 註冊表。若該 `lcc_code` 不存在，自動在 `Domains` 表中插入此 `lcc_code` 與 `name` 完成「動態註冊」。此階段**不塞入任何單字或術語**（單字提取自癒屬下游 GLOSSARY-CORE 職責）。
+5. **快取寫回**：將對齊映射寫回 `DomainMapping` 表防重，並回傳該標準 `LCCCode`。各管線僅產出 raw 領域與上下文後呼叫此入口。
+
+#### §1.2.2 `GLOSSARY-CORE` 標準自癒演算法（五管線共用）
+
+```
+輸入：doc_glossary、context、domain = LCC
+```
+
+五步：(1) **歷史軌道拉取**（Phase 2 起點、只讀）—— 依 `domain` LCC 從 SQLite `GlobalGlossary` 級聯拉取該領域歷史術語 `sqlite_glossary` 為基礎軌道（取代舊設計的 Phase 1 預載）；(2) 逐術語比對 SQLite；(3) **命中** → 讀取既有繁中對應；(4) **缺失** → 附 `(context, LCC)` 語境調 LLM 精確翻譯 → Backfill 回寫 SQLite 知識飛輪；(5) **雙層融合**（本文術語優先覆蓋歷史）→ 凍結「最終 Glossary」。
+
+兩大 Hook 點：① Phase 2（LCC 推導 + 歷史拉取 + 全文提取 + DB 自癒 + 融合注入）；② Phase 4 Chat 前（Query Expansion，命中術語則重寫 `時序悖論 OR "Temporal Paradox"` 供 BM25+FAISS 雙路跨語召回）。
+
+#### §1.2.3 `Translator` 雙模式翻譯引擎（五管線共用）
+
+```
+Translator.translate(text: str, ctx: InjectionContext, mode: TranslateMode,
+                      text_type: str = "content") -> str
+# text_type（本次呼叫屬性、不入 InjectionContext）：'title' | 'abstract' | 'content' | 'caption'
+#   決定底層提示詞檔（title vs content）與 User Prompt 格式；預設 'content'
+
+TranslateMode = { NORMAL, DEEP_THINK }
+InjectionContext = {
+    lcc:         LCCCode,        # 必填，來自 DomainNormalizer
+    glossary:    FinalGlossary,  # 必填，來自 GLOSSARY-CORE 凍結最終 Glossary
+    zh_summary:  str | None,     # 中文上下文摘要（依管線而定：全文宏觀摘要 or 逐章故事板 Storyboard）
+    preceding:   str | None,     # Sliding-Window 前文承接（僅長章滾動需要）
+    constraints: list[str],      # 可選，如人名不翻正則鎖定 / References skip
+    domain_name: str | None,     # P2 預解析的領域英文名（=Domains.name，例 "Mathematics"；一次性 lcc→name 解析）；
+                                 #   Translator 直接讀取、嚴禁逐段查 DB（防熱路徑連線浪費）
+    doc_type:    str | None,     # 文體（academic/book/slides/...）；Translator 據此套用 Style Hints
+}
+```
+
+| 模式 | 思考預算 | 適用單元 |
+|---|---|---|
+| `DEEP_THINK` | **啟用** | 摘要類（全文/全書/各章摘要）—— 品質優先、文學靈魂、用字一致 |
+| `NORMAL` | **禁用（Bypass）** | 正文內文 —— 降本提速，已有摘要+Glossary 強約束兜底 |
+
+> **§1.2.3.1 翻譯策略隔離原則（五管線共用引擎、各路自主規則；PIPE-RESUME v9 定調）**：`Translator` 為**共用原子翻譯引擎**（LLM 呼叫 / 提示詞組裝 / Glossary 強約束 / thinking 模式 / 分行容錯 / retry 集中一處）；**各管線的「翻譯策略」＝其 `run_phase3` 編排**（切分/Bypass/上下文），業務風格規則由各路**自建 `InjectionContext.constraints`（自由文字規則清單）逐路注入**——`_build_system_prompt` 末段貼為「【額外譯文約束】」條列。例：ResumePipeline 注入「公司/產品名保留原文、Email/電話/URL 原樣、技能詞保留英文、中英對照」；其他路（書籍/期刊專利例外等）各自注入。**規則由策略擁有、引擎共用執行**：禁止各路另維護完整 prompt 或 fork Translator 核心（避免 5 路重工、失一致性）；`doc_type` 觸發粗粒度 Style Hints、`constraints` 補細粒度業務規則。<!-- === [PIPE-SYNC-2 C2 START] === -->**編排得受限並行**（ThreadPool、保序靠 slot index、限流靠共用 `LLMClient._api_semaphore`、單 unit 失敗退原文＝RESUME-PERF-1 先例），供逐 section 路（Academic/LiteDoc 等）參照。
+>
+> **zh 來源（source_lang=zh）規格（五路通用 edge path、RAG-ASYNC-HOTFIX-3 治本）**：任何路皆可能收到 zh 原生文件——P3 **跳過翻譯（原文≡譯文）**、但**仍須建 per-section `rag_sections`**（`summary_key`＝原文標題 path、與 P2 `section_summaries`／P4 chunk node_key 天然同基準）；無 section 結構時退單一容器兜底。嚴禁「zh 路只回 full_text、跳過結構化」（致 P4 chunk 失 section 粒度、召回不對稱）。<!-- === [PIPE-SYNC-2 C2 END] === -->
+
+<!-- === [PIPE-SYNC-4 C2 D5b] === -->
+#### §1.2.4 `MetaNormalizer` 封面元數據自癒飛輪（家族第 4 員、slides／litedoc 消費）
+
+> **模組**：`processor/meta_normalizer.py`（旗標 `settings.LLM_USE_META_NORM` 熱插拔閘門；**False 預設 → `normalize_fields` 直回原樣、不查 DB、不呼 LLM、零風險**）。繼承 `DomainNormalizer` 知識飛輪範式（快取→LLM→`on_conflict` 動態註冊），把「領域名對齊」搬到「metadata 欄名對齊」。動因：為 INFRA-4（旁路欄轉正凍結合約）鋪規格。
+
+**單一公開入口**：
+
+```python
+normalize_fields(raw_fields: Dict[str, str], context: str = "") -> Dict[str, str]
+# 旗標 off → dict(raw_fields) 原樣；on → 委派模組級單例 MetaNormalizer.normalize
+# 回傳 key 含 __reserved__:<欄> 標記者由 P1 回填凍結合約、其餘走 raw_metadata 旁路（§1.1.1）
+```
+
+**`normalize` 三路分流**（逐欄 raw_key、單欄失敗 `logger.error(exc_info=True)` 降級原樣、不阻斷 Pipeline）：
+
+| 路 | 條件 | 行為 | 依據 |
+|---|---|---|---|
+| **① reserved** | norm ∈ 凍結合約既有欄（title / authors / venue / doi） | 加 `__reserved__:<合約欄>` 前綴回傳、**不入登記表、不問 LLM** → 交 P1 回填凍結合約 | BS1 |
+| **② 泛用詞黑名單** | norm ∈ `_GENERIC_KEYS`（date / name / title… 語境相依詞） | **不查快取**、每次過 LLM 帶 `context`（防跨件污染）；**不寫 alias 快取** | Q9 / BS3 |
+| **③ 非黑名單** | 其餘 | 先查 `MetaFieldAlias` 快取→命中即回 canonical；miss → LLM 比對既有 canonical（**temp=0** 保守）→ `on_conflict` 動態註冊 `MetaField` + `MetaFieldAlias` + 寫回快取 | BS4 / BS5 · Q2 |
+
+**兩表 Schema**（繼承 Domains 範式）：`MetaField`（canonical PK/Unique + label_zh/label_en + `sort_weight`）／`MetaFieldAlias`（raw alias → canonical，FK CASCADE、冪等）。
+
+**硬規則**：LLM 呼叫**全在 DB 交易外**（極短交易原則）；`on_conflict` 冪等註冊；旗標 off 零 side-effect；reserved 欄不入登記表（合約欄由 P1 專責回填）。**消費端**：`SlidePipeline`／`LiteDocPipeline` P1 開放 metadata 抽取後呼 `normalize_fields`——reserved 回填合約、canonical 三欄 dict 寫 `raw_metadata` 旁路；前端經 `GET /api/meta-fields` 通用 key-value 渲染（排除集過濾 + `sort_weight`/字母序排序）。
+<!-- === [PIPE-SYNC-4 C2 D5b END] === -->
+
+<!-- === [PIPE-SYNC-4 C2 D5] === -->
+#### §1.2.5 `section_engine` 共用 section 機制引擎（家族第 5 員、resume／litedoc 消費）
+
+> **模組**：`pipelines/section_engine.py`（**pure-function 引擎**、translator/llm/doc_type/prompt/model **全注入**、**引擎零 doc_type 字面量**）。抽自 resume 的「遞迴標題樹走訪→逐節點摘要／並行翻譯／排版還原／rag 旁路／meta header」共同骨幹，供 resume（delegate）／litedoc（**首個跨 consumer**）／academic／book 共用；對齊 `rag_indexer`／`DomainNormalizer` 既有共用真理源範式（純函式注入、非 mixin/base class 繼承耦合）。
+
+**三簇公開介面**：
+
+- **摘要簇**：`collect_summary_targets(sections, path_prefix) -> [(node_key, title, content)]`（DFS pre-order、可吃**任意子標題樹**供 book rolling；**node_key＝原文標題 path**＝接縫基準）／`node_content_text`／`parse_indexed`／`generate_section_summaries`／`translate_section_summaries`／**`build_section_summaries(...) -> Dict[node_key, 繁中摘要]`**（P2 ⑤產 + ⑥批次翻；三安全鎖：批次〔⑤⑥ 各 1 次 LLM、非 N 次〕／非致命〔失敗留空、不阻 reading_ready、不拋〕／可量測〔`performance_metric` phase=P2 stage=section_summary〕；LLM 全交易外）。
+- **翻譯還原簇**：`collect_render_slots(...) -> [slot]`（title/content/raw 三型；title slot `key`＝**原文標題 path**、`level=min(2+depth,6)`）／`normalize_paragraph_breaks`（pipe-table-safe 單 `\n`→`\n\n`）／`translate_unit`／`translate_whole`／`is_heading_degraded`／`flatten_sections`／`own_text_len`／**`restore_sections_markdown(...) -> (markdown, slots, zh_by_index)`**（RESUME-PERF-1 範式：collect → 受限並行翻譯〔`max_workers` 呼叫端注入、實際 API 併發再受 `LLMClient._api_semaphore` 限流、`{future:index}` 保序、單 unit 失敗退原文異常隔離〕→ 按 slot 原序組裝；**引擎回傳 slots + zh_by_index、不知 rag**）。
+- **rag 旁路 + meta header 簇**：`collect_rag_sections(slots, zh_by_index, translate, sink)`（由已譯 slots 重組扁平譯後 section、**`summary_key`＝原文標題 path**、複用 zh_by_index 不重譯）／`single_container_sections(text, title)`（is_zh／退化 fallback 單容器、title 呼叫端傳、引擎不讀 ctx）／**`render_meta_header(title, items:[(Label,Value)], sep) -> str`**（**純格式化器**：收已抽好 + 已做語系 label 對照之 `(Label,Value)` tuples、產 `# 標題` + 無序列表、**引擎零讀 raw_metadata / PipelineContext**）／`render_meta_header_html(...)`（academic-family 置中 HTML 扉頁 `paper-header-meta`、byte 對齊 A 軌 md_restore、純加法）。
+
+**四鐵律**：① **零 doc_type 字面量**（引擎不含任何文體判斷、全靠注入）；② **接縫 key＝原文標題 path**（摘要簇 node_key ／ 還原簇 slot key ／ rag 簇 summary_key **三處同基準**、堵 RAG-ASYNC-HOTFIX-1 跨譯失配）；③ **Zero Schema Coupling**（meta header 收 `(Label,Value)` tuples、引擎零讀 `raw_metadata`／ctx、各文體欄位/語系差異全留呼叫端）；④ **restore 不產 rag 副作用**（`restore_sections_markdown` 只回 markdown + slots + zh_by_index、rag section 旁路由呼叫端以 slots + zh_by_index 自建）。
+
+> **現役擴充註**：現役 `section_engine.py` 另含後續 **PIPE-LITEDOC-HOTFIX-1** 補入之語系偵測/標題回聲剝除簇（`detect_zh_tw`／`classify_source_lang`／`sample_body_text`／`strip_title_echo`；二元繁中偵測 + 原文層去標題回聲、簡體回 `hans` 不給 `zh*` 字串以免四處 `startswith("zh")` gate 復活）——屬同引擎後續擴充、同守零 doc_type 耦合鐵律。
+<!-- === [PIPE-SYNC-4 C2 D5 END] === -->
+
+### §1.3 策略管線插件契約
+
+主幹只呼叫 `PipelineFactory.get_strategy(doc_type)`，回傳對應 `DocumentPipeline` 策略插件。五條管線對外統一四 Phase 狀態機（`reading_ready` / `rag_ready`），內部 stage 細節各自實現：
+
+| 管線 | doc_type | P1 解析 | P3 切分調度 | P4 RAG 門檻 |
+|---|---|---|---|---|
+| `AcademicPipeline` | academic | MinerU + md_cleaner | Section 物理大塊並行 | ≥ 10 |
+| `BookPipeline` | book | MinerU + md_cleaner | 逐章滾動 + 三層 Sliding Window | ≥ 10 |
+| `SlidePipeline` | slides | Vision 每頁，無 cleaner | <!-- === [PIPE-SYNC-3 C1 D1/D5 START] === -->逐頁翻譯與排版還原（PIPE-SLIDES C4 落地、補註⁷ 對齊；P3 含 slides 專屬排版噪聲清洗層〔母片日期單頁/雙Caption/點群節奏/行內粗體/裸URL〕＝D5）<!-- === [PIPE-SYNC-3 C1 D1/D5 END] === --> | ≥ 3 |
+| `ResumePipeline` | resume | Vision 整份，無 cleaner<!-- === [PIPE-SYNC-2 C2 START] === -->（opt-out TextTiling、processed JSON 直當 tiles、P1 零 Embedding＝RESUME-P3 C1 先例）<!-- === [PIPE-SYNC-2 C2 END] === --> | <!-- === [RAG-ASYNC C1 START] === -->逐 heading section 翻譯 + 退化 fallback<!-- === [RAG-ASYNC C1 END] === --><!-- === [PIPE-SYNC-2 C2 START] === -->；還原細則：meta header 渲染（P1 meta 入 final 開頭、無序列表）／標題層級＝遞迴深度 `min(2+depth,6)`／段落 `\n\n` 正規化（pipe-table-safe）<!-- === [PIPE-SYNC-2 C2 END] === --> | ≥ 3 |
+| `LiteDocPipeline` | news/web/未知 fallback | MinerU + md_cleaner | < 15k 一鍵 / ≥ 15k 降級 Section | ≥ 10 |
+
+統一根節點摘要欄位 `metadata.resolved_summary`：前端廢除「只有論文才顯示摘要」限制，改為非空即渲染（書籍→全書大綱、簡報→核心要點、履歷→核心競爭力）。
+
+<!-- === [PIPE-SYNC-2 C2 START] === -->
+### §1.3.1 Vision 解析共用規格（resume／slides 共用、resume 落地驗證）
+
+凡 P1 採 Vision 解析之管線（`ResumePipeline`／`SlidePipeline`），共同遵循三原則：
+
+1. **忠實轉錄鐵律**：Vision prompt 嚴禁要求重組／摘要／補完，僅忠實轉錄原文內容與結構（7e 系列 revert 教訓）；配套噪聲排除原則（如主標題抽取優先序、投遞元資訊排除等類型化黑名單）。
+2. **確定性參數**：`chat_with_images` 必傳 `temperature=settings.LLM_VISION_TEMPERATURE`（預設 **0**、greedy）——未設則吃 Gemini 預設 ~1.0 高溫採樣、同份 PDF 每次輸出抖動、golden 無固定靶（VISION-HOTFIX-1 治本）。
+3. **非確定性殘餘誠實註記**：temp=0 不保證 byte 級重現（Google 後端 batching／浮點／MoE 殘餘）→ golden 重捕須先清中間快取、比對留容差。<!-- === [PIPE-SYNC-3 C1 D2 START] === --> **golden A/B 軌權威釐清（PIPE-SLIDES-HOTFIX-6 回溯更正）**：`tools/golden_baseline.py capture <route>` 一律捕 **A 軌舊單體**（`PipelineCore.process`、shadow=False、正本基準）→ **B 軌策略管線（`*_pipeline.py`）之變更不需、亦無法經 `capture` 重捕 A 軌 golden**（A 軌 `processor` 未變）；B 軌驗證走**影子重傳 E2E**（+ PIPE Flip 時 B 軌 shadow 輸出 **diff A 軌 golden** + 改善豁免）。唯 A 軌 `processor`（含 Vision 共用之 `ResumeProcessor`）自身改動才需 `capture` 重捕。<!-- === [PIPE-SYNC-3 C1 D2 END] === -->
+<!-- === [PIPE-SYNC-3 C1 D4 START] === -->
+4. **頁面類型判定（is_cover / is_blank）供管線過濾**：Vision 輸出之頁面類型布林欄供下游過濾——`is_cover`（封面判定、見 §1.2 Slides 封面規則）；`is_blank`（**空白/裝飾/純過場/章節分隔頁，含被賦予「過場/Transition」標題之過場頁 → true；含真實圖表/照片/資料/條列正文一律 false**）→ 管線跳過該單位（slides `is_blank` 且 `markdown_content` 空即跳；HOTFIX-4 引入、HOTFIX-5 放寬 + prompt 釐清）。此為通用 Vision 頁面元數據屬性、各路可複用。
+<!-- === [PIPE-SYNC-3 C1 D4 END] === -->
+
+> 輸出格式為 markdown 忠實轉錄；**輸出 Schema 級約束屬各路 plan 自定**（PIPE-VISUAL 開 plan 時評估）、本節不越權凍結。
+<!-- === [PIPE-SYNC-2 C2 END] === -->
+
+### §1.4 RAG 物理產出 Schema
+
+**`index_meta.json`（交接點 ④ 顯式規格）**：
+
+```json
+{
+  "rag_status": "ready | failed",
+  "vector_store_signature": {
+    "embedding_model": "gemini-embedding-001",  <!-- === [PIPE-SYNC-2 C2] === MODEL-11 更正：embedding-2 為多模態交錯模型（SDK 假批次、無 task_type）已廢；-001 真批次+task_type；新舊向量不可混庫 -->
+    "output_dimensions": 768,
+    "chunk_filter_version": "B2-2026-05-22"
+  },
+  "physical_outputs": {
+    "vector_store_dir": "vectors/",
+    "meta_file": "vectors/index_meta.json",
+    "tree_json_file": "rag_tree.json"
+  }
+}
+```
+
+**Strategy B 摘要增強型分塊格式（Summary-Augmented Context）**：
+
+```markdown
+# {chunk_key}
+Context: {doc_type} > {section_title}
+Chapter Summary: {section_summary}
+
+{chunk_content}
+```
+
+<!-- === [RAG-ASYNC C1 START] === -->
+> **§1.4.1 chunk 來源與物理分塊（RAG-ASYNC 定調）**：上式 `{section_summary}` 來源＝P2 交付之 `GlossaryReadySpec.section_summaries`（繁中、缺失則略 `Chapter Summary:` 行降級）；chunk markdown **由 P4 自有索引引擎依 P3 section 結構自生**（每節點一個 `#`），**非餵 reading-view `final_zh.md`**（對齊 R4.3）。物理分塊為**二段式**：① header augment（每節點 `#`+Context+Chapter Summary+內文）→ ② **size-cap 二段子切**（節點內文超 `EMBEDDING_MAX_TOKENS_PER_ITEM` 時遞迴子切、每子塊重貼同一前綴；修正原 header-only 無 size-cap 致書籍大章塌超大 chunk 之弱點）。索引引擎為 **B 軌共用真理源（如 `processor/rag_indexer.py`）、零依賴 A 軌 `rag_processor`**，輸出仍對齊凍結 ④ 合約。<!-- === [PIPE-SYNC-2 C2 START] === -->**④ 輸出完整性（RAG-ASYNC-HOTFIX-2 治本）**：`rag_tree.json` 由索引引擎 `rag_indexer.build_rag_tree` **自建**（key_map key＝chunk Header＝node_key → `/sections/{i}/content/0` path；巢狀節點帶 `translated_content`/`translated_title`）、`index()` 一併寫出 `final_{paper}_rag_tree.json`——B 軌四產物缺一不可（FAISS＋paper_chunks＋index_meta＋rag_tree），漏產 rag_tree 則章節引用/paper_title 前綴靜默降級。<!-- === [PIPE-SYNC-2 C2 END] === -->
+<!-- === [RAG-ASYNC C1 END] === -->
+
+**Embedding 物理流程（七步，全內聚 Phase 4）**：<!-- === [RAG-ASYNC C1 START] === -->物理分塊（§1.4.1 二段式：header augment + size-cap 子切，`MarkdownHeaderTextSplitter` 切 `#`）<!-- === [RAG-ASYNC C1 END] === --> → `_is_chunk_meaningful` 過濾 → **1 次批量 Embedding 呼叫** → `FAISS.from_documents` → `vectors/` 寫 `index.faiss`+`index.pkl` → SQLite `paper_chunks` 批量寫庫（每 row 註記 `embedding_model`+`output_dimensions`）→ 寫 `index_meta.json`。
+
+---
+
+## §2 行為合約（Behavioral Contract / Hard Rules）
+
+> 以下為不可違反的硬規則。任何未經本 SPEC 修改而違反下列規則的程式碼變動視為 Bug。
+
+### §2.1 交接點① 硬約束（P1 完美一致性）
+
+- **R1.1** P1 對五路交付**絕對均勻**的產物：🚫 不含 Abstract / LCC / Glossary、零翻譯。所有「需讀全文才能算」的衍生語境一律留給 P2。
+- **R1.2** Early Emit 只渲染扉頁標頭（Title / Author），**不含 Abstract**。前 2 頁物理提取、15 秒內早發寫庫搶跑渲染。
+- **R1.3** Glossary / LCC **全程不進 Phase 1**；LCC 由 P2 `DomainNormalizer` 產出。
+
+### §2.2 交接點② 硬約束（Glossary 凍結）
+
+- **R2.1** Glossary 在交接點② **一次凍結**，P3 純消費**不得再做提取 / 自癒**。
+- **R2.2** `translated_abstract` 已為目標語，前端摘要**一次到位即譯文、永不顯示未翻譯原文**（時序 Bug 由「摘要一次譯到位」消滅，而非「P1 早發原文」）。
+- **R2.3** 五條管線術語提取源**一律為全文 Markdown，嚴禁用摘要**（摘要漏詞會使同一專有名詞前後譯名不一致）；原文總摘要僅作自癒步驟的 `context` 語境。
+- **R2.4** Book 滾動例外（摘要與術語提取必須融於同一次 LLM 呼叫）**完整內聚於 P2，不外溢交接點**。
+
+### §2.3 交接點③ 硬約束（物理還原乾淨度）
+
+- **R3.1** 還原雙語 Markdown **嚴禁包含**任何非原著文字（AI Questions / 章節 Summary / 公式解析說明），確保 Print PDF 最乾淨版面。
+- **R3.2** Slides 投影片描述**強制對齊**為圖片 native alt text `![figure_desc](images/slide_XX.jpg)`，**嚴禁**在下方寫 `*圖表：desc*` 獨立段落（徹底消滅雙 Caption Bug）。<!-- === [PIPE-SYNC-3 C1 D3 START] === --> **跨軌契約（alt 特殊字元、RAG-12-HOTFIX-1 + HOTFIX-2 治本）**：`figure_desc`（→alt）可能含 LaTeX `$...$`（如氮循環圖 `$N_2$`/`$\text{NH}_4^+$`）或括號 `][()` → ① 前端 `renderMarkdownWithMath` **須於抽 math 之前保護 markdown 圖片整段**（`![...](...)`→佔位、marked.parse 前還原），使 alt 內 `$` 永不進 math 管線、避免 KaTeX HTML 注入 `alt="…"` 炸穿 `<img>` 級聯破版（RAG-12-HOTFIX-1）；② B 軌 P1 `_safe_alt` **將 alt 內 `][()` 全形化 + 換行→空白**，防 CommonMark `]` 提前閉合破圖（HOTFIX-2）。此為「B 軌 alt 產出 ↔ 前端渲染」之 handoff 不變式。<!-- === [PIPE-SYNC-3 C1 D3 END] === -->
+
+### §2.4 交接點④ 硬約束（RAG 解耦容錯）
+
+- **R4.1** RAG 建庫與 Chunks 批量落庫**完全非同步**；主鏈路（P1→P2→P3）在 `md_restore` 完成即解鎖 `reading_ready`，閱讀器與 Print PDF 100% 可用。
+- **R4.2** RAG 失敗時僅拋 warning + 標 paper 為 `rag_failed`，**不引發單點故障**；主鏈路不受影響。成功後 `rag_status = ready` 解鎖 AI Chat。
+- **R4.3** RAG 背景任務唯一輸入來源**硬性限制**為 Phase 3 乾淨 `translate` JSON（`extra_info` 已徹底廢除）。
+- **R4.4** Embedding 必須**批量化**（禁止 chunk 循環單次呼叫）；異常時指數退避重試（1s→2s→4s），3 次仍失敗則更新 `rag_status = failed`、寫錯誤狀態至 `index_meta.json`、不向上拋錯。
+
+### §2.5 Embedding 驅逐約束
+
+- **R5.1** Embedding 從 Ingestion 階段**徹底驅逐**；Ingestion / Glossary Prep / Translation 三階段 **0 次 Embedding 呼叫**，高度內聚於 Phase 4。
+
+### §2.6 References / 跳過約束
+
+- **R6.1** References 節點標記 `skip_translation = true`，直接複製原文，**0 ms、0 API 消耗**。
+
+---
+
+## §3 邊界條件與相容性限制（Edge Cases & Compatibility）
+
+### §3.1 RAG 字元門檻邊界
+
+- Academic / Book / LiteDoc：`_is_chunk_meaningful` 字元門檻 **≥ 10**。
+- Slides / Resume：放寬至 **≥ 3**，100% 保護 `Go` / `C++` / `AI` 等硬核技能詞不被誤殺；email / phone / url regex 保留不論長度。
+- 同 section 短 items（如技能列表）合併為單 Chunk，避免語意信號稀釋。
+
+### §3.2 領域 / 摘要 fallback 邊界
+
+- `detect_domain` 失敗 → 軟降級空 LCC，不中斷。
+- Academic 無摘要標題但有實質內容 → 寫入 Abstract；完全無摘要 → LLM 全文生成。
+- Resume `raw_domain` 由履歷專業領域推導（行銷→`H`、程式設計師→`QA`；因行銷與財務同字異譯須以領域別精準對齊）。
+- Slides 封面判斷 `is_cover == false` → 放棄提取 Title、`metadata.title` 置空，防正文首字誤判。<!-- === [PIPE-SYNC-3 C1 D4] === --> `is_blank == true`（空白/裝飾/過場頁，含有標題之過場頁）→ 跳過該單位（判定規則見 §1.3.1 第 4 原則）。<!-- === [PIPE-SYNC-3 C1 D4 END] === -->
+
+### §3.3 LiteDoc 15k 安全閥門
+
+- 全文 < 15,000 字元 → P3 100% Bypass Tiling 一鍵全翻。
+- 全文 ≥ 15,000 字元 → P3 自動降級回 Academic 大塊物理 Section 分組翻譯，防 LLM 輸出溢出崩潰。
+- 作為未知 doc_type 最後防線，最輕量最健壯。
+
+### §3.4 向下相容過渡方案（主鏈 P1–3 未改版時優先實施 P4 解耦）
+
+- `pipeline_core.py`：僅從 `STAGE_NAMES` 尾端刪 `extra_info` + `rag`，主同步鏈在 `md_restore` 後截斷返回，`output_paths['translate']` JSON 直作 RAG 輸入。
+- `RagProcessor` 自帶舊 JSON 相容：`_extract_abstract_summary()` 自適應遍歷舊 `sections` 找 `type == "abstract"`；`_restructure_sections` 以 `node.get("summary", "")` 安全取空值，缺 summaries 不崩潰，降級直接向量化原文。
+- `web_server.py` 四步改造：主鏈同步返回 → 解鎖 `reading_ready` → 拋 `background_tasks.add_task(run_async_rag, ...)` → 背景完成更新 `rag_status = ready` + `load_paper_resources`。
+
+### §3.5 影子並行相容性（Shadow Launch，Flip 後全數移除）
+
+- A 軌舊單體 / B 軌新 `PipelineCore(shadow=True)`，**共享同一 SQLite 與 output 目錄**。
+- 物理隔離靠**資料層後綴**（非程式命名）：`paper_id` 尾加 `_shadow`（獨立 row + `output/*_shadow/` 子目錄）；Resolved Title 尾加 ` (測試)` 後綴（前端肉眼區分）。
+- `SHADOW_LAUNCH_ENABLED`（預設 `false`）env 一鍵開關；出問題只跑 A 軌、線上 0 風險。
+- 既有 `list_papers` / `get_paper` / `delete_paper` API **零改動**自動納管影子 row。
+- **命名鐵律**：新五路第一天即用最終正式名（靠模組物理隔離區分），絕不用 `_v2`/`New`/`Shadow` 污染前後綴，確保 Flip 後零改名、零 import 連鎖 regression。
+- **絞殺順序**：Resume → Visual → Academic → LiteDoc → Book，每路跨完整四 Phase，Golden Baseline Diff 0% 退化才 Flip the Switch（移除 web_server dual-dispatch + 影子旗標 + 下線舊單體）。
+
+### §3.6 既有計畫對齊邊界
+
+- `GLOSSARY-CORE`（中度修改）：內聚於每路 Phase 2。
+- `TRANSLATE-BOOK`（中度修改）：內聚於 Book 路 Phase 2（滾動摘要/術語）+ Phase 3（故事板正文翻譯）。
+- `API-PERF`（輕度修改）：基建前置；監控埋點改為對物理四 Phase 計時；`PIPELINE_SEMAPHORE` 套用新 PipelineCore。
+- `QUEUE-1`（重構性廢除）：Early Emit + RAG 異步化 + API-PERF Semaphore 已覆蓋其職能，收官清除。
+
+---
+
+## §4 變動歷程（Change Log）
+
+| 日期 | 版本 | 變更描述 | 影響範圍 |
+|---|---|---|---|
+| 2026-06-03 | v2 | 同步更新 DomainNormalizer 規格：實施自適應內容領域判定與資料庫動態領域註冊，新增 `Domains` 註冊表與 `DomainMapping` 快取對照，支援複合文檔（如履歷）按技能實質分類 | DomainNormalizer 介面與行為、資料庫 Schema |
+| 2026-06-01 | v1 | 由 `PipelineCore_流程重構_整理版.md` 轉制為 SPEC：凝煉 §1 四份凍結合約 + 三大共用真理源 + 策略管線契約 + RAG Schema、§2 行為硬規則、§3 邊界與相容性 | PIPE-1 ~ PIPE-11 全系列規劃之介面真理源 |
+
+---
+
+## §99 治理規格
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| 目的 | 凍結 PipelineCore 大改版四 Phase 交接合約 / 三大共用真理源 / 策略管線契約 / RAG 落庫 Schema；作為 PIPE-1~11 各階段 plan 規劃的權威介面參考 |
+| 用途 | 規劃任一 PIPE-N plan 時引用本 SPEC §1 介面定義 + §2 行為合約；實作不符以本 SPEC 為準 |
+| 權威源 | 本檔 §1–§3 |
+| 引用方 | `2026-06-01_PIPE_PipelineCore流程重構大改版_plan_v1.md`（戰略總綱）/ PIPE-SCAFFOLD / PIPE-RESUME 等各階段 plan |
+| 被引用方 | `<由 Antigravity 自動掃描注入>` |
+| 約束事項 | 實作程式碼必須與本規格 §1/§2 保持 100% 一致；任何未經本 SPEC 修改的介面變動視為 Bug；本 SPEC 僅專注技術介面與行為合約，開發工作流規格一律引用 WORKFLOW_SOP.md，不重寫 |
+| 改版觸發條件 | 四份合約欄位變動 / 三大真理源簽名變更 / 策略管線契約調整 / RAG Schema 變動 |
+| 改版規則 | 直接修改對應章節 + §4 Change Log 加列 + §99.2 加 Revision |
+| 刪除條件 | Flip the Switch 收官且大改版全數落地後，評估是否降級為歷史檔（非自動刪除） |
+| 重複防護 | 完整 Mermaid 設計脈絡與五路逐 Phase 時序細節原始源為本檔；工作流 / 六階段觸發鏈唯一源在 WORKFLOW_SOP.md；工作目錄規則唯一源在 CLAUDE.md §3 |
+
+### §99.2 Revision 歷程
+
+- v8 (2026-06-19)：PIPE-SYNC-4 C2 SPEC 回灌（litedoc + section_engine 落地經驗、依 PIPE-SYNC-4 plan v3）——(1) **D5** 新增 **§1.2.5 `section_engine` 契約章**（三簇介面〔摘要／翻譯還原〔`restore_sections_markdown` 回 `(md,slots,zh_by_index)`、引擎不知 rag〕／rag 旁路+meta header〕+ 四鐵律〔零 doc_type 字面量／接縫 key＝原文標題 path／Zero Schema Coupling／restore 不產 rag 副作用〕、consumer resume/litedoc）；(2) **D5b** 新增 **§1.2.4 `MetaNormalizer` 契約章**（`normalize_fields` 旗標閘門 + 三路分流〔reserved BS1／黑名單 Q9／canonical 註冊 BS4·temp=0〕 + MetaField/MetaFieldAlias schema + LLM 交易外/`on_conflict` 冪等、consumer slides/litedoc、為 INFRA-4 鋪規格）；(3) **D6** §1.1.1 raw_metadata 旁路登記補 litedoc（date/url/publisher/translated_title 三欄 dict）；(4) **D7** §1.2 標題「三大共用真理源」→「共用真理源**家族**」+ §0.3 三度對稱段增家族 roster（原始三大 + MetaNormalizer 第 4 + section_engine 第 5）；(5) **D8** 本 Revision。HTML 註解包裹；**D8.1 不改項逐字守 .bak 原值**：§1.3 L140〔news/web/未知 fallback〕／§3.3 15k／§2·§3.1 ≥10／四凍結合約結構皆未動；不 bump 檔名。〔**RESCUE-1 C2 重建**：本 v8 本體隨舊 worktree 刪除遺失，依 v7 `.bak` + PIPE-SYNC-4 C2 執行報告 D5-D8.1 + 對照現役 `section_engine.py`/`meta_normalizer.py` 重建；D5/D5b 契約章為重寫、**非 byte-identical**；D8.1 不改項與 v7 `.bak` 逐字一致〕
+- v7 (2026-06-14)：PIPE-SYNC-3 C1 SPEC Sync（slides 路落地經驗回灌、依 PIPE-SYNC-3 plan v3）——(1) **D1** §1.3 表 `SlidePipeline` P3「100% Bypass 一鍵」**矯正為「逐頁翻譯與排版還原」**（PIPE-SLIDES C4 落地、消 SPEC↔master plan↔現實三方矛盾）+ **D5** 同列一行帶過「P3 含 slides 專屬排版噪聲清洗層」；(2) **D2** §1.3.1 #3 後補 **golden A/B 軌權威釐清**（`capture` 一律捕 A 軌舊單體、B 軌變更不需/無法經 capture 重捕、走影子 E2E + diff A 軌 golden；PIPE-SLIDES-HOTFIX-6 回溯更正進真理源）；(3) **D3** R3.2 後補 **alt 特殊字元跨軌契約**（alt 含 LaTeX/`][()` → 前端 renderMarkdownWithMath 抽 math 前保護圖片整段〔RAG-12-HOTFIX-1〕 + B 軌 `_safe_alt` 全形化〔HOTFIX-2〕）；(4) **D4** §1.3.1 新增**第 4 原則「頁面類型判定 is_cover/is_blank 供過濾」** + §1.2 Slides is_cover 處一句指回（is_blank 跳過；HOTFIX-4/5）；(5) **D6** §1.1 新增 **§1.1.2 `PipelineContext.rag_sections`（P3→P4 旁路欄、五路共用、對稱 §1.1.1 raw_metadata）**（RAG-ASYNC C6；治本真 P3→P4 RAG 交接物未在旁路登記表）；(6) **D7** §1.1③「對應 JSON 節點」點名 `rag_tree_json` 可選欄（對齊 contracts.py）。HTML 註解包裹；**四凍結合約型別欄位結構零變動、不改 contracts.py 程式**；不 bump 檔名。
+- v6 (2026-06-11)：PIPE-SYNC-2 C2 SPEC Sync（依 PIPE-SYNC-2 plan v1〔v1.2〕）——(1) **U3** §1.1② + §1.4.1 凍結 `section_summaries` **key 接縫契約**（key＝原文標題 path；P2 產 `_collect_summary_targets`／P3 帶 slot `key`→`summary_key`／P4 取 `_walk` 首選 `summary_key` 三方同基準；譯後 title 僅顯示；措辭權威源 WORKFLOW_SOP §7.1；RAG-ASYNC-HOTFIX-1 治本）；(2) **U4** §1.2.3.1 後補 **zh 來源（source_lang=zh）五路通用 edge path 規格**（跳過翻譯仍建 per-section rag_sections、無 section 退兜底；HOTFIX-3 治本）；(3) **U5** 新增 **§1.3.1 Vision 解析共用規格**（忠實轉錄鐵律／`LLM_VISION_TEMPERATURE=0`／非確定性殘餘註記；resume/slides 共用、Schema 級約束留 PIPE-VISUAL；VISION-HOTFIX-1）；(4) **U6** ④ 合約樣例 `embedding_model` 更正 `gemini-embedding-001`（MODEL-11、不可混庫）；(5) **U7** §1.4.1 補 rag_tree.json 由 `rag_indexer.build_rag_tree` 自建＋④ 輸出完整性四產物（HOTFIX-2 治本）；(6) **U8** §1.3 resume P1 欄補 opt-out TextTiling 註；(7) **U9** §1.2.3.1 補編排受限並行句（RESUME-PERF-1）；(8) **U10** §1.3 resume 行尾補還原細則三件套。HTML 註解包裹；四凍結合約欄位結構零變動；不 bump 檔名。
+- v5 (2026-06-08)：RAG-ASYNC C1 規格同步（依 RAG-ASYNC plan v2）——(1) §1.1② `GlossaryReadySpec` 以**五路通用節點摘要 `section_summaries`（`Dict[node_key,str]`、繁中、P2 產出）取代 Book 專用 `chapter_summary`**（section≡chapter 同為文件樹節點、收斂單一欄）；(2) 新增 **§1.4.1 chunk 來源與物理分塊**（`{section_summary}` 來源＝P2 `section_summaries`；chunk md 由 P4 自有索引引擎依 P3 結構自生、非餵閱讀 md；物理分塊改**二段式 header augment + size-cap 子切**、修書籍大章超大 chunk 弱點；索引引擎為 B 軌共用真理源、零依賴 A 軌 `rag_processor`）；(3) §1.3 resume 列 P3「100% Bypass 一鍵」**更正為「逐 heading section 翻譯 + 退化 fallback」**（修 RESUME-P3 落地後 doc-drift）。HTML 註解包裹標記變動處。
+- v4 (2026-06-05)：PIPE-RESUME v9 影子整合對齊（純擴充、不動既有四凍結合約欄位/簽名）——(1) §1.1 補 **§1.1.1 `PipelineContext.raw_metadata`**（DB 持久化旁路欄、五管線共用：完整原始 metadata 走此可變欄供 `Paper.metadata_json`、對齊 A 軌 `upsert_paper` 保真、取代 custom_metadata-in-Spec、非凍結合約欄）；(2) §1.2.3 補 **§1.2.3.1 翻譯策略隔離原則**（共用 Translator 引擎 + 各路 `run_phase3` 自建 `InjectionContext.constraints` 逐路注入業務規則、禁各路 fork prompt/核心）。對齊 PIPE-RESUME plan §99.2 v9-v11 與母 plan v11。
+- v3 (2026-06-04)：對齊 TRANSLATOR plan 拍板，凍結合約補欄位/簽名（純擴充、不動既有語意）——(1) §1.2.3 `InjectionContext` 補 `domain_name`（P2 預解析領域名〔=`Domains.name`，**英文** LCC 名，例 `"Mathematics"`；L109 描述已由「中文名」正名為「英文名」與 §1.1② 一致〕，Translator 直讀、嚴禁逐段查 DB）與 `doc_type`（文體 Style Hints；解 `extra="forbid"` 分歧）；(2) §1.1 ② `GlossaryReadySpec` 補 `domain_name`（P2→P3 凍結載體：P2 一次性 `lcc→Domains.name` 唯讀解析、物理封存供 P3 建構 `InjectionContext` 免再查 DB，消除載體斷層）；(3) §1.2.3 `translate()` 簽名補 `text_type: str = "content"`（本次呼叫屬性、不入 InjectionContext；決定底層提示詞檔與 User Prompt 格式）；(4) §1.2.3 `zh_summary` 描述統一為「中文上下文摘要（依管線：全文宏觀 or 逐章故事板）」，對齊 BOOK 逐章故事板實際用法。
+- v2 (2026-06-03)：同步更新 DomainNormalizer 規格，調整 `normalize_to_lcc` 介面簽名與行為合約，全面對齊 `DOMAIN-NORM_plan_v2.md` 之動態領域註冊與內容分類規格。
+- v1 (2026-06-01)：PIPE-SPEC 初版——由 `PipelineCore_流程重構_整理版.md` 轉制凝煉為 template_specification 結構（§0 概念模型 / §1 介面定義 / §2 行為合約 / §3 邊界相容 / §4 Change Log / §99 治理）。原 1103 行設計戰略文件之介面契約、行為硬規則、邊界條件全數保留並結構化；舊流程剖析與全局實施路線圖（縱向五路絞殺）保留要點供脈絡參考。
