@@ -1,7 +1,8 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-02（CHECKOUT-GUARD Check）
+最後更新：2026-07-07（RESCUE-1 C1 Run）
 
+- 2026-07-07 — `2026-07-07_RESCUE-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：RESCUE-1 救援 C1——QUEUE-1 v2〔MinerU 雙實例 CFS 物理分流〕存活本體逐字保全留置主 repo baton、新增 `archive/2026-07-01_RESCUE-1_C1_QUEUE-1_v2_plan.md.bak` tracked 審計副本〔U1+U6·防再遺失閘門〕;**deviation**：run 提示詞 paraphrase 稱「複製進 worktree」屬 stale〔worktree 已廢棄〕、改依 tasks.md §8 於主 repo 就地執行、本體不 mv/不改·byte 9890 不變;TODO C1→done/C2→WIP + hash 自癒;執行報告暫存 baton）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 五維度〔目標規格 U1-U6 / tasks §6 grep 實檔複驗 / 不可動 / 提示詞版控稽核 / msg 草稿〕全綠 → TODO 結案〔C1/C2/checkout hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔;**首次 dogfood checkout 執行報告鐵律**〔產 executions/…_checkout_執行.md 含 staged 自檢輸出〕;CHECKOUT-GUARD 全案結案）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C2_run_提示詞.md`（C2 Run·DOC-Refactor：三模板落地 WORKFLOW_SOP §3 鐵律——`template_prompt_for_run.md §8`+`template_execution.md §8` 加「逐檔·禁 `git add .`/`-A`/`<目錄>`」+ `template_prompt_for_check.md` 收官新增「commit 前 `git diff --cached` staged 自檢」步驟 + mandate 產保存 `_checkout_執行.md`;既有 Conformance 五維度/三防線結構零改·3 .bak·baton 過程檔嚴禁 git add）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C1_run_提示詞.md`（C1 Run·DOC-Refactor：`ref/WORKFLOW_SOP.md §3` 新增兩鐵律〔收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢·反例錨 FE-PERF-1 混檔〕+ checkout 執行報告鐵律〔必產保存 executions/…_checkout_執行.md〕〕+ §99.2 v6;五類定義本體零改·.bak 備份·baton 過程檔嚴禁 git add）
@@ -21,6 +22,7 @@
 ### RESCUE-1 系列（遺失治理文件挽救）
 - 🟡 **RESCUE-1 遺失治理文件挽救（2026-07-01 plan v1.2 → Tasks·DOC-Refactor·舊 worktree 刪除致 baton 文件遺失之機械救援）**
   - `2026-07-01_RESCUE-1_Tasks_提示詞.md` — Tasks（依 plan v1.2 拆 5 commit：C1 QUEUE-1 v2 救回〔逐字保全 + archive .bak 審計〕/ C2 PIPE-SPEC v8 重建〔v7 .bak 基底 + C2 執行報告 D5-D8.1 + 對照現役 section_engine/MetaNormalizer code·D8.1 不改項逐字守·非 byte-identical〕/ C3 MODEL-10 殘留 mv→archive / C4 TODO 失效引用總修正 + 2026-06 遺失清單尾註 / C5 Checkout；工作目錄改主 repo〔授權限 .claude-logs/{baton,archive}+TODO.md〕;Q1-Q6 已定案;§7.2 純 DOC 豁免）
+  - `2026-07-07_RESCUE-1_C1_run_提示詞.md` — C1 Run（QUEUE-1 v2 存活本體逐字保全留置主 repo baton + `archive/…C1_QUEUE-1_v2_plan.md.bak` 審計〔U1/U6〕;deviation：run paraphrase「複製進 worktree」stale、依 tasks.md §8 主 repo 就地執行;byte 9890 不變·git check-ignore baton 排除;TODO C1→done/C2→WIP + hash 自癒）
 
 ### META-NORM 系列
 - ✅ **META-NORM 封面元數據自癒飛輪與動態欄位登記（2026-06-11 plan → Tasks → C1-C6 → C7 收官·BE-Refactor·解 PIPE-SLIDES C+D）**

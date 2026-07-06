@@ -1,0 +1,167 @@
+# QUEUE-1 雙實例 CFS 物理分流與協同避讓調度 plan
+
+> **本文件為 QUEUE-1 任務的改版規劃書（階段 1 產出）。**
+> 針對大型書籍解析任務長時間阻塞小型文件（論文、履歷）解析的「隊頭阻塞」阻斷性問題，確立 Client 端（`pdf_processor.py` 封裝內部）動態頁數檢測與雙埠分流路由、宿主機雙容器 cgroups cpu_shares CFS 時間片內核搶佔、以及 `mineru_SOP_手冊.md` 的全新運維更新規格。
+
+---
+
+## §0 改版規則
+
+- 改版觸發：§1–§7 任一規格條款變動
+- 改版規則：直接修改對應章節 + §99.2 加 Revision 紀錄
+- 完整治理規格 → §99
+
+---
+
+## §1 TL;DR（概要）
+
+- **挑戰**：單通道模式下，一本 300 頁的大書送入推理後，會強佔 CPU 推理通道 10–20 分鐘。後續進來的小檔案（如 1 頁履歷）即使在 Client 端 Queue 裡拿到第一名，也會因為唯一工作通道被強佔而死等。若強制併發，又會造成 CPU 爭奪，大家都變慢且極易引發 OOM 卡死。
+- **解法**：實施**雙實例 Docker + Linux 內核 CFS 權重調度（物理雙通道搶佔）**。
+  - **GCP 宿主機端**：在 `docker-compose.yml` 中配置兩個實例：`mineru-interactive` (Port 8000, 優先級時間片 `cpu_shares: 1024`) 與 `mineru-batch` (Port 8001, 優先級時間片 `cpu_shares: 128`，相差 8 倍)。
+  - **應用 Client 端 (`pdf_processor.py`)**：在 `process()` 方法第一步，使用 `PyMuPDF (fitz)` 在 0.01 秒內無損讀取 PDF 總頁數，將其完全封裝在其獨立模組內部。依據頁數動態分流：頁數 < 10 路由至 Port 8000；頁數 ≥ 10 路由至 Port 8001。
+  - **SOP 運維更新**：更新 `sop/2026-05-27_mineru_SOP_手冊.md`，載明雙實例與 Linux 內核 CFS 調度規格。
+  - **測試防線**：在單元測試中新增針對高優先/低優先雙埠動態路由與防崩潰自愈的 Mock 測試案例。
+- **影響**：BE-Refactor 工作流（包含 `pdf_processor.py`、單元測試、SOP 手冊、.env.example）；上游 `pipeline_core.py` 與 `web_server.py` **100% 無感知、無改動**；零資料庫 Schema 影響。
+
+---
+
+## §2 目標規格
+
+### 2.1 應用端頁數檢測與動態路由（`pdf_processor.py` 內部封裝）
+* **無損頁數檢測**：在 `process()` 方法最早期，使用 `fitz.open(pdf_path)` 以唯讀模式在 0.01 秒內精確讀取 PDF 的 `total_pages`。
+* **防禦性自愈**：包裹 `try-except` 容錯塊。若讀取頁數拋出任何 Exception，`logger.warning` 警告提示，並安全 fallback `total_pages = 999`（自動路由至低優先級通道，保證服務永不崩潰）。
+* **動態埠路由與重組**：
+  - 從 `.env` 中讀取 `MINERU_PORT_INTERACTIVE`（預設 `8000`）與 `MINERU_PORT_BATCH`（預設 `8001`）。
+  - 若 `total_pages < 10` ➡️ 路由埠為 `8000`；若 `total_pages >= 10` ➡️ 路由埠為 `8001`。
+  - 使用 `urllib.parse.urlparse` 解析配置的 `self.MINERU_API_URL`，動態將其 netloc 中的 Port 替換為路由後的目標埠，組裝出最終的 `actual_api_url` 送出請求。這保證了向後相容性與環境配置彈性。
+
+### 2.2 宿主機端雙實例與 CFS 時間片調度規格
+* **實體實例雙開**：宿主機 GCP 同時運行兩個獨立 MinerU 容器，分別監聽 `8000` 與 `8001` 埠，以物理分流消除「隊頭阻塞」。
+* **內核搶佔配置（cgroups cpu_shares）**：
+  - 互動高優先實例（8000）配置 `cpu_shares: 1024`。
+  - 批次低優先實例（8001）配置 `cpu_shares: 128`。
+  - 運行調度效果：當高優先實例閒置時，低優先實例可 **100% 全速** 榨乾 CPU 資源大書推理。一旦高優先實例（8000）收到 10 頁內的小檔請求，Linux CFS（Completely Fair Scheduler）時間片調度器將瞬間把 **85% 以上的 CPU 運算時間分配給互動實例**，將大書推理壓縮掛起。小檔 15 秒內極速跑完，隨後大書自動獲得 100% 資源無損恢復。
+
+### 2.3 SOP 手冊與配置更新規格
+* **SOP 物理更新**：修改正式目錄下的 `.claude-logs/sop/2026-05-27_mineru_SOP_手冊.md`，追加以下内容，更新後總行數必須嚴格控制在 **250 行** 以內：
+  - **§1 配置表**：追加 `MINERU_PORT_INTERACTIVE` 與 `MINERU_PORT_BATCH` 的變數配置表。
+  - **新增 §3 雙 Docker 容器與內核 CFS 權重調度（🔥 終極搶佔）**：詳載宿主機 `docker-compose.yml` 配置規格，說明 CPUshares 內核 CFS 分配原理，並附帶對應的 `docker inspect` 等 cgroups 核查指令。
+  - **§6 容器卡死釋放**：擴增為雙埠健康檢查與雙容器獨立重啟維運命令。
+  - **§99.2 Revision**：追加 `v3 (2026-05-29)` 歷程紀錄。
+* **.env.example 更新**：追加雙埠環境變數說明與預設值。
+
+### 2.4 單元測試規格
+* **埠分流與自愈測試覆蓋**：在 `tests/test_pdf_processor_timeout.py` 中新增 3 個專屬測試案例：
+  - `test_route_to_interactive_port_when_pages_less_than_10`：Mock 5 頁的 PDF，斷言發送請求 API 的 Port 為 8000。
+  - `test_route_to_batch_port_when_pages_greater_than_or_equal_to_10`：Mock 15 頁的 PDF，斷言發送請求 API 的 Port 為 8001。
+  - `test_route_fallback_to_batch_on_page_read_exception`：Mock 讀取頁數時拋出異常，斷言不崩潰且安全 fallback 使用 Port 8001。
+
+---
+
+## §3 現況與證據
+
+### 3.1 程式碼現況
+- **`processor/pdf_processor.py`**：
+  - 目前 API URL 統一使用寫死的 `self.MINERU_API_URL` 屬性，無視檔案大小，且並未引入頁數檢測邏輯。
+- **`.claude-logs/sop/2026-05-27_mineru_SOP_手冊.md`**：
+  - 手冊目前為 216 行，全篇皆基於「單一實例」進行運維與排障。
+
+### 3.2 grep 鋼鐵證據
+
+```bash
+# 1. 核查當前 pdf_processor.py 中的 API URL 發送方式
+grep -n "MINERU_API_URL" processor/pdf_processor.py
+# 輸出：26:         self.MINERU_API_URL = os.getenv("MINERU_API_URL", "http://localhost:8000/file_parse")
+# 輸出：67:                     self.MINERU_API_URL,
+
+# 2. 核查當前 SOP 手冊中關於埠的配置（目前只配置了 8000 單埠說明）
+grep -n "8000" .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md
+# 輸出：22: | `MINERU_API_URL` | `http://localhost:8000/file_parse` |
+# 輸出：167: curl -s http://localhost:8000/health || echo "API 尚未就緒，稍候重試"
+```
+
+---
+
+## §4 不可動清單
+
+明確劃定修改邊界，防止修改邏輯溢出。**以下檔案與邏輯在本次修改中嚴禁任何改動：**
+
+- [ ] `pipeline_core.py` 的 `_stage_pdf_to_md` 控制流與 doc-type 分流路由邏輯 — 100% 不可碰觸，維持上游完全無感知。
+- [ ] `web_server.py` 的上傳與解析端點介面簽名 — 100% 不可碰觸。
+- [ ] `models.py` 的資料庫 Schema 表結構 — 100% 不可碰觸。
+- [ ] `processor/pdf_processor.py` 的 `_copy_images` ZIP 圖拷貝優先級 1 核心解壓邏輯 — 100% 不可碰觸。
+
+---
+
+## §5 規格依據
+
+| 依據名稱 | 來源位置 |
+|---|---|
+| 任務原始設計與雙埠討論方案 | 雙實例 CFS 物理分流拍板方案 |
+| 任務生命週期與暫存鐵律 | `ref/WORKFLOW_SOP.md §3` |
+| 專案防 Regression 管制 | `ref/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md §7` |
+
+---
+
+## §6 驗證計畫
+
+### 6.1 自動化單元測試
+* **新增測試執行**：
+  ```bash
+  # 執行新增的頁數動態分流與防崩潰 Mock 測試，預期 3 passed
+  venv/bin/python -m pytest tests/test_pdf_processor_timeout.py -k "route" -v
+  
+  # 執行 Timeout 加上 Route 測試，預期 7 passed (原 4 + 新增 3)
+  venv/bin/python -m pytest tests/test_pdf_processor_timeout.py -v
+  
+  # 執行全套單元測試，預期 386 passed (新增 3)，確保零 regression 影響
+  venv/bin/python -m pytest tests/ -q
+  ```
+
+### 6.2 手動驗證流程（SOP 文件與正則核查）
+1. **SOP 總行數核查**：
+   ```bash
+   wc -l .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md
+   # 預期：總行數 ≤ 250 (目前 216 行，預估更新後控制在 245 行內)
+   ```
+2. **正則 IP 洩漏與結構核查**：
+   ```bash
+   # 確保 §0 / §99 結構完整
+   grep "^## §0\|^## §99" .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md
+   # 確保無硬編碼 IP 洩漏（應為 0 行命中）
+   grep -n "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md
+   ```
+3. **SOP 雙埠與 CFS 時間片配置核查**：
+   ```bash
+   # 確保 8000 與 8001 的埠配置與 cpu_shares 規格字樣出現在手冊中
+   grep -E "8000|8001|cpu_shares|shares" .claude-logs/sop/2026-05-27_mineru_SOP_手冊.md
+   ```
+
+---
+
+## §7 Open Questions
+
+無。（Client 端 PyMuPDF 頁數分流路由與 Server 端 Docker-shares cgroups CFS 底層搶佔相結合，在 CPU 推理限制下為當前工程實踐的唯一完美解。）
+
+---
+
+## §99 治理規格與 Revision
+
+### §99.1 治理規格表
+
+| 維度 | 內容 |
+|---|---|
+| **目的** | 定義 QUEUE-1 任務的目標技術規格，作為後續 tasks 拆分與原子執行的唯一基準 |
+| **用途** | 供 baron 審查並在 tasks.md 拆分時引用；Antigravity 階段 3 驗證時引用 |
+| **權威源** | 本檔 §1–§7 |
+| **引用方** | 後續 QUEUE-1 tasks / 執行報告 |
+| **被引用方** | <由 Antigravity 自動掃描注入> |
+| **約束事項** | 嚴禁含設計演進歷史與拍板過程；嚴禁含 commit 拆分（屬 tasks 階段）；暫存於 baton/ 不入版控 |
+| **改版觸發條件** | §1–§7 任一規格條款變動 |
+| **改版規則** | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
+| **刪除條件** | 任務全部完成，經 baron 同意且歸檔至 archive/ |
+| **重複防護** | 僅定義技術規格，工作目錄與流程規格一律引用 CLAUDE.md / WORKFLOW_SOP.md |
+
+### §99.2 Revision 歷程
+
+- v1 (2026-05-29)：初版建立（QUEUE-1）

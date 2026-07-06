@@ -17,7 +17,7 @@
 |---|---|---|
 | C1 | Rule Authoring：`WORKFLOW_SOP §3` 新增兩鐵律〔**收官 git-add 白名單鐵律**〔逐檔顯式·嚴禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached --name-only` 自檢 staged＝宣告清單·多/少一檔即停·反例錨 FE-PERF-1 混檔〕+ **checkout 執行報告鐵律**〔必產保存 `executions/…_checkout_執行.md` 含 Conformance 五維度+staged 自檢輸出〕〕+ §99.2 v6·五類定義/文書類別/命名/§7 零改 | `81179d8` |
 | C2 | Template Propagation：三模板落地——`template_prompt_for_run §8`+`template_execution §8` 加「逐檔·禁廣義 add」+ `template_prompt_for_check` 收官新增「第五步 commit 前 staged 自檢」+「第六步 mandate `_checkout_執行.md`」〔既有 Conformance 五維度/三防線/L126 結構零改·3 .bak〕 | `dbd6d24` |
-| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U6 實檔複驗 / tasks §6 grep / 不可動〔零 .py/static·WORKFLOW_SOP §1/§2/§4-7 未動·三模板既有結構未動〕 / 提示詞 plan+Tasks+C1+C2+Check 五份逐檔入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + **首次 dogfood checkout 執行報告鐵律**〔產 `executions/…_checkout_執行.md` 含 staged 自檢輸出·排除 RESCUE-1 未追蹤檔〕+ baton 一次性歸檔 + hash 自癒 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔目標規格 U1-U6 實檔複驗 / tasks §6 grep / 不可動〔零 .py/static·WORKFLOW_SOP §1/§2/§4-7 未動·三模板既有結構未動〕 / 提示詞 plan+Tasks+C1+C2+Check 五份逐檔入 git / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + **首次 dogfood checkout 執行報告鐵律**〔產 `executions/…_checkout_執行.md` 含 staged 自檢輸出·排除 RESCUE-1 未追蹤檔〕+ baton 一次性歸檔 + hash 自癒 | `eb2b381` |
 
 > **修法依據**：`.claude-logs/plans/2026-07-02_CHECKOUT-GUARD_收官git-add白名單鐵律_plan_v1.md`（v2、§9 六 OQ + 範圍補強〔納 run 模板〕+ Q6〔checkout 報告〕全 🟢 定案）
 > **動因**：FE-PERF-1 收官期 WORKFLOW-5 未追蹤歸檔被廣義 `git add` 掃入 C1 commit（跨任務混檔）→ 賴 `pre-fe-rebuild` 備份後歷史重寫方淨化；根因＝WORKFLOW_SOP §3 與三模板 §8 未禁廣義 add、無 commit 前 staged 自檢；並附帶治「checkout 輪有時未產執行報告」（template_execution L126 假設存在、template_prompt_for_check 未 mandate 之落差）。
@@ -1040,8 +1040,8 @@
 ### 🔴 高優先
 
 - 🟡 **RESCUE-1 遺失治理文件挽救**（`.claude-logs/baton/2026-06-28_RESCUE-1_遺失治理文件挽救_plan_v1.md`）
-  - [/] 🟡 WIP: C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）
-  - [ ] ⬜ 未開始: C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）
+  - [x] ✅ C1 — Restore Queue v2（還原 QUEUE-1 v2 雙實例排程計畫）〔QUEUE-1 v2 存活本體逐字保全 9890 bytes + archive `.bak` 審計副本;deviation：依 tasks §8 主 repo 就地執行〕
+  - [/] 🟡 WIP: C2 — Rebuild PIPE-SPEC v8（重建共用真理源規格書 v8）
   - [ ] ⬜ 未開始: C3 — Purge MODEL-10 Residue（清理已收官殘留）
   - [ ] ⬜ 未開始: C4 — TODO Reconciliation（TODO 狀態與遺失清單總修正）
   - [ ] ⬜ 未開始: C5 — Checkout（收官與歸檔）
