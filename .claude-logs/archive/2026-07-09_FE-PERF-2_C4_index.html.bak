@@ -8,9 +8,6 @@
 <!-- === [FE-PERF-2 C1] === marked 9.1.6 自託管（原 CDN 同版換源、離線/GFW 零跨源依賴、比照 KaTeX vendored；defer 屬 C2） -->
 <script src="/static/vendor/marked/marked.min.js" defer></script>
 <!-- === [RAG-12 C1] === 自託管 KaTeX 0.16.47（前端數學渲染、離線/GFW；接線見 RAG-12 C2/C3） -->
-<!-- === [FE-PERF-2 C4] === KaTeX 兩支核心字型 preload（preload scanner 於 CSSOM 建成前即抓、消公式字型 FOUT/版跳；僅此二支、防無公式頁過度預載） -->
-<link rel="preload" href="/static/vendor/katex/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/static/vendor/katex/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
 <script src="/static/vendor/katex/katex.min.js" defer></script>
 <!-- === [RAG-12 C1 END] === -->
@@ -1016,9 +1013,6 @@
     margin-top: var(--space-5);                                      /* 首個 QA 組補回頂部留白（RAG-14）*/
   }
   .msg-user {
-    /* [FE-PERF-2 C4] 視窗外訊息跳過 layout/paint；auto 記憶尺寸防上捲跳動（U8·Safari 18+ 基線內） */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 120px;
     background: var(--color-accent);
     color: #fff;
     padding: var(--space-3) var(--space-4);
@@ -1045,9 +1039,6 @@
     51%, 100% { opacity: 0; }
   }
   .msg-ai {
-    /* [FE-PERF-2 C4] 視窗外訊息跳過 layout/paint；auto 記憶尺寸防上捲跳動（U8·Safari 18+ 基線內） */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 120px;
     position: relative;
     background: var(--color-bg);
     color: var(--color-text);
@@ -1833,7 +1824,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🟢 RAG-13-HOTFIX-1：若滾動源自彈出選單內部，則忽略，防止誤判關閉
     if (e.target.closest && e.target.closest('.ctx-popup')) return;
     closePopups();
-  }, { capture: true, passive: true }); // [FE-PERF-2 C4] passive（handler 無 preventDefault、不阻塞合成滾動）
+  }, true);
   window.addEventListener('resize', closePopups);
 
   // ── 點論文 item 切 active ─────────────────────
@@ -1970,7 +1961,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, HIDE_DELAY);
       }
     });
-    window.addEventListener('scroll', hideNow, { capture: true, passive: true }); // [FE-PERF-2 C4] passive
+    window.addEventListener('scroll', hideNow, true);
     window.addEventListener('blur', hideNow);
   })();
 
