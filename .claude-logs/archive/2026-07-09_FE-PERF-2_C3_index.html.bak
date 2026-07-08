@@ -1674,45 +1674,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // === [RAG-12 C2 END] ===
 
-  // === [FE-PERF-2 C3] === 串流渲染節流器（plan v4 U1/Q1/Q2）
-  // rAF + 最小間隔 160ms：sentence 高頻抵達時每 ~160ms 才全量重排一次（穩態 ≤6-7 次/秒），
-  // 消除「每 token renderMarkdownWithMath + innerHTML + 讀 scrollHeight」之 O(n²) 熱路徑。
-  // 出口契約（U1 收尾不變式·恰一次）：主串流 done/catch → flush()〔原碼 done 不渲染〕；
-  // replay done/onerror → cancel()〔原碼 done 自帶收尾渲染、嚴禁再 flush 防雙渲染〕。
-  // paintFn 按站點封裝（replay 含 cursor 語意）；scrollTop 於 paintFn 內與渲染同幀（Q2）。
-  function makeThrottledRenderer(paintFn) {
-    let latest = null, timer = 0, raf = 0, last = 0;
-    const MIN = 160; // ms（Q1 定案）
-    function paintNow() {
-      raf = 0;
-      last = performance.now();
-      if (latest !== null) { const t = latest; latest = null; paintFn(t); }
-    }
-    function schedule() {
-      if (raf) return;
-      const wait = Math.max(0, MIN - (performance.now() - last));
-      if (wait === 0) {
-        raf = requestAnimationFrame(paintNow);
-      } else if (!timer) {
-        timer = setTimeout(() => { timer = 0; raf = requestAnimationFrame(paintNow); }, wait);
-      }
-    }
-    return {
-      update(t) { latest = t; schedule(); },
-      flush() {
-        if (timer) { clearTimeout(timer); timer = 0; }
-        if (raf) { cancelAnimationFrame(raf); raf = 0; }
-        if (latest !== null) { const t = latest; latest = null; last = performance.now(); paintFn(t); }
-      },
-      cancel() {
-        if (timer) { clearTimeout(timer); timer = 0; }
-        if (raf) { cancelAnimationFrame(raf); raf = 0; }
-        latest = null;
-      }
-    };
-  }
-  // === [FE-PERF-2 C3 END] ===
-
   // ── 三欄收合 toggle ─────────────────────────
   const sidebar = document.getElementById('sidebar');
   const chatPanel = document.getElementById('chat-panel');
@@ -3224,16 +3185,6 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
     aiMsg.appendChild(c);
   };
 
-  // [FE-PERF-2 C3] replay 專用節流器（paintFn 含 cursor 語意、按站點封裝；
-  // done 走 cancel()+原碼收尾渲染、嚴禁 flush 防雙渲染——plan v4 U1 收尾不變式）
-  const r = makeThrottledRenderer((t) => {
-    removeCursor();
-    aiMsg.innerHTML = renderMarkdownWithMath(t); // [RAG-12 C3] 數學渲染接線
-    appendCursor();
-    const msgsEl = document.getElementById('chat-messages');
-    msgsEl.scrollTop = msgsEl.scrollHeight;
-  });
-
   es.onmessage = (ev) => {
     try {
       const chunk = JSON.parse(ev.data);
@@ -3252,12 +3203,15 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
       }
 
       if (chunk.sentence) {
+        removeCursor();
         const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-        r.update(formatted); // [FE-PERF-2 C3] 節流（cursor/渲染/scrollTop 全移入 paintFn 同幀）
+        aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+        appendCursor();
+        const msgsEl = document.getElementById('chat-messages');
+        msgsEl.scrollTop = msgsEl.scrollHeight;
       }
 
       if (chunk.done) {
-        r.cancel(); // [FE-PERF-2 C3] U1 收尾不變式：原碼 done 自帶收尾渲染 → cancel 讓位、嚴禁 flush（防雙渲染）
         removeCursor();
         const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
         aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
@@ -3278,7 +3232,6 @@ function attachToStream(paperId, aiMsg, alreadyRenderedPartial) {
     console.warn('[attachToStream] EventSource error:', e);
     es.close();
     if (currentEventSource === es) currentEventSource = null;
-    r.cancel(); // [FE-PERF-2 C3] 錯誤出口：取消 pending 渲染（防 stream 死後殘留重繪把 cursor 加回）
     removeCursor();
   };
 }
@@ -3543,12 +3496,6 @@ async function sendMessage() {
   qaGroup.appendChild(aiMsg);
   messages.scrollTop = messages.scrollHeight;
 
-  // [FE-PERF-2 C3] 主串流節流器（paintFn＝渲染+捲底同幀；定義於 try 外、catch 亦可安全 flush）
-  const r = makeThrottledRenderer((t) => {
-    aiMsg.innerHTML = renderMarkdownWithMath(t); // [RAG-12 C3] 數學渲染接線
-    messages.scrollTop = messages.scrollHeight;
-  });
-
   // SSE 串流
   try {
     const res = await fetch(`/api/papers/${currentPaperId}/chat`, {
@@ -3575,10 +3522,10 @@ async function sendMessage() {
             accumulated += chunk.sentence;
             // 把單換行轉成 Markdown 段落（兩個換行）
             const formatted = accumulated.replace(/\n(?!\n)/g, '\n\n');
-            r.update(formatted); // [FE-PERF-2 C3] rAF+160ms 節流（原每 sentence 全量渲染；渲染+scrollTop 移入 paintFn 同幀）
+            aiMsg.innerHTML = renderMarkdownWithMath(formatted); // [RAG-12 C3] 數學渲染接線
+            messages.scrollTop = messages.scrollHeight;
           }
           if (chunk.done) {
-            r.flush(); // [FE-PERF-2 C3] U1 收尾不變式：主串流原碼 done 不渲染 → flush 補最終全量（恰一次）
             isStreaming = false;
             if (chunk.grounding_sources && chunk.grounding_sources.length > 0) {
               aiMsg.dataset.groundingSources = JSON.stringify(chunk.grounding_sources);
@@ -3591,7 +3538,6 @@ async function sendMessage() {
       }
     }
   } catch (e) {
-    r.flush(); // [FE-PERF-2 C3] 斷線出口：保留異常前最後一批已收內容
     isStreaming = false;
   }
 }
