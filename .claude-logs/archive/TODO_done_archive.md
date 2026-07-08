@@ -4,6 +4,22 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### FE-Refactor FE-PERF-2 前端效能紅線四項實修（Osmani 稽核 FE 包實碼——串流 O(n²) 節流/marked 自託管 defer/字型 preload/scroll passive/content-visibility）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Marked Vendoring：marked 9.1.6 鎖版自託管 `static/vendor/marked/`（36KB·banner 驗證）+ `index.html` head 換本地 src〔不加 defer·換源與時序解耦〕；node smoke parse 正常、`$` 原樣穿透 | `337764e` |
+| C2 | Deferred Boot：marked/katex `defer`×2 + inline 主 script（2,234 行）整包 `DOMContentLoaded`〔頭尾 3 行·零重排·node --check 通過〕；前置閘 `on[a-z]+=` 8 命中全裁定誤命中（contenteditable=/註解）、零 inline handler | `0de91af` |
+| C3 | Stream Throttle：`makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併 paintFn 同幀〕+ 主串流〔sentence→update·done 首行 flush·catch flush〕+ replay〔sentence→update·done 首行 cancel+原碼收尾·onerror cancel 補強〕**四出口收斂**（plan v4 U1 收尾不變式）；`renderMarkdownWithMath` 管線零觸碰；node smoke 5/5〔60 update→3 paint·尾字不丟·flush 冪等·cancel 丟棄〕 | `b2f21d8` |
+| C4 | Paint Hints：KaTeX 兩核心字型 preload〔`as="font"`+crossorigin·消 FOUT〕+ scroll passive×2〔capture 保留·無 preventDefault〕+ `.msg-user`/`.msg-ai` `content-visibility:auto`+`contain-intrinsic-size:auto 120px`〔記憶尺寸型·固定值 0·Safari 18+ 基線內〕；SOP §4 檢查表總勾 | `8e5d1fa` |
+| checkout | 成果收官：Conformance 五維度全綠〔U1–U8 跨 commit 覆蓋·tasks §6 實檔重跑·不可動·提示詞 7 份入 git·msg 草稿〕+ §7.2 顯式豁免〔consumer 內部優化·SSE 契約零改〕+ baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢實貼〕；pytest 本環境缺模組（U6 以 diff 零 `.py` 為主證、baron 環境可補跑） | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-09_FE-PERF-2_前端效能紅線四項實修_plan_v1.md`（v4、八 OQ 全定案 + U1 收尾不變式銳化）
+> **動因**：Osmani《How modern browsers work》稽核（`baton/frontend_browser_standards_audit.md` 落實性複核「FE 包」#1 串流 O(n²)/#3 marked 自託管 defer/#4 字型 preload/#7 scroll passive）+ baron 增補 U8 content-visibility；相容底線 **Safari 18+** 拍板（css governance audit、系統不對外）。
+> **首次 FE 必讀 SOP 實碼 dogfood**：`sop/2026-07-02_frontend_效能與渲染_SOP` §2 紅線 1/2/4/5 落地、§4 檢查表 C1–C4 逐 commit 自評 + C4 總勾。
+> **執行期兩處誠實微調**（U1 不變式必要、非新設計）：主串流 r 定義移 try 外（防 catch ReferenceError）/ replay `es.onerror` 補第四出口 `cancel()`（防死流殘留 cursor 重繪）。
+> **⚠️ baron E2E（非 commit）**：三軌渲染+console 0 / 長答案串流打字流暢+尾字完整 / 硬重整+DevTools 封鎖 cdnjs 零影響 / 公式頁無 FOUT / ≥30 則上捲無跳動+串流錨底不變 / replay cursor / Performance 渲染 ≤6-7 次/秒。
+
 ### DOC-Refactor CONTEXT-1 session 載入鏈瘦身與 context 治理（五文獻稽核→TODO 瘦身+baton wildcard 收斂+快取排序原則+工作目錄修正+生命週期雙層新規）
 
 | Commit | 內容 | Hash |

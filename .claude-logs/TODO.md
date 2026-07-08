@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`待 baron 回填`、5 commits）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`待 baron 回填`、5 commits）→ archive/TODO_done_archive.md
+- ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`5d3be98`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor RESCUE-1 遺失治理文件挽救（`5701fb0`…`a150915`、6 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CHECKOUT-GUARD 收官 git-add 白名單鐵律（`81179d8`…`eb2b381`、3 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor FE-PERF-1 前端效能與渲染 SOP 建立（`3ec7b3f`…`c00604b`、3 commits）→ archive/TODO_done_archive.md
@@ -349,6 +350,7 @@
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
 
 ### FE-PERF (✅ 已完成)
+- ✅ ~~FE-PERF-2 前端效能紅線四項實修~~（已落地、C1 `337764e` + C2 `0de91af` + C3 `b2f21d8` + C4 `8e5d1fa` + checkout 收官；FE-Refactor 實碼落地 Osmani 稽核 FE 包——C1 marked 9.1.6 自託管 / C2 defer+DOMContentLoaded 整包〔零重排〕 / C3 rAF+160ms 串流節流〔四出口收斂·管線零觸碰·node smoke 5/5〕 / C4 字型 preload+scroll passive+content-visibility 記憶尺寸型；U8 相容底線 Safari 18+ 拍板；首次 FE 必讀 SOP 實碼 dogfood；零後端零 golden；⚠️ baron 瀏覽器 E2E 七項）→ archive/TODO_done_archive.md
 - ✅ ~~FE-PERF-1 前端效能與渲染 SOP 建立~~（已落地、C1 `3ec7b3f` + C2 `4fb2248` + checkout 收官；DOC-Refactor 以 Osmani《How modern browsers work》稽核〔`baton/frontend_browser_standards_audit.md`〕立 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔效能 7 條紅線+渲染正確性陷阱 6 類 hotfix 溯源+驗收檢查表+§99.1 重複防護·120 行〕+ 回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP+§99.2 v5〔補後端有/前端無之治理不對稱缺口〕；§2.5 sop/ 選定〔workflow-gated 不污染 @path〕；§7.2 純 DOC 豁免；零業務碼；歷史經 pre-fe-rebuild 備份後重寫為乾淨 commit 邊界；稽核 7 條實修屬另案）
 
 ### FE-AESTHETICS (✅ 已完成 + 🟡 HOTFIX-1 進行中)
