@@ -86,9 +86,9 @@
 
 ## §3 工作目錄硬規則
 
-**唯一合法工作目錄**：主 repo 根目錄 `~/mad-professor-public/`（Server 視圖 `/home/baroncheng/mad-professor-public`；Mac OrbStack 視圖 `/Users/baroncheng/OrbStack/claude-lab/home/baroncheng/mad-professor-public`）
+**唯一合法工作目錄**：`.claude/worktrees/hopeful-yalow-902c50/`
 
-- 嚴禁讀寫授權範圍外檔案（授權範圍由各任務 plan / tasks 工作目錄條款定義）
+- 嚴禁讀寫主 repo 目錄（worktree 父目錄）
 - 嚴禁改動業務代碼（`pipeline_core.py` / `web_server.py` / `paper_manager.py` / `processor/*.py` / `static/*`）
 - 違規：baron 有權直接 revert、不通知
 - **baton/ 暫存**：plan / tasks / 執行報告 在收官前一律暫存 `baton/`（不入 Git 版控）
@@ -120,7 +120,7 @@
 
 | 環境 | 路徑 | 分支 |
 |---|---|---|
-| Claude Code Server（主 repo 就地） | `~/mad-professor-public/` | `gemini-refactor` |
+| Claude Code Server worktree | `~/mad-professor-public/.claude/worktrees/hopeful-yalow-902c50/` | `gemini-refactor` |
 | Mac OrbStack | `~/mad-professor-public/` | `gemini-refactor` |
 | GCP 正式機 | TBD | TBD |
 
@@ -155,7 +155,6 @@
 
 ### §99.2 Revision 歷程
 
-- v5 (2026-07-09)：CONTEXT-1 C2——§3 唯一合法工作目錄由已刪除 worktree（hopeful-yalow-902c50）更新為主 repo 雙視圖 + §3 首 bullet 授權範圍化 + §4 Server 表列同步（U7/Q9）
 - v4 (2026-07-08)：CONTEXT-1 C1——§0 baton wildcard 收斂為僅 README（按需取用、audit 優先矩陣 #2）+ §99.1 補 @path 靜態優先動態靠後排序原則（#3）
 - v3 (2026-05-26)：WORKFLOW-1 C1.5——§1.4 TODO 維護補入拆 tasks 時同步更新規則（對齊 plan r11）
 - v2 (2026-05-26)：WORKFLOW-1 C1——補 @path 自動載入、核心規範與契約整合（§1 = 原§1 + §2 合併）、工作流類別判定（§2）、工作目錄硬規則含 baton 暫存（§3）、§0 / §99 拆分式結構
