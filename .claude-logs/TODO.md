@@ -13,6 +13,7 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
+- ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`待 baron 回填`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor RESCUE-1 遺失治理文件挽救（`5701fb0`…`a150915`、6 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CHECKOUT-GUARD 收官 git-add 白名單鐵律（`81179d8`…`eb2b381`、3 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor FE-PERF-1 前端效能與渲染 SOP 建立（`3ec7b3f`…`c00604b`、3 commits）→ archive/TODO_done_archive.md
@@ -96,15 +97,6 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
-
-- 🟡 **CONTEXT-1 session載入鏈瘦身與context治理**（`.claude-logs/baton/2026-07-07_CONTEXT-1_session載入鏈瘦身與context治理_plan_v1.md`〔§99.2 v2 九 OQ 定案〕/ tasks：`.claude-logs/baton/2026-07-08_CONTEXT-1_session載入鏈瘦身與context治理_tasks.md`）
-  - [x] ✅ C1 — Loading Chain Convergence（載入鏈收斂）（`1219a87`）
-  - [x] ✅ C2 — Workdir Stale Fix（工作目錄修正）（`44f6d00`）
-  - [x] ✅ C3 — Lifecycle Rules Sync（生命週期規則同步）（`3c19213`）
-  - [x] ✅ C4 — TODO Slimming（TODO 瘦身歸檔）（hash 待 baron 回填）
-  - [/] 🟡 WIP: C5 — Checkout（收官歸檔）
-  - 工時：5 個 commits
-  - 依賴：無（RESCUE-1 已全案收官、C4 前置＝C3）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -349,7 +341,8 @@
 - ✅ ~~WORKFLOW-4 StraTA 任務成功率原理移植進文件治理模板~~（已落地、C1 `44659be` + C2 `0e8cb77` + C3 `757dee6` + C4 收官；DOC-Refactor 移植 StraTA〔2605.06642v1〕四原理進 5 治理模板——U1 prompt_for_run 讀 plan〔conditioning re-inject 策略 z〕/ U2 execution §1 對齊欄 / U3 execution §自評雙軸〔負向防錯 + 正向「推進哪個 U-N」防做白工〕/ U4 template_plan §2.5 條件化多候選〔diverse rollout·高風險才觸發·語意分散〕+ prompt_for_plan 同步 + Q5 stale 校正 / U5 prompt_for_check 減負前移〔維度三/五前移分攤·非省略·聚焦 U-coverage+§7.2〕/ U6 五模板 marker+StraTA 誠實前提註；**WORKFLOW_SOP §4 五維度定義未動**；§7.2 純 DOC 顯式豁免；零業務代碼、640 passed 基線；見 ✅ 完成區）
 - ✅ ~~WORKFLOW-5 ClawVM 混合治理 Hook 落地~~（已落地、C1 `6fd2ce2` + C2 `306797a` + C3 `2c14d4a` + C4 `c107bfd` + C5 `6ab46b9` + C6 `37f3ded` + C7 Checkout 收官；ClawVM 論文〔2604.10352v1〕——純文件約束＝discretion 結構性不足、跨出純文件用真實 Hook〔harness enforcement〕；C1 SessionEnd dry-run gate〔裁定不能 block→DIRTY-RESET Observable Fault·連鎖修正 exit 0+JSON 非 exit 2、python3 非 jq〕/ C2 baton 3-Phase 非破壞性寫入〔不可繞過〕/ C3 template Fidelity Floor 三維度〔機器可讀 fidelity_floor:〕/ C4 pre_tool_guard 截斷守衛〔防誤觸·sentinel 可繞過·truncation 8/8〕/ C5 dirty_reset_guard〔僅可觀測·dirty_reset 4/4〕/ C6 settings 掛載樣本+專案級部署 SOP；三道防線威脅模型誠實標註；§7.2 純治理+hook 豁免；零業務代碼；⚠️ baron 各環境手動掛載 .claude/settings.json + 重啟生效；見 ✅ 完成區）
 
-### RESCUE (✅ 已完成)
+### CONTEXT (✅ 已完成)
+- ✅ ~~CONTEXT-1 session 載入鏈瘦身與 context 治理~~（已落地、C1 `1219a87` + C2 `44f6d00` + C3 `3c19213` + C4 `b154478` + C5 checkout 收官；DOC-Refactor 依五文獻稽核〔baton/context_engineering_governance_audit.md 長駐規格源〕——C1 baton wildcard→僅 README（-123KB/session）+ @path 排序原則 / C2 §3/§4 stale worktree→主 repo 雙視圖 / C3 FRAMEWORK §2.1 雙層結構＋check/run 模板雙源 / C4 TODO 1,428→467 行（-67.3%）＋本歸檔檔建立〔byte 逐字+hash 集合全等雙鐵證〕；§7.2 純 DOC 豁免；零業務碼；⚠️ baron 各環境 git pull 後重啟 session 生效）
 - ✅ ~~RESCUE-1 遺失治理文件挽救~~（已落地、C1 `5701fb0` + C2 `522002b` + C3 `1df608a` + C4 `d3a6c07` + C5 checkout 收官；DOC-Refactor 治舊 worktree 刪除致 baton git-ignored 文件遺失——U1 QUEUE-1 v2〔MinerU 雙實例 CFS〕救回 + archive `.bak` / U2 PIPE-SPEC v8 依 v7 `.bak`+執行報告+現役 code 重建〔D8.1 逐字守·D5/D5b 非 byte-identical〕/ U3 MODEL-10 殘留 mv→archive / U4-U5 TODO 失效引用總修正+遺失清單審計〔INFRA-2 取代/QUEUE-1 v1 廢除/INFRA-4 正名非遺失〕/ U6 baton 慣例守恆〔archive `.bak` 防再遺失閘門·Q3 本體長駐〕；工作目錄 baron 拍板覆蓋 §3 改主 repo；§7.2 純 DOC 豁免；零業務碼；B 類 CHAT-STRUCT-1/TRANSLATE-BOOK v7 各自後開）
 
 ### CHECKOUT-GUARD (✅ 已完成)

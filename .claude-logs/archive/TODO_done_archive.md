@@ -4,6 +4,23 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### DOC-Refactor CONTEXT-1 session 載入鏈瘦身與 context 治理（五文獻稽核→TODO 瘦身+baton wildcard 收斂+快取排序原則+工作目錄修正+生命週期雙層新規）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Loading Chain Convergence：CLAUDE.md §0 `@baton/*.md`→僅 README（-123KB/session）+ §99.1 @path「靜態規範優先、動態狀態靠後」排序原則 + §99.2 v4；baton/README 新增 §4 按需取用（任務提示詞指路 / 長駐真理源 grep / 臨時 ls+grep 三路） | `1219a87` |
+| C2 | Workdir Stale Fix：§3 唯一合法工作目錄由已刪除 worktree（hopeful-yalow-902c50）→主 repo 雙視圖（Server `/home/...`＋Mac OrbStack 視圖）+ §3 首 bullet 授權範圍化〔tasks 級銳化〕+ §4 Server 表列同步 + §99.2 v5 | `44f6d00` |
+| C3 | Lifecycle Rules Sync：FRAMEWORK §2.1「不另外分檔」→「單一入口（雙層結構）」+ §2.4 寫入目的地改歸檔檔＋索引行 pointer 格式 + §2.5 雙層寫入 + §99.2 v5；check 模板結案四步雙層＋自癒雙源、run 模板自癒雙源（規則+模板同 commit 原子） | `3c19213` |
+| C4 | TODO Slimming：新建本歸檔檔（byte 逐字承接 1,044 行/79 任務、diff IDENTICAL + hash 集合全等雙鐵證）+ TODO.md 重寫 1,428→467 行（-67.3%、79 行一行式索引）+ pre_tool_guard sentinel 程序零殘留 | `b154478` |
+| C5 | Checkout 收官：Conformance 驗收全綠〔plan U1–U7 跨 commit 覆蓋 / tasks §6 重跑 / 不可動 §7 / 提示詞 8 份稽核 / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1–C4 報告→executions/〕+ TODO 雙層結案（**首次 dogfood C3 新流程**）+ staged 白名單自檢 + checkout 執行報告 | `待 baron 回填` |
+
+> **修法依據**：`.claude-logs/plans/2026-07-07_CONTEXT-1_session載入鏈瘦身與context治理_plan_v1.md`（§99.2 v2、九 OQ 全 🟢 定案）；tasks：`.claude-logs/tasks/2026-07-08_CONTEXT-1_session載入鏈瘦身與context治理_tasks.md`
+> **動因**：五篇 context engineering / agent 工程文獻稽核（`baton/context_engineering_governance_audit.md`、規格源長駐 baton）——session 啟動 @path 鏈灌入 ~2,140 行 + baton 7 檔 130KB、TODO.md 73.6% 為已完成歷史考古、wildcard 無差別全載 → context rot（鐵律被淹沒）+ TODO 每次更新使其後快取全失效。
+> **成效**：每 session 載入鏈 −961 行（TODO 1,428→467）− 123KB（baton wildcard→僅 README 7.4KB）；@path 排序原則入憲（§99.1）；生命週期改雙層結構（active 單檔 SSOT + 完成史歸檔本檔）；CLAUDE.md §3/§4 stale worktree 指向修正（雙視圖）。
+> **執行期標記（交 baron 驗收軌道）**：C2 §3 首 bullet 授權範圍化＋§4 表列同步＝tasks 級銳化超 plan/Q9 字面；C4 實際 467 行 vs U1「≤450」估算＝三保留區逐字鐵律優先（框架 §7 仲裁 #1）；`a150915` 於 C1 依 run 模板自癒提前回填致 C4 hash diff 預期值改「空輸出」（C1 報告 §4.3 既載）；baton/README §99.1 權威源 §1–§2→§1–§4 連動修正。
+> **§7.2 豁免**：純 DOC-Refactor、零業務代碼、無 Phase handoff（同 WORKFLOW-3/4/5、RESCUE-1、CHECKOUT-GUARD 先例）；pytest 本環境無 venv 未跑、以 `git diff HEAD -- '*.py' static/ tests/`＝空（C1–C5 全程）為零波及鐵證、baron 可於 Mac 端複核。
+> **⚠️ baron 運維（非 commit）**：① 各環境 `git pull` 後**重啟 Claude Code session** 使新 @path 載入鏈生效並實測（開場僅規範層+瘦身版 TODO+baton README）；② E2E spot-check：新 session 問任一鐵律（規範層直答）+ 任一歷史任務 hash（循索引 pointer 至本檔 grep 取得）；③ 下一任務 checkout 實走雙層結案流程複驗模板可操作性。
+
 
 ### DOC-Refactor RESCUE-1 遺失治理文件挽救（舊 worktree 刪除致 baton git-ignored 文件遺失·機械救援）
 

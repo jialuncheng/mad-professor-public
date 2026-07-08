@@ -1,7 +1,15 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-07（RESCUE-1 Check 收官）
+最後更新：2026-07-09（CONTEXT-1 Check 收官）
 
+- 2026-07-09 — `2026-07-09_CONTEXT-1_Check_提示詞.md`（Check·C5 Checkout 收官·DOC-Refactor：Conformance 驗收〔plan §2 U1-U7 跨 commit 覆蓋 / tasks §6 重跑 / 不可動 §7 / 提示詞 8 份稽核 / msg 草稿〕全綠 → TODO 雙層結案〔**dogfood C3 新流程**：完整表格追加 TODO_done_archive.md + TODO 索引行 + 移除 active + 類別索引〕+ hash 雙源自癒 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C4 報告→executions/;audit 規格源/PIPE-SPEC/QUEUE-1 長駐不碰〕+ staged 白名單自檢 + checkout 執行報告直落 executions/;§7.2 純 DOC 豁免;CONTEXT-1 全案結案）
+- 2026-07-09 — `2026-07-09_CONTEXT-1_C4_run_提示詞.md`（C4 Run·DOC-Refactor：TODO 瘦身歸檔——新建 `archive/TODO_done_archive.md` byte 逐字承接 TODO 已完成區〔U1/U2〕+ TODO 重寫一行式索引〔Q3 格式·三保留區逐字〕+ sentinel 夾帶/移除程序〔Q6·pre_tool_guard 減速帶〕+ a150915 已 C1 提前自癒之連鎖承接;1 `.bak`;hash 集合 diff 零增刪驗證;TODO C4→✅/C5→WIP + hash 自癒）
+- 2026-07-09 — `2026-07-09_CONTEXT-1_C3_run_提示詞.md`（C3 Run·DOC-Refactor：生命週期規則同步——FRAMEWORK §2.1「不另外分檔」→「單一入口（雙層結構）」〔U4/Q7·active 單檔 SSOT + 完成史歸檔 archive/TODO_done_archive.md〕+ §2.4/§2.5 寫入/歸檔規則改指歸檔檔+索引行格式 + §99.2 v5;check 模板結案段+run 模板 hash 自癒段改雙源〔規則+模板同 commit 原子落地〕;3 `.bak`;TODO C3→✅/C4→WIP + hash 自癒）
+- 2026-07-09 — `2026-07-09_CONTEXT-1_C2_run_提示詞.md`（C2 Run·DOC-Refactor：工作目錄修正——CLAUDE.md §3 L89 唯一合法工作目錄由已刪除 worktree `hopeful-yalow-902c50`→主 repo 雙視圖〔U7/Q9·Server `/home/...`+Mac OrbStack 視圖〕+ §3 首 bullet「嚴禁讀寫主 repo」→授權範圍化〔tasks 級銳化·報告標 deviation〕+ §4 L123 同步表列 + §99.2 v5;1 `.bak`;TODO C2→✅/C3→WIP + hash 自癒）
+- 2026-07-08 — `2026-07-08_CONTEXT-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：載入鏈收斂——CLAUDE.md §0 L12 `@baton/*.md`→`@baton/README.md`〔U3/Q4〕+ §99.1 約束事項補「@path 靜態優先、動態靠後」〔U5/Q5〕+ §99.2 v4 + baton/README 新增按需取用節;2 `.bak` 入 git add 白名單;執行報告暫存 baton 嚴禁 git add;TODO C1→✅/C2→WIP + hash 自癒）
+- 2026-07-08 — `2026-07-08_CONTEXT-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：依 plan v2〔九 OQ 定案〕拆最小可逆原子 commits〔自設、末 commit 必為 checkout、各 Run 產執行報告暫存 baton、checkout 才一次性歸檔〕+ §0.5 成果盤點 + §8 六維度表 + 同步 TODO 🟡 WIP;產出後即停）
+- 2026-07-07 — `2026-07-07_CONTEXT-1_plan_v2_提示詞.md`（plan v2 定案·DOC-Refactor：baron 九 OQ 全數採推薦方案拍板〔Q1 hash a150915 回填授權 / Q2 archive/TODO_done_archive.md / Q3 索引行格式 / Q4 僅 README / Q5 §99.1 / Q6 sentinel / Q7 §2.1 雙層表述 / Q8 豁免 / Q9 工作目錄授權〕→ plan 更新 §99.2 v2〔U1/U2/U5 參數落定 + 新 U7 工作目錄 stale 修正〔§3 L89+§4 L123 雙視圖〕+ Q6 sentinel 機制銳化〔tool_input 判定·夾帶後移除不殘留〕〕）
+- 2026-07-07 — `2026-07-07_CONTEXT-1_plan_提示詞.md`（plan·DOC-Refactor：依 baton/context_engineering_governance_audit.md〔五文獻稽核〕優先矩陣 #1/#2/#3 產 CONTEXT-1 plan〔TODO.md 已完成區瘦身〔1,419→≤450 行·hash 256 集合全等鐵證〕+ `@baton/*.md` wildcard 收斂僅 README + 載入排序原則明文化 + FRAMEWORK §2.1「不另外分檔」衝突同步改版 + check/run 模板措辭同步 + pre_tool_guard sentinel〕;落 baton/·依 template_plan/WORKFLOW_SOP/framework·不含 commit 建議;§9 九 OQ 待 baron 拍板）
 - 2026-07-07 — `2026-07-07_RESCUE-1_Check_提示詞.md`（Check·C5 Checkout 收官·DOC-Refactor：Conformance 五維度〔目標規格 U1-U6 / tasks §6.1-§6.4 grep / 不可動〔零業務碼〕/ 提示詞 plan+Tasks+C1-C4+Check 稽核 / msg 草稿〕全綠 → TODO 結案〔RESCUE-1 移入 ✅ 完成表 C1-C5 + hash 自癒〕+ §7.2 純 DOC 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1-C5 報告→executions/;**PIPE-SPEC v8 + QUEUE-1 v2 本體依 Q3 baton 長駐不歸檔**〕+ checkout 執行報告鐵律〔產 executions/…C5_執行.md 含 staged 自檢輸出〕;RESCUE-1 全案結案）
 - 2026-07-07 — `2026-07-07_RESCUE-1_C4_run_提示詞.md`（C4 Run·DOC-Refactor：RESCUE-1 救援 C4——TODO Reconciliation:執行前 `cp TODO.md → archive/…C4_TODO.md.bak`;active 區 INFRA-2 取代結案移除 / QUEUE-1(v1) 廢除移除 / QUEUE-1 v2 校正指 baton 存活本體 / INFRA-4 正名非遺失 / CHAT-STRUCT-1·TRANSLATE-BOOK v7·INFRA-3 失效路徑就地標「隨 worktree 遺失待重建」+ 末尾「2026-06 worktree 刪除遺失清單」尾註〔U4/U5〕;頂部 ✅ 表格與既有 hash 零刪改;主 repo 就地·無 deviation;TODO C4→done/C5→WIP + hash 自癒〔0 佔位符〕）
 - 2026-07-07 — `2026-07-07_RESCUE-1_C3_run_提示詞.md`（C3 Run·DOC-Refactor：RESCUE-1 救援 C3——清理已收官 MODEL-10 baton 殘留:`mv baton/2026-05-27_MODEL-10_…_plan.md → archive/`〔tracked 審計、不直接刪除〕〔U3〕;C3 prompt 與 tasks §8 一致、主 repo 就地 mv、無 deviation;TODO C3→done/C4→WIP + hash 自癒〔0 佔位符〕）
@@ -9,19 +17,37 @@
 - 2026-07-07 — `2026-07-07_RESCUE-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：RESCUE-1 救援 C1——QUEUE-1 v2〔MinerU 雙實例 CFS 物理分流〕存活本體逐字保全留置主 repo baton、新增 `archive/2026-07-01_RESCUE-1_C1_QUEUE-1_v2_plan.md.bak` tracked 審計副本〔U1+U6·防再遺失閘門〕;**deviation**：run 提示詞 paraphrase 稱「複製進 worktree」屬 stale〔worktree 已廢棄〕、改依 tasks.md §8 於主 repo 就地執行、本體不 mv/不改·byte 9890 不變;TODO C1→done/C2→WIP + hash 自癒;執行報告暫存 baton）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 五維度〔目標規格 U1-U6 / tasks §6 grep 實檔複驗 / 不可動 / 提示詞版控稽核 / msg 草稿〕全綠 → TODO 結案〔C1/C2/checkout hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔;**首次 dogfood checkout 執行報告鐵律**〔產 executions/…_checkout_執行.md 含 staged 自檢輸出〕;CHECKOUT-GUARD 全案結案）
 - 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C2_run_提示詞.md`（C2 Run·DOC-Refactor：三模板落地 WORKFLOW_SOP §3 鐵律——`template_prompt_for_run.md §8`+`template_execution.md §8` 加「逐檔·禁 `git add .`/`-A`/`<目錄>`」+ `template_prompt_for_check.md` 收官新增「commit 前 `git diff --cached` staged 自檢」步驟 + mandate 產保存 `_checkout_執行.md`;既有 Conformance 五維度/三防線結構零改·3 .bak·baton 過程檔嚴禁 git add）
-- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_C1_run_提示詞.md`（C1 Run·DOC-Refactor：`ref/WORKFLOW_SOP.md §3` 新增兩鐵律〔收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢·反例錨 FE-PERF-1 混檔〕+ checkout 執行報告鐵律〔必產保存 executions/…_checkout_執行.md〕〕+ §99.2 v6;五類定義本體零改·.bak 備份·baton 過程檔嚴禁 git add）
-- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_Tasks_提示詞.md`（Tasks·DOC-Refactor：plan v2〔六 OQ + 範圍補強 + Q6 定案〕拆 3 commit〔C1 WORKFLOW_SOP §3 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`〕+ checkout 必產報告鐵律」+§99.2 v6 / C2 三模板落地〔run/check/execution §8 git add 註 + check 收官 staged 自檢步驟 + check mandate checkout 報告〕 / checkout〕;純 DOC·同步 TODO 🟡 WIP·§7.2 豁免）
-- 2026-07-02 — `2026-07-02_CHECKOUT-GUARD_plan_提示詞.md`（plan·DOC-Refactor：FE-PERF-1 收官跨任務混檔〔WF5 未追蹤歸檔被廣義 git add 掃入 FE-PERF-1 C1、事後歷史重寫淨化〕→ 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`〕+ commit 前 staged-set 自檢」根治;規範入 WORKFLOW_SOP §3 + template_prompt_for_check;依 template_plan/WORKFLOW_SOP/framework·不含 commit 建議）
-- 2026-07-02 — `2026-07-02_FE-PERF-1_checkout_run_提示詞.md`（checkout Run·DOC-Refactor：Conformance 五維度驗收全綠〔目標規格 U1-U7 / tasks §6 grep / 不可動 / 提示詞版控稽核 / msg 草稿〕→ TODO 結案〔C1 `3ec7b3f` + C2 `4fb2248` hash 回填〕+ §7.2 純 DOC 豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1·C2 執行報告→executions/〕;SOP 手冊已 C1 就地版控）
-- 2026-07-02 — `2026-07-02_FE-PERF-1_C2_run_提示詞.md`（C2 Run·DOC-Refactor：回填 `ref/WORKFLOW_SOP.md` §1.1 FE-Refactor / §1.4 FE-Hotfix「必讀 SOP」由「—」→ `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md` + §99.2 v5;五類定義本體零改·.bak 備份·git add 僅 WORKFLOW_SOP+.bak·baton 過程檔嚴禁 git add）
-- 2026-07-02 — `2026-07-02_FE-PERF-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔§2 效能 7 條紅線〔規則+static/index.html 反例行號+改法〕 / §3 渲染正確性陷阱〔附 hotfix 代號溯源〕 / §4 落地前驗收檢查表〔對接 template_execution §自評〕 / §5 交叉引用 design/docs+WORKFLOW_SOP §7 / §99.1 重複防護〕;≤260 行·僅 SOP 檔入 git·baton 過程檔嚴禁 git add）
-- 2026-07-02 — `2026-07-02_FE-PERF-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：FE-PERF-1 plan（v2 六 OQ 定案）拆 3 commit〔C1 新建 sop/ 前端效能與渲染 SOP 手冊〔效能 7 條紅線+渲染正確性陷阱+驗收檢查表+§99.1 重複防護〕 / C2 回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP+§99.2 / checkout 收官歸檔〕;過程文件暫存 baton、同步 TODO 🟡 WIP、§7.2 純 DOC 豁免）
-- 2026-07-02 — `2026-07-02_FE-PERF-1_plan_提示詞.md`（plan·DOC-Refactor：以 Osmani《How modern browsers work》為標準稽核前端後，產前端效能與渲染 SOP 建立 plan〔落 baton/·依 template_plan/WORKFLOW_SOP/framework·不含 commit 建議〕;放 sop/ 非 ref/〔workflow-gated·不污染 @path〕、範圍限效能+渲染正確性、回填 WORKFLOW_SOP §1.1/§1.4 FE 兩列必讀 SOP）
-
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### CONTEXT-1 系列（session 載入鏈瘦身與 context 治理）
+- 🔵 **CONTEXT-1 session 載入鏈瘦身與 context 治理（2026-07-07 plan v1 → v2 九 OQ 定案·DOC-Refactor·待 tasks）**
+  - `2026-07-07_CONTEXT-1_plan_提示詞.md` — plan（階段 1·依 baton/context_engineering_governance_audit.md〔五文獻稽核〕優先矩陣 #1/#2/#3 開 plan：U1 TODO 已完成區瘦身〔一行式索引+歸檔檔·hash 256 全等〕/ U2 歸檔完整性 / U3 baton wildcard 收斂僅 README / U4 FRAMEWORK §2.1「不另外分檔」+§2.4/§2.5+check/run 模板同步 / U5 載入排序原則 / U6 零波及;§9 九 OQ〔含 pre_tool_guard sentinel Q6、§3 stale worktree Q9〕;依 template_plan/WORKFLOW_SOP/framework、不含 commit 建議）
+  - `2026-07-07_CONTEXT-1_plan_v2_提示詞.md` — plan v2 定案（baron 九 OQ 全採推薦方案：Q1 a150915 回填授權 / Q2 archive/TODO_done_archive.md / Q3 索引行格式 / Q4 僅 README / Q5 §99.1 / Q6 sentinel / Q7 雙層表述 / Q8 豁免 / Q9 工作目錄;plan §99.2 v2〔新 U7 工作目錄 stale 修正〔§3+§4 雙視圖〕+ Q6 銳化〔sentinel=tool_input 判定·不殘留〕〕）
+  - `2026-07-08_CONTEXT-1_Tasks_提示詞.md` — Tasks（階段 2·依 plan v2 自設最小可逆原子 commits〔末 commit 必為 checkout、各 Run 產執行報告暫存 baton、checkout 一次性歸檔〕+ §0.5 成果盤點 + §8 六維度表 + TODO 同步 🟡 WIP）
+  - `2026-07-08_CONTEXT-1_C1_run_提示詞.md` — C1 Run（載入鏈收斂：CLAUDE.md §0 wildcard→僅 README + §99.1 排序原則 + §99.2 v4 + baton/README 按需取用節;2 `.bak`;TODO C1→✅/C2→WIP + hash 自癒）
+  - `2026-07-09_CONTEXT-1_C2_run_提示詞.md` — C2 Run（工作目錄修正：§3 L89 stale worktree→主 repo 雙視圖〔U7/Q9〕+ §3 首 bullet 授權範圍化〔tasks 級銳化·deviation〕+ §4 L123 同步 + §99.2 v5;1 `.bak`;TODO C2→✅/C3→WIP + hash 自癒）
+  - `2026-07-09_CONTEXT-1_C3_run_提示詞.md` — C3 Run（生命週期規則同步：FRAMEWORK §2.1 雙層表述+§2.4/§2.5 改指歸檔檔+§99.2 v5 + check/run 模板雙源〔同 commit 原子〕;3 `.bak`;TODO C3→✅/C4→WIP + hash 自癒）
+  - `2026-07-09_CONTEXT-1_C4_run_提示詞.md` — C4 Run（TODO 瘦身歸檔：新建 archive/TODO_done_archive.md byte 逐字承接 + TODO 一行式索引重寫〔Q3〕+ sentinel 程序〔Q6〕;hash 集合零增刪驗證;1 `.bak`;TODO C4→✅/C5→WIP + hash 自癒）
+  - `2026-07-09_CONTEXT-1_Check_提示詞.md` — Check/C5 Checkout（Conformance 全綠 → TODO 雙層結案〔dogfood C3 新流程〕+ hash 雙源自癒 + baton 一次性歸檔 + staged 自檢 + checkout 執行報告;CONTEXT-1 結案）
+
+### CHECKOUT-GUARD 系列（收官 git-add 白名單鐵律）
+- ✅ **CHECKOUT-GUARD 收官 git-add 白名單鐵律（2026-07-02 plan v2 → Tasks → C1/C2 → Check·DOC-Refactor·已收官 C1 `81179d8` / C2 `dbd6d24` / checkout `eb2b381`）**
+  - `2026-07-02_CHECKOUT-GUARD_plan_提示詞.md` — plan（FE-PERF-1 收官跨任務混檔〔WF5 未追蹤歸檔被廣義 git add 掃入、歷史重寫淨化〕→ 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`〕+ commit 前 staged-set 自檢」根治;不含 commit 建議）
+  - `2026-07-02_CHECKOUT-GUARD_Tasks_提示詞.md` — Tasks（拆 3 commit：C1 WORKFLOW_SOP §3 兩鐵律 / C2 三模板落地 / checkout;§7.2 豁免）
+  - `2026-07-02_CHECKOUT-GUARD_C1_run_提示詞.md` — C1 Run（WORKFLOW_SOP §3 新增白名單鐵律+checkout 執行報告鐵律+§99.2 v6;反例錨 FE-PERF-1）
+  - `2026-07-02_CHECKOUT-GUARD_C2_run_提示詞.md` — C2 Run（run/execution §8 加「逐檔·禁廣義 add」+ check 收官 staged 自檢步驟 + mandate `_checkout_執行.md`;3 .bak）
+  - `2026-07-02_CHECKOUT-GUARD_Check_提示詞.md` — Check（Conformance 五維度全綠 + 首次 dogfood checkout 執行報告鐵律 + baton 歸檔 + TODO 結案）
+
+### FE-PERF-1 系列（前端效能與渲染 SOP 建立）
+- ✅ **FE-PERF-1 前端效能與渲染 SOP 建立（2026-07-02 plan v2 → Tasks → C1/C2 → checkout·DOC-Refactor·已收官 C1 `3ec7b3f` / C2 `4fb2248` / checkout `c00604b`）**
+  - `2026-07-02_FE-PERF-1_plan_提示詞.md` — plan（以 Osmani《How modern browsers work》為標準稽核前端後開 plan〔落 baton/·不含 commit 建議〕;放 sop/ 非 ref/〔workflow-gated·不污染 @path〕、範圍限效能+渲染正確性、回填 WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP）
+  - `2026-07-02_FE-PERF-1_Tasks_提示詞.md` — Tasks（拆 3 commit：C1 新建 sop 手冊 / C2 回填 WORKFLOW_SOP / checkout;§7.2 純 DOC 豁免）
+  - `2026-07-02_FE-PERF-1_C1_run_提示詞.md` — C1 Run（新建 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`〔效能 7 條紅線+渲染陷阱 6 類+驗收檢查表〕）
+  - `2026-07-02_FE-PERF-1_C2_run_提示詞.md` — C2 Run（WORKFLOW_SOP §1.1/§1.4 FE 必讀 SOP 回填 + §99.2 v5）
+  - `2026-07-02_FE-PERF-1_checkout_run_提示詞.md` — checkout（Conformance 五維度全綠 + baton 一次性歸檔 + TODO 結案）
 
 ### RESCUE-1 系列（遺失治理文件挽救）
 - ✅ **RESCUE-1 遺失治理文件挽救（2026-06-28 plan v1.2 → Tasks → C1-C5·DOC-Refactor·舊 worktree 刪除致 baton 文件遺失之機械救援·Check 收官）**
