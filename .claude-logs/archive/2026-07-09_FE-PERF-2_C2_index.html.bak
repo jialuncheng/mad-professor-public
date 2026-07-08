@@ -6,10 +6,10 @@
 <!-- 簡單 SVG favicon：三條橫線（漢堡圖示，呼應介面 icon 系統） -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E">
 <!-- === [FE-PERF-2 C1] === marked 9.1.6 自託管（原 CDN 同版換源、離線/GFW 零跨源依賴、比照 KaTeX vendored；defer 屬 C2） -->
-<script src="/static/vendor/marked/marked.min.js" defer></script>
+<script src="/static/vendor/marked/marked.min.js"></script>
 <!-- === [RAG-12 C1] === 自託管 KaTeX 0.16.47（前端數學渲染、離線/GFW；接線見 RAG-12 C2/C3） -->
 <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-<script src="/static/vendor/katex/katex.min.js" defer></script>
+<script src="/static/vendor/katex/katex.min.js"></script>
 <!-- === [RAG-12 C1 END] === -->
 <style>
   :root {
@@ -1598,8 +1598,6 @@
 </div>
 
 <script>
-// === [FE-PERF-2 C2] === DOMContentLoaded 包裹 START（marked/katex 已 defer；deferred script 保證先於 DOMContentLoaded 執行、marked.use 安全；既有內文縮排維持原樣不重排）
-document.addEventListener('DOMContentLoaded', () => {
   // 關閉 GFM strikethrough（~~text~~ 與單 ~ 撞線）
   //
   // 為何：marked.js 預設啟用 GFM strikethrough、單 ~ 也會匹配。論文 / 履歷
@@ -3833,7 +3831,6 @@ document.getElementById('logout-btn').addEventListener('click', async (e) => {
   } catch (e) { /* 忽略，仍導向登入頁 */ }
   location.href = '/login';
 });
-}); // === [FE-PERF-2 C2] === DOMContentLoaded 包裹 END
 </script>
 </body>
 </html>
