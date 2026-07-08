@@ -79,23 +79,6 @@ Baton（接力棒）是為了解決多個 AI 工具（如 Antigravity、Claude C
 
 ---
 
-## §4 按需取用（CONTEXT-1 載入鏈收斂）
-
-> 自 CONTEXT-1 C1 起，CLAUDE.md §0 之 `@.claude-logs/baton/*.md` wildcard 已收斂為僅載入本 `README.md`——baton 內其他檔案**不再被任何 session 自動全載**（治理依據：`baton/context_engineering_governance_audit.md` 優先矩陣 #2、attention budget / just-in-time retrieval）。
-
-### §4.1 取用方式（三路）
-
-1. **任務檔（plan / tasks / 執行報告）**：由該任務的階段提示詞**顯式指路**（強制讀檔清單列明 `baton/<檔名>`）——本專案提示詞模板本就逐份指路，wildcard 屬冗餘雙重載入、已移除。
-2. **長駐真理源**（如 PIPE-SPEC v8 / QUEUE-1 v2 plan、依 RESCUE-1 plan §9 Q3 定案長駐 baton 不版控）：由消費它的任務提示詞指路，或以 `ls` / `grep` / 讀檔按需取。
-3. **臨時查閱**：`ls .claude-logs/baton/` 盤點 → `grep` 定位 → 讀取所需段落（漸進式揭露、不整包灌 context）。
-
-### §4.2 與既有機制之關係
-
-- §1.1「平時為空」原則不變：任務暫存檔於 Checkout 一次性歸檔；長駐檔為 RESCUE-1 Q3 定案之例外。
-- §2 3-Phase 歸檔流程、§3 hook 部署 SOP 零影響——本節只改「載入方式」（推送全載 → 按需拉取）、不改任何檔案流向。
-
----
-
 ## §99 治理規格與 Revision
 
 ### §99.1 治理規格表
@@ -104,7 +87,7 @@ Baton（接力棒）是為了解決多個 AI 工具（如 Antigravity、Claude C
 |---|---|
 | **目的** | 規範跨 AI 工具單向文件交接暫存機制，隔離 Git 版控污染，並透過安全歸檔建立 Audit Trail |
 | **用途** | 當跨 AI 工具傳導 plan/tasks 時，開發者與 AI 必須查閱此機制規格以進行歸檔 |
-| **權威源** | 本檔 §1–§4 |
+| **權威源** | 本檔 §1–§2 |
 | **引用方** | CLAUDE.md §3（工作目錄硬規則）/ 階段 6 收官提示詞 |
 | **被引用方** | <由 Antigravity 自動掃描注入> |
 | **約束事項** | 嚴禁在歸檔時使用 `git mv` 命令；必須在 `_執行.md` 中寫明消化暫存檔與 Hash 映射 |
@@ -115,7 +98,6 @@ Baton（接力棒）是為了解決多個 AI 工具（如 Antigravity、Claude C
 
 ### §99.2 Revision 歷程
 
-- v4 (2026-07-08)：CONTEXT-1 C1——新增 §4 按需取用（CLAUDE.md §0 baton wildcard 收斂為僅本 README 後之三路取用方式：任務提示詞顯式指路 / 長駐真理源指路或 grep / 臨時 ls+grep 漸進式揭露；§1–§3 既有內容零改）
 - v3 (2026-06-27)：WORKFLOW-5 C6——新增 §3 Hook 跨環境部署 SOP（治理 hook 腳本版控於 tools/、設定用專案級 .claude/settings.json 指向〔Q1 方案 a·作用域隔離〕、$CLAUDE_PROJECT_DIR 跨環境、session 啟動載入、強度分級誠實標註）；掛載樣本 settings.hooks.sample.json
 - v2 (2026-06-26)：WORKFLOW-5 C2——§2 形式化為 ClawVM 3-Phase Writeback（Staging → Deterministic Validation → Scoped Commit）；新增 Phase 2 確定性自檢四維度（Provenance / Schema / Non-destructive / Scope）+ 非破壞性寫入核心鐵律；對帳 WORKFLOW_SOP §3「Run 嚴禁 mv、Checkout 才歸檔」一次性 mv 鐵律；保留 git mv 禁令與 Audit Trail
 - v1 (2026-05-26)：初版發布，對齊計畫書 r11/v11 關於 `mv + git add` 安全移動指令規範

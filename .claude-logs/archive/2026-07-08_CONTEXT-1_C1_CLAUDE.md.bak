@@ -9,7 +9,7 @@
 @.claude-logs/ref/WORKFLOW_SOP.md
 @.claude-logs/ref/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md
 @.claude-logs/TODO.md
-@.claude-logs/baton/README.md
+@.claude-logs/baton/*.md
 
 - 改版觸發：§1–§5 任一規範變動 → 直接改章節 + §99.2 加 Revision
 - 完整治理規格 → §99
@@ -147,7 +147,7 @@
 | 權威源 | 本檔 §1–§5 |
 | 引用方 | ref/WORKFLOW_SOP.md / ref/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md |
 | 被引用方 | `<由 Antigravity 自動掃描注入>` |
-| 約束事項 | 嚴禁含動態內容（當前任務名 / hash / 變動數字）；≤ 200 行；§0 @path 引用順序：靜態規範優先、動態狀態靠後（最大化 prefix cache 命中） |
+| 約束事項 | 嚴禁含動態內容（當前任務名 / hash / 變動數字）；≤ 200 行 |
 | 改版觸發條件 | §1–§5 任一規範變動 |
 | 改版規則 | 直接修改對應章節 + §99.2 加 Revision 紀錄 |
 | 刪除條件 | 不刪（永久必讀核心） |
@@ -155,7 +155,6 @@
 
 ### §99.2 Revision 歷程
 
-- v4 (2026-07-08)：CONTEXT-1 C1——§0 baton wildcard 收斂為僅 README（按需取用、audit 優先矩陣 #2）+ §99.1 補 @path 靜態優先動態靠後排序原則（#3）
 - v3 (2026-05-26)：WORKFLOW-1 C1.5——§1.4 TODO 維護補入拆 tasks 時同步更新規則（對齊 plan r11）
 - v2 (2026-05-26)：WORKFLOW-1 C1——補 @path 自動載入、核心規範與契約整合（§1 = 原§1 + §2 合併）、工作流類別判定（§2）、工作目錄硬規則含 baton 暫存（§3）、§0 / §99 拆分式結構
 - v1 (2026-05-19)：初版
