@@ -4,6 +4,20 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### DOC-Refactor DOC-SYNC-1 設計文件現況對齊（design/docs 清帳版——幽靈去毒 + dom-reference 覆蓋率 36%→100%；FE-CSS-GOV 前置）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Docs Truth Sync：**components 幽靈去毒**〔`.title-meta`/`.title-meta-sep` ⚠️ 未實作〔`renderTitleHeader:2748` 實建清單+後端 0 命中〕/ `.msg-ai-actions`/`.msg-copy`/`.msg-regen` ⚠️ 半實作〔CSS `:1063-1098`+委派 `:2405-2406` 在、DOM 注入未接〕/ **`.dropdown-popup` 零碰**〔v3 勘誤：`:2241` 含空格 className 存活〕〕+ **dom-reference 補 30 真缺 ID**〔另 18 為既載格式盲點〕75/75〔§6.4 Modal 七家族〔theme/tag/action/notice 新節〕+ §4.4 abstract-toolbar + §1 app + §2.2 edit-tags-btn + §9 theme-link〕+ 同步戳×2 + token 三檔零差稽核戳×3；增量 +47 行〔≤160〕、零代碼、index.html 零 byte | `c8d6bcb` |
+| checkout | 成果收官：Conformance 五維度全綠〔U1–U5 實檔複驗·tasks §6·不可動〔dropdown-popup 零碰+零代碼〕·提示詞 4 份·msg 草稿〕+ C1 四 deviation 裁決〔准〕+ §7.2 顯式豁免 + baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢〕 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-09_DOC-SYNC-1_設計文件現況對齊_plan_v1.md`（v3、六 OQ 定案 + Q6 規模釘死 + U1 tasks 階段勘誤）
+> **動因**：design/docs 一致性實測——dom-reference 覆蓋率 36%（27/75 ID）、components 把未實作/半實作寫成現況契約（AI 讀到會接不存在的線）；token 契約層實測零差。docs 停更 2026-05-24~06-13、index.html 改到 07-09（≈5 世代欠帳）。
+> **baron 順序拍板**：先輕量 DOC-SYNC 清帳〔只清幽靈+補漏、**不深耕**〕→ 後 FE-CSS-GOV（ownership map / `@layer` 原則 / theme-guide 契約改寫隨各 commit 配套）；兩 plan 分開。
+> **C1 四執行期 deviation（誠實列報告 §4(d)、checkout 裁決准）**：① U2 量測改容錯抽取〔48 缺中 18 為既載格式盲點、真缺 30〕；② dom-reference §2.2/§4.2/§5.1 同源病灶一併去毒〔超 U1 字面「components.md」、同 U 目標〕；③ confirm-modal「點 mask 不關閉」stale 更正〔OPTIMIZE-1 C2 已解鎖〕；④ §6.4「兩個 modal」→「七個」隨補修正。
+> **§7.2**：純 DOC-Refactor、無 code handoff、顯式豁免。
+> **銜接**：FE-CSS-GOV 之 deep-doc（ownership map / @layer 原則 / theme-guide 契約改寫 / principles margin-flow）唯一歸屬後續任務、地圖已對齊現況（本案前置達成）。
+
 ### FE-Refactor FE-PERF-2 前端效能紅線四項實修（Osmani 稽核 FE 包實碼——串流 O(n²) 節流/marked 自託管 defer/字型 preload/scroll passive/content-visibility）
 
 | Commit | 內容 | Hash |
@@ -12,7 +26,7 @@
 | C2 | Deferred Boot：marked/katex `defer`×2 + inline 主 script（2,234 行）整包 `DOMContentLoaded`〔頭尾 3 行·零重排·node --check 通過〕；前置閘 `on[a-z]+=` 8 命中全裁定誤命中（contenteditable=/註解）、零 inline handler | `0de91af` |
 | C3 | Stream Throttle：`makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併 paintFn 同幀〕+ 主串流〔sentence→update·done 首行 flush·catch flush〕+ replay〔sentence→update·done 首行 cancel+原碼收尾·onerror cancel 補強〕**四出口收斂**（plan v4 U1 收尾不變式）；`renderMarkdownWithMath` 管線零觸碰；node smoke 5/5〔60 update→3 paint·尾字不丟·flush 冪等·cancel 丟棄〕 | `b2f21d8` |
 | C4 | Paint Hints：KaTeX 兩核心字型 preload〔`as="font"`+crossorigin·消 FOUT〕+ scroll passive×2〔capture 保留·無 preventDefault〕+ `.msg-user`/`.msg-ai` `content-visibility:auto`+`contain-intrinsic-size:auto 120px`〔記憶尺寸型·固定值 0·Safari 18+ 基線內〕；SOP §4 檢查表總勾 | `8e5d1fa` |
-| checkout | 成果收官：Conformance 五維度全綠〔U1–U8 跨 commit 覆蓋·tasks §6 實檔重跑·不可動·提示詞 7 份入 git·msg 草稿〕+ §7.2 顯式豁免〔consumer 內部優化·SSE 契約零改〕+ baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢實貼〕；pytest 本環境缺模組（U6 以 diff 零 `.py` 為主證、baron 環境可補跑） | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔U1–U8 跨 commit 覆蓋·tasks §6 實檔重跑·不可動·提示詞 7 份入 git·msg 草稿〕+ §7.2 顯式豁免〔consumer 內部優化·SSE 契約零改〕+ baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢實貼〕；pytest 本環境缺模組（U6 以 diff 零 `.py` 為主證、baron 環境可補跑） | `bc2bcc4` |
 
 > **修法依據**：`plans/2026-07-09_FE-PERF-2_前端效能紅線四項實修_plan_v1.md`（v4、八 OQ 全定案 + U1 收尾不變式銳化）
 > **動因**：Osmani《How modern browsers work》稽核（`baton/frontend_browser_standards_audit.md` 落實性複核「FE 包」#1 串流 O(n²)/#3 marked 自託管 defer/#4 字型 preload/#7 scroll passive）+ baron 增補 U8 content-visibility；相容底線 **Safari 18+** 拍板（css governance audit、系統不對外）。

@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`待 baron 回填`、5 commits）→ archive/TODO_done_archive.md
+- ✅ DOC-Refactor DOC-SYNC-1 設計文件現況對齊（`c8d6bcb`…`待 baron 回填`、2 commits）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`bc2bcc4`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`5d3be98`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor RESCUE-1 遺失治理文件挽救（`5701fb0`…`a150915`、6 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CHECKOUT-GUARD 收官 git-add 白名單鐵律（`81179d8`…`eb2b381`、3 commits）→ archive/TODO_done_archive.md
@@ -345,6 +346,9 @@
 ### CONTEXT (✅ 已完成)
 - ✅ ~~CONTEXT-1 session 載入鏈瘦身與 context 治理~~（已落地、C1 `1219a87` + C2 `44f6d00` + C3 `3c19213` + C4 `b154478` + C5 checkout 收官；DOC-Refactor 依五文獻稽核〔baton/context_engineering_governance_audit.md 長駐規格源〕——C1 baton wildcard→僅 README（-123KB/session）+ @path 排序原則 / C2 §3/§4 stale worktree→主 repo 雙視圖 / C3 FRAMEWORK §2.1 雙層結構＋check/run 模板雙源 / C4 TODO 1,428→467 行（-67.3%）＋本歸檔檔建立〔byte 逐字+hash 集合全等雙鐵證〕；§7.2 純 DOC 豁免；零業務碼；⚠️ baron 各環境 git pull 後重啟 session 生效）
 - ✅ ~~RESCUE-1 遺失治理文件挽救~~（已落地、C1 `5701fb0` + C2 `522002b` + C3 `1df608a` + C4 `d3a6c07` + C5 checkout 收官；DOC-Refactor 治舊 worktree 刪除致 baton git-ignored 文件遺失——U1 QUEUE-1 v2〔MinerU 雙實例 CFS〕救回 + archive `.bak` / U2 PIPE-SPEC v8 依 v7 `.bak`+執行報告+現役 code 重建〔D8.1 逐字守·D5/D5b 非 byte-identical〕/ U3 MODEL-10 殘留 mv→archive / U4-U5 TODO 失效引用總修正+遺失清單審計〔INFRA-2 取代/QUEUE-1 v1 廢除/INFRA-4 正名非遺失〕/ U6 baton 慣例守恆〔archive `.bak` 防再遺失閘門·Q3 本體長駐〕；工作目錄 baron 拍板覆蓋 §3 改主 repo；§7.2 純 DOC 豁免；零業務碼；B 類 CHAT-STRUCT-1/TRANSLATE-BOOK v7 各自後開）
+
+### DOC-SYNC (✅ 已完成)
+- ✅ ~~DOC-SYNC-1 設計文件現況對齊~~（已落地、C1 `c8d6bcb` + checkout 收官；DOC-Refactor 清帳版對齊 design/docs 至 `index.html@8e5d1fa`——components 幽靈去毒〔title-meta ⚠️ 未實作 / msg 家族 ⚠️ 半實作 / dropdown-popup v3 勘誤零碰〕+ dom-reference 補 30 真缺 ID〔18 為既載格式盲點〕75/75+Modal 七家族 + token 三檔零差戳；輕量欄位≤160 行、零代碼、四 deviation 誠實裁決；§7.2 純 DOC 豁免；FE-CSS-GOV deep-doc〔ownership map/@layer 原則/theme-guide 契約改寫〕之前置）→ archive/TODO_done_archive.md
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）

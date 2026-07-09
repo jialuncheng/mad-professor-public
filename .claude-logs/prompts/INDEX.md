@@ -1,7 +1,11 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-09（FE-PERF-2 Check）
+最後更新：2026-07-09（DOC-SYNC-1 Check）
 
+- 2026-07-09 — `2026-07-09_DOC-SYNC-1_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 五維度〔plan §2 U1-U5 / tasks §6 實檔複驗 / 不可動〔dropdown-popup 零碰+零代碼〕 / 提示詞 4 份稽核 / msg 草稿〕全綠 + C1 四 deviation 裁決〔量測修正/同源去毒/stale 更正/引言修正·皆同 U 目標〕→ baton 歸檔 + TODO 雙層結案 + hash 自癒 + 鐵律 checkout 報告直產;DOC-SYNC-1 全案結案）
+- 2026-07-09 — `2026-07-09_DOC-SYNC-1_C1_run_提示詞.md`（C1 Run·DOC-Refactor：Docs Truth Sync——components 兩款凍結措辭標註〔title-meta×2「未實作」+ msg 家族「半實作·注入未接」·dropdown-popup 零碰〕+ dom-reference 依分區表補 48 ID〔輕量三欄·Modal 家族新節〕+ 同步戳×2 + token 三檔零差戳×3;5 .bak;index.html 唯讀零 byte;git add 僅 5 檔+5 .bak）
+- 2026-07-09 — `2026-07-09_DOC-SYNC-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：依 plan v2〔六 OQ 定案·Q6 規模釘死〕拆 **C1 — Docs Truth Sync**〔components 6 幽靈去毒〔5 標註+dropdown-popup 更正實名〕+ dom-reference 補 48 ID〔輕量欄位·≤160 行〕+ 兩檔同步戳 + token 三檔頂部零差驗證註·5 檔一 commit〕+ **checkout**;index.html 唯讀對照;同步 TODO 🟡 WIP）
+- 2026-07-09 — `2026-07-09_DOC-SYNC-1_plan_提示詞.md`（plan·DOC-Refactor：design/docs 現況對齊「清帳版」——實測 dom-reference 覆蓋率 36%〔27/75 ID〕+ components 6 幽靈 class〔規劃寫成現況〕→ 清幽靈+補漏記、**刻意不深耕**〔ownership map/@layer 原則/theme-guide 改寫留 FE-CSS-GOV 各 commit 配套〕;token 契約層實測零差不動;不含 commit 建議）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_Check_提示詞.md`（Check·checkout 收官·FE-Refactor：Conformance 五維度〔plan §2 U1-U8 跨 commit 覆蓋 / tasks §6 / 不可動 / 提示詞 7 份稽核 / msg 草稿〕→ baton 一次性歸檔〔plan/tasks/C1-C4 報告·audit 兩份長駐不碰〕+ TODO 雙層結案〔framework §2.5 v5〕+ hash 自癒 + **鐵律 checkout 報告直產 executions/ 含 staged 白名單自檢**;FE-PERF-2 全案結案）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_C4_run_提示詞.md`（C4 Run·FE-Refactor：Paint Hints——KaTeX 兩核心字型 preload〔as=font+crossorigin·消 FOUT〕+ 兩處 scroll 監聽 `{capture:true,passive:true}`〔已核實無 preventDefault〕+ `.msg-user`/`.msg-ai` `content-visibility:auto`+`contain-intrinsic-size:auto 120px`〔記憶尺寸型·禁固定值·底線 Safari 18+ 基線內〕;git add 僅 index.html+.bak;C1–C4 實作完結、餘 checkout）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_C3_run_提示詞.md`（C3 Run·FE-Refactor：Stream Throttle——新增 `makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併同幀〕+ 主串流接線〔sentence→update·done 首行 flush·catch 補 flush〕+ replay 接線〔sentence→update·done 首行 cancel+沿用原收尾·cursor 語意〕;消 O(n²) 熱路徑;`renderMarkdownWithMath` 內部嚴禁改;git add 僅 index.html+.bak）
