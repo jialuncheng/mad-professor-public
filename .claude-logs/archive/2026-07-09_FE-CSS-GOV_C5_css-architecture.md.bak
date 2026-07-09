@@ -4,7 +4,7 @@
 > 由 `FE-CSS-GOV` 任務建立與維護；治理高度定案源見 `baton/frontend_css_governance_audit.md`。
 > 最後現況對照：2026-07-09、基準 `static/index.html@d4ce75a`（FE-CSS-GOV C1 File Split）。
 >
-> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ✅ ／ C3 主題契約〔縮版·結構去重外溢 THEME-DEDUP〕✅ ／ C4 token 歸屬〔§6·作法2 零遷移〕✅ ／ C5 作用域白名單全量表〔§5·C5–C7 併一·唯 `.sb-row` 收斂〕✅。全 5 章落地完成。
+> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ✅ ／ C3 主題契約〔縮版·結構去重外溢 THEME-DEDUP〕✅ ／ C4 token 歸屬〔§6·作法2 零遷移〕✅ ／ C5-C7 命名前綴+白名單表 ⬜。未打勾章節為**規劃、尚未落地**。
 
 ---
 
@@ -82,22 +82,9 @@
 
 （`print.css` 之 19 個 `!important` 屬 unlayered print 覆蓋，非主檔系計數。）
 
-## 5. 作用域白名單全量表（C5 ✅·五類分類·grep `@a49fb28` 實測）
+## 5. 命名作用域與白名單（C5-C7 規劃、尚未落地）
 
-> **決策（baron 2026-07-09 拍板·C5–C7 併為一）**：原 plan §3 估「85 行 ID 後代式、需收斂 36 行」。grep 全掃 sidebar/chat/content 後，**36 行絕大多數是正當模式、不該動**——chrome CSS 其實結構良好。每個 `#`-選擇器落在下列五類；**唯一該物理收斂的是 E 類（`.sb-row` 6 行·C5 已做）**，其餘四類**保留**（附「為何保留」）。此表即 U3「作用域治理」的交付物：讓未來 AI 一眼知道每個 ID 選擇器的邊界與正當性。
-
-| 類別 | 判準 | 處置 | 實例（grep 行號） |
-|---|---|---|---|
-| **A 容器自身 ID** | `#x { }` 單一 ID、targeting 單一元素、非跨元素耦合 | **保留**（轉 class 多此一舉；多被 JS/layout 收合邏輯引用） | `#sidebar`/`#folder-tree`/`#paper-list`/`#sidebar-bottom`/`#chat-panel`/`#chat-header`/`#chat-header-actions`/`#chat-messages`/`#chat-input-area`/`#content-area`/`#content-toolbar`/`#app` |
-| **B 內容渲染容器後代** | 容器內容為 marked/後端/`renderTitleHeader` 產物、**無 class 可預掛** | **白名單保留** | `#paper-content …`（content.css 33 行）/`#current-title .title-zh/.title-en/.paper-tags`（5）/`#abstract-toolbar details.title-abstract …`（8）/`#chat-messages` |
-| **C 自身狀態式** | ID + 偽類/屬性、單元素自身態、非跨元素 | **白名單保留** | `#chat-input:focus`/`:empty::before`/`[contenteditable="false"]`/`#hashtag-autocomplete.hashtag-popup`/`#web-search-toggle.active`/`#tooltip.show` |
-| **D 跨欄共用語意 class（ID-scope）** | 同名 class 刻意跨語境複用、用 ID-scope 隔離；owner 散在 layout/content/themes（跨檔） | **保留 ID-scope**（共用 class 用 ID-scope 是**正當模式非反模式**；硬拆成唯一 class 需跨檔改 layout/content + 製造「一處 `.sb-title`、他處 `#…title`」不一致、反傷可維護性） | `.title`（sidebar.css + layout.css collapsed + 4 themes）/`.toolbar-actions`（sidebar + layout collapsed + content-toolbar）/`.h-title`（chat + layout collapsed + 4 themes） |
-| **E 真正私有可收斂** | 該 class 只在單一容器內用（grep 證） | **✅ C5 已收斂**（卸 ID 前綴為單級 class） | `#sidebar-bottom .sb-row` → `.sb-row`（sidebar.css·`.sb-row` 僅 sidebar-bottom·0 JS 引用·6 行） |
-
-### 5.1 鐵則
-- **DOM id 與 JS 契約 class 零改名**（見 `dom-reference.md §8`）——本節收斂僅動 CSS 選擇器（E 類卸前綴），零改 HTML class/id。
-- **D 類為何不硬收斂**：`.title`/`.toolbar-actions`/`.h-title` 是跨欄複用的語意 class，ID-scope 是其正確隔離手段；其 owner 部分在 layout.css（collapsed 態）/content.css（中欄工具列）——跨欄一致收斂需擴編輯權且動 collapsed 行為，風險高於收益。若未來真要全欄模組化，正解是元件選擇器 scope（非逐欄拆 class）＝獨立架構決策。
-- **新增 chrome 樣式**：優先掛單 class；跨語境複用的語意 class 沿用 ID-scope（歸 D 類、登本表）。
+> ⬜ **待 C5-C7**：chrome UI 之 ID 後代選擇器收斂為單 class（前綴 `.sb-*`/`.chat-*`/`.ct-*`）；**內容渲染容器白名單**（`#paper-content`/`#chat-messages`/`#current-title`/`#abstract-toolbar` 之後代規則保留——內容為 marked/後端/renderTitleHeader 產物、無 class 可掛）；**DOM id 與 JS 契約 class 零改名**（見 `dom-reference.md §8`）。前綴表與白名單全量表於 C5-C7 落地。
 
 ---
 

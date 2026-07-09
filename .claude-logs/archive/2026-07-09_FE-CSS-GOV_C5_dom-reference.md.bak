@@ -186,7 +186,6 @@ Phase 4.7c 修正 3：`#current-title` 為 toolbar 子元素，取原 h2 的 `fl
 ```
 
 容器 class：`.sb-row`（flex, justify-content: space-between）
-> **作用域（FE-CSS-GOV C5）**：`.sb-row` 已由 `#sidebar-bottom .sb-row` 卸前綴為**單級 class**（`.sb-row` 僅用於此處、0 JS 引用）。chrome 作用域全量分類見 `css-architecture.md §5`。
 
 | id | tooltip | 行為 |
 |---|---|---|

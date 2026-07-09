@@ -260,19 +260,18 @@
     padding: var(--pad-panel);
     border-top: 1px solid var(--color-border);
   }
-  /* [FE-CSS-GOV C5] .sb-row 卸 #sidebar-bottom ID 前綴 → 單級 class（grep 證只在 sidebar-bottom·唯一 .sb-* 元件 class） */
-  .sb-row {
+  #sidebar-bottom .sb-row {
     display: flex;
     gap: var(--gap-btn-tight);
   }
   /* 左欄底部四 icon：32×32 固定、不再 flex:1 平分；
      用 space-between 撐到欄兩端，視覺重心穩定且容器尺寸與其他 icon 一致 */
-  .sb-row {
+  #sidebar-bottom .sb-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
-  .sb-row > button {
+  #sidebar-bottom .sb-row > button {
     width: var(--btn-icon);
     height: var(--btn-icon);
     min-width: 0;
@@ -285,9 +284,9 @@
     cursor: pointer;
     transition: background var(--transition), border-color var(--transition);
   }
-  .sb-row > button:hover { background: var(--color-surface); }
-  .sb-row > button:active { background: var(--color-surface-2); }
-  .sb-row > button svg {
+  #sidebar-bottom .sb-row > button:hover { background: var(--color-surface); }
+  #sidebar-bottom .sb-row > button:active { background: var(--color-surface-2); }
+  #sidebar-bottom .sb-row > button svg {
     width: var(--btn-icon-svg); height: var(--btn-icon-svg);
     stroke: currentColor; stroke-width: var(--btn-icon-stroke);
     fill: none; stroke-linecap: round; stroke-linejoin: round;

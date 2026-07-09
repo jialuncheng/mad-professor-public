@@ -2,7 +2,6 @@
 
 > 通用元件契約。所有新元件設計前先翻這份；既有元件不可偏離。
 > 最後現況對照：2026-07-09、基準 `static/index.html@8e5d1fa`（DOC-SYNC-1 C1；帶「⚠️ 未實作/半實作」標註者為規劃保留、勿依其接線）。
-> **CSS 檔案架構 / cascade 層序 / 作用域白名單** → `css-architecture.md`（token 歸屬 §6、chrome 作用域五類分類 §5）；**主題契約** → `theme-guide.md`。
 
 ---
 
