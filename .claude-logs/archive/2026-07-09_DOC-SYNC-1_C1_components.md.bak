@@ -1,7 +1,6 @@
 # Components 設計規格 · MadPro UI
 
 > 通用元件契約。所有新元件設計前先翻這份；既有元件不可偏離。
-> 最後現況對照：2026-07-09、基準 `static/index.html@8e5d1fa`（DOC-SYNC-1 C1；帶「⚠️ 未實作/半實作」標註者為規劃保留、勿依其接線）。
 
 ---
 
@@ -324,7 +323,8 @@ Phase 4.7c 修正 3（修正 2 把 title 搬出 toolbar 是誤判，本輪搬回
 - `.title-zh`：22px / 600，always-show（fallback 同 `resolveDisplayTitle`，
   中文優先）
 - `.title-en`：14px muted；當 title-zh 與 metadata.title (原文) 不同時才顯示
-- ⚠️ 未實作（規劃保留、勿接線；DOC-SYNC-1）：`.title-meta`（12px muted，flex；authors · date · journal/publisher）與分隔符 `.title-meta-sep`（`·`）——`renderTitleHeader`（`index.html:2748`）現僅產 title-zh / title-en / title-abstract、無此二 class
+- `.title-meta`：12px muted，flex；authors · date · journal/publisher，
+  分隔符 `.title-meta-sep` (`·`)
 - `details.title-abstract`：摘要可摺疊（預設摺起），summary 文字「顯示摘要」；
   展開後 `.abstract-body` 為左側 3px border 卡片
 - 整個 `#current-title[hidden]`：未選文件時隱藏
@@ -332,7 +332,7 @@ Phase 4.7c 修正 3（修正 2 把 title 搬出 toolbar 是誤判，本輪搬回
 
 doc_type 分支：
 - academic / technical / book / news / web：完整顯示
-- resume：candidate_name 為 .title-zh、organization 為 .title-meta ⚠️ 未實作（規劃保留、勿接線；同上 DOC-SYNC-1 標註）；
+- resume：candidate_name 為 .title-zh、organization 為 .title-meta；
   無 .title-en / authors / date / abstract
 - slides：簡化（.title-zh，可能無 meta，abstract 通常空 → 靜默省略）
 
@@ -354,9 +354,9 @@ fallback：缺項靜默省略；只有 title 是 always-show。
 - 左對齊 `align-self: flex-start`
 - 最大寬 90%
 - 內含 Markdown 渲染、可含 `.msg-sources` 來源列
-- **右下浮現** `.msg-ai-actions` 動作鈕列（hover 顯示）⚠️ 半實作（樣式/事件委派已備〔`index.html:1063-1098` / `:2405-2406`〕、DOM 注入未接——現況 hover 不顯示；勿假設按鈕存在）（DOC-SYNC-1）：
-  - `.msg-copy` — 複製內容到剪貼簿；成功後 1.5s 內 icon 變 accent 色 ⚠️（注入未接，見上）
-  - `.msg-regen` — 重新生成（待接 API）⚠️（注入未接，見上）
+- **右下浮現** `.msg-ai-actions` 動作鈕列（hover 顯示）：
+  - `.msg-copy` — 複製內容到剪貼簿；成功後 1.5s 內 icon 變 accent 色
+  - `.msg-regen` — 重新生成（待接 API）
   - 容器：`position: absolute; right: 6px; bottom: -14px`，浮出泡泡下緣 14px
   - 觸控裝置（`@media hover: none`）永遠顯示
 

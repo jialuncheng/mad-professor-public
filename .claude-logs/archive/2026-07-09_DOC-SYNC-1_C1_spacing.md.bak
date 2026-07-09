@@ -1,7 +1,5 @@
 # Spacing 設計規格 · MadPro UI
 
-> ✅ 2026-07-09 實測零差：本檔 `--space-*` 值表與 `static/index.html@8e5d1fa` `:root` 逐項相符（DOC-SYNC-1 稽核戳、未改任何 token 內容）。
-
 > 4px 模矩制（4px modular grid），所有距離數值必須走 token。
 
 ---

@@ -1,7 +1,5 @@
 # Typography 設計規格 · MadPro UI
 
-> ✅ 2026-07-09 實測零差：本檔 `--font-*` 值表與 `static/index.html@8e5d1fa` `:root` 逐項相符（DOC-SYNC-1 稽核戳、未改任何 token 內容）。
-
 > 字體規範依「主檔（結構）」+「主題（外觀）」分層。
 > 主檔只定義字級階梯與字級用途；字族（family）、字重、字距由各 `themes/*.css` 提供。
 >
