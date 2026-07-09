@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ DOC-Refactor DOC-SYNC-1 設計文件現況對齊（`c8d6bcb`…`待 baron 回填`、2 commits）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor FE-CSS-GOV CSS 治理與作用域收斂（`32e3a1a`…checkout 待回填、6 commits·C3/C4/C5 三度 re-scope）→ archive/TODO_done_archive.md
+- ✅ DOC-Refactor DOC-SYNC-1 設計文件現況對齊（`c8d6bcb`…`d4ce75a`、2 commits）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`bc2bcc4`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`5d3be98`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor RESCUE-1 遺失治理文件挽救（`5701fb0`…`a150915`、6 commits）→ archive/TODO_done_archive.md
@@ -99,6 +100,14 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- ⬜ **THEME-DEDUP 主題結構去重（FE-CSS-GOV C3 外溢·baron 拍板收官後獨立開 plan）**
+  - 由來：FE-CSS-GOV C3 舊 85 行審計未涵蓋後補的裝飾 CSS（如 kahn `.ph::before` 天窗光線）；C3 縮為死碼+契約、結構去重整包外溢
+  - 範疇：對**全部** `static/themes/*.css` 完整重審 → 共用結構（4 主題同值，如 `#paper-content h2 border-bottom+padding-bottom`）上移 base；異值結構（`padding`/`.figure margin`/`.byline`/`figcaption margin-top`）token 化入 globals tokens 層；裝飾佔位幾何（`.ph`/`.ph::before`）保留主題（Q8 carve-out）
+  - 規格依據：`design/docs/theme-guide.md §1 白名單 + §8 方向`（FE-CSS-GOV C3 立）
+  - 時序：**FE-CSS-GOV 全案 checkout 之後**（吃 C4 瘦身 token + C5-C7 收斂 class 之終態、避交疊）
+  - 工時：待 plan 評估（FE-Refactor·預估 3-5 commits）
+  - 依賴：FE-CSS-GOV 收官
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）

@@ -4,12 +4,30 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### FE-Refactor FE-CSS-GOV CSS 治理與作用域收斂（inline CSS 拆檔 + @layer 層化 + 主題契約 + token 歸屬 + 作用域白名單；C3/C4/C5 執行期 baron 三度拍板 re-scope）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | File Split：inline `<style>` 1,354 行**零改寫等價**拆 `static/css/` 7 檔〔globals/layout/sidebar/content/chat/overlays/print〕+ index.html 7 `<link>` 序載入〔globals 首/print 末/#theme-link 殿後〕+ css-architecture.md 初版+README；三不變式對帳〔partition byte-identical/brace 平衡/`{` 守恆 234〕·JS 主塊 byte-identical | `32e3a1a` |
+| C2 | Layer Cascade：globals `@layer reset,tokens,base,components;`+三分包裹·layout/sidebar/content/chat/overlays 整檔 `@layer components`·**print+themes+自訂主題 unlayered**〔恆勝 base fallback〕·非 print `!important`(1) 白名單保留〔蓋 enableChat inline·CSS 規範必要〕·規則零改寫 md5 逐檔對帳；principles §6.5〔@layer/unlayered/margin-flow〕+css-architecture §4/§4.1 | `a49fb28` |
+| C3 | Theme Dedup（**縮版·re-scope**）：4 主題 `#demo-bar` 死碼刪除〔HTML 早於 BUG-F5 B3 移除·3 證〕124 行純刪·brace 各 -4；theme-guide 重寫契約〔Q8 白名單+figure 裝飾 carve-out+unlayered 優先級取代 source-order+§8 THEME-DEDUP 方向〕；**結構去重整包外溢 THEME-DEDUP**〔舊 85 行審計未涵蓋後補裝飾 CSS·裝飾佔位藝術無法上移/token 化〕 | `0fbafeb` |
+| C4 | Token Slimming（**作法2 純文件版·re-scope**）：13 個「B 類」grep 反證 8 個跨 2-5 檔共用·CSS custom prop 天生全域故遷檔零解耦·部分 owner 越界→**零遷移**〔全留 globals〕；globals `:root` 三層分區〔T1 全域結構/T2 共用元件系統/T3 主題覆寫面·46 宣告 byte-identical 零值改動〕+ css-architecture §6 Token 歸屬〔三層表+T2 grep 消費地圖+custom-prop-全域原則〕 | `c0b53ab` |
+| C5 | Scope Map & Sidebar Cleanup（**併 C6/C7·re-scope**）：grep 反證「36 行需收斂」高估→chrome `#`-選擇器五類〔A 容器自身/B 內容白名單/C 自身狀態/D 跨欄共用語意 class·ID-scope 正當/E 私有可收斂〕；唯一物理收斂＝E 類 `.sb-row` 卸 `#sidebar-bottom` 前綴〔6 行·grep 證唯一·HTML 免改〕；css-architecture §5 作用域白名單全量表〔五類+鐵則〕+ dom-reference/components 同步 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔U2 層化/U3 作用域/U4 主題/U5 token 跨 commit 覆蓋·不可動〔index.html 自 C1 零改·DOM id 75 守恆·renderMarkdownWithMath 完好·7 css brace 平衡〕·提示詞 7 份·msg 草稿〕+ §7.2 顯式豁免〔plan Q6〕+ baton 一次性歸檔〔plan→plans/·tasks→tasks/·C1–C5 報告→executions/·audit 源長駐 baton〕+ TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-09_FE-CSS-GOV_CSS治理與作用域收斂_plan_v1.md`（v2、八 OQ 全定案 + 底線 Safari 18+）／治理定案源 `baton/frontend_css_governance_audit.md`（長駐 baton）。
+> **動因**：inline `<style>` 1,354 行單體 + globals 耦合 + 主題結構重複 + chrome ID 後代式 → AI 開發改動不精確；以「拆檔/層化/主題契約/token 歸屬/作用域治理」五槓桿治理。
+> **執行期三度 re-scope（baron 逐一拍板·grep 反證 tasks 高估）**：C3〔舊審計未涵蓋後補裝飾 CSS→縮為死碼+契約、結構去重外溢〕／C4〔custom prop 天生全域→遷檔零解耦→零遷移、改語意分區+消費地圖〕／C5〔「36 行需收斂」多為正當模式〔容器/白名單/自身狀態/共用語意 class ID-scope〕→併 C6/C7 為一、唯 `.sb-row` 收斂〕。三者共性＝85 行審計未看清 chrome CSS 其實結構良好；誠實交付真價值、零 false-premise churn。
+> **§7.2**：純 FE-Refactor CSS/docs、無跨 Phase code handoff、顯式豁免（plan Q6）。
+> **不可動守恆**：JS 邏輯（index.html L1610+）/ DOM id（75）/ 27+ JS 契約 class / renderMarkdownWithMath 全零觸；index.html 自 C1(`32e3a1a`) 後零 diff。
+> **收官後續集**：**THEME-DEDUP**（主題結構去重·TODO ⬜ stub·對全主題 CSS 完整重審→共用 base/異值 token/裝飾保留）＝C3 外溢之唯一結構續集；token 架構（C4）與作用域（C5）已定案、無新外溢。
+
 ### DOC-Refactor DOC-SYNC-1 設計文件現況對齊（design/docs 清帳版——幽靈去毒 + dom-reference 覆蓋率 36%→100%；FE-CSS-GOV 前置）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | Docs Truth Sync：**components 幽靈去毒**〔`.title-meta`/`.title-meta-sep` ⚠️ 未實作〔`renderTitleHeader:2748` 實建清單+後端 0 命中〕/ `.msg-ai-actions`/`.msg-copy`/`.msg-regen` ⚠️ 半實作〔CSS `:1063-1098`+委派 `:2405-2406` 在、DOM 注入未接〕/ **`.dropdown-popup` 零碰**〔v3 勘誤：`:2241` 含空格 className 存活〕〕+ **dom-reference 補 30 真缺 ID**〔另 18 為既載格式盲點〕75/75〔§6.4 Modal 七家族〔theme/tag/action/notice 新節〕+ §4.4 abstract-toolbar + §1 app + §2.2 edit-tags-btn + §9 theme-link〕+ 同步戳×2 + token 三檔零差稽核戳×3；增量 +47 行〔≤160〕、零代碼、index.html 零 byte | `c8d6bcb` |
-| checkout | 成果收官：Conformance 五維度全綠〔U1–U5 實檔複驗·tasks §6·不可動〔dropdown-popup 零碰+零代碼〕·提示詞 4 份·msg 草稿〕+ C1 四 deviation 裁決〔准〕+ §7.2 顯式豁免 + baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢〕 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔U1–U5 實檔複驗·tasks §6·不可動〔dropdown-popup 零碰+零代碼〕·提示詞 4 份·msg 草稿〕+ C1 四 deviation 裁決〔准〕+ §7.2 顯式豁免 + baton 一次性歸檔 + TODO 雙層結案 + 鐵律 checkout 報告〔staged 白名單自檢〕 | `d4ce75a` |
 
 > **修法依據**：`plans/2026-07-09_DOC-SYNC-1_設計文件現況對齊_plan_v1.md`（v3、六 OQ 定案 + Q6 規模釘死 + U1 tasks 階段勘誤）
 > **動因**：design/docs 一致性實測——dom-reference 覆蓋率 36%（27/75 ID）、components 把未實作/半實作寫成現況契約（AI 讀到會接不存在的線）；token 契約層實測零差。docs 停更 2026-05-24~06-13、index.html 改到 07-09（≈5 世代欠帳）。
@@ -42,7 +60,7 @@
 | C2 | Workdir Stale Fix：§3 唯一合法工作目錄由已刪除 worktree（hopeful-yalow-902c50）→主 repo 雙視圖（Server `/home/...`＋Mac OrbStack 視圖）+ §3 首 bullet 授權範圍化〔tasks 級銳化〕+ §4 Server 表列同步 + §99.2 v5 | `44f6d00` |
 | C3 | Lifecycle Rules Sync：FRAMEWORK §2.1「不另外分檔」→「單一入口（雙層結構）」+ §2.4 寫入目的地改歸檔檔＋索引行 pointer 格式 + §2.5 雙層寫入 + §99.2 v5；check 模板結案四步雙層＋自癒雙源、run 模板自癒雙源（規則+模板同 commit 原子） | `3c19213` |
 | C4 | TODO Slimming：新建本歸檔檔（byte 逐字承接 1,044 行/79 任務、diff IDENTICAL + hash 集合全等雙鐵證）+ TODO.md 重寫 1,428→467 行（-67.3%、79 行一行式索引）+ pre_tool_guard sentinel 程序零殘留 | `b154478` |
-| C5 | Checkout 收官：Conformance 驗收全綠〔plan U1–U7 跨 commit 覆蓋 / tasks §6 重跑 / 不可動 §7 / 提示詞 8 份稽核 / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1–C4 報告→executions/〕+ TODO 雙層結案（**首次 dogfood C3 新流程**）+ staged 白名單自檢 + checkout 執行報告 | `待 baron 回填` |
+| C5 | Checkout 收官：Conformance 驗收全綠〔plan U1–U7 跨 commit 覆蓋 / tasks §6 重跑 / 不可動 §7 / 提示詞 8 份稽核 / msg 草稿〕+ §7.2 純 DOC 顯式豁免 + baton 一次性歸檔〔plan→plans/、tasks→tasks/、C1–C4 報告→executions/〕+ TODO 雙層結案（**首次 dogfood C3 新流程**）+ staged 白名單自檢 + checkout 執行報告 | `5d3be98` |
 
 > **修法依據**：`.claude-logs/plans/2026-07-07_CONTEXT-1_session載入鏈瘦身與context治理_plan_v1.md`（§99.2 v2、九 OQ 全 🟢 定案）；tasks：`.claude-logs/tasks/2026-07-08_CONTEXT-1_session載入鏈瘦身與context治理_tasks.md`
 > **動因**：五篇 context engineering / agent 工程文獻稽核（`baton/context_engineering_governance_audit.md`、規格源長駐 baton）——session 啟動 @path 鏈灌入 ~2,140 行 + baton 7 檔 130KB、TODO.md 73.6% 為已完成歷史考古、wildcard 無差別全載 → context rot（鐵律被淹沒）+ TODO 每次更新使其後快取全失效。
