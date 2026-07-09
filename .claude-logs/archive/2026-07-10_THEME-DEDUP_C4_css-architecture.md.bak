@@ -160,4 +160,3 @@
 
 - **權威源**：本檔＝CSS 檔案架構/層序/作用域 ownership 唯一源；治理高度定案在 `baton/frontend_css_governance_audit.md`；視覺 token/元件契約在 `color-tokens.md`/`components.md`/`dom-reference.md`；主題契約在 `theme-guide.md`；效能紅線在 `sop/2026-07-02_frontend_效能與渲染_SOP_手冊.md`。
 - **維護**：FE-CSS-GOV 各 commit 同步更新對應章節（建置狀態勾選 + 基準戳）。
-- **機器可驗（THEME-DEDUP C4）**：`python3 .claude-logs/tools/check_css_governance.py`——四類契約確定性檢查（① 主檔系 unlayered 鐵律〔§4〕② token 唯一定義 globals〔§6〕③ 9 主題+模板凍結骨架〔theme-guide §2/§3·例外表＝§11.3〕④ 死碼=0）；exit 0/1+違規清單、`--file` 單檔模式、純標準庫。**任何 AI/人動 CSS 後必跑**；主題模板＝`design/docs/theme-template.css`（嚴禁落 static/themes/·會被 `/api/themes` 掃入下拉）。

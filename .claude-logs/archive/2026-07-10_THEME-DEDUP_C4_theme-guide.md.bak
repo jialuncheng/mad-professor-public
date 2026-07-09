@@ -4,8 +4,7 @@
 > 本檔為**目錄級主題凍結規格權威源**（THEME-DEDUP 定案）：適用 `static/themes/` 下**任何主題**（非僅內建 4 支）——必備 token（§2）、統一骨架與必備選擇器（§3）、屬性白名單（§4）、兩個可空槽（§5）、禁止清單（§6）、unlayered 優先級（§7）。
 > 架構全景（檔案分層 / @layer / token 三層 / 結構→base 對照）見 `css-architecture.md`；跨檔設計理念見 `principles.md §6.5`。
 >
-> **落地進度**：C1 base 承接 ✅ ／ C2 內建 4 支正規化 + 本規格凍結 ✅ ／ C3 上傳 5 支正規化 ✅（遺留登記 §11）／ C4 模板 + 契約腳本 ✅（**全 9 支 + 模板首綠**）。
-> **機器可驗**：`python3 .claude-logs/tools/check_css_governance.py`（全量）或 `--file <主題.css>`（單檔）——任何 AI/人動 CSS 後跑一下、紅即擋（§8 步驟 8）。
+> **落地進度**：C1 base 承接 ✅ ／ C2 內建 4 支正規化 + 本規格凍結 ✅ ／ C3 上傳 5 支正規化 ✅（遺留登記 §11）／ C4 模板 `design/docs/theme-template.css` + 契約腳本 `tools/check_css_governance.py` ⬜。
 
 ---
 
@@ -126,20 +125,21 @@
 
 ## §8 Step-by-step：建立新主題
 
-1. **起點＝複製模板**：`cp design/docs/theme-template.css static/themes/<name>.css`——模板即完整統一骨架（9 段 + 26 token 佔位 + 16 選擇器 + 兩空槽 + 逐段用途註解）、填值即 conformant。
+> C4 產出統一骨架模板 `design/docs/theme-template.css` 後、Step 1 改為「copy 模板」；目前以最簡 conformant 主題（mies）為起點。
+
+1. **起點**：`cp static/themes/mies.css static/themes/<name>.css`（C4 後改 copy 模板）。
 2. **header 註解**：主題名、核心信念、視覺語彙（5 行內）。
 3. **26 token 填值**（§2）：13 色 + 4 結構寬 + 7 異值結構 + 2 字族——只改值、不增減。
-4. **字體 `@import`**：換成主題字族（必在 `:root` 前、防 FOUT）。
-5. **白名單屬性調印刷**（§4）：16 選擇器內自由發揮 font/letter-spacing/text-transform/`.ph` 背景裝飾…。
-6. **兩槽**（§5）：要幾何裝飾填 `::before`、要 re-skin chrome 填 marker 段；不用保持模板原樣（空）。
+4. **字體 `@import`**（選）：置 `:root` 前（防 FOUT）。
+5. **白名單屬性調印刷**（§4）：16 選擇器內自由發揮 font/letter-spacing/text-transform…。
+6. **兩槽**（§5）：要幾何裝飾填 `::before`、要 re-skin chrome 填 marker 段；不用留空。
 7. **掛載**：`#theme-link href="themes/<name>.css"`（或經風格 Modal 上傳）。
-8. **機器驗收（必跑）**：
-   ```bash
-   python3 .claude-logs/tools/check_css_governance.py --file static/themes/<name>.css   # 單檔
-   python3 .claude-logs/tools/check_css_governance.py                                    # 全量
-   ```
-   exit 0＝conformant；exit 1＝違規清單逐條列（缺 token/缺選擇器/非白名單屬性/死碼/@layer）。
-9. **人工 checklist**：三欄分隔線可見、active icon 反白對比 ≥4.5、字體 fallback 不破版。
+8. **checklist**：
+   - [ ] 26 token 齊（缺者 fallback 生效、視覺斷裂）
+   - [ ] 16 選擇器 + 2 槽 marker 在
+   - [ ] 零非白名單結構屬性（§6）、零 `#demo-bar` 死碼、零 `@layer`
+   - [ ] 三欄分隔線可見、active icon 反白對比 ≥4.5、字體 fallback 不破版
+   - [ ]（C4 後）`python3 .claude-logs/tools/check_css_governance.py` 全綠
 
 ---
 

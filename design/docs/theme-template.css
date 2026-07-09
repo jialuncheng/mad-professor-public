@@ -1,0 +1,169 @@
+/* ============================================================
+   THEME · <主題名> — <一句話身分（人物/流派/建物）>
+   ============================================================
+   <核心信念引言（選）>
+
+   核心語彙：
+     · <視覺語彙 1（色/材質/線條）>
+     · <視覺語彙 2>
+     · <視覺語彙 3>
+
+   設計轉譯：
+     · 主色：<...>
+     · accent：<...>
+     · divider：<...>
+     · 字體：<字族 — 為何符合主題氣質（必 sans-serif）>
+     · figure 佔位：<裝飾手法（背景漸層 / ::before 幾何）>
+
+   [規格] 統一骨架（theme-guide §3）：結構規則歸 base（content.css）、
+   數值經 26 必備 token 供給（theme-guide §2 凍結規格）。
+   本模板 = design/docs/theme-template.css（嚴禁複製到 static/themes/ 前忘記改名——
+   /api/themes 會把該目錄任何非內建 .css 列入下拉選單）。
+   驗收：python3 .claude-logs/tools/check_css_governance.py --file <你的主題.css>
+   ============================================================ */
+
+/* 段 2 ── @import 字體（選用·必在 :root 前、防 FOUT） */
+@import url("https://fonts.googleapis.com/css2?family=<FontName>:wght@400;500;600;700&display=swap");
+
+/* ══ tokens（26 必備·theme-guide §2）══ */
+:root {
+  /* ── 色票（13）── */
+  --color-bg: #______;                   /* 全域底色 */
+  --color-bg-served: #______;            /* 中欄底（可同 bg 或略亮） */
+  --color-surface: #______;              /* hover / 次級表面 */
+  --color-surface-2: #______;            /* rail / 強調表面 */
+  --color-border: #______;
+  --color-border-strong: #______;
+  --color-divider: #______;              /* 三欄結構分隔線色 */
+  --color-text: #______;
+  --color-text-muted: #______;
+  --color-text-subtle: #______;          /* 需 ≥4.5:1 on bg — 過 AA */
+  --color-accent: #______;               /* selected / user 訊息泡（與 #fff 對比 ≥4.5） */
+  --color-accent-hover: #______;
+  --color-danger: #______;
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 1px;                      /* 1px 或 2px */
+  --radius-sm: 0;                        /* 現行主題皆 0（破例須修 principles.md） */
+  --radius-md: 0;
+
+  /* ── 中欄共軌最大寬度 ── */
+  --content-max-w: 760px;                /* 720–860 依主題呼吸感 */
+
+  /* ── 異值結構 token（7·規則在 base、值在此覆寫）── */
+  --pc-pad: var(--space-6) var(--space-8);   /* #paper-content padding（shorthand 可） */
+  --figure-margin-y: var(--space-6);         /* .figure 垂直 margin */
+  --byline-margin-b: var(--space-6);         /* .byline margin-bottom */
+  --byline-pad-b: var(--space-2);            /* .byline padding-bottom */
+  --byline-border-w: 1px;                    /* .byline 底線寬（0＝無底線） */
+  --figcaption-margin-t: var(--space-3);     /* figcaption margin-top */
+  --ph-border-w: 1px;                        /* .figure .ph 邊框寬 */
+
+  /* ── 字族（2·必 sans-serif）── */
+  --font-display: "<FontName>", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "<FontName>", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+/* ══ base 字體 ══ */
+body {
+  font-family: var(--font-body);
+  font-size: 14px;                       /* 14–15px 依字族 x-height */
+}
+.display-font { font-family: var(--font-display); }
+
+/* ══ chrome 標題 ══ */
+/* 中欄 served 底（純色或主題級漸層皆可） */
+#content-area { background: var(--color-bg-served); }
+/* 三欄標題（左欄 + 右欄 header） */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;                  /* uppercase／none 依主題 */
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+/* 中欄工具列大標（與 #paper-content h1 同字級為佳） */
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+/* ══ 內容（#paper-content 系）══ */
+/* 結構（padding/margin/border 寬…）歸 base——這裡只寫白名單外觀屬性 */
+#paper-content {
+  /* padding 歸 base、值走 :root --pc-pad */
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  /* 章節底線歸 base（--divider-w + --color-divider 經 token 生效） */
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+#paper-content p {
+  font-size: 14px;
+  line-height: 1.75;                     /* 1.7–1.8 */
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  /* 間距/底線歸 base（--byline-*）；底線異色以白名單 border-color 覆 */
+}
+
+/* ══ figure 佔位 ══ */
+#paper-content .figure {
+  /* margin 歸 base（--figure-margin-y） */
+}
+#paper-content .figure .ph {
+  /* 佔位裝飾＝主題個性主舞台：background / background-image 漸層自由發揮 */
+  background-color: var(--color-surface);
+  /* 邊框寬歸 base（--ph-border-w）；異色以 border-color 覆（default divider） */
+  font-family: var(--font-display);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  /* margin-top 歸 base（--figcaption-margin-t） */
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
+/* 要用偽元素做幾何效果（如 kahn 天窗光線）在此填；不用保持空規則 */
+#paper-content .figure .ph::before { }
+
+/* ══ 進階 chrome 覆寫層（本主題未使用）══ */
+/* 要 re-skin chrome（.btn-*/.msg-*/.modal-* 等·如 apple/google）把覆寫規則放本段；
+   建議色值經 var(--color-*)、不強制（theme-guide §11.2）。不用僅留本 marker。 */
