@@ -65,6 +65,38 @@ body {
 /* 中欄 served：純白畫面 */
 #content-area { background: var(--color-bg-served); }
 
+/* ── 展示控制條：Bauhaus label 質感 ── */
+#demo-bar {
+  height: 42px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "color is the keyboard · the soul is the piano";
+}
+
 /* ── 三欄標題：Bauhaus 大寫寬字距 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {

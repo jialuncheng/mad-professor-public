@@ -63,6 +63,38 @@ body {
 /* 中欄 served：奈良畫紙最亮 */
 #content-area { background: var(--color-bg-served); }
 
+/* ── 展示控制條：圓潤輕量 ── */
+#demo-bar {
+  height: 42px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "the child within me";
+}
+
 /* ── 三欄標題：圓潤幾何 + 中字距 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {

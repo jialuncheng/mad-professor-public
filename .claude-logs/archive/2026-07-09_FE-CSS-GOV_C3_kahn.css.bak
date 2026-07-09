@@ -72,6 +72,37 @@ body {
     var(--color-bg-served);
 }
 
+/* ── 展示控制條：museum-label 質感 ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;                /* 較沙克版收窄（原 0.24em） */
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "i sense light as the giver of all presences";
+}
+
 /* ── 三欄標題：museum-label 而非銘文 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {
