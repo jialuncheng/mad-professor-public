@@ -59,16 +59,6 @@
                   "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-body: "Space Grotesk", "Helvetica Neue", "Arial",
                "PingFang TC", "Microsoft JhengHei", sans-serif;
-
-  /* ── 異值結構 token（THEME-DEDUP C3·規則在 base、值在此覆寫）── */
-  --content-max-w: 760px; /* 中欄共軌最大寬度（原檔 max-width 同值） */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-6);
-  --figcaption-margin-t: var(--space-3);
-  --byline-margin-b: var(--space-6);
-  --byline-pad-b: var(--space-3);
-  --byline-border-w: 1px;
-  --ph-border-w: var(--divider-w);
 }
 
 body {
@@ -80,6 +70,38 @@ body {
 
 /* 中欄 served：玻璃帷幕牆透進來的光 */
 #content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：全小寫、工業標識感 ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: lowercase;             /* Bayer Universal：廢除大寫 */
+  letter-spacing: 0.06em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;                    /* Bauhaus 拒絕義式裝飾——以正體呈現 */
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "kunst und technik · eine neue einheit";
+}
 
 /* ── 三欄標題：lowercase + 中字距 ── */
 #sidebar h1 .title,
@@ -103,9 +125,9 @@ body {
 
 /* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
 }
-/* [THEME-DEDUP C3] 遺留節奏 margin（下方 h1/h2/h3/p 之 margin*）＝pre-FE-RHYTHM 舊樣板產物·視覺等價鐵律保留、收斂另議（theme-guide §11 登記） */
 #paper-content h1 {
   font-family: var(--font-display);
   font-size: 36px;
@@ -117,13 +139,14 @@ body {
   color: var(--color-text);
 }
 #paper-content h2 {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 600;
   text-transform: lowercase;
   letter-spacing: -0.005em;
   margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -145,23 +168,22 @@ body {
   font-style: italic;
 }
 #paper-content .byline {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);
   font-size: 12px;
   font-weight: 500;
   text-transform: lowercase;
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-strong);
 }
-#paper-content .figure {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
-}
+#paper-content .figure { margin: var(--space-6) 0; }
 
 /* ── figure 佔位：Dessau 玻璃帷幕牆 ──
    純白玻璃底 + 規律垂直 mullion 鋼柱 + 細水平樓板線 + 右上紅色 signage chip
    ── */
 #paper-content .figure .ph {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   background:
     /* 右上紅色 signage chip（Schmidt 立面招牌位置）*/
     linear-gradient(var(--color-accent), var(--color-accent))
@@ -181,6 +203,7 @@ body {
       rgba(20, 20, 20, 0.18) 32px,
       rgba(20, 20, 20, 0.18) 34px),
     var(--color-bg-served);
+  border: var(--divider-w) solid var(--color-divider);
   font-family: var(--font-display);
   color: var(--color-text);
   font-size: 11px;
@@ -189,18 +212,13 @@ body {
   letter-spacing: 0.06em;
 }
 #paper-content .figure figcaption {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-size: 13px;
   font-weight: 400;
   color: var(--color-text-muted);
   font-style: italic;
+  margin-top: var(--space-3);
   text-align: center;
   line-height: 1.6;
   max-width: 560px;
   margin-inline: auto;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */

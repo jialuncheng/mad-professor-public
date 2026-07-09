@@ -4,7 +4,7 @@
 > 本檔為**目錄級主題凍結規格權威源**（THEME-DEDUP 定案）：適用 `static/themes/` 下**任何主題**（非僅內建 4 支）——必備 token（§2）、統一骨架與必備選擇器（§3）、屬性白名單（§4）、兩個可空槽（§5）、禁止清單（§6）、unlayered 優先級（§7）。
 > 架構全景（檔案分層 / @layer / token 三層 / 結構→base 對照）見 `css-architecture.md`；跨檔設計理念見 `principles.md §6.5`。
 >
-> **落地進度**：C1 base 承接 ✅ ／ C2 內建 4 支正規化 + 本規格凍結 ✅ ／ C3 上傳 5 支正規化 ✅（遺留登記 §11）／ C4 模板 `design/docs/theme-template.css` + 契約腳本 `tools/check_css_governance.py` ⬜。
+> **落地進度**：C1 base 承接 ✅ ／ C2 內建 4 支正規化 + 本規格凍結 ✅ ／ C3 上傳 5 支正規化 ⬜ ／ C4 模板 `design/docs/theme-template.css` + 契約腳本 `tools/check_css_governance.py` ⬜。
 
 ---
 
@@ -172,34 +172,3 @@
 
 ### §10.4 資源目錄
 上傳目標 `static/themes/<sanitized>.css`；**served 主題唯一目錄＝`static/themes/`**（`design/new/themes/` 為 stale mockup、非 served）；相關：`web_server.py::upload_theme`／`#theme-modal`／`tests/test_themes_upload.py`（5 pytest）。
-
----
-
-## §11 自訂/上傳主題（現役 5 支·C3 正規化實錄）
-
-> 現役上傳：apple／corbusier／fuller／google／gropius（THEME-DEDUP C0 入版控、C3 正規化）。本章＝上傳主題的 conformance 實況與**遺留登記**（契約腳本例外表之依據）。
-
-### §11.1 上傳主題如何運作（unlayered 三保證）
-1. 上傳 CSS 不含 `@layer` → 天然 unlayered → **恆勝**主檔四層（§7）——其覆寫必生效。
-2. 缺 token → globals T3 default 生效；缺結構規則 → 自動繼承 base——**不 crash、不破版**。
-3. chrome re-skin（覆寫 `.btn-*`/`.msg-*`/`.modal-*` 等）→ 放**骨架第 9 槽**（§5-B）＝自由區；apple/google 即此型、內容原樣保留。
-
-### §11.2 chrome 槽使用規範
-- 覆寫規則集中於 `/* ══ 進階 chrome 覆寫層 ══ */` marker 之後（檔尾段）。
-- **建議**色值經 `var(--color-*)`（隨 token 換膚、維護性佳）、**不強制**（既有 apple/google 混用硬編碼、原樣保留）。
-- 槽內屬性自由（含 border-radius/backdrop-filter 等）——**不受** §4 內容選擇器白名單約束。
-
-### §11.3 遺留登記（keep + register·視覺等價鐵律優先於 structure=0）
-
-> C3 正規化時，以下白名單外結構**刻意保留**——base 無法重現其樣式、剝除即視覺回歸；契約腳本（C4）以本表為例外。收斂與否屬後續（baron 另議）。
-
-| 範疇 | 遺留 | 支數 |
-|---|---|---|
-| **節奏 margin**（pre-FE-RHYTHM 舊樣板產物） | `#paper-content h1 { margin-bottom }`／`h2 { margin }`／`h3 { margin }`／`p { margin-bottom }` | **全 5 支**（同值：5/6-0-3/5-0-2/4） |
-| **fuller 虛線美學** | `h2 { border-bottom: … dashed … }`／`.byline { border-bottom: 1px dashed … }`（base 為 solid、不可重現） | fuller |
-| **fuller 數字排版** | `body { font-feature-settings: "tnum" }`（候選未來白名單） | fuller |
-| **圓角佔位** | `.ph { border-radius: 12px/16px }` | apple／google |
-| **figcaption 寬度**（Q3 既有例外·同 kahn） | `max-width: 560/600px + margin-inline: auto` | corbusier／fuller／gropius |
-
-### §11.4 新上傳主題建議
-依 §8 Step-by-step（C4 後 copy 模板）產出 conformant 主題＝最佳路徑；非 conformant 上傳仍可用（§11.1 三保證）、僅不在契約腳本綠燈範圍。

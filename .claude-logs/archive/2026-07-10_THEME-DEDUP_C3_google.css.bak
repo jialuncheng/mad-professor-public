@@ -45,16 +45,6 @@
                   "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-body: "Roboto", "Inter", -apple-system, BlinkMacSystemFont,
                "PingFang TC", "Microsoft JhengHei", sans-serif;
-
-  /* ── 異值結構 token（THEME-DEDUP C3·規則在 base、值在此覆寫）── */
-  --content-max-w: 760px; /* 中欄共軌最大寬度（原檔 max-width 同值） */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-6);
-  --figcaption-margin-t: var(--space-3);
-  --byline-margin-b: var(--space-5);
-  --byline-pad-b: 0;
-  --byline-border-w: 0;   /* google：byline 無底線 */
-  --ph-border-w: 1px;
 }
 
 body {
@@ -65,6 +55,41 @@ body {
 
 /* 中欄 served：白卡片 */
 #content-area { background: var(--color-bg-served); }
+
+/* ── Demo bar ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+#demo-bar .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+#demo-bar .seg {
+  border-radius: 20px;                   /* Material segmented pill */
+  overflow: hidden;
+}
+#demo-bar .seg button {
+  height: 28px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "Focus on the user";
+}
 
 /* ── 三欄標題 ── */
 #sidebar h1 .title,
@@ -87,9 +112,9 @@ body {
 
 /* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
 }
-/* [THEME-DEDUP C3] 遺留節奏 margin（下方 h1/h2/h3/p 之 margin*）＝pre-FE-RHYTHM 舊樣板產物·視覺等價鐵律保留、收斂另議（theme-guide §11 登記） */
 #paper-content h1 {
   font-family: var(--font-display);
   font-size: 32px;
@@ -100,12 +125,13 @@ body {
   color: var(--color-text);
 }
 #paper-content h2 {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 500;
   letter-spacing: -0.005em;
   margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -125,40 +151,34 @@ body {
   font-style: italic;
 }
 #paper-content .byline {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);
   font-size: 13px;
   color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
 }
-#paper-content .figure {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
-}
+#paper-content .figure { margin: var(--space-6) 0; }
 
 /* ── figure 佔位：Material card（圓角 + 細邊） ── */
 #paper-content .figure .ph {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 16px;                   /* Material large card */
   font-family: var(--font-display);
   color: var(--color-text-subtle);
   font-size: 13px;
   font-weight: 500;
   text-transform: none;
-  border-color: var(--color-border);   /* [THEME-DEDUP C3] 邊框寬歸 base（--ph-border-w）·色以白名單覆（google 淡框） */
 }
 #paper-content .figure figcaption {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-size: 13px;
   color: var(--color-text-muted);
   font-style: normal;
+  margin-top: var(--space-3);
   text-align: center;
   line-height: 1.5;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（re-skin·設計本體·原樣保留〔theme-guide §5-B〕）══ */
 
 /* ── Material 元件級覆寫 ── */
 

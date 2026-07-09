@@ -64,16 +64,6 @@
                   "PingFang TC", "Microsoft JhengHei", monospace;
   --font-body: "DM Sans", "Helvetica Neue", "Arial",
                "PingFang TC", "Microsoft JhengHei", sans-serif;
-
-  /* ── 異值結構 token（THEME-DEDUP C3·規則在 base、值在此覆寫）── */
-  --content-max-w: 760px; /* 中欄共軌最大寬度（原檔 max-width 同值） */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-6);
-  --figcaption-margin-t: var(--space-3);
-  --byline-margin-b: var(--space-6);
-  --byline-pad-b: var(--space-3);
-  --byline-border-w: 1px; /* fuller 自帶 dashed 底線（遺留保留）·此值供規格齊備 */
-  --ph-border-w: var(--divider-w);
 }
 
 body {
@@ -86,6 +76,38 @@ body {
 
 /* 中欄 served：圖面落點 */
 #content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：工程繪圖題字感 ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  font-family: var(--font-display);      /* mono 製圖標籤感 */
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;             /* credo 走小寫——patent 註解感 */
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "do more with less · dymaxion";
+}
 
 /* ── 三欄標題：mono 製圖標題 ── */
 #sidebar h1 .title,
@@ -109,9 +131,9 @@ body {
 
 /* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
 }
-/* [THEME-DEDUP C3] 遺留節奏 margin（下方 h1/h2/h3/p 之 margin*）＝pre-FE-RHYTHM 舊樣板產物·視覺等價鐵律保留、收斂另議（theme-guide §11 登記） */
 #paper-content h1 {
   font-family: var(--font-display);      /* h1 mono：patent 圖大字題 */
   font-size: 30px;
@@ -122,7 +144,6 @@ body {
   color: var(--color-text);
 }
 #paper-content h2 {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 600;
@@ -130,6 +151,7 @@ body {
   margin: var(--space-6) 0 var(--space-3);
   /* dashed underline：工程圖 section line 慣例——Fuller 主題的差異化記號 */
   border-bottom: var(--divider-w) dashed var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -152,19 +174,18 @@ body {
   font-style: italic;
 }
 #paper-content .byline {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);      /* byline mono：作者署名走 patent 標籤 */
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
   /* dashed 底線：同 h2 規格——標籤性質元素都走虛線 */
   border-bottom: 1px dashed var(--color-border-strong);
 }
-#paper-content .figure {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
-}
+#paper-content .figure { margin: var(--space-6) 0; }
 
 /* ── figure 佔位：cyanotype 藍曬 + 測地三角網格 + 穹頂高光 ──
    底：cyanotype 藍曬深色
@@ -172,7 +193,6 @@ body {
    網格：三方向交織白色 1px 線（0°/60°/-60°）形成等邊三角網
    ── */
 #paper-content .figure .ph {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   background:
     /* 三方向 1px 白線：等邊三角網格 */
     repeating-linear-gradient(
@@ -199,6 +219,7 @@ body {
       rgba(255, 255, 255, 0) 60%),
     /* cyanotype 藍曬底色 */
     #134e76;
+  border: var(--divider-w) solid var(--color-divider);
   font-family: var(--font-display);
   color: rgba(255, 255, 255, 0.85);      /* 文字在深底上轉淺 */
   font-size: 11px;
@@ -207,20 +228,15 @@ body {
   letter-spacing: 0.16em;
 }
 #paper-content .figure figcaption {
-  /* [THEME-DEDUP C3] 結構歸 base·值走 :root token */
   font-family: var(--font-display);      /* caption mono：圖註標籤感 */
   font-size: 12px;
   font-weight: 400;
   color: var(--color-text-muted);
   font-style: normal;                    /* mono 不走 italic */
+  margin-top: var(--space-3);
   text-align: center;
   line-height: 1.6;
   max-width: 600px;
   margin-inline: auto;
   letter-spacing: 0.02em;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */

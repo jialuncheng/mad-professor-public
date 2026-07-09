@@ -140,7 +140,7 @@
 
 ### 6.4 主題結構→base/token 對照表（THEME-DEDUP C1 立基）
 
-> 主題的佈局結構規則歸 **base（content.css）**、數值經 **T3 異值結構 token** 供給——主題僅覆寫 token 值（structure-free）。default＝多數派值；「主題覆寫」欄＝內建 4 支之異值。**現況（C2/C3 已落地）**：9 支主題（4 內建 + 5 上傳）皆已卸結構、token 生效；上傳 5 支另有**遺留登記**（pre-FE-RHYTHM 節奏 margin／fuller dashed 等·視覺等價鐵律保留）→ 唯一登記表見 `theme-guide.md §11.3`（契約腳本例外之依據）。上傳 8 token 覆寫值＝C0 baseline 原值（如 --content-max-w 全 760px、apple/google --byline-border-w: 0）。
+> 主題的佈局結構規則歸 **base（content.css）**、數值經 **T3 異值結構 token** 供給——主題僅覆寫 token 值（structure-free）。default＝多數派值；「主題覆寫」欄＝內建 4 支之異值（上傳 5 支於 C3 依 baseline 核定）。**C1 為鋪底**：base 規則已就位、主題尚未卸結構（unlayered 蓋 base·視覺零變）；C2/C3 主題卸結構後 token 生效。
 
 | Token（default） | base 規則（content.css·@layer components） | 主題覆寫（異值） |
 |---|---|---|
