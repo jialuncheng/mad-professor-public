@@ -9,18 +9,17 @@
 @layer tokens {
   :root {
     /* ──────────────────────────────────────────────
-       Token 三層分類（FE-CSS-GOV C4·作法2：零遷移·全域集中）
+       主檔（結構層）token
        ────────────────────────────────────────────
-       所有 token 集中於此 globals :root——custom property 全域繼承、
-       跨檔（layout/sidebar/content/chat/overlays）皆可 var() 取用；
-       「歸屬」是**語意分類、非檔案 scope**（真正 scope 需元件選擇器、未採）。
-       完整消費地圖（哪個變數被哪些檔用）見 design/docs/css-architecture.md §6 Token 歸屬。
-         · T1 全域結構 scale     — 主檔定義、themes 不覆寫
-         · T2 共用元件系統 token — 主檔定義、跨元件、themes 不覆寫
-         · T3 主題覆寫面 fallback — themes/<name>.css 覆寫（未掛主題時 fallback 生效）
+       色票、字體、圓角、分隔線粗細 → 由 themes/<name>.css 提供
+       此處只放與主題無關的版面結構數值：
+         · 間距模矩  --space-*
+         · 字級階梯  --font-*
+         · 按鈕／工具列／rail 尺寸
+         · 按鈕群組三階間距
+         · 過渡時間
        ────────────────────────────────────────────── */
 
-    /* ══ T1 全域結構 scale（themes 不覆寫）══ */
     /* ── 間距（4px 模矩）── */
     --space-1: 4px; --space-2: 8px; --space-3: 12px;
     --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-8: 48px;
@@ -29,10 +28,6 @@
     --font-xs: 12px; --font-sm: 13px; --font-base: 14px;
     --font-lg: 16px; --font-xl: 20px; --font-2xl: 28px;
 
-    /* ── 過渡時間 ── */
-    --transition: 150ms ease;
-
-    /* ══ T2 共用元件系統 token（跨元件·themes 不覆寫·消費地圖見 css-architecture §6）══ */
     /* ── 按鈕／版面 ── */
     --btn-h: 32px;
     --btn-pad-x: var(--space-4);
@@ -53,12 +48,13 @@
     --gap-btn-normal: var(--space-2);
     --gap-btn-loose: var(--space-4);
 
-    /* ══ T3 主題覆寫面 fallback（themes/<name>.css 覆寫；未掛主題時此 fallback 生效）══ */
     /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄正文 + toolbar 共用最大寬度 token
        預設 760px、各主題自行覆寫；toolbar + paper-content + abstract 同軌道 */
     --content-max-w: 760px;
 
-    /* ── 色票 fallback ── */
+    --transition: 150ms ease;
+
+    /* ── fallback：若未掛主題，仍可渲染 ── */
     --color-bg: #ffffff;
     --color-bg-served: #ffffff;
     --color-surface: #f5f5f5;
@@ -72,8 +68,6 @@
     --color-accent: #111111;
     --color-accent-hover: #2a2a2a;
     --color-danger: #a8242c;
-
-    /* ── 結構厚度 / 圓角 / 字族 fallback ── */
     --divider-w: 1px;
     --radius-sm: 0;
     --radius-md: 0;

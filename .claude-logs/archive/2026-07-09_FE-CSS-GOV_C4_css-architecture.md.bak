@@ -4,7 +4,7 @@
 > 由 `FE-CSS-GOV` 任務建立與維護；治理高度定案源見 `baton/frontend_css_governance_audit.md`。
 > 最後現況對照：2026-07-09、基準 `static/index.html@d4ce75a`（FE-CSS-GOV C1 File Split）。
 >
-> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ✅ ／ C3 主題契約〔縮版·結構去重外溢 THEME-DEDUP〕✅ ／ C4 token 歸屬〔§6·作法2 零遷移〕✅ ／ C5-C7 命名前綴+白名單表 ⬜。未打勾章節為**規劃、尚未落地**。
+> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ✅ ／ C3 主題去重白名單 ⬜ ／ C4 token 歸屬 ⬜ ／ C5-C7 命名前綴+白名單表 ⬜。未打勾章節為**規劃、尚未落地**。
 
 ---
 
@@ -85,45 +85,6 @@
 ## 5. 命名作用域與白名單（C5-C7 規劃、尚未落地）
 
 > ⬜ **待 C5-C7**：chrome UI 之 ID 後代選擇器收斂為單 class（前綴 `.sb-*`/`.chat-*`/`.ct-*`）；**內容渲染容器白名單**（`#paper-content`/`#chat-messages`/`#current-title`/`#abstract-toolbar` 之後代規則保留——內容為 marked/後端/renderTitleHeader 產物、無 class 可掛）；**DOM id 與 JS 契約 class 零改名**（見 `dom-reference.md §8`）。前綴表與白名單全量表於 C5-C7 落地。
-
----
-
-## 6. Token 歸屬（C4 ✅·作法2 純文件版）
-
-> **決策（baron 2026-07-09 拍板·作法2）**：原 plan U5「把 B 類元件變數遷出 globals 到 owning 元件檔以解耦」經 grep 反證**前提不成立**——(1) 13 個變數中 8 個跨 2–5 個元件檔共用（`--btn-icon-stroke` 5 檔、`--gap-btn-normal` 5 檔…），本質是共用設計 token 系統、無單一 owner；(2) **CSS custom property 天生全域**：`:root{--x}` 不論寫在哪支 CSS 都掛 document root、全域繼承，故「換檔宣告」給**零解耦**、只讓歸屬圖失真；(3) 部分真實 owner（如 `--gap-btn-tight`→`sidebar.css`）在 C4 編輯權外。→ **決定：13 個全留 globals（零遷移）**，改以本節「語意分類 + 消費地圖」達成 U5 想要的 SSOT。真正模組化解耦需把 token scope 到元件選擇器（如 `#chat-panel{--x}` 而非 `:root`）＝獨立架構決策、未採。
-
-**唯一定義位置**：全部 token 定義於 `globals.css` 的 `:root`（`@layer tokens`）。「歸屬」是**語意分類**、非檔案 scope。
-
-### 6.1 三層分類（globals `:root` 分區）
-| 層 | 角色 | themes 覆寫? | 成員 |
-|---|---|---|---|
-| **T1 全域結構 scale** | 主檔定義的抽象尺度 | ❌ | `--space-1..8`／`--font-xs..2xl`（字級階梯）／`--transition` |
-| **T2 共用元件系統 token** | 跨元件的具體元件尺寸 | ❌ | 見 §6.2（13 個） |
-| **T3 主題覆寫面 fallback** | 未掛主題時的兜底值 | ✅ themes 覆寫 | `--content-max-w`／`--color-*`(13)／`--divider-w`／`--radius-sm/md`／`--font-display`／`--font-body` |
-
-### 6.2 T2 共用元件系統 token — 消費地圖（grep `@a49fb28` 實測）
-> 均定義於 `globals.css :root`；下表「消費檔」＝實際 `var(--x)` 出現處。**多檔共用者無單一 owner、留 globals 為正解**。
-
-| Token | 值 | 消費檔（grep） |
-|---|---|---|
-| `--btn-h` | 32px | layout / overlays |
-| `--btn-pad-x` | var(--space-4) | layout |
-| `--btn-min-w` | 64px | layout |
-| `--btn-icon` | 32px | layout / sidebar |
-| `--btn-icon-svg` | 18px | layout / sidebar |
-| `--btn-icon-stroke` | 1.5 | layout / sidebar / chat / overlays / content（5 檔） |
-| `--gap-btn-tight` | var(--space-1) | sidebar |
-| `--gap-btn-normal` | var(--space-2) | sidebar / overlays / chat / content |
-| `--gap-btn-loose` | var(--space-4) | chat / content |
-| `--toolbar-h` | 48px | content / sidebar / chat |
-| `--pad-panel` | var(--space-4) | sidebar / content / chat |
-| `--rail-w` | 48px | layout（`.collapsed`） |
-| `--chat-pad-x` | var(--space-4) | chat（L168 fallback 形） |
-
-### 6.3 維護規則
-- **新增 token**：一律加到 `globals.css :root` 對應層（T1/T2/T3），勿散到元件檔。
-- **改元件尺寸**：改 T2 對應變數（全域一處生效）；勿在元件檔重定義同名 `:root` 變數（會製造多定義）。
-- **themes 只碰 T3**（見 `theme-guide.md §1` 白名單）。
 
 ---
 
