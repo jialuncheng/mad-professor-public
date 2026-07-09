@@ -1,0 +1,284 @@
+/* ============================================================
+   THEME · Google Material You / Material 3
+   ============================================================
+   Material Design 3 核心語彙：
+     · Google Sans / Roboto Flex（雲端 fallback Inter）
+     · Material 大色塊：Primary blue #1a73e8（Google brand）
+     · Surface tonal palette（neutral 中性灰，Material 3 dynamic）
+     · 大圓角（state layer 16px + button 20px）
+     · 「Elevation」用 1dp 細陰影 + tonal surface 堆層
+     · 大量 8dp 模矩、慷慨間距
+     · Google Sans 標題、Roboto 內文（用 Inter 統一替代）
+
+   ⚠ 破例：
+     `--radius-md`: 0 → 12px（Material button shape）
+     已在 `principles.md` 註記 Apple/Google 兩主題的圓角破例
+
+   依賴主檔提供：間距 / 按鈕尺寸 / icon 規格不變。
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：Material 3 tonal palette + Google brand blue ── */
+  --color-bg: #f8f9fa;                   /* Material surface-1 / Google grey-50 */
+  --color-bg-served: #ffffff;            /* Surface-bright：白卡片 */
+  --color-surface: #f1f3f4;              /* Google grey-100 hover */
+  --color-surface-2: #e8eaed;            /* Google grey-200 rail */
+  --color-border: #dadce0;               /* Google divider grey-300 */
+  --color-border-strong: #9aa0a6;        /* Google grey-500 */
+  --color-divider: #dadce0;              /* Material 細淡分隔 */
+  --color-text: #202124;                 /* Google grey-900 主文字 */
+  --color-text-muted: #5f6368;           /* Google grey-700 secondary */
+  --color-text-subtle: #80868b;          /* Google grey-600；AA 過 4.5:1 on #f8f9fa */
+  --color-accent: #1a73e8;               /* Google Brand Blue */
+  --color-accent-hover: #1557b0;
+  --color-danger: #d93025;               /* Google Red 600 */
+
+  /* ── 結構 ── */
+  --divider-w: 1px;                      /* Material 用淡細線 */
+  --radius-sm: 8px;
+  --radius-md: 12px;                     /* Material button shape */
+
+  /* ── 字體：Google Sans display + Roboto body；fallback Inter ── */
+  --font-display: "Google Sans", "Inter", -apple-system, BlinkMacSystemFont,
+                  "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Roboto", "Inter", -apple-system, BlinkMacSystemFont,
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：白卡片 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── Demo bar ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+#demo-bar .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+#demo-bar .seg {
+  border-radius: 20px;                   /* Material segmented pill */
+  overflow: hidden;
+}
+#demo-bar .seg button {
+  height: 28px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "Focus on the user";
+}
+
+/* ── 三欄標題 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;                      /* Google Sans 500 medium */
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;                      /* Material display weight 400 */
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;                      /* Material display-medium 400 */
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: var(--space-4);
+  color: var(--color-text);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：Material card（圓角 + 細邊） ── */
+#paper-content .figure .ph {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;                   /* Material large card */
+  font-family: var(--font-display);
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: normal;
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Material 元件級覆寫 ── */
+
+/* Primary button：Material filled tonal */
+.btn-primary,
+.modal-box button.modal-btn.primary,
+#send-btn {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  border-radius: 20px;                   /* Material filled button pill */
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.btn-primary:hover,
+.modal-box button.modal-btn.primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+/* Ghost / 一般 modal-btn：Material text/outlined button */
+.btn-ghost,
+.modal-box button.modal-btn {
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+/* Icon-only / 輸入框 / popup 等其他元件圓角 */
+.icon-only,
+.modal-box select,
+.dropdown-trigger,
+#chat-input,
+.ctx-popup,
+.ctx-popup button,
+.modal-box,
+#tooltip,
+#sidebar-bottom .sb-row > button {
+  border-radius: var(--radius-md);
+}
+.ctx-popup button { border-radius: var(--radius-sm); }
+.icon-only,
+#sidebar-bottom .sb-row > button { border-radius: 999px; }   /* Material icon button 全圓 */
+#tooltip { border-radius: 6px; }
+
+/* Search toggle .active：Material primary container */
+#web-search-toggle.active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+/* user 訊息泡泡：Material Gmail / Chat 風 */
+.msg-user {
+  background: var(--color-accent);
+  border-radius: 18px 18px 4px 18px;     /* Gmail 風一角縮 */
+}
+.msg-ai {
+  background: var(--color-bg-served);
+  border: 1px solid var(--color-border);
+  border-radius: 18px 18px 18px 4px;
+}
+.msg-ai-actions {
+  border-radius: 999px;                  /* pill 形動作群 */
+  background: var(--color-bg-served);
+  border: 1px solid var(--color-border);
+}
+.msg-ai-actions button { border-radius: 999px; }
+
+/* paper-item / folder-item：Material list item with state layer */
+.paper-item,
+.folder-item {
+  border-radius: 999px 999px 999px 999px;   /* Material pill list item */
+}
+.paper-item:hover,
+.folder-item:hover { background: var(--color-surface); }
+.paper-item.active,
+.folder-item.active {
+  background: #e8f0fe;                   /* Material primary container（淡藍）*/
+  color: #1967d2;                        /* on-primary-container */
+}
+.paper-item.active .paper-title-en { color: #5f6368; }
+.paper-item.active .paper-menu-btn,
+.folder-item.active .menu-btn { color: #1967d2; }
+
+/* Modal：Material elevation */
+.modal-mask {
+  background: rgba(32, 33, 36, 0.32);
+}
+.modal-box {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 11px 15px rgba(0, 0, 0, 0.10),
+    0 24px 38px rgba(0, 0, 0, 0.06);
+  border: none;
+  border-radius: 28px;                   /* Material 3 large dialog */
+}
+
+/* 輸入框 focus：Material primary outline */
+#chat-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.20);
+}

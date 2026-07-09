@@ -1,0 +1,224 @@
+/* ============================================================
+   THEME · Walter Gropius — Bauhaus Dessau (1925–26) + Bayer Universal
+   ============================================================
+   "kunst und technik — eine neue einheit"
+   (art and technology — a new unity, 1923 manifesto turn)
+
+   不是 Kandinsky 那種畫面內的三原色構成；
+   而是 Dessau 校舍：玻璃帷幕牆 + 鋼構 mullion + 純白噴塗混凝土 +
+   Schmidt 立面上那行垂直黑體招牌「bauhaus」+ Bayer Universal 全小寫意識形態。
+
+   核心語彙：
+     · 玻璃帷幕牆的工業透明感（白與透明的對話，光線是建築材料）
+     · 鋼骨 mullion 黑線 — 結構直接可見，從不掩飾
+     · Herbert Bayer (1925) Universal Typeface — 全小寫、幾何單線
+       Gropius/Bauhaus 認為大寫是「資源浪費」，廢除之
+     · 工業紅 signage：校舍立面那塊紅色「bauhaus」招牌
+     · 不對稱構圖、層級靠字重與位置而非裝飾
+     · 完全無圓角、無漸層、無陰影 — Sachlichkeit（即物性）
+
+   設計轉譯：
+     · 全介面強制 lowercase（h1/h2/byline/credo/標籤）—本主題的差異化記號
+     · accent：Bauhaus signage 工業橘紅（較 Corbu vermilion 更橙、較 Mies 磚紅更亮）
+     · divider：2px 鋼骨黑 — 與 Kahn 同厚度但色更黑、語境是 mullion 而非牆
+     · 字：Space Grotesk — 幾何單線 grotesque、貼近 Bayer Universal 字形
+     · figure 佔位：玻璃帷幕牆 —
+       純白底 + 規律垂直 mullion 鋼柱 + 細水平樓板線 + 右上角紅色 signage chip
+
+   依賴主檔（Mad Professor Redesign.html）提供：
+     · 結構性間距 token  (--space-*)
+     · 按鈕／工具列／rail 尺寸 token
+     · --divider-w / --radius-*  ← 此檔覆寫
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：噴塗白混凝土 + 鋼骨黑 + 工業紅 signage ── */
+  --color-bg: #f3f3f0;                   /* Dessau 校舍外牆：白噴塗混凝土（略冷一階） */
+  --color-bg-served: #ffffff;            /* 中欄：玻璃帷幕牆透進來的純白光 */
+  --color-surface: #e8e8e4;              /* hover / 次級表面 */
+  --color-surface-2: #d4d4d0;            /* rail / 強表面 */
+  --color-border: #b8b8b4;
+  --color-border-strong: #2a2a2a;        /* 鋼骨深灰 */
+  --color-divider: #141414;              /* mullion 鋼柱黑（比 Mies #1a 更黑、比 Kandinsky #0a 灰一點） */
+  --color-text: #141414;
+  --color-text-muted: #555555;
+  --color-text-subtle: #6e6e6e;          /* 4.6:1 on #f3f3f0 — 過 AA */
+  --color-accent: #e2231a;               /* Bauhaus signage 工業橘紅（Schmidt 立面招牌色） */
+  --color-accent-hover: #b41812;
+  --color-danger: #e2231a;               /* 同 accent — Bauhaus 紀律：紅只一種，用途承擔靠位置 */
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 2px;                      /* 鋼骨 mullion：精準、結構直接 */
+  --radius-sm: 0;
+  --radius-md: 0;
+
+  /* ── 字體 token ── */
+  --font-display: "Space Grotesk", "Helvetica Neue", "Arial",
+                  "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Space Grotesk", "Helvetica Neue", "Arial",
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：玻璃帷幕牆透進來的光 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：全小寫、工業標識感 ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: lowercase;             /* Bayer Universal：廢除大寫 */
+  letter-spacing: 0.06em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;                    /* Bauhaus 拒絕義式裝飾——以正體呈現 */
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "kunst und technik · eine neue einheit";
+}
+
+/* ── 三欄標題：lowercase + 中字距 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: -0.015em;               /* 大字微緊縮：結構感 */
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  text-transform: lowercase;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: -0.005em;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.72;
+  margin-bottom: var(--space-4);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：Dessau 玻璃帷幕牆 ──
+   純白玻璃底 + 規律垂直 mullion 鋼柱 + 細水平樓板線 + 右上紅色 signage chip
+   ── */
+#paper-content .figure .ph {
+  background:
+    /* 右上紅色 signage chip（Schmidt 立面招牌位置）*/
+    linear-gradient(var(--color-accent), var(--color-accent))
+      no-repeat 92% 12% / 28px 28px,
+    /* 水平樓板線（細、淡）*/
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 44px,
+      rgba(20, 20, 20, 0.08) 44px,
+      rgba(20, 20, 20, 0.08) 45px),
+    /* 垂直 mullion 鋼柱（密、深）*/
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent 32px,
+      rgba(20, 20, 20, 0.18) 32px,
+      rgba(20, 20, 20, 0.18) 34px),
+    var(--color-bg-served);
+  border: var(--divider-w) solid var(--color-divider);
+  font-family: var(--font-display);
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 560px;
+  margin-inline: auto;
+}

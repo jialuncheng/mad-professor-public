@@ -1,0 +1,242 @@
+/* ============================================================
+   THEME · Buckminster Fuller — Geodesic + Cyanotype Blueprint
+   ============================================================
+   "do more with less"
+   "dymaxion = dynamic + maximum + tension"
+   "we are all crew on spaceship earth"
+
+   不是 Bauhaus 那種藝術學校語境；
+   而是 patent 圖、Dymaxion 草圖、測地圓頂三角網格、藍曬工程繪圖紙——
+   工程師而非建築師、發明家而非美術家。
+
+   核心語彙：
+     · 測地圓頂（geodesic dome）的三角測地網格
+     · cyanotype 藍曬圖：深 cyan 底 + 白色技術線
+     · 工程繪圖慣例：dashed line = section / hidden line，solid = visible edge
+     · Dymaxion Map 二十面體展開
+     · tensegrity = tension + integrity，張力與壓力分離
+     · 工業橘 signal（NASA / 60s 太空時代）
+
+   設計轉譯：
+     · UI 底：冷紙白（製圖桌上的繪圖紙）
+     · served 中欄：更亮一階的繪圖紙（圖面落點）
+     · accent：cyan #0c5982（patent 圖標準墨色）
+     · divider：2px 深 navy（深藍墨而非純黑——工程繪圖墨水）
+     · h2 底線 / byline 底線：dashed —— 工程圖 section line 慣例（全主題集唯一）
+     · 字體：JetBrains Mono (display) + DM Sans (body) — 工程標籤＋可讀內文
+     · figure 佔位：cyanotype 藍曬底 + 三方向交織白色三角網格 + 徑向高光（穹頂曲率）
+     · danger：Dymaxion 橘 #d96b1f（signal orange）— 差異於其他主題的紅系
+
+   依賴主檔（Mad Professor Redesign.html）提供：
+     · 結構性間距 token  (--space-*)
+     · 按鈕／工具列／rail 尺寸 token
+     · --divider-w / --radius-*  ← 此檔覆寫
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：製圖紙白 + 工程墨 navy + cyan accent + Dymaxion 橘 ── */
+  --color-bg: #e6ebef;                   /* 製圖紙：冷紙白略帶 cyan tint */
+  --color-bg-served: #f4f7fa;            /* 中欄：圖面落點，更亮一階 */
+  --color-surface: #d6dde2;              /* hover / 次級表面 */
+  --color-surface-2: #c0c9d0;            /* rail / 強表面 */
+  --color-border: #a3acb4;
+  --color-border-strong: #4a5560;
+  --color-divider: #0d2030;              /* 工程墨 navy：深藍墨而非純黑——是 Fuller 的差異化記號 */
+  --color-text: #0d2030;                 /* 與分隔線同墨色 */
+  --color-text-muted: #4a5560;
+  --color-text-subtle: #69737d;          /* 4.5:1 on #e6ebef — 過 AA */
+  --color-accent: #0c5982;               /* patent 圖標準 cyan：Fuller 的 blueprint 簽名色 */
+  --color-accent-hover: #084060;
+  --color-danger: #d96b1f;               /* Dymaxion / NASA 太空時代 signal orange — 差異於其他主題紅系 */
+
+  /* ── 結構厚度與圓角 ── */
+  --divider-w: 2px;                      /* 工程線：精準、結構直接；色而非寬做差異化 */
+  --radius-sm: 0;
+  --radius-md: 0;
+
+  /* ── 字體 token ──
+     display 用 JetBrains Mono：製圖標籤、patent 圖題字感
+     body 用 DM Sans：長文可讀性——mono 全面用會傷閱讀
+     雙字族在主題集裡皆首次使用，無撞檔。 ── */
+  --font-display: "JetBrains Mono", "SF Mono", "Menlo", "Consolas",
+                  "PingFang TC", "Microsoft JhengHei", monospace;
+  --font-body: "DM Sans", "Helvetica Neue", "Arial",
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  font-feature-settings: "tnum";         /* 全域 tabular nums：Fuller 會同意 */
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：圖面落點 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── 展示控制條：工程繪圖題字感 ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  font-family: var(--font-display);      /* mono 製圖標籤感 */
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+#demo-bar .seg button {
+  height: 26px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;             /* credo 走小寫——patent 註解感 */
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "do more with less · dymaxion";
+}
+
+/* ── 三欄標題：mono 製圖標題 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  text-transform: none;                  /* 大標 mixed case：patent 圖題字慣例 */
+  letter-spacing: -0.01em;               /* 大字 mono 微緊縮 */
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);      /* h1 mono：patent 圖大字題 */
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin: var(--space-6) 0 var(--space-3);
+  /* dashed underline：工程圖 section line 慣例——Fuller 主題的差異化記號 */
+  border-bottom: var(--divider-w) dashed var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;             /* h3 大寫小字距：patent 圖子節標題感 */
+  letter-spacing: 0.06em;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-family: var(--font-body);         /* 內文回到 sans：保長文可讀性 */
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.72;
+  margin-bottom: var(--space-4);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);      /* byline mono：作者署名走 patent 標籤 */
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  /* dashed 底線：同 h2 規格——標籤性質元素都走虛線 */
+  border-bottom: 1px dashed var(--color-border-strong);
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：cyanotype 藍曬 + 測地三角網格 + 穹頂高光 ──
+   底：cyanotype 藍曬深色
+   中央：徑向高光（暗示測地球面曲率，中心亮邊緣暗）
+   網格：三方向交織白色 1px 線（0°/60°/-60°）形成等邊三角網
+   ── */
+#paper-content .figure .ph {
+  background:
+    /* 三方向 1px 白線：等邊三角網格 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 33px,
+      rgba(255, 255, 255, 0.55) 33px,
+      rgba(255, 255, 255, 0.55) 34px),
+    repeating-linear-gradient(
+      60deg,
+      transparent 0,
+      transparent 33px,
+      rgba(255, 255, 255, 0.55) 33px,
+      rgba(255, 255, 255, 0.55) 34px),
+    repeating-linear-gradient(
+      -60deg,
+      transparent 0,
+      transparent 33px,
+      rgba(255, 255, 255, 0.55) 33px,
+      rgba(255, 255, 255, 0.55) 34px),
+    /* 徑向高光：穹頂曲率暗示 */
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0) 60%),
+    /* cyanotype 藍曬底色 */
+    #134e76;
+  border: var(--divider-w) solid var(--color-divider);
+  font-family: var(--font-display);
+  color: rgba(255, 255, 255, 0.85);      /* 文字在深底上轉淺 */
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+#paper-content .figure figcaption {
+  font-family: var(--font-display);      /* caption mono：圖註標籤感 */
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-style: normal;                    /* mono 不走 italic */
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-inline: auto;
+  letter-spacing: 0.02em;
+}

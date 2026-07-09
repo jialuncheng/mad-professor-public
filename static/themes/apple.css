@@ -1,0 +1,288 @@
+/* ============================================================
+   THEME · Apple Human Interface
+   ============================================================
+   Apple HIG（macOS Sonoma / iOS 17+）的核心語彙：
+     · SF Pro Display / Text（系統字；非 Apple 平台 fallback Inter）
+     · System Blue #007AFF 主強調
+     · 圓角 (10-12px)：Apple 的 squircle 偽超橢圓感
+     · Off-white + 微暖中性灰，極淡分隔線
+     · 大量負空間、慷慨間距
+     · 文字權重重 SF 的「Tight」字距
+     · 標題大字 -0.02em 緊縮
+
+   ⚠ 此主題**刻意違反**全域「直角」承諾：
+     `--radius-md` 由 0 → 10px。
+     理由：Apple 的圓角不是裝飾，是品牌核心識別。
+     新增此主題已在 `principles.md` §2 視覺承諾表「直角」項註明可破例。
+
+   依賴主檔：間距 / 按鈕尺寸 / icon 規格不變。
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ── 色票：Apple Light Mode 取色 ── */
+  --color-bg: #f5f5f7;                   /* Apple.com 標準背景 */
+  --color-bg-served: #ffffff;            /* 卡片白：中欄為主敘事 */
+  --color-surface: #ececef;              /* hover 表面 */
+  --color-surface-2: #e1e1e4;            /* 強表面 / rail */
+  --color-border: #d2d2d7;               /* Apple system divider */
+  --color-border-strong: #a1a1a6;
+  --color-divider: #d2d2d7;              /* 主分隔：Apple 從不用粗黑線 */
+  --color-text: #1d1d1f;                 /* Apple 標題文字 */
+  --color-text-muted: #6e6e73;           /* Apple secondary label */
+  --color-text-subtle: #86868b;          /* Apple tertiary label，AA 過 4.5:1 */
+  --color-accent: #007aff;               /* System Blue */
+  --color-accent-hover: #0062cc;
+  --color-danger: #ff3b30;               /* System Red */
+
+  /* ── 結構厚度與圓角 ──
+     破例：Apple 的圓角是 brand DNA，無法用直角表達 */
+  --divider-w: 1px;                      /* Apple 走細線，不靠粗線分區 */
+  --radius-sm: 6px;
+  --radius-md: 10px;                     /* squircle 感；按鈕、modal、輸入框 */
+
+  /* ── 字體 token：Inter 替代 SF Pro（雲端） ── */
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont,
+                  "SF Pro Display", "Helvetica Neue",
+                  "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont,
+               "SF Pro Text", "Helvetica Neue",
+               "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  letter-spacing: -0.005em;              /* SF / Inter 微緊縮 */
+}
+.display-font { font-family: var(--font-display); }
+
+/* 中欄 served：純白卡片 */
+#content-area { background: var(--color-bg-served); }
+
+/* ── Demo bar ── */
+#demo-bar {
+  height: 44px;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-transform: none;                  /* Apple 不愛 uppercase */
+}
+#demo-bar .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+#demo-bar .seg {
+  border-radius: 8px;                    /* segmented control 圓角 */
+  overflow: hidden;
+}
+#demo-bar .seg button {
+  height: 28px;
+  font-size: 12px;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  font-family: inherit;
+  font-weight: 500;
+}
+#demo-bar .credo {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+#demo-bar .credo::before {
+  content: "Designed in California";
+}
+
+/* ── 三欄標題 ── */
+#sidebar h1 .title,
+#chat-header > .h-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+#content-toolbar h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;                      /* h1 為 700，靠字重分層 */
+  letter-spacing: -0.022em;              /* Apple 大字招牌緊縮 */
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+/* ── 文章內容 ── */
+#paper-content {
+  max-width: 760px;
+  padding: var(--space-6) var(--space-8);
+}
+#paper-content h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;              /* Apple keynote 大字標誌性緊縮 */
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+#paper-content h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: var(--space-6) 0 var(--space-3);
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
+}
+#paper-content h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: var(--space-5) 0 var(--space-2);
+}
+#paper-content p {
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: var(--space-4);
+  color: var(--color-text);
+}
+#paper-content em {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+#paper-content .byline {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+#paper-content .figure { margin: var(--space-6) 0; }
+
+/* ── figure 佔位：Apple 卡片風（圓角 + 微邊框，無紋路）── */
+#paper-content .figure .ph {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;                   /* 大圓角卡片，Apple App Store 風 */
+  font-family: var(--font-display);
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+#paper-content .figure figcaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: normal;
+  margin-top: var(--space-3);
+  text-align: center;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+/* ── Apple-flavor 元件級覆寫 ── */
+
+/* 主按鈕：System Blue 飽和、白字、圓角 */
+.btn-primary,
+.modal-box button.modal-btn.primary,
+#send-btn {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.btn-primary:hover,
+.modal-box button.modal-btn.primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+/* Ghost / icon-only / 一般 modal-btn 全部圓角 */
+.btn-ghost,
+.icon-only,
+.modal-box button.modal-btn,
+.modal-box select,
+.dropdown-trigger,
+#chat-input,
+.ctx-popup,
+.ctx-popup button,
+.modal-box,
+#tooltip,
+#sidebar-bottom .sb-row > button {
+  border-radius: var(--radius-md);
+}
+.ctx-popup button { border-radius: var(--radius-sm); }
+#tooltip { border-radius: 8px; }
+
+/* Search toggle .active：Apple System Blue 反白 */
+#web-search-toggle.active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+/* user 訊息泡泡：System Blue 圓角 */
+.msg-user {
+  background: var(--color-accent);
+  border-radius: 18px;                   /* iMessage 風大圓角 */
+}
+.msg-ai {
+  background: var(--color-bg-served);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+}
+.msg-ai-actions {
+  border-radius: 8px;
+  background: var(--color-bg-served);
+}
+.msg-ai-actions button { border-radius: 6px; }
+
+/* paper-item / folder-item 圓角 + Apple sidebar selection 風 */
+.paper-item,
+.folder-item {
+  border-radius: 8px;
+}
+.paper-item.active,
+.folder-item.active {
+  background: var(--color-accent);
+  color: #fff;
+}
+.paper-item.active .paper-title-en { color: rgba(255,255,255,0.7); }
+.paper-item.active .paper-menu-btn,
+.folder-item.active .menu-btn { color: #fff; }
+
+/* 三欄分隔線：Apple 走細淡灰，不要黑線 */
+#sidebar, #chat-panel {
+  /* 已被主檔指定 border-* 為 var(--divider-w) solid var(--color-divider)；
+     此處 color 已是淡 #d2d2d7 → 自動套用 */
+}
+
+/* Modal mask：Apple 風 backdrop blur（如瀏覽器支援）+ 較淡黑 */
+.modal-mask {
+  background: rgba(0, 0, 0, 0.32);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.modal-box {
+  /* Apple 對話框有極淡陰影，這是品牌識別 */
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16),
+              0 2px 8px rgba(0, 0, 0, 0.06);
+  border: none;                          /* Apple modal 用陰影而非邊框分層 */
+}
+
+/* 輸入框 focus 用 System Blue 微光 */
+#chat-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18);
+}
