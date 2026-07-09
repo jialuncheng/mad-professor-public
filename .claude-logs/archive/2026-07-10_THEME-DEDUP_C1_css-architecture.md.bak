@@ -112,7 +112,7 @@
 |---|---|---|---|
 | **T1 全域結構 scale** | 主檔定義的抽象尺度 | ❌ | `--space-1..8`／`--font-xs..2xl`（字級階梯）／`--transition` |
 | **T2 共用元件系統 token** | 跨元件的具體元件尺寸 | ❌ | 見 §6.2（13 個） |
-| **T3 主題覆寫面 fallback** | 未掛主題時的兜底值 | ✅ themes 覆寫 | `--content-max-w`／`--color-*`(13)／`--divider-w`／`--radius-sm/md`／`--font-display`／`--font-body`／**異值結構 token ×7（THEME-DEDUP C1·見 §6.4）** |
+| **T3 主題覆寫面 fallback** | 未掛主題時的兜底值 | ✅ themes 覆寫 | `--content-max-w`／`--color-*`(13)／`--divider-w`／`--radius-sm/md`／`--font-display`／`--font-body` |
 
 ### 6.2 T2 共用元件系統 token — 消費地圖（grep `@a49fb28` 實測）
 > 均定義於 `globals.css :root`；下表「消費檔」＝實際 `var(--x)` 出現處。**多檔共用者無單一 owner、留 globals 為正解**。
@@ -137,22 +137,6 @@
 - **新增 token**：一律加到 `globals.css :root` 對應層（T1/T2/T3），勿散到元件檔。
 - **改元件尺寸**：改 T2 對應變數（全域一處生效）；勿在元件檔重定義同名 `:root` 變數（會製造多定義）。
 - **themes 只碰 T3**（見 `theme-guide.md §1` 白名單）。
-
-### 6.4 主題結構→base/token 對照表（THEME-DEDUP C1 立基）
-
-> 主題的佈局結構規則歸 **base（content.css）**、數值經 **T3 異值結構 token** 供給——主題僅覆寫 token 值（structure-free）。default＝多數派值；「主題覆寫」欄＝內建 4 支之異值（上傳 5 支於 C3 依 baseline 核定）。**C1 為鋪底**：base 規則已就位、主題尚未卸結構（unlayered 蓋 base·視覺零變）；C2/C3 主題卸結構後 token 生效。
-
-| Token（default） | base 規則（content.css·@layer components） | 主題覆寫（異值） |
-|---|---|---|
-| `--pc-pad`（`var(--space-6) var(--space-8)`） | `#paper-content { padding: var(--pc-pad) }` | kahn `var(--space-8)` |
-| `--figure-margin-y`（`var(--space-6)`） | `.figure { margin: var(--figure-margin-y) 0 }` | mies `var(--space-5)` |
-| `--byline-margin-b`（`var(--space-6)`） | `.byline { margin-bottom: … }` | mies `var(--space-5)` |
-| `--byline-pad-b`（`var(--space-2)`） | `.byline { padding-bottom: … }` | kahn `var(--space-3)`／mies `0` |
-| `--byline-border-w`（`1px`） | `.byline { border-bottom: var(--byline-border-w) solid var(--color-border-strong) }` | mies `0`；底線**色**主題以白名單 `border-color` 覆（kandinsky→divider） |
-| `--figcaption-margin-t`（`var(--space-3)`） | `figcaption { margin-top: … }` | mies `var(--space-2)` |
-| `--ph-border-w`（`1px`） | `.ph { border: var(--ph-border-w) solid var(--color-divider) }` | kandinsky/nara `2px`；邊框**色**主題以 `border-color` 覆（kahn→border-strong） |
-
-- **共用結構（Group B·非 token）**：`#paper-content h2 { border-bottom: var(--divider-w) solid var(--color-divider); padding-bottom: var(--space-2) }`——4 主題同值直移 base（填原 h2 空槽）、線寬/色仍經既有主題 token。
 
 ---
 

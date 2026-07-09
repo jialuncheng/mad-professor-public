@@ -58,17 +58,6 @@
        預設 760px、各主題自行覆寫；toolbar + paper-content + abstract 同軌道 */
     --content-max-w: 760px;
 
-    /* ── 異值結構 token（THEME-DEDUP·主題覆寫）──
-       default＝多數派值；base（content.css）讀取、主題僅覆寫異值——
-       主題徹底 structure-free（規則歸 base、數值經 token 供給） */
-    --pc-pad: var(--space-6) var(--space-8);   /* #paper-content padding（kahn 覆 --space-8 單值） */
-    --figure-margin-y: var(--space-6);         /* .figure 垂直 margin（mies 覆 --space-5） */
-    --byline-margin-b: var(--space-6);         /* .byline margin-bottom（mies 覆 --space-5） */
-    --byline-pad-b: var(--space-2);            /* .byline padding-bottom（kahn 覆 --space-3、mies 覆 0） */
-    --byline-border-w: 1px;                    /* .byline 底線寬（mies 覆 0） */
-    --figcaption-margin-t: var(--space-3);     /* figcaption margin-top（mies 覆 --space-2） */
-    --ph-border-w: 1px;                        /* .figure .ph 邊框寬（kandinsky/nara 覆 2px） */
-
     /* ── 色票 fallback ── */
     --color-bg: #ffffff;
     --color-bg-served: #ffffff;

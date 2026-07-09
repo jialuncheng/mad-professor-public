@@ -144,10 +144,9 @@
     overflow-x: hidden; /* 防止橫向溢出撐破中欄 */
     margin: 0 auto;
     width: 100%;
-    /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、各主題覆寫。
-       [THEME-DEDUP C1] padding 承接 base：走 --pc-pad token（主題覆寫異值）；字體與字級仍由主題提供 */
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、
+       各主題覆寫；padding / 字體與字級 仍由主題提供 */
     max-width: var(--content-max-w);
-    padding: var(--pc-pad);
     box-sizing: border-box;
   }
 
@@ -232,10 +231,7 @@
   }
   #paper-content h1 { text-wrap: pretty; }
   #paper-content h2 {
-    /* [THEME-DEDUP C1] 章節底線承接 base（Group B·4 主題同值直移）：
-       線寬/色仍由主題經 --divider-w + --color-divider 控制 */
-    border-bottom: var(--divider-w) solid var(--color-divider);
-    padding-bottom: var(--space-2);
+    /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
   }
   /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === */
   /* C：簡報標題塊——底線移到「標題+副標」整塊之下（用主題 divider 變數、各主題自動吻合）；
@@ -305,28 +301,13 @@
     padding: 4px 0;
   }
   /* === [RAG-12 C2 END] === */
-  /* [THEME-DEDUP C1] .byline 結構承接 base（間距/底線寬經 token、主題覆寫異值；
-     底線色 default border-strong、主題可以白名單 border-color 覆〔如 kandinsky 用 divider〕） */
-  #paper-content .byline {
-    margin-bottom: var(--byline-margin-b);
-    padding-bottom: var(--byline-pad-b);
-    border-bottom: var(--byline-border-w) solid var(--color-border-strong);
-  }
-  #paper-content .figure {
-    /* [THEME-DEDUP C1] 垂直 margin 承接 base：走 --figure-margin-y token（主題覆寫異值） */
-    margin: var(--figure-margin-y) 0;
-  }
+  #paper-content .figure { /* margin 由主題覆寫 */ }
   #paper-content .figure .ph {
     width: 100%;
     aspect-ratio: 16 / 9;
     display: flex; align-items: center; justify-content: center;
-    /* [THEME-DEDUP C1] 邊框承接 base：寬經 --ph-border-w、色 default divider（主題可覆 border-color）；
-       背景紋路 / 字體 → 仍由主題覆寫 */
-    border: var(--ph-border-w) solid var(--color-divider);
+    /* 背景紋路 / 邊框 / 字體 → 由主題覆寫 */
   }
-  #paper-content .figure figcaption {
-    /* [THEME-DEDUP C1] 上距承接 base：走 --figcaption-margin-t token；字體、置中等 → 仍由主題覆寫 */
-    margin-top: var(--figcaption-margin-t);
-  }
+  #paper-content .figure figcaption { /* 字體、置中等 → 由主題覆寫 */ }
 
 }
