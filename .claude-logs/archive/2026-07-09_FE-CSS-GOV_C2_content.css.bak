@@ -3,9 +3,6 @@
    [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
    規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
    ========================================================================== */
-
-/* [FE-CSS-GOV C2] @layer components 包裹（themes/print unlayered、依 unlayered>layered 必贏本層；僅首尾插入、內容零重排） */
-@layer components {
   /* ── 中欄 ── served space：背景色由主題覆寫（可同或略亮） */
   #content-area {
     flex: 1; min-width: 0;
@@ -310,4 +307,3 @@
   }
   #paper-content .figure figcaption { /* 字體、置中等 → 由主題覆寫 */ }
 
-}

@@ -99,37 +99,6 @@
 
 ---
 
-## 6.5 CSS 架構原則（FE-CSS-GOV；架構細節見 `css-architecture.md`）
-
-### (a) `@layer` 串接層序（原生 cascade layers、無 build）
-主檔系 `static/css/*.css` 以單一層序運作：
-
-```
-@layer reset, tokens, base, components;   /* 宣告於 globals.css 首行、全站唯一 */
-```
-
-- 優先權**由層決定、與 source-order／特異度脫鉤**：`components` 勝 `base` 勝 `tokens` 勝 `reset`。
-- **主檔系嚴禁 unlayered 規則**（鐵則）：任何未包進上述四層之主檔規則，會依「unlayered > layered」意外蓋過**主題**——破壞換膚。新增主檔規則一律歸入對應層（多數為 `components`）。
-- **`themes/*.css`、自訂主題上傳、`print.css` 維持 unlayered**：依 CSS Cascade L5「unlayered author styles > layered」→ 三者**恆勝**主檔四層。故：主題 `:root` 必覆寫 base fallback（換膚生效）；`print.css` 必蓋螢幕樣式；RAG-13 使用者上傳之自訂主題（不含 `@layer`）向後相容零破。
-
-### (b) `!important` 唯一合法用例
-主檔系目標 **`!important` = 0**，唯一例外：**蓋過 JS 設的 inline style**（inline 特異度 `1,0,0,0` 高於任何選擇器，`@layer`／特異度皆無法勝，只有 stylesheet 的 `!important` 能贏）。現存唯一保留：`layout.css` 之 `#chat-panel.collapsed … :not(#chat-toggle) { display:none !important }`（蓋 `enableChat()` inline `display:block`）——已登 `css-architecture.md` 白名單。新增 `!important` 前須確認屬此用例，否則改用層序/特異度。
-
-### (c) 作用域紀律（收斂 C5-C7）
-chrome UI 樣式以**單一 class 前綴**定位（`.sb-*`/`.chat-*`/`.ct-*`…）、避免 ID 後代選擇器造成跨元素耦合；**內容渲染容器**（`#paper-content`/`#chat-messages`/`#current-title`/`#abstract-toolbar`）之後代規則**白名單保留**（內容為 marked/後端產物、無 class 可掛）。DOM id 與 JS 契約 class 零改名（見 `dom-reference.md §8`）。
-
-### (d) 閱讀視圖垂直節奏＝**單一 margin-flow 節奏源模型**（FE-RHYTHM-UNIFY 定案）
-`#paper-content` 內文垂直間距採**單一 `margin-top` flow**、非逐交界補丁——每個區塊的上緣間距由「它自己看**上一個兄弟**（相鄰選擇器 `+`）」決定，形成單一節奏來源：
-
-- 基準流：一般區塊間 `margin-top: var(--space-4)`；
-- 區段斷點：非標題→標題 用較大 `margin-top`（章節呼吸）；
-- 標題貼內文：標題→* 用較小 `margin-top`（標題與其內文靠近）；
-- 標籤貼清單：`p → ul/ol` 收緊。
-
-**鐵則**：勿回退為「逐交界補丁」（會相互牽連、FE-RHYTHM-1 舊病）；**已完全消滅 `:has()`**（改相鄰選擇器；底線 Safari 18+ 後 `:has()` 雖可用、但節奏模型不因此改動）。實作歸 `content.css`。
-
----
-
 ## 7. 認定範圍
 
 本理念**僅限本專案**。Claude / Claude Code 不該將其推及其他 Anthropic 產品設計，亦不應假設使用者其他作品須遵循。

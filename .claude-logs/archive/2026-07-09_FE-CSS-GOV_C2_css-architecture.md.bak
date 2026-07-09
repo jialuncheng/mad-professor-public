@@ -4,7 +4,7 @@
 > 由 `FE-CSS-GOV` 任務建立與維護；治理高度定案源見 `baton/frontend_css_governance_audit.md`。
 > 最後現況對照：2026-07-09、基準 `static/index.html@d4ce75a`（FE-CSS-GOV C1 File Split）。
 >
-> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ✅ ／ C3 主題去重白名單 ⬜ ／ C4 token 歸屬 ⬜ ／ C5-C7 命名前綴+白名單表 ⬜。未打勾章節為**規劃、尚未落地**。
+> **建置狀態（漸進落地）**：C1 拆檔（本篇初版）✅ ／ C2 @layer 層序 ⬜ ／ C3 主題去重白名單 ⬜ ／ C4 token 歸屬 ⬜ ／ C5-C7 命名前綴+白名單表 ⬜。未打勾章節為**規劃、尚未落地**。
 
 ---
 
@@ -55,32 +55,9 @@
 
 ---
 
-## 4. Cascade 層序（C2 ✅ 落地）
+## 4. Cascade 層序（C2 規劃、尚未落地）
 
-**唯一層序宣告**（`globals.css` 首行）：
-```
-@layer reset, tokens, base, components;
-```
-優先權：`components > base > tokens > reset`；**unlayered > 全部 layered**（CSS Cascade L5）。
-
-| 層 / 狀態 | 檔 | 內容 |
-|---|---|---|
-| `@layer reset` | globals.css | `*{box-sizing}`、`body,h1…{margin:0;padding:0}` |
-| `@layer tokens` | globals.css | `:root`（全域 token + 元件級·C4 後遷出） |
-| `@layer base` | globals.css | `body`/`button`/`a` 元素通則 + 未掛主題 fallback |
-| `@layer components` | layout / sidebar / content / chat / overlays（各整檔 wrap） | 全部元件樣式 |
-| **unlayered（層外·恆勝）** | **themes/\*.css** / **自訂主題上傳** / **print.css** | 換膚必贏 base fallback；print 必蓋螢幕樣式；RAG-13 上傳零破 |
-
-- **鐵則**：主檔系（`static/css/` 除 print）**嚴禁 unlayered 規則**——會意外蓋過主題。新增主檔規則歸對應層（多為 `components`）。
-- **驗收不變式**：`grep '^@layer' print.css themes/*.css` = 0；`globals` 層宣告 = 1；5 component 檔各 `@layer components {` = 1；每檔 `{`==`}`。
-
-### 4.1 `!important` 白名單（C2）
-主檔系目標 `!important` = 0。**唯一合法保留**：
-| 檔 | 規則 | 為何保留 |
-|---|---|---|
-| `layout.css` | `#chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) { display:none !important }` | 蓋過 `enableChat()` 設的 inline `style="display:block"`——inline 特異度 `1,0,0,0` 高於任何選擇器，`@layer`／特異度皆無法勝，**只有 stylesheet `!important` 能贏**（CSS 規範事實、非 code smell）。policy: CSS state class > inline JS。 |
-
-（`print.css` 之 19 個 `!important` 屬 unlayered print 覆蓋，非主檔系計數。）
+> ⬜ **待 C2**：`globals.css` 首行將宣告 `@layer reset, tokens, base, components;`；主檔系 7 檔（除 print）內容入對應層；**`themes/*.css`、自訂主題上傳、`print.css` 維持 unlayered**——依 CSS Cascade L5「unlayered > layered」→ 主題與 print 永遠贏 base，且 RAG-13 自訂主題上傳契約零變。主檔系**嚴禁 unlayered 規則**（否則會意外蓋過主題）。
 
 ## 5. 命名作用域與白名單（C5-C7 規劃、尚未落地）
 

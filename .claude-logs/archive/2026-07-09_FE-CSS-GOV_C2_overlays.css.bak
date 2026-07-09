@@ -3,9 +3,6 @@
    [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
    規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
    ========================================================================== */
-
-/* [FE-CSS-GOV C2] @layer components 包裹（themes/print unlayered、依 unlayered>layered 必贏本層；僅首尾插入、內容零重排） */
-@layer components {
   /* ─────────────────────────────────────────
      Tooltip 系統：data-tip 屬性觸發
      · mouseenter 1s 後出現於 icon 左側
@@ -184,4 +181,3 @@
   }
   .modal-box button.modal-btn.primary:hover { background: var(--color-accent-hover); }
 
-}

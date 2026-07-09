@@ -3,10 +3,6 @@
    [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
    規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
    ========================================================================== */
-/* [FE-CSS-GOV C2] 唯一層序宣告：reset < tokens < base < components（themes/print unlayered，依 unlayered>layered 恆勝本檔四層） */
-@layer reset, tokens, base, components;
-
-@layer tokens {
   :root {
     /* ──────────────────────────────────────────────
        主檔（結構層）token
@@ -74,14 +70,9 @@
     --font-display: system-ui, sans-serif;
     --font-body: system-ui, sans-serif;
   }
-} /* @layer tokens */
 
-@layer reset {
   *,*::before,*::after { box-sizing: border-box; }
   body, h1, h2, h3, p, ol, ul { margin: 0; padding: 0; }
-} /* @layer reset */
-
-@layer base {
   body {
     /* font-family / font-size → 由 themes/<name>.css 提供 */
     background: var(--color-bg);
@@ -96,7 +87,6 @@
   }
   button { font-family: inherit; }
   a { color: inherit; }
-} /* @layer base */
 
   /* BUG-F5 B3（ui-fixes-batch B3）：#demo-bar CSS 死代碼整段刪除
      原 prototype 展示控制條的 CSS（約 32 行）保留但 HTML markup 早已移除；
