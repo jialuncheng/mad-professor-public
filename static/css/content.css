@@ -1,0 +1,309 @@
+/* ==========================================================================
+   content.css — 中欄 #paper-content / META-NORM / slides / FE-RHYTHM margin-flow / KaTeX 防禦
+   [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
+   規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
+   ========================================================================== */
+  /* ── 中欄 ── served space：背景色由主題覆寫（可同或略亮） */
+  #content-area {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg-served);
+  }
+  /* 中欄標題列：允許標題多行展開；icon 群永遠貼齊頂部
+     BUG-F1 Bug 5（ui-fixes-batch B7）：max-width + margin:0 auto 跟 #paper-content 共軌、寬螢幕對稱 */
+  #content-toolbar {
+    min-height: var(--toolbar-h);
+    flex-shrink: 0;
+    padding: 10px var(--pad-panel);                  /* (48 - 28) / 2 = 10，讓 icon 居中於最小高度 */
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: flex-start;          /* 改 flex-start：標題加高時不會把 icon 往下推 */
+    gap: var(--gap-btn-loose);
+    max-width: var(--content-max-w);
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* 痛點 6：中欄 icon 群 normal 間距、同一個 flex 容器 */
+  #content-toolbar .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+    flex-shrink: 0;
+    padding-top: 4px;                                 /* 與大標題第一行視覺對齊 */
+  }
+
+  #empty-state {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-subtle);
+    font-size: var(--font-base);
+    gap: var(--space-2);
+  }
+  #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* #current-title 放在 toolbar 內、取原 h2 的 flex 槽
+     （flex:1 min-width:0、可多行）；toolbar 本身是 multi-row + 可變
+     高度 row + title-left / actions-right 設計、title 留在 toolbar 內可一起捲。
+     padding / border-bottom 由 toolbar 提供、此處不重複設定。 */
+  #current-title {
+    /* padding-right 防右側 toolbar-actions 按鈕被長標題遮擋 */
+    flex: 1; min-width: 0;
+    padding-right: var(--space-4, 16px);
+    color: var(--color-text);
+  }
+  /* BUG-F5 B1（ui-fixes-batch B1）：廢 token (--font-h1 / h2 / small) 替換為主 scale
+     主檔 :root 定義 --font-xs(12) / sm(13) / base(14) / lg(16) / xl(20) / 2xl(28)
+     對齊 design/docs/typography.md §1 字級階梯、§2 用途對照（中欄 toolbar 標題 28px / 700） */
+  #current-title .title-zh {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.3;
+    margin: 0 0 var(--space-1) 0;
+  }
+  #current-title .title-en {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    line-height: 1.4;
+    margin: 0 0 var(--space-2) 0;
+  }
+  /* #abstract-toolbar 獨立摘要容器，滿寬居中且對稱 */
+  #abstract-toolbar {
+    flex-shrink: 0;
+    padding: 0 var(--pad-panel) var(--space-2) var(--pad-panel);
+    border-bottom: 1px solid var(--color-border);
+    max-width: var(--content-max-w);
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #abstract-toolbar details.title-abstract {
+    margin-top: var(--space-2);
+    font-size: var(--font-base);
+    color: var(--color-text);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* tag-pill 半透明磨砂玻璃
+     依 design/docs/components.md §X tag-pill 規範
+     + design/docs/color-tokens.md（半透明 + backdrop-filter） */
+  #current-title .paper-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2);
+  }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-sm, 12px);
+    color: var(--color-text);
+    transition: background 0.2s ease;
+  }
+  .tag-pill:hover { background: rgba(255, 255, 255, 0.8); }
+  [data-theme="dark"] .tag-pill { background: rgba(0, 0, 0, 0.4); }
+  [data-theme="dark"] .tag-pill:hover { background: rgba(0, 0, 0, 0.55); }
+  #abstract-toolbar details.title-abstract > summary {
+    cursor: pointer;
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    user-select: none;
+    list-style: none;
+  }
+  #abstract-toolbar details.title-abstract > summary::before { content: "▸ "; }
+  #abstract-toolbar details.title-abstract[open] > summary::before { content: "▾ "; }
+  #abstract-toolbar details.title-abstract[open] > summary {
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+  #abstract-toolbar details.title-abstract .abstract-body {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface, var(--color-bg));
+    border-left: 3px solid var(--color-border);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #paper-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* 防止橫向溢出撐破中欄 */
+    margin: 0 auto;
+    width: 100%;
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、
+       各主題覆寫；padding / 字體與字級 仍由主題提供 */
+    max-width: var(--content-max-w);
+    box-sizing: border-box;
+  }
+
+  /* 正文防禦性折行與防溢出機制 */
+  #paper-content p,
+  #paper-content li,
+  #paper-content div,
+  #paper-content span {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+  #paper-content pre,
+  #paper-content code {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* 學術 PDF 經典扉頁排版（FE-AESTHETICS C2）*/
+  .paper-header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    margin: var(--space-4) auto var(--space-6) auto;
+    padding-bottom: var(--space-4);
+    border-bottom: var(--divider-w) solid var(--color-border);
+    max-width: var(--content-max-w);
+  }
+  .paper-header-meta .header-authors {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+  }
+  .paper-header-meta .header-venue-date {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-bottom: var(--space-1);
+  }
+  .paper-header-meta .header-doi {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin-bottom: var(--space-2);
+  }
+  .paper-header-meta .header-keywords {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-2);
+  }
+  /* === [META-NORM C5 START] === 動態 metadata 通用渲染（飛輪 canonical 欄）=== */
+  .paper-dynamic-meta {
+    margin-top: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .paper-dynamic-meta .dynamic-meta-item {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--font-sm);
+    line-height: 1.5;
+  }
+  .paper-dynamic-meta .meta-label {
+    color: var(--color-text-subtle);
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+  .paper-dynamic-meta .meta-value {
+    color: var(--color-text);
+    word-break: break-word;
+  }
+  /* === [META-NORM C5 END] === */
+  #paper-content > h1:first-child {
+    text-align: center;
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-2);
+    text-wrap: pretty;
+  }
+  #paper-content h1 { text-wrap: pretty; }
+  #paper-content h2 {
+    /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
+  }
+  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === */
+  /* C：簡報標題塊——底線移到「標題+副標」整塊之下（用主題 divider 變數、各主題自動吻合）；
+     內層 h2 不再各自畫線（覆寫主題 #paper-content h2 border、特異度 1,1,1 > 1,0,1）→ 一-b 夾線消失 */
+  #paper-content .slide-head {
+    border-bottom: var(--divider-w) solid var(--color-divider);
+    padding-bottom: var(--space-2);
+    margin: var(--space-6) 0 var(--space-3);
+  }
+  #paper-content .slide-head h2 {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+  }
+  #paper-content .slide-sub {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  /* 二：清單縮排（結構性 fallback、主題無關、含自訂主題受益）
+     L79 全域 reset 把 ul/ol padding 歸零 → list-style:outside 下 bullet 凸排；
+     此處補回 top-level + 巢狀縮排（HOTFIX-3b：補 top-level、原僅巢狀） */
+  #paper-content ul, #paper-content ol,
+  #paper-content ul ul, #paper-content ol ol,
+  #paper-content ul ol, #paper-content ol ul {
+    padding-left: 1.5em;
+  }
+  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] === */
+  /* === [FE-RHYTHM-UNIFY C2 START] === 閱讀視圖垂直節奏統一（取代 FE-RHYTHM-1 逐交界補丁）
+     單一 margin-top flow 模型：間距由「與上一個兄弟之關係」單向供給，根治
+     「base 只用 margin-bottom + L83 reset 歸零清單 margin」之不對稱（清單前寬後窄黑洞）。
+     主題垂直 margin 已移交 base（見各主題 FE-RHYTHM-UNIFY 標記）；塊級 margin-bottom 由 L83 reset 歸零、
+     故 margin-top 為單一節奏來源。完全消滅 :has()（清單改看「上一個」兄弟＝相鄰選擇器、相容 Safari 14+）。
+     token 由 C1 spike 凍結（基準流 4 / 區段斷點 6 / 標題後 2 / 標籤→清單 1）。
+     互斥：A 為標題→只走「標題→*」；A 非標題且 B 標題→只走「非標題→標題」（結構互斥、不依賴 source order）。 */
+  #paper-content > * + * {
+    margin-top: var(--space-4);                                  /* 基準流：內文↔內文、清單→下段 */
+  }
+  #paper-content > :not(:is(h1,h2,h3,h4)) + :is(h1,h2,h3,h4) {
+    margin-top: var(--space-6);                                  /* 非標題→標題：區段斷點大留白（保區段分隔、不縮）*/
+  }
+  #paper-content > :is(h1,h2,h3,h4) + * {
+    margin-top: var(--space-2);                                  /* 標題→其內文/子標題：貼緊（含 h→h、取代擬議 FE-RHYTHM-2）*/
+  }
+  #paper-content > p + :is(ul,ol) {
+    margin-top: var(--space-1);                                  /* 標籤段落→其清單：最貼（收編 FE-RHYTHM-1）*/
+  }
+  /* 特殊塊 margin-top 明列（置於 flow 之後、贏同特異度 tie；防 flow 覆寫其原間距）。
+     margin-top 與 flow 同屬性＝級聯非疊加；各塊 border/overflow/padding/margin-bottom 由其既有規則保留。
+     h1:first-child 由既有 #paper-content > h1:first-child 規則處理（:first-child 永不被 *+* 命中、不重列）。 */
+  #paper-content > .slide-head { margin-top: var(--space-6); }       /* 投影片標題塊（其 border/padding/margin-bottom 由既有 .slide-head 規則保留）*/
+  #paper-content > .paper-header-meta { margin-top: var(--space-4); } /* 學術扉頁（緊接 h1 時防被「標題→*」收成 space-2）*/
+  #paper-content > .katex-display { margin-top: var(--space-2); }    /* 顯示式（若為直接子代）*/
+  #paper-content > .figure { margin-top: var(--space-4); }
+  /* === [FE-RHYTHM-UNIFY C2 END] === */
+  #paper-content img {
+    max-width: 100%;
+    height: auto;
+  }
+  /* === [RAG-12 C2] === KaTeX 顯示式：收斂預設 1em margin（避撞 slides tight list）、
+     overflow-x 防超長式撐破中欄、padding 防橫向 scrollbar 切下標尾巴（plan_v7 §2-9） */
+  #paper-content .katex-display {
+    margin: var(--space-2) 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+  }
+  /* === [RAG-12 C2 END] === */
+  #paper-content .figure { /* margin 由主題覆寫 */ }
+  #paper-content .figure .ph {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex; align-items: center; justify-content: center;
+    /* 背景紋路 / 邊框 / 字體 → 由主題覆寫 */
+  }
+  #paper-content .figure figcaption { /* 字體、置中等 → 由主題覆寫 */ }
+

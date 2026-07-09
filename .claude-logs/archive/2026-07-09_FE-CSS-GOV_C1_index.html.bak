@@ -14,17 +14,1364 @@
 <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
 <script src="/static/vendor/katex/katex.min.js" defer></script>
 <!-- === [RAG-12 C1 END] === -->
-<!-- === [FE-CSS-GOV C1] === CSS 治理拆檔：inline <style> 等價遷出至 static/css/ 7 關注點檔（載入序＝原 source 序、cascade 等價；@layer 化屬 C2、#theme-link 仍殿後） -->
-<link rel="stylesheet" href="/static/css/globals.css">
-<link rel="stylesheet" href="/static/css/overlays.css">
-<link rel="stylesheet" href="/static/css/layout.css">
-<link rel="stylesheet" href="/static/css/sidebar.css">
-<link rel="stylesheet" href="/static/css/content.css">
-<link rel="stylesheet" href="/static/css/chat.css">
-<link rel="stylesheet" href="/static/css/print.css">
+<style>
+  :root {
+    /* ──────────────────────────────────────────────
+       主檔（結構層）token
+       ────────────────────────────────────────────
+       色票、字體、圓角、分隔線粗細 → 由 themes/<name>.css 提供
+       此處只放與主題無關的版面結構數值：
+         · 間距模矩  --space-*
+         · 字級階梯  --font-*
+         · 按鈕／工具列／rail 尺寸
+         · 按鈕群組三階間距
+         · 過渡時間
+       ────────────────────────────────────────────── */
+
+    /* ── 間距（4px 模矩）── */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px;
+    --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-8: 48px;
+
+    /* ── 字級 ── */
+    --font-xs: 12px; --font-sm: 13px; --font-base: 14px;
+    --font-lg: 16px; --font-xl: 20px; --font-2xl: 28px;
+
+    /* ── 按鈕／版面 ── */
+    --btn-h: 32px;
+    --btn-pad-x: var(--space-4);
+    --btn-min-w: 64px;
+    --btn-icon: 32px;                       /* icon-only 容器邊長 */
+    --btn-icon-svg: 18px;                   /* SVG 內框 */
+    --btn-icon-stroke: 1.5;                 /* 統一筆畫：1.5 視覺與漢堡平衡 */
+    --toolbar-h: 48px;
+    --pad-panel: var(--space-4);
+    --rail-w: 48px;                         /* collapsed 邊欄寬度 */
+    --chat-pad-x: var(--space-4);           /* 右欄左右共用 padding：訊息與輸入框邊界對齊；16px 配合右欄 380 寬度 */
+
+    /* ── 三階按鈕群組間距 ──
+       tight  = icon-only 緊密群（左欄底部）
+       normal = 同族群一般間距（標題列 icon 群）
+       loose  = 不同族群（標題列「標題 ↔ 動作群」）         */
+    --gap-btn-tight: var(--space-1);
+    --gap-btn-normal: var(--space-2);
+    --gap-btn-loose: var(--space-4);
+
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄正文 + toolbar 共用最大寬度 token
+       預設 760px、各主題自行覆寫；toolbar + paper-content + abstract 同軌道 */
+    --content-max-w: 760px;
+
+    --transition: 150ms ease;
+
+    /* ── fallback：若未掛主題，仍可渲染 ── */
+    --color-bg: #ffffff;
+    --color-bg-served: #ffffff;
+    --color-surface: #f5f5f5;
+    --color-surface-2: #ececec;
+    --color-border: #e5e5e5;
+    --color-border-strong: #c8c8c8;
+    --color-divider: #111111;
+    --color-text: #111111;
+    --color-text-muted: #6b6b6b;
+    --color-text-subtle: #a3a3a3;
+    --color-accent: #111111;
+    --color-accent-hover: #2a2a2a;
+    --color-danger: #a8242c;
+    --divider-w: 1px;
+    --radius-sm: 0;
+    --radius-md: 0;
+    --font-display: system-ui, sans-serif;
+    --font-body: system-ui, sans-serif;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ol, ul { margin: 0; padding: 0; }
+  body {
+    /* font-family / font-size → 由 themes/<name>.css 提供 */
+    background: var(--color-bg);
+    color: var(--color-text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  button { font-family: inherit; }
+  a { color: inherit; }
+
+  /* BUG-F5 B3（ui-fixes-batch B3）：#demo-bar CSS 死代碼整段刪除
+     原 prototype 展示控制條的 CSS（約 32 行）保留但 HTML markup 早已移除；
+     對應 JS 的 querySelectorAll 永遠回空 NodeList；本 commit 同時刪 CSS + JS dead code。 */
+
+  /* ─────────────────────────────────────────
+     Tooltip 系統：data-tip 屬性觸發
+     · mouseenter 1s 後出現於 icon 左側
+     · Mies 美學：純白底、1px 黑線、直角、無箭頭
+     ───────────────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    z-index: 2000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+  #tooltip.visible { opacity: 1; }
+
+  /* ─────────────────────────────────────────
+     Modal 統一美學
+     · 半透明黑遮罩；內框純白、1px 黑線、直角
+     ───────────────────────────────────────── */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;                      /* 暗示「可點外面關」 */
+  }
+  .modal-mask > .modal-box { cursor: auto; }   /* 內框恢復一般游標 */
+  .modal-mask.show { display: flex; }
+  .modal-box {
+    /* Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層；補 radius / font-family
+       讓 Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層 */
+    background: var(--color-bg);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-md, 8px);
+    font-family: var(--font-body);
+    padding: var(--space-6);
+    min-width: 380px;
+    max-width: 480px;
+  }
+  .modal-box h3 {
+    /* Modal h3 用 display font token、跟主題標題系統對齊 */
+    font-family: var(--font-display);
+    font-size: var(--font-lg);
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    color: var(--color-text);
+  }
+  .modal-box ol, .modal-box ul {
+    padding-left: var(--space-5);
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+    line-height: 1.9;
+  }
+  .modal-box li { margin-bottom: var(--space-1); }
+  .modal-box .step-note {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-1);
+  }
+  .modal-box p {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+    line-height: 1.6;
+  }
+  .modal-box .modal-actions {
+    display: flex;
+    gap: var(--gap-btn-normal);
+    justify-content: flex-end;
+    margin-top: var(--space-5);
+  }
+  .modal-box select {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+  }
+  .modal-box select:focus { border-color: var(--color-accent); }
+
+  /* BUG-F3 Bug 7（ui-fixes-batch B5）：補 .modal-input + 廣義 input[type="text"] 樣式
+     R2 ship 時 HTML 寫 class="modal-input"（#tag-input）但無 CSS、瀏覽器降 UA 預設、
+     寬度死約 150px、無圓角、無 padding、視覺與下方 select / 按鈕落差大。
+     focus ring 用 color-mix(in srgb, var(--color-accent) 18%, transparent) 跨主題
+     自動跟色、不寫死 rgba；input focus ring 為業界標準、不需補 components.md §10 反例豁免。
+     廣義覆蓋 input[type="text"]：未來新 modal input 同時享受相同主題樣式、不必各自補。 */
+  .modal-box .modal-input,
+  .modal-box input[type="text"] {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+    box-sizing: border-box;
+    transition: border-color var(--transition);
+  }
+  .modal-box .modal-input:focus,
+  .modal-box input[type="text"]:focus {
+    border-color: var(--color-accent);
+    /* color-mix 計算 accent 18% 透明度光環、跨主題自動跟色 */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+
+  /* ── 自訂 dropdown（取代 native <select>）── */
+  .dropdown {
+    margin-bottom: var(--space-2);
+  }
+  .dropdown-trigger {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    transition: background var(--transition);
+  }
+  .dropdown-trigger:hover { background: var(--color-surface); }
+  .dropdown-trigger[aria-expanded="true"] { background: var(--color-surface); }
+  .dropdown-chevron {
+    width: 14px; height: 14px;
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+    flex-shrink: 0;
+    transition: transform var(--transition);
+  }
+  .dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+    transform: rotate(180deg);
+  }
+  /* dropdown 開啟時的 popup：在 modal 內也要顯現，z-index 須高於 modal-mask(1500) */
+  .ctx-popup.dropdown-popup { z-index: 1600; }
+  .modal-box button.modal-btn {
+    height: var(--btn-h);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .modal-box button.modal-btn:hover { background: var(--color-surface); }
+  .modal-box button.modal-btn.primary {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+  }
+  .modal-box button.modal-btn.primary:hover { background: var(--color-accent-hover); }
+
+  /* ─────────────────────────────────────────
+     主版面：三欄
+     ───────────────────────────────────────── */
+  #app {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  /* === 共用按鈕系統 === */
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .btn-primary:hover { background: var(--color-accent-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .btn-ghost:hover { background: var(--color-surface); }
+  .btn-ghost.active {
+    background: var(--color-text);
+    color: #fff;
+    border-color: var(--color-text);
+  }
+  .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* === icon-only：統一 28×28、無 min-width === */
+  .icon-only {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;        /* 預設無邊（toolbar 內），可被覆蓋 */
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .icon-only:hover {
+    background: var(--color-surface);
+  }
+  .icon-only:active {
+    background: var(--color-surface-2);   /* 按下瞬間：再深一階表面色 */
+  }
+  .icon-only:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 1px;
+  }
+  .icon-only svg {
+    width: var(--btn-icon-svg);
+    height: var(--btn-icon-svg);
+    stroke: currentColor;
+    stroke-width: var(--btn-icon-stroke);
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* .bordered 保留 class 名作向下相容，但不再加常駐邊框 */
+  .icon-only.bordered { border-color: transparent; }
+
+  /* === 左欄 sidebar ===
+     Kahn：servant space，靠「厚牆」分隔；2px umber 視為結構體 */
+  #sidebar {
+    width: 288px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: var(--divider-w) solid var(--color-divider);
+    overflow: hidden;
+    transition: width 180ms ease;
+  }
+  #sidebar h1 {
+    height: var(--toolbar-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-btn-normal);
+    padding: 0 var(--space-2) 0 var(--pad-panel);
+    font-size: var(--font-base);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+  #sidebar h1 .title {
+    /* 字體 / 字距 → 由主題覆寫 */
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 標題列右側 icon 群：normal 間距 */
+  #sidebar h1 .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+  }
+
+  #folder-tree {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .folder-item {
+    position: relative;                    /* 痛點 4：popup 以 item 右端為錨 */
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin: 0 var(--space-2);
+    font-size: var(--font-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition);
+  }
+  .folder-item:hover { background: var(--color-border); }
+  .folder-item.active {
+    background: var(--color-text);
+    color: #fff;
+  }
+  .folder-item .chevron {
+    width: 14px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted);
+  }
+  .folder-item.active .chevron { color: #fff; }
+  .folder-item .chevron svg {
+    width: 10px; height: 10px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    transition: transform var(--transition);
+  }
+  .folder-item.open > .chevron svg { transform: rotate(90deg); }
+  .folder-item .chevron.empty { visibility: hidden; }
+  .folder-item .fname {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .folder-item .menu-btn {
+    /* 痛點 5：⋯ 改用 SVG icon-only，統一尺寸 */
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent; color: inherit;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition), background var(--transition);
+  }
+  .folder-item .menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .folder-item:hover .menu-btn { opacity: 1; }
+  .folder-item.active .menu-btn { opacity: 1; }
+  .folder-item .menu-btn:hover { background: rgba(255,255,255,0.12); }
+  .folder-item:not(.active) .menu-btn:hover { background: var(--color-surface); }
+
+  #paper-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2);
+  }
+  .paper-item {
+    position: relative;                   /* 痛點 4 */
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: var(--space-1);
+    transition: background var(--transition), color var(--transition);
+  }
+  .paper-item:hover { background: var(--color-border); }
+  .paper-item.active { background: var(--color-text); color: #fff; }
+
+  /* ── 上傳中占位列 ──
+     不顯示 ⋯ 選單；以微脈動暗示「處理中」；
+     底部 1px 細線跑進度，文字顯示階段+百分比；
+     整列禁止點擊（pointer-events: none），避免誤觸 */
+  .paper-item.uploading {
+    cursor: default;
+    pointer-events: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    animation: paperUploadingPulse 1.6s ease-in-out infinite;
+  }
+  .paper-item.uploading:hover { background: var(--color-surface); }
+  .paper-item.uploading .paper-title-zh {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+  .paper-progress {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    margin-top: 2px;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+  }
+  .paper-progress-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    flex-shrink: 0;
+    animation: paperUploadingBlink 1s ease-in-out infinite;
+  }
+  .paper-progress-bar {
+    margin-top: var(--space-2);
+    height: 2px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+  .paper-progress-fill {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 200ms ease;
+  }
+  @keyframes paperUploadingPulse {
+    0%, 100% { background: var(--color-surface); }
+    50%      { background: var(--color-border); }
+  }
+  @keyframes paperUploadingBlink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+  }
+  .paper-item-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .paper-item-titles { flex: 1; min-width: 0; }
+  .paper-title-zh {
+    font-size: var(--font-sm); font-weight: 500;
+    line-height: 1.4; margin-bottom: var(--space-1);
+  }
+  .paper-title-en {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .paper-item.active .paper-title-en { color: rgba(255,255,255,0.55); }
+
+  /* 痛點 5：paper-menu-btn 改 SVG，盒尺寸與 folder 一致 24×24 */
+  .paper-menu-btn {
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    opacity: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: opacity var(--transition), background var(--transition), color var(--transition);
+  }
+  .paper-menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .paper-item:hover .paper-menu-btn { opacity: 1; }
+  .paper-item.active .paper-menu-btn { color: #fff; opacity: 1; }
+  .paper-menu-btn:hover { background: var(--color-surface); color: var(--color-text); }
+  .paper-item.active .paper-menu-btn:hover {
+    background: rgba(255,255,255,0.12); color: #fff;
+  }
+  /* 觸控裝置無 hover：⋯ 永遠顯示，避免無法操作 */
+  @media (hover: none) {
+    .paper-menu-btn,
+    .folder-item .menu-btn { opacity: 1; }
+  }
+
+  /* ── popup：fixed 浮層、append 到 body；統一美學（純白、1px 黑線、直角）── */
+  .ctx-popup {
+    position: fixed;
+    z-index: 1000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: var(--space-1);
+    min-width: 140px;
+    max-height: 260px; overflow-y: auto;
+  }
+  .ctx-popup button {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    width: 100%; text-align: left;
+    border: 0; background: transparent; cursor: pointer;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .ctx-popup button:hover { background: var(--color-border); }
+  .ctx-popup button.danger { color: var(--color-danger); }
+  .ctx-popup button:disabled {
+    color: var(--color-text-subtle); cursor: not-allowed;
+  }
+  .ctx-popup button:disabled:hover { background: transparent; }
+  .ctx-popup .has-sub::after {
+    content: '›';
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: var(--font-base);
+  }
+
+  /* ── 左欄底部：四個 icon 等寬一排 ── */
+  #sidebar-bottom {
+    flex-shrink: 0;
+    padding: var(--pad-panel);
+    border-top: 1px solid var(--color-border);
+  }
+  #sidebar-bottom .sb-row {
+    display: flex;
+    gap: var(--gap-btn-tight);
+  }
+  /* 左欄底部四 icon：32×32 固定、不再 flex:1 平分；
+     用 space-between 撐到欄兩端，視覺重心穩定且容器尺寸與其他 icon 一致 */
+  #sidebar-bottom .sb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #sidebar-bottom .sb-row > button {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  #sidebar-bottom .sb-row > button:hover { background: var(--color-surface); }
+  #sidebar-bottom .sb-row > button:active { background: var(--color-surface-2); }
+  #sidebar-bottom .sb-row > button svg {
+    width: var(--btn-icon-svg); height: var(--btn-icon-svg);
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* ── 中欄 ── served space：背景色由主題覆寫（可同或略亮） */
+  #content-area {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg-served);
+  }
+  /* 中欄標題列：允許標題多行展開；icon 群永遠貼齊頂部
+     BUG-F1 Bug 5（ui-fixes-batch B7）：max-width + margin:0 auto 跟 #paper-content 共軌、寬螢幕對稱 */
+  #content-toolbar {
+    min-height: var(--toolbar-h);
+    flex-shrink: 0;
+    padding: 10px var(--pad-panel);                  /* (48 - 28) / 2 = 10，讓 icon 居中於最小高度 */
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: flex-start;          /* 改 flex-start：標題加高時不會把 icon 往下推 */
+    gap: var(--gap-btn-loose);
+    max-width: var(--content-max-w);
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* 痛點 6：中欄 icon 群 normal 間距、同一個 flex 容器 */
+  #content-toolbar .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+    flex-shrink: 0;
+    padding-top: 4px;                                 /* 與大標題第一行視覺對齊 */
+  }
+
+  #empty-state {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-subtle);
+    font-size: var(--font-base);
+    gap: var(--space-2);
+  }
+  #empty-state svg { stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* #current-title 放在 toolbar 內、取原 h2 的 flex 槽
+     （flex:1 min-width:0、可多行）；toolbar 本身是 multi-row + 可變
+     高度 row + title-left / actions-right 設計、title 留在 toolbar 內可一起捲。
+     padding / border-bottom 由 toolbar 提供、此處不重複設定。 */
+  #current-title {
+    /* padding-right 防右側 toolbar-actions 按鈕被長標題遮擋 */
+    flex: 1; min-width: 0;
+    padding-right: var(--space-4, 16px);
+    color: var(--color-text);
+  }
+  /* BUG-F5 B1（ui-fixes-batch B1）：廢 token (--font-h1 / h2 / small) 替換為主 scale
+     主檔 :root 定義 --font-xs(12) / sm(13) / base(14) / lg(16) / xl(20) / 2xl(28)
+     對齊 design/docs/typography.md §1 字級階梯、§2 用途對照（中欄 toolbar 標題 28px / 700） */
+  #current-title .title-zh {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.3;
+    margin: 0 0 var(--space-1) 0;
+  }
+  #current-title .title-en {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    line-height: 1.4;
+    margin: 0 0 var(--space-2) 0;
+  }
+  /* #abstract-toolbar 獨立摘要容器，滿寬居中且對稱 */
+  #abstract-toolbar {
+    flex-shrink: 0;
+    padding: 0 var(--pad-panel) var(--space-2) var(--pad-panel);
+    border-bottom: 1px solid var(--color-border);
+    max-width: var(--content-max-w);
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #abstract-toolbar details.title-abstract {
+    margin-top: var(--space-2);
+    font-size: var(--font-base);
+    color: var(--color-text);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* tag-pill 半透明磨砂玻璃
+     依 design/docs/components.md §X tag-pill 規範
+     + design/docs/color-tokens.md（半透明 + backdrop-filter） */
+  #current-title .paper-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2);
+  }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-sm, 12px);
+    color: var(--color-text);
+    transition: background 0.2s ease;
+  }
+  .tag-pill:hover { background: rgba(255, 255, 255, 0.8); }
+  [data-theme="dark"] .tag-pill { background: rgba(0, 0, 0, 0.4); }
+  [data-theme="dark"] .tag-pill:hover { background: rgba(0, 0, 0, 0.55); }
+  #abstract-toolbar details.title-abstract > summary {
+    cursor: pointer;
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    user-select: none;
+    list-style: none;
+  }
+  #abstract-toolbar details.title-abstract > summary::before { content: "▸ "; }
+  #abstract-toolbar details.title-abstract[open] > summary::before { content: "▾ "; }
+  #abstract-toolbar details.title-abstract[open] > summary {
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+  #abstract-toolbar details.title-abstract .abstract-body {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface, var(--color-bg));
+    border-left: 3px solid var(--color-border);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #paper-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* 防止橫向溢出撐破中欄 */
+    margin: 0 auto;
+    width: 100%;
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 走 --content-max-w token、
+       各主題覆寫；padding / 字體與字級 仍由主題提供 */
+    max-width: var(--content-max-w);
+    box-sizing: border-box;
+  }
+
+  /* 正文防禦性折行與防溢出機制 */
+  #paper-content p,
+  #paper-content li,
+  #paper-content div,
+  #paper-content span {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+  #paper-content pre,
+  #paper-content code {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* 學術 PDF 經典扉頁排版（FE-AESTHETICS C2）*/
+  .paper-header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    margin: var(--space-4) auto var(--space-6) auto;
+    padding-bottom: var(--space-4);
+    border-bottom: var(--divider-w) solid var(--color-border);
+    max-width: var(--content-max-w);
+  }
+  .paper-header-meta .header-authors {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+  }
+  .paper-header-meta .header-venue-date {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-bottom: var(--space-1);
+  }
+  .paper-header-meta .header-doi {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin-bottom: var(--space-2);
+  }
+  .paper-header-meta .header-keywords {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-2);
+  }
+  /* === [META-NORM C5 START] === 動態 metadata 通用渲染（飛輪 canonical 欄）=== */
+  .paper-dynamic-meta {
+    margin-top: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .paper-dynamic-meta .dynamic-meta-item {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--font-sm);
+    line-height: 1.5;
+  }
+  .paper-dynamic-meta .meta-label {
+    color: var(--color-text-subtle);
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+  .paper-dynamic-meta .meta-value {
+    color: var(--color-text);
+    word-break: break-word;
+  }
+  /* === [META-NORM C5 END] === */
+  #paper-content > h1:first-child {
+    text-align: center;
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-2);
+    text-wrap: pretty;
+  }
+  #paper-content h1 { text-wrap: pretty; }
+  #paper-content h2 {
+    /* border-bottom 由主題透過 --divider-w + --color-divider 控制 */
+  }
+  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 START] === */
+  /* C：簡報標題塊——底線移到「標題+副標」整塊之下（用主題 divider 變數、各主題自動吻合）；
+     內層 h2 不再各自畫線（覆寫主題 #paper-content h2 border、特異度 1,1,1 > 1,0,1）→ 一-b 夾線消失 */
+  #paper-content .slide-head {
+    border-bottom: var(--divider-w) solid var(--color-divider);
+    padding-bottom: var(--space-2);
+    margin: var(--space-6) 0 var(--space-3);
+  }
+  #paper-content .slide-head h2 {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+  }
+  #paper-content .slide-sub {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  /* 二：清單縮排（結構性 fallback、主題無關、含自訂主題受益）
+     L79 全域 reset 把 ul/ol padding 歸零 → list-style:outside 下 bullet 凸排；
+     此處補回 top-level + 巢狀縮排（HOTFIX-3b：補 top-level、原僅巢狀） */
+  #paper-content ul, #paper-content ol,
+  #paper-content ul ul, #paper-content ol ol,
+  #paper-content ul ol, #paper-content ol ul {
+    padding-left: 1.5em;
+  }
+  /* === [PIPE-SLIDES-HOTFIX-3 HOTFIX-3 END] === */
+  /* === [FE-RHYTHM-UNIFY C2 START] === 閱讀視圖垂直節奏統一（取代 FE-RHYTHM-1 逐交界補丁）
+     單一 margin-top flow 模型：間距由「與上一個兄弟之關係」單向供給，根治
+     「base 只用 margin-bottom + L83 reset 歸零清單 margin」之不對稱（清單前寬後窄黑洞）。
+     主題垂直 margin 已移交 base（見各主題 FE-RHYTHM-UNIFY 標記）；塊級 margin-bottom 由 L83 reset 歸零、
+     故 margin-top 為單一節奏來源。完全消滅 :has()（清單改看「上一個」兄弟＝相鄰選擇器、相容 Safari 14+）。
+     token 由 C1 spike 凍結（基準流 4 / 區段斷點 6 / 標題後 2 / 標籤→清單 1）。
+     互斥：A 為標題→只走「標題→*」；A 非標題且 B 標題→只走「非標題→標題」（結構互斥、不依賴 source order）。 */
+  #paper-content > * + * {
+    margin-top: var(--space-4);                                  /* 基準流：內文↔內文、清單→下段 */
+  }
+  #paper-content > :not(:is(h1,h2,h3,h4)) + :is(h1,h2,h3,h4) {
+    margin-top: var(--space-6);                                  /* 非標題→標題：區段斷點大留白（保區段分隔、不縮）*/
+  }
+  #paper-content > :is(h1,h2,h3,h4) + * {
+    margin-top: var(--space-2);                                  /* 標題→其內文/子標題：貼緊（含 h→h、取代擬議 FE-RHYTHM-2）*/
+  }
+  #paper-content > p + :is(ul,ol) {
+    margin-top: var(--space-1);                                  /* 標籤段落→其清單：最貼（收編 FE-RHYTHM-1）*/
+  }
+  /* 特殊塊 margin-top 明列（置於 flow 之後、贏同特異度 tie；防 flow 覆寫其原間距）。
+     margin-top 與 flow 同屬性＝級聯非疊加；各塊 border/overflow/padding/margin-bottom 由其既有規則保留。
+     h1:first-child 由既有 #paper-content > h1:first-child 規則處理（:first-child 永不被 *+* 命中、不重列）。 */
+  #paper-content > .slide-head { margin-top: var(--space-6); }       /* 投影片標題塊（其 border/padding/margin-bottom 由既有 .slide-head 規則保留）*/
+  #paper-content > .paper-header-meta { margin-top: var(--space-4); } /* 學術扉頁（緊接 h1 時防被「標題→*」收成 space-2）*/
+  #paper-content > .katex-display { margin-top: var(--space-2); }    /* 顯示式（若為直接子代）*/
+  #paper-content > .figure { margin-top: var(--space-4); }
+  /* === [FE-RHYTHM-UNIFY C2 END] === */
+  #paper-content img {
+    max-width: 100%;
+    height: auto;
+  }
+  /* === [RAG-12 C2] === KaTeX 顯示式：收斂預設 1em margin（避撞 slides tight list）、
+     overflow-x 防超長式撐破中欄、padding 防橫向 scrollbar 切下標尾巴（plan_v7 §2-9） */
+  #paper-content .katex-display {
+    margin: var(--space-2) 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+  }
+  /* === [RAG-12 C2 END] === */
+  #paper-content .figure { /* margin 由主題覆寫 */ }
+  #paper-content .figure .ph {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex; align-items: center; justify-content: center;
+    /* 背景紋路 / 邊框 / 字體 → 由主題覆寫 */
+  }
+  #paper-content .figure figcaption { /* 字體、置中等 → 由主題覆寫 */ }
+
+  /* ── 右欄 chat ── */
+  #chat-panel {
+    width: 380px;
+    flex-shrink: 0;
+    background: var(--color-bg);
+    border-left: var(--divider-w) solid var(--color-divider);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: width 180ms ease;
+  }
+  #chat-header {
+    height: var(--toolbar-h);
+    flex-shrink: 0;
+    padding: 0 var(--pad-panel);
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: center;
+    gap: var(--gap-btn-loose);
+    font-size: var(--font-base);
+    font-weight: 600;
+  }
+  #chat-header > .h-title {
+    /* 字體 / 字距 → 由主題覆寫 */
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 痛點 7：右欄三按鈕進入同一個 flex 容器，normal 間距 */
+  #chat-header-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+  }
+  /* 開啟搜尋 / 匯出 MD：皆為 icon-only.bordered；只額外定義 active 反白狀態 */
+  #web-search-toggle.active {
+    background: var(--color-text);
+    color: #fff;
+    border-color: var(--color-text);
+  }
+  #web-search-toggle.active:hover {
+    background: var(--color-accent-hover);
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;                                     /* 永遠保留捲軸位、左右視覺對稱 */
+    padding: 0 var(--chat-pad-x, var(--space-5)) var(--space-5);  /* 頂部設為 0，防置頂穿透（RAG-14）*/
+    display: flex; flex-direction: column;
+    gap: var(--space-6);                                             /* qa-group 外部間距（C1 RAG-14）*/
+  }
+  .qa-group {
+    display: flex; flex-direction: column;
+    gap: var(--space-4);                                             /* user/ai 內部間距（C1 RAG-14）*/
+  }
+  .qa-group:first-child {
+    margin-top: var(--space-5);                                      /* 首個 QA 組補回頂部留白（RAG-14）*/
+  }
+  .msg-user {
+    /* [FE-PERF-2 C4] 視窗外訊息跳過 layout/paint；auto 記憶尺寸防上捲跳動（U8·Safari 18+ 基線內） */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+    background: var(--color-accent);
+    color: #fff;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.6;
+    align-self: stretch;                                             /* 滿寬（C1 RAG-14）*/
+    max-width: 100%;                                                 /* 滿寬（C1 RAG-14）*/
+    white-space: pre-wrap;
+    position: sticky;                                                /* Q&A sticky header（C1 RAG-14）*/
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  /* attach 到 broker 的 stream 時 ai msg 末尾的閃爍游標
+     （sendMessage 用純字「▋」、attach 模式統一帶 blink 動畫）*/
+  .cursor-blink {
+    animation: blink-cursor 1s step-end infinite;
+    margin-left: 2px;
+    opacity: 0.7;
+  }
+  @keyframes blink-cursor {
+    0%, 50% { opacity: 0.7; }
+    51%, 100% { opacity: 0; }
+  }
+  .msg-ai {
+    /* [FE-PERF-2 C4] 視窗外訊息跳過 layout/paint；auto 記憶尺寸防上捲跳動（U8·Safari 18+ 基線內） */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+    position: relative;
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.8;
+    align-self: stretch;                                             /* 滿寬（C1 RAG-14）*/
+    max-width: 100%;                                                 /* 滿寬（C1 RAG-14）*/
+    border: 1px solid var(--color-border);
+  }
+  /* AI 訊息動作鈕：右下角 hover 顯示 copy / regenerate */
+  .msg-ai-actions {
+    position: absolute;
+    right: 6px;
+    bottom: -14px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 1px;
+  }
+  .msg-ai:hover .msg-ai-actions { opacity: 1; }
+  .msg-ai-actions button {
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--transition), color var(--transition);
+  }
+  .msg-ai-actions button:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .msg-ai-actions svg {
+    width: 13px; height: 13px;
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .msg-ai-actions button.copied {
+    color: var(--color-accent);
+  }
+  @media (hover: none) {
+    .msg-ai-actions { opacity: 1; }
+  }
+  .msg-ai p { margin-bottom: var(--space-2); }
+  .msg-ai p:last-child { margin-bottom: 0; }
+  .msg-sources {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--color-border);
+  }
+  .msg-sources a { color: var(--color-text-muted); text-decoration: underline; }
+  .msg-sources a:hover { color: var(--color-text); }
+  .msg-system {
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    text-align: center;
+    padding: var(--space-3);
+  }
+
+  /* 右欄輸入區：與 chat-messages 共用水平 padding（--chat-pad-x），
+     textarea 撐滿剩餘寬度，左右邊緣 = 訊息泡泡容器邊緣 */
+  #chat-input-area {
+    flex-shrink: 0;
+    padding: var(--pad-panel) var(--chat-pad-x, var(--space-5));
+    border-top: 1px solid var(--color-border);
+    /* autocomplete dropdown 定位錨點（P2-3 §3.3.5-#4） */
+    position: relative;
+  }
+  #chat-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    line-height: 1.5;
+    /* BUG-F1 Bug 3（ui-fixes-batch C1）：預留 placeholder 兩行高度、避免 type 時容器跳動
+       原 min-height: var(--btn-h) (38px) 不夠容納兩行；改 56px = 兩行 line-height(1.5*14=21) + padding */
+    min-height: 56px;
+    max-height: 240px;                    /* 約 10 行；contenteditable 自然撐高 */
+    overflow-y: auto;
+    outline: none;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    display: block;
+    /* contenteditable div 需顯式設 word-break、避免長字串撐破容器 */
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  #chat-input:focus { border-color: var(--color-accent); }
+  /* contenteditable div 無原生 placeholder（P2-3 §3.3.5-#1）：
+     用 :empty::before + data-placeholder 模擬；display:block 確保排版正確 */
+  #chat-input:empty::before {
+    content: attr(data-placeholder);
+    /* BUG-F1 Bug 3（ui-fixes-batch C1）：讓 data-placeholder 內 &#10; / \n 顯示為實際換行 */
+    white-space: pre-wrap;
+    color: var(--color-text-subtle);
+    pointer-events: none;
+    display: block;
+  }
+  #chat-input:empty:focus::before { opacity: 0.5; }
+  /* disabled 視覺契約對齊既有 textarea[disabled]（P2-3 §3.3.5-#2）：
+     contenteditable="false" 替代 disabled 屬性、需顯式樣式維持 UX */
+  #chat-input[contenteditable="false"] {
+    background: var(--color-surface);
+    color: var(--color-text-subtle);
+    cursor: not-allowed;
+    user-select: none;
+  }
+  #chat-input[contenteditable="false"]:empty::before { opacity: 0.4; }
+
+  /* Hashtag Token 樣式（P2-3 §3.3.2 + design/docs/components.md §11.2） */
+  .hashtag-token {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    user-select: none;
+    cursor: default;
+    /* 跟周圍純文字基線對齊、避免 token 跳行錯位 */
+    vertical-align: baseline;
+    line-height: 1.5;
+    /* 確保 contenteditable 把整顆 token 當原子單元、Backspace 一次刪整顆 */
+  }
+  .hashtag-token-remove {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 2px;
+    font-size: inherit;
+    line-height: 1;
+  }
+  .hashtag-token-remove:hover { color: white; }
+  [data-theme="dark"] .hashtag-token { background: var(--color-accent); }
+
+  /* autocomplete dropdown 綁容器、非綁 cursor（P2-3 §3.3.5-#4）
+     永遠在 input 正上方展開、避免溢出畫面與多行抖動 */
+  #hashtag-autocomplete.hashtag-popup {
+    position: absolute;
+    bottom: 100%;
+    left: var(--chat-pad-x, var(--space-5));
+    right: var(--chat-pad-x, var(--space-5));
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-1) 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+  #hashtag-autocomplete.hashtag-popup[hidden] { display: none; }
+  .hashtag-popup-item {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--font-base);
+    color: var(--color-text);
+    cursor: pointer;
+    line-height: 1.6;
+  }
+  .hashtag-popup-item:hover,
+  .hashtag-popup-item.active {
+    background: var(--color-surface);
+  }
+  .hashtag-popup-more {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--font-sm);
+    color: var(--color-text-subtle);
+    cursor: default;
+    font-style: italic;
+  }
+
+  .chat-empty {
+    text-align: center;
+    color: var(--color-text-subtle);
+    font-size: var(--font-sm);
+    margin-top: var(--space-8);
+  }
+
+  /* ─────────────────────────────────────────
+     收合態：核心改良 — width:0 → 48px rail
+     hamburger 內嵌 DOM、永遠貼分隔邊
+     ───────────────────────────────────────── */
+  #sidebar.collapsed { width: var(--rail-w); }
+  #sidebar.collapsed > h1 > .title,
+  #sidebar.collapsed > h1 > .toolbar-actions > :not(#sidebar-toggle),
+  #sidebar.collapsed > #folder-tree,
+  #sidebar.collapsed > #paper-list,
+  #sidebar.collapsed > #sidebar-bottom { display: none; }
+  #sidebar.collapsed > h1 {
+    padding: 0;
+    justify-content: center;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  #sidebar.collapsed > h1 > .toolbar-actions { gap: 0; }
+  /* 收合後新增 rail content（vertical 圖示快捷） */
+  #sidebar.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  #chat-panel.collapsed { width: var(--rail-w); }
+  #chat-panel.collapsed > #chat-header > .h-title,
+  #chat-panel.collapsed > #chat-messages,
+  #chat-panel.collapsed > #chat-input-area { display: none; }
+  /* BUG-F1 Bug 4（ui-fixes-batch B6）：拆出 :not(#chat-toggle) 加 !important、
+     蓋過 enableChat() 內 inline style="display:block"。
+     policy: CSS state class > inline JS（避免未來 inline style 蔓延、TODO 補 design/docs/css.md） */
+  #chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) {
+    display: none !important;
+  }
+  #chat-panel.collapsed > #chat-header {
+    padding: 0;
+    justify-content: center;
+    background: var(--color-surface);
+  }
+  #chat-panel.collapsed > #chat-header > #chat-header-actions { gap: 0; }
+  #chat-panel.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* 痛點 1/2：sidebar-toggle 不再 fixed，sit 在標題列 toolbar-actions 內 */
+  #sidebar-toggle, #chat-toggle { /* 已套用 .icon-only */ }
+
+  /* 細節：捲軸樣式統一 */
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 4px;
+  }
+  *::-webkit-scrollbar-track { background: transparent; }
+
+  /* ── 列印：只印中欄文章 ──
+     業務 JS 已將 #current-title 寫進 document.title（print-btn handler），
+     瀏覽器列印時頁眉/頁尾自動帶入；此 CSS 僅負責隱藏非文章 UI。 */
+  @media print {
+    /* 解除 viewport 高度與 scroll 限制，讓 #paper-content 展開到實際內容高度
+       （否則 #content-area overflow:hidden + #paper-content flex:1+overflow-y:auto
+       會把列印限制在當前可見範圍）。 */
+    html, body {
+      height: auto !important;
+      overflow: visible !important;
+    }
+    main, #content-area {
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;     /* 解除 flex 限制 */
+    }
+    #paper-content {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+      flex: none !important;          /* 解除 flex: 1 */
+    }
+
+    /* 隱藏所有非文章區塊。#current-title 已是 #content-toolbar 子元素，
+       不需另列 */
+    #sidebar,
+    #chat-panel,
+    #content-toolbar,
+    #abstract-toolbar,
+    #empty-state,
+    #tooltip,
+    .modal-mask,
+    .ctx-popup {
+      display: none !important;
+    }
+
+    /* 中欄全寬輸出 */
+    body, html, main {
+      background: white !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    #paper-content {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 16px !important;
+      color: black !important;
+      font-size: 12pt;
+      line-height: 1.6;
+    }
+
+    /* 文章內元素列印優化 */
+    #paper-content h1,
+    #paper-content h2,
+    #paper-content h3 {
+      page-break-after: avoid;
+    }
+    #paper-content img,
+    #paper-content figure {
+      max-width: 100% !important;
+      page-break-inside: avoid;
+    }
+    #paper-content p,
+    #paper-content li {
+      orphans: 3;
+      widows: 3;
+    }
+  }
+</style>
 <!-- 主題版型：切換 href 即可換主題。可選：themes/mies.css、themes/kahn.css。
-     置於 7 個 static/css/ link 之後是刻意安排：CSS 後出者勝，讓主題 :root 覆寫主檔 fallback
-     （FE-CSS-GOV C1 更新註：原述「置於 </style> 之後」；C2 @layer 化後改由 unlayered>layered 語意保證主題必贏）。-->
+     置於 </style> 之後是刻意安排：CSS 後出者勝，讓主題 :root 覆寫主檔 fallback。-->
 <link rel="stylesheet" id="theme-link" href="/static/themes/kahn.css">
 </head>
 <body>

@@ -1,0 +1,152 @@
+/* ==========================================================================
+   layout.css — 三欄框架(#app) / 共用按鈕系統 / icon-only / 收合態 rail / scrollbar
+   [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
+   規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
+   ========================================================================== */
+  /* ─────────────────────────────────────────
+     主版面：三欄
+     ───────────────────────────────────────── */
+  #app {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  /* === 共用按鈕系統 === */
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .btn-primary:hover { background: var(--color-accent-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    height: var(--btn-h);
+    min-width: var(--btn-min-w);
+    padding: 0 var(--btn-pad-x);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .btn-ghost:hover { background: var(--color-surface); }
+  .btn-ghost.active {
+    background: var(--color-text);
+    color: #fff;
+    border-color: var(--color-text);
+  }
+  .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* === icon-only：統一 28×28、無 min-width === */
+  .icon-only {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;        /* 預設無邊（toolbar 內），可被覆蓋 */
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .icon-only:hover {
+    background: var(--color-surface);
+  }
+  .icon-only:active {
+    background: var(--color-surface-2);   /* 按下瞬間：再深一階表面色 */
+  }
+  .icon-only:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 1px;
+  }
+  .icon-only svg {
+    width: var(--btn-icon-svg);
+    height: var(--btn-icon-svg);
+    stroke: currentColor;
+    stroke-width: var(--btn-icon-stroke);
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* .bordered 保留 class 名作向下相容，但不再加常駐邊框 */
+  .icon-only.bordered { border-color: transparent; }
+
+  /* ─────────────────────────────────────────
+     收合態：核心改良 — width:0 → 48px rail
+     hamburger 內嵌 DOM、永遠貼分隔邊
+     ───────────────────────────────────────── */
+  #sidebar.collapsed { width: var(--rail-w); }
+  #sidebar.collapsed > h1 > .title,
+  #sidebar.collapsed > h1 > .toolbar-actions > :not(#sidebar-toggle),
+  #sidebar.collapsed > #folder-tree,
+  #sidebar.collapsed > #paper-list,
+  #sidebar.collapsed > #sidebar-bottom { display: none; }
+  #sidebar.collapsed > h1 {
+    padding: 0;
+    justify-content: center;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  #sidebar.collapsed > h1 > .toolbar-actions { gap: 0; }
+  /* 收合後新增 rail content（vertical 圖示快捷） */
+  #sidebar.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  #chat-panel.collapsed { width: var(--rail-w); }
+  #chat-panel.collapsed > #chat-header > .h-title,
+  #chat-panel.collapsed > #chat-messages,
+  #chat-panel.collapsed > #chat-input-area { display: none; }
+  /* BUG-F1 Bug 4（ui-fixes-batch B6）：拆出 :not(#chat-toggle) 加 !important、
+     蓋過 enableChat() 內 inline style="display:block"。
+     policy: CSS state class > inline JS（避免未來 inline style 蔓延、TODO 補 design/docs/css.md） */
+  #chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) {
+    display: none !important;
+  }
+  #chat-panel.collapsed > #chat-header {
+    padding: 0;
+    justify-content: center;
+    background: var(--color-surface);
+  }
+  #chat-panel.collapsed > #chat-header > #chat-header-actions { gap: 0; }
+  #chat-panel.collapsed::after {
+    content: '';
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* 痛點 1/2：sidebar-toggle 不再 fixed，sit 在標題列 toolbar-actions 內 */
+  #sidebar-toggle, #chat-toggle { /* 已套用 .icon-only */ }
+
+  /* 細節：捲軸樣式統一 */
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 4px;
+  }
+  *::-webkit-scrollbar-track { background: transparent; }
+

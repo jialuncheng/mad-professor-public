@@ -1,0 +1,291 @@
+/* ==========================================================================
+   sidebar.css — 左欄 sidebar / 上傳占位列 / .ctx-popup 浮層(物理原生於此) / 左欄底部
+   [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
+   規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
+   ========================================================================== */
+  /* === 左欄 sidebar ===
+     Kahn：servant space，靠「厚牆」分隔；2px umber 視為結構體 */
+  #sidebar {
+    width: 288px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: var(--divider-w) solid var(--color-divider);
+    overflow: hidden;
+    transition: width 180ms ease;
+  }
+  #sidebar h1 {
+    height: var(--toolbar-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-btn-normal);
+    padding: 0 var(--space-2) 0 var(--pad-panel);
+    font-size: var(--font-base);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+  #sidebar h1 .title {
+    /* 字體 / 字距 → 由主題覆寫 */
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 標題列右側 icon 群：normal 間距 */
+  #sidebar h1 .toolbar-actions {
+    display: flex; align-items: center;
+    gap: var(--gap-btn-normal);
+  }
+
+  #folder-tree {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .folder-item {
+    position: relative;                    /* 痛點 4：popup 以 item 右端為錨 */
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin: 0 var(--space-2);
+    font-size: var(--font-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition);
+  }
+  .folder-item:hover { background: var(--color-border); }
+  .folder-item.active {
+    background: var(--color-text);
+    color: #fff;
+  }
+  .folder-item .chevron {
+    width: 14px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted);
+  }
+  .folder-item.active .chevron { color: #fff; }
+  .folder-item .chevron svg {
+    width: 10px; height: 10px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    transition: transform var(--transition);
+  }
+  .folder-item.open > .chevron svg { transform: rotate(90deg); }
+  .folder-item .chevron.empty { visibility: hidden; }
+  .folder-item .fname {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .folder-item .menu-btn {
+    /* 痛點 5：⋯ 改用 SVG icon-only，統一尺寸 */
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent; color: inherit;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition), background var(--transition);
+  }
+  .folder-item .menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .folder-item:hover .menu-btn { opacity: 1; }
+  .folder-item.active .menu-btn { opacity: 1; }
+  .folder-item .menu-btn:hover { background: rgba(255,255,255,0.12); }
+  .folder-item:not(.active) .menu-btn:hover { background: var(--color-surface); }
+
+  #paper-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2);
+  }
+  .paper-item {
+    position: relative;                   /* 痛點 4 */
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: var(--space-1);
+    transition: background var(--transition), color var(--transition);
+  }
+  .paper-item:hover { background: var(--color-border); }
+  .paper-item.active { background: var(--color-text); color: #fff; }
+
+  /* ── 上傳中占位列 ──
+     不顯示 ⋯ 選單；以微脈動暗示「處理中」；
+     底部 1px 細線跑進度，文字顯示階段+百分比；
+     整列禁止點擊（pointer-events: none），避免誤觸 */
+  .paper-item.uploading {
+    cursor: default;
+    pointer-events: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    animation: paperUploadingPulse 1.6s ease-in-out infinite;
+  }
+  .paper-item.uploading:hover { background: var(--color-surface); }
+  .paper-item.uploading .paper-title-zh {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+  .paper-progress {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    margin-top: 2px;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+  }
+  .paper-progress-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    flex-shrink: 0;
+    animation: paperUploadingBlink 1s ease-in-out infinite;
+  }
+  .paper-progress-bar {
+    margin-top: var(--space-2);
+    height: 2px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+  .paper-progress-fill {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 200ms ease;
+  }
+  @keyframes paperUploadingPulse {
+    0%, 100% { background: var(--color-surface); }
+    50%      { background: var(--color-border); }
+  }
+  @keyframes paperUploadingBlink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+  }
+  .paper-item-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .paper-item-titles { flex: 1; min-width: 0; }
+  .paper-title-zh {
+    font-size: var(--font-sm); font-weight: 500;
+    line-height: 1.4; margin-bottom: var(--space-1);
+  }
+  .paper-title-en {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .paper-item.active .paper-title-en { color: rgba(255,255,255,0.55); }
+
+  /* 痛點 5：paper-menu-btn 改 SVG，盒尺寸與 folder 一致 24×24 */
+  .paper-menu-btn {
+    width: 24px; height: 24px;
+    min-width: 0; padding: 0;
+    border: 0; background: transparent;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    opacity: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: opacity var(--transition), background var(--transition), color var(--transition);
+  }
+  .paper-menu-btn svg {
+    width: 14px; height: 14px; stroke: currentColor;
+    stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .paper-item:hover .paper-menu-btn { opacity: 1; }
+  .paper-item.active .paper-menu-btn { color: #fff; opacity: 1; }
+  .paper-menu-btn:hover { background: var(--color-surface); color: var(--color-text); }
+  .paper-item.active .paper-menu-btn:hover {
+    background: rgba(255,255,255,0.12); color: #fff;
+  }
+  /* 觸控裝置無 hover：⋯ 永遠顯示，避免無法操作 */
+  @media (hover: none) {
+    .paper-menu-btn,
+    .folder-item .menu-btn { opacity: 1; }
+  }
+
+  /* ── popup：fixed 浮層、append 到 body；統一美學（純白、1px 黑線、直角）── */
+  .ctx-popup {
+    position: fixed;
+    z-index: 1000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: var(--space-1);
+    min-width: 140px;
+    max-height: 260px; overflow-y: auto;
+  }
+  .ctx-popup button {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    width: 100%; text-align: left;
+    border: 0; background: transparent; cursor: pointer;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .ctx-popup button:hover { background: var(--color-border); }
+  .ctx-popup button.danger { color: var(--color-danger); }
+  .ctx-popup button:disabled {
+    color: var(--color-text-subtle); cursor: not-allowed;
+  }
+  .ctx-popup button:disabled:hover { background: transparent; }
+  .ctx-popup .has-sub::after {
+    content: '›';
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: var(--font-base);
+  }
+
+  /* ── 左欄底部：四個 icon 等寬一排 ── */
+  #sidebar-bottom {
+    flex-shrink: 0;
+    padding: var(--pad-panel);
+    border-top: 1px solid var(--color-border);
+  }
+  #sidebar-bottom .sb-row {
+    display: flex;
+    gap: var(--gap-btn-tight);
+  }
+  /* 左欄底部四 icon：32×32 固定、不再 flex:1 平分；
+     用 space-between 撐到欄兩端，視覺重心穩定且容器尺寸與其他 icon 一致 */
+  #sidebar-bottom .sb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #sidebar-bottom .sb-row > button {
+    width: var(--btn-icon);
+    height: var(--btn-icon);
+    min-width: 0;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  #sidebar-bottom .sb-row > button:hover { background: var(--color-surface); }
+  #sidebar-bottom .sb-row > button:active { background: var(--color-surface-2); }
+  #sidebar-bottom .sb-row > button svg {
+    width: var(--btn-icon-svg); height: var(--btn-icon-svg);
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+

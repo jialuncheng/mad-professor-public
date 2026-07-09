@@ -19,7 +19,6 @@
 6. **interaction.md** — 動態行為、過渡、鍵盤、捲動
 7. **copywriting.md** — 寫新文案前讀
 8. **theme-guide.md** — 要做新主題時讀
-9. **css-architecture.md** — 新增/改 CSS 前讀：某段樣式該寫哪支檔、哪一層（ownership map）
 
 ---
 
@@ -38,7 +37,6 @@
 | **interaction.md** | 行為 | 五態定義、transition 時序、popup/modal/tooltip 開關規則、上傳鏈、AI 問答鏈、鍵盤現況 | 工程、設計 |
 | **copywriting.md** | 文案 | 命令式語氣、無句末標點、中英／中數字空格、tooltip 對照、術語表、錯誤訊息三段式 | 全員 |
 | **theme-guide.md** | 操作 | 主題能／不能控制清單、必填 token、step-by-step 範例（Wright）、5 大陷阱 | 設計、工程 |
-| **css-architecture.md** | 架構 | CSS 檔案職責（`static/css/` 7 檔）、載入序、cascade 層序（@layer）、命名作用域與白名單、「新樣式寫哪」決策樹（ownership map；FE-CSS-GOV 維護） | 工程、Claude Code |
 
 > 未寫：accessibility.md（暫不對外開放，鍵盤／a11y 規範待完成）
 

@@ -1,0 +1,94 @@
+/* ==========================================================================
+   globals.css — @layer 宣告位/tokens(:root)/reset/base 元素通則/未掛主題 fallback
+   [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
+   規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
+   ========================================================================== */
+  :root {
+    /* ──────────────────────────────────────────────
+       主檔（結構層）token
+       ────────────────────────────────────────────
+       色票、字體、圓角、分隔線粗細 → 由 themes/<name>.css 提供
+       此處只放與主題無關的版面結構數值：
+         · 間距模矩  --space-*
+         · 字級階梯  --font-*
+         · 按鈕／工具列／rail 尺寸
+         · 按鈕群組三階間距
+         · 過渡時間
+       ────────────────────────────────────────────── */
+
+    /* ── 間距（4px 模矩）── */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px;
+    --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-8: 48px;
+
+    /* ── 字級 ── */
+    --font-xs: 12px; --font-sm: 13px; --font-base: 14px;
+    --font-lg: 16px; --font-xl: 20px; --font-2xl: 28px;
+
+    /* ── 按鈕／版面 ── */
+    --btn-h: 32px;
+    --btn-pad-x: var(--space-4);
+    --btn-min-w: 64px;
+    --btn-icon: 32px;                       /* icon-only 容器邊長 */
+    --btn-icon-svg: 18px;                   /* SVG 內框 */
+    --btn-icon-stroke: 1.5;                 /* 統一筆畫：1.5 視覺與漢堡平衡 */
+    --toolbar-h: 48px;
+    --pad-panel: var(--space-4);
+    --rail-w: 48px;                         /* collapsed 邊欄寬度 */
+    --chat-pad-x: var(--space-4);           /* 右欄左右共用 padding：訊息與輸入框邊界對齊；16px 配合右欄 380 寬度 */
+
+    /* ── 三階按鈕群組間距 ──
+       tight  = icon-only 緊密群（左欄底部）
+       normal = 同族群一般間距（標題列 icon 群）
+       loose  = 不同族群（標題列「標題 ↔ 動作群」）         */
+    --gap-btn-tight: var(--space-1);
+    --gap-btn-normal: var(--space-2);
+    --gap-btn-loose: var(--space-4);
+
+    /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄正文 + toolbar 共用最大寬度 token
+       預設 760px、各主題自行覆寫；toolbar + paper-content + abstract 同軌道 */
+    --content-max-w: 760px;
+
+    --transition: 150ms ease;
+
+    /* ── fallback：若未掛主題，仍可渲染 ── */
+    --color-bg: #ffffff;
+    --color-bg-served: #ffffff;
+    --color-surface: #f5f5f5;
+    --color-surface-2: #ececec;
+    --color-border: #e5e5e5;
+    --color-border-strong: #c8c8c8;
+    --color-divider: #111111;
+    --color-text: #111111;
+    --color-text-muted: #6b6b6b;
+    --color-text-subtle: #a3a3a3;
+    --color-accent: #111111;
+    --color-accent-hover: #2a2a2a;
+    --color-danger: #a8242c;
+    --divider-w: 1px;
+    --radius-sm: 0;
+    --radius-md: 0;
+    --font-display: system-ui, sans-serif;
+    --font-body: system-ui, sans-serif;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ol, ul { margin: 0; padding: 0; }
+  body {
+    /* font-family / font-size → 由 themes/<name>.css 提供 */
+    background: var(--color-bg);
+    color: var(--color-text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  button { font-family: inherit; }
+  a { color: inherit; }
+
+  /* BUG-F5 B3（ui-fixes-batch B3）：#demo-bar CSS 死代碼整段刪除
+     原 prototype 展示控制條的 CSS（約 32 行）保留但 HTML markup 早已移除；
+     對應 JS 的 querySelectorAll 永遠回空 NodeList；本 commit 同時刪 CSS + JS dead code。 */
+

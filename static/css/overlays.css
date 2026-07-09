@@ -1,0 +1,183 @@
+/* ==========================================================================
+   overlays.css — Tooltip / Modal 七家族 / .modal-input / 自訂 dropdown
+   [FE-CSS-GOV C1] inline <style> 零改寫等價遷出（基準 index.html@d4ce75a）；
+   規則內容物理搬遷、零改寫。@layer 化屬 C2；主題去重屬 C3；作用域收斂屬 C5-C7。
+   ========================================================================== */
+  /* ─────────────────────────────────────────
+     Tooltip 系統：data-tip 屬性觸發
+     · mouseenter 1s 後出現於 icon 左側
+     · Mies 美學：純白底、1px 黑線、直角、無箭頭
+     ───────────────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    z-index: 2000;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+  #tooltip.visible { opacity: 1; }
+
+  /* ─────────────────────────────────────────
+     Modal 統一美學
+     · 半透明黑遮罩；內框純白、1px 黑線、直角
+     ───────────────────────────────────────── */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;                      /* 暗示「可點外面關」 */
+  }
+  .modal-mask > .modal-box { cursor: auto; }   /* 內框恢復一般游標 */
+  .modal-mask.show { display: flex; }
+  .modal-box {
+    /* Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層；補 radius / font-family
+       讓 Modal 完整繼承主題 token、避免主題切換時邊角 / 字體斷層 */
+    background: var(--color-bg);
+    border: var(--divider-w, 1px) solid var(--color-divider);
+    border-radius: var(--radius-md, 8px);
+    font-family: var(--font-body);
+    padding: var(--space-6);
+    min-width: 380px;
+    max-width: 480px;
+  }
+  .modal-box h3 {
+    /* Modal h3 用 display font token、跟主題標題系統對齊 */
+    font-family: var(--font-display);
+    font-size: var(--font-lg);
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    color: var(--color-text);
+  }
+  .modal-box ol, .modal-box ul {
+    padding-left: var(--space-5);
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+    line-height: 1.9;
+  }
+  .modal-box li { margin-bottom: var(--space-1); }
+  .modal-box .step-note {
+    font-size: var(--font-xs);
+    color: var(--color-text-subtle);
+    margin-top: var(--space-1);
+  }
+  .modal-box p {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+    line-height: 1.6;
+  }
+  .modal-box .modal-actions {
+    display: flex;
+    gap: var(--gap-btn-normal);
+    justify-content: flex-end;
+    margin-top: var(--space-5);
+  }
+  .modal-box select {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+  }
+  .modal-box select:focus { border-color: var(--color-accent); }
+
+  /* BUG-F3 Bug 7（ui-fixes-batch B5）：補 .modal-input + 廣義 input[type="text"] 樣式
+     R2 ship 時 HTML 寫 class="modal-input"（#tag-input）但無 CSS、瀏覽器降 UA 預設、
+     寬度死約 150px、無圓角、無 padding、視覺與下方 select / 按鈕落差大。
+     focus ring 用 color-mix(in srgb, var(--color-accent) 18%, transparent) 跨主題
+     自動跟色、不寫死 rgba；input focus ring 為業界標準、不需補 components.md §10 反例豁免。
+     廣義覆蓋 input[type="text"]：未來新 modal input 同時享受相同主題樣式、不必各自補。 */
+  .modal-box .modal-input,
+  .modal-box input[type="text"] {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    outline: none;
+    margin-bottom: var(--space-2);
+    box-sizing: border-box;
+    transition: border-color var(--transition);
+  }
+  .modal-box .modal-input:focus,
+  .modal-box input[type="text"]:focus {
+    border-color: var(--color-accent);
+    /* color-mix 計算 accent 18% 透明度光環、跨主題自動跟色 */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+
+  /* ── 自訂 dropdown（取代 native <select>）── */
+  .dropdown {
+    margin-bottom: var(--space-2);
+  }
+  .dropdown-trigger {
+    width: 100%;
+    height: var(--btn-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    transition: background var(--transition);
+  }
+  .dropdown-trigger:hover { background: var(--color-surface); }
+  .dropdown-trigger[aria-expanded="true"] { background: var(--color-surface); }
+  .dropdown-chevron {
+    width: 14px; height: 14px;
+    stroke: currentColor; stroke-width: var(--btn-icon-stroke);
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+    flex-shrink: 0;
+    transition: transform var(--transition);
+  }
+  .dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+    transform: rotate(180deg);
+  }
+  /* dropdown 開啟時的 popup：在 modal 內也要顯現，z-index 須高於 modal-mask(1500) */
+  .ctx-popup.dropdown-popup { z-index: 1600; }
+  .modal-box button.modal-btn {
+    height: var(--btn-h);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .modal-box button.modal-btn:hover { background: var(--color-surface); }
+  .modal-box button.modal-btn.primary {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+  }
+  .modal-box button.modal-btn.primary:hover { background: var(--color-accent-hover); }
+
