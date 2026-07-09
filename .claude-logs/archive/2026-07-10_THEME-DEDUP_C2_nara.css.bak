@@ -17,13 +17,13 @@
      · figure 佔位：純色 + 右下一個小圓暗示「角色頭」
      · 圓角守住 0（避免太可愛而失去當代藝術的張力）
 
-   [THEME-DEDUP C2] 統一骨架：結構規則歸 base（content.css）、
-   數值經 26 必備 token 供給（見 theme-guide.md 凍結規格）。
+   依賴主檔提供：
+     · 結構性間距 token、按鈕／工具列尺寸
+     · --divider-w / --radius-* ← 此檔覆寫
    ============================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
 
-/* ══ tokens（26 必備·theme-guide §2）══ */
 :root {
   /* ── 色票：暖奶白 + 磚玫紅 + 暖褐結構 ── */
   --color-bg: #f4ecdf;                   /* 奶米暖白：奈良畫紙底 */
@@ -48,21 +48,11 @@
   /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄共用最大寬度 token、覆寫主檔 760px 預設 */
   --content-max-w: 800px;
 
-  /* ── 異值結構 token（THEME-DEDUP·規則在 base、值在此覆寫）── */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-6);
-  --byline-margin-b: var(--space-6);
-  --byline-pad-b: var(--space-2);
-  --byline-border-w: 1px;
-  --figcaption-margin-t: var(--space-3);
-  --ph-border-w: 2px;                    /* 手繪輪廓的厚 */
-
   /* ── 字體 token ── */
   --font-display: "Quicksand", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-body: "Quicksand", "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
-/* ══ base 字體 ══ */
 body {
   font-family: var(--font-body);
   font-size: 14px;
@@ -70,9 +60,9 @@ body {
 }
 .display-font { font-family: var(--font-display); }
 
-/* ══ chrome 標題 ══ */
 /* 中欄 served：奈良畫紙最亮 */
 #content-area { background: var(--color-bg-served); }
+
 /* ── 三欄標題：圓潤幾何 + 中字距 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {
@@ -92,9 +82,10 @@ body {
   color: var(--color-text);
 }
 
-/* ══ 內容（#paper-content 系）══ */
+/* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C2] padding 歸 base、值走 :root --pc-pad */
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 已由 :root --content-max-w (800px) 覆寫、此處刪除重複定義 */
+  padding: var(--space-6) var(--space-8);
 }
 #paper-content h1 {
   font-family: var(--font-display);
@@ -109,7 +100,9 @@ body {
   font-family: var(--font-display);
   font-size: 21px;
   font-weight: 600;
-  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base；[THEME-DEDUP C2] 底線歸 base（--divider-w/--color-divider 經 token 生效） */
+  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base */
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -133,16 +126,15 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--color-text-muted);
-  /* [THEME-DEDUP C2] 間距/底線歸 base（--byline-*·底線色＝base default border-strong） */
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-strong);
 }
+#paper-content .figure { margin: var(--space-6) 0; }
 
-/* ══ figure 佔位 ══ */
 /* ── figure 佔位：奈良作品「角色 + 純色背景」的暗示
    純色奶米底 + 右下一個小圓（角色頭的暗示），加一個微微靠左的鈍紅嘴點。
    不寫實只是「畫面有人在」── */
-#paper-content .figure {
-  /* [THEME-DEDUP C2] margin 歸 base（--figure-margin-y） */
-}
 #paper-content .figure .ph {
   background:
     /* 嘴點（小紅圓，偏中下） */
@@ -155,7 +147,7 @@ body {
       var(--color-divider) 92%, var(--color-divider) 95%,
       transparent 95.5%),
     var(--color-surface);
-  /* [THEME-DEDUP C2] 邊框寬歸 base（--ph-border-w: 2px）；色＝base default divider */
+  border: 2px solid var(--color-divider);
   font-family: var(--font-display);
   color: var(--color-text-muted);
   font-size: 12px;
@@ -167,12 +159,7 @@ body {
   font-size: 14px;
   color: var(--color-text-muted);
   font-style: italic;
-  /* [THEME-DEDUP C2] margin-top 歸 base（--figcaption-margin-t） */
+  margin-top: var(--space-3);
   text-align: center;
   line-height: 1.6;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */

@@ -12,13 +12,15 @@
      · Helvetica Neue 中性無襯線；大字微緊縮
      · 收斂的磚紅 danger
 
-   [THEME-DEDUP C2] 統一骨架：結構規則歸 base（content.css）、
-   數值經 26 必備 token 供給（見 theme-guide.md 凍結規格）。
+   依賴主檔（Mad Professor Redesign.html）提供：
+     · 結構性間距 token  (--space-*)
+     · 按鈕／工具列尺寸 token  (--btn-*, --toolbar-h, --pad-panel, --rail-w)
+     · 分隔線粗細 token  (--divider-w  ← 此檔覆寫)
+     · 圓角 token  (--radius-*  ← 此檔覆寫)
    ============================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-/* ══ tokens（26 必備·theme-guide §2）══ */
 :root {
   /* ── 色票：純白 + 鋼鐵中性灰 ── */
   --color-bg: #ffffff;
@@ -43,15 +45,6 @@
   /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄共用最大寬度 token、覆寫主檔 760px 預設 */
   --content-max-w: 860px;
 
-  /* ── 異值結構 token（THEME-DEDUP·規則在 base、值在此覆寫）── */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-5);     /* 收斂的節奏 */
-  --byline-margin-b: var(--space-5);
-  --byline-pad-b: 0;                     /* less is more：byline 無底部內距 */
-  --byline-border-w: 0;                  /* less is more：byline 無底線 */
-  --figcaption-margin-t: var(--space-2);
-  --ph-border-w: 1px;
-
   /* ── 字體 token（雲端 Inter；雲端載入失敗 fallback 到系統 Helvetica / 中文黑體）── */
   --font-display: "Inter", "Helvetica Neue", "Helvetica", "Arial",
                   "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -59,16 +52,15 @@
                "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
-/* ══ base 字體 ══ */
 body {
   font-family: var(--font-body);
   font-size: 14px;
 }
 .display-font { font-family: var(--font-display); }
 
-/* ══ chrome 標題 ══ */
 /* 中欄 served：Mies 不靠色階區分，留同色 */
 #content-area { background: var(--color-bg-served); }
+
 /* ── 三欄標題：簡潔 sans，無大寫變化 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {
@@ -88,9 +80,10 @@ body {
   color: var(--color-text);
 }
 
-/* ══ 內容（#paper-content 系）══ */
+/* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C2] padding 歸 base、值走 :root --pc-pad */
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 已由 :root --content-max-w (860px) 覆寫、此處刪除重複定義 */
+  padding: var(--space-6) var(--space-8);
 }
 #paper-content h1 {
   font-family: var(--font-display);
@@ -106,7 +99,9 @@ body {
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.005em;
-  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base；[THEME-DEDUP C2] 底線歸 base（--divider-w/--color-divider 經 token 生效） */
+  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base */
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -130,13 +125,11 @@ body {
   text-transform: none;
   letter-spacing: 0;
   color: var(--color-text-muted);
-  /* [THEME-DEDUP C2] 間距/底線歸 base（--byline-*：margin-b space-5、pad-b 0、border-w 0＝無底線） */
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  border-bottom: 0;
 }
-
-/* ══ figure 佔位 ══ */
-#paper-content .figure {
-  /* [THEME-DEDUP C2] margin 歸 base（--figure-margin-y: space-5） */
-}
+#paper-content .figure { margin: var(--space-5) 0; }
 #paper-content .figure .ph {
   background-color: var(--color-surface-2);
   /* 誠實表現「這是佔位」：嚴格水平線，非裝飾性斜紋 */
@@ -146,7 +139,7 @@ body {
     transparent 23px,
     rgba(0, 0, 0, 0.05) 23px,
     rgba(0, 0, 0, 0.05) 24px);
-  /* [THEME-DEDUP C2] 邊框寬歸 base（--ph-border-w: 1px）；色＝base default divider */
+  border: 1px solid var(--color-divider);
   font-family: var(--font-display);
   color: var(--color-text-muted);
   font-size: 11px;
@@ -158,13 +151,8 @@ body {
   font-size: 13px;
   color: var(--color-text-muted);
   font-style: italic;
-  /* [THEME-DEDUP C2] margin-top 歸 base（--figcaption-margin-t: space-2）；max-width: none＝排版例外保留（Q3） */
+  margin-top: var(--space-2);
   max-width: none;
   text-align: center;
   line-height: 1.6;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */

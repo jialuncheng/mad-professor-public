@@ -18,13 +18,14 @@
      · 分隔線：深中性灰 2px（混凝土陰影）
      · figure 佔位：頂部銀光 + 1px 中軸光線（線性天窗暗示）
 
-   [THEME-DEDUP C2] 統一骨架：結構規則歸 base（content.css）、
-   數值經 26 必備 token 供給（見 theme-guide.md 凍結規格）。
+   依賴主檔提供：
+     · 結構性間距 token  (--space-*)
+     · 按鈕／工具列／rail 尺寸 token
+     · --divider-w / --radius-*  ← 此檔覆寫
    ============================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
 
-/* ══ tokens（26 必備·theme-guide §2）══ */
 :root {
   /* ── 色票：清水模冷中性灰 → 更純（R=G=B）+ 更淡（淺階 +20% 朝白）── */
   --color-bg: #dcdcdc;                   /* 中灰：原 #d2d3d4，向白 20%、去 cool */
@@ -49,28 +50,17 @@
   /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄共用最大寬度 token、覆寫主檔 760px 預設 */
   --content-max-w: 720px;
 
-  /* ── 異值結構 token（THEME-DEDUP·規則在 base、值在此覆寫）── */
-  --pc-pad: var(--space-8);              /* 畫廊大留白：單值四邊 48px */
-  --figure-margin-y: var(--space-6);
-  --byline-margin-b: var(--space-6);
-  --byline-pad-b: var(--space-3);        /* museum label 較寬的底部呼吸 */
-  --byline-border-w: 1px;
-  --figcaption-margin-t: var(--space-3);
-  --ph-border-w: 1px;
-
   /* ── 字體 token（全部非襯線 sans-serif）── */
   --font-display: "IBM Plex Sans", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-body: "IBM Plex Sans", "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
-/* ══ base 字體 ══ */
 body {
   font-family: var(--font-body);
   font-size: 15px;
 }
 .display-font { font-family: var(--font-display); }
 
-/* ══ chrome 標題 ══ */
 /* ── 中欄 served：畫廊內。
       頂部一道極輕「銀光」，暗示拱頂線性天窗 + 銀箔反射板把光漫射下來。
       色溫偏冷白，不是奶油黃。── */
@@ -81,6 +71,7 @@ body {
       rgba(248, 248, 244, 0) 60%),
     var(--color-bg-served);
 }
+
 /* ── 三欄標題：museum-label 而非銘文 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {
@@ -100,9 +91,10 @@ body {
   color: var(--color-text);
 }
 
-/* ══ 內容（#paper-content 系）══ */
+/* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C2] padding 歸 base、值走 :root --pc-pad */
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 已由 :root --content-max-w (720px) 覆寫、此處刪除重複定義 */
+  padding: var(--space-8);
 }
 #paper-content h1 {
   font-family: var(--font-display);
@@ -117,7 +109,9 @@ body {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 600;
-  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base；[THEME-DEDUP C2] 底線歸 base（--divider-w/--color-divider 經 token 生效） */
+  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base */
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -142,16 +136,15 @@ body {
   text-transform: none;                  /* 收掉沙克版的大寫 */
   letter-spacing: 0.02em;
   color: var(--color-text-muted);
-  /* [THEME-DEDUP C2] 間距/底線歸 base（--byline-*·底線色＝base default border-strong） */
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-strong);
 }
+#paper-content .figure { margin: var(--space-6) 0; }
 
-/* ══ figure 佔位 ══ */
 /* ── figure 佔位：拱頂下方的漫射光場 ──
    頂端有一道線性天光（cycloidal 拱頂頂部的天窗暗示），
    往下淡出；無磚紋、無斜線——讓「光」自己作為材料表現。 */
-#paper-content .figure {
-  /* [THEME-DEDUP C2] margin 歸 base（--figure-margin-y） */
-}
 #paper-content .figure .ph {
   background:
     /* 中軸線性天窗：銀白光帶從頂端中線下沉 */
@@ -163,29 +156,16 @@ body {
       rgba(245, 245, 240, 0.65) 0%,
       rgba(245, 245, 240, 0) 65%),
     var(--color-surface);
-  /* [THEME-DEDUP C2] 邊框寬歸 base（--ph-border-w）；色以白名單 border-color 覆（base default divider） */
-  border-color: var(--color-border-strong);
+  border: 1px solid var(--color-border-strong);
   font-family: var(--font-display);
   color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  /* 中軸 1px 天窗光線本身（裝飾幾何·Q3 例外保留） */
+  /* 中軸 1px 天窗光線本身 */
   position: relative;
 }
-#paper-content .figure figcaption {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  font-style: italic;
-  /* [THEME-DEDUP C2] margin-top 歸 base（--figcaption-margin-t）；max-width/margin-inline＝排版例外保留（Q3） */
-  text-align: center;
-  max-width: 560px;
-  margin-inline: auto;
-  line-height: 1.6;
-}
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
 #paper-content .figure .ph::before {
   content: '';
   position: absolute;
@@ -199,5 +179,13 @@ body {
   transform: translateX(-0.5px);
   pointer-events: none;
 }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */
+#paper-content .figure figcaption {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--space-3);
+  text-align: center;
+  max-width: 560px;
+  margin-inline: auto;
+  line-height: 1.6;
+}

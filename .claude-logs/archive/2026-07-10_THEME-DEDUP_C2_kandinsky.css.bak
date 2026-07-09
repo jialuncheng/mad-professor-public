@@ -18,13 +18,13 @@
      · 黃用作 hover 高光（節制，僅在必要視覺反饋）
      · 字距：大字微鬆（Futura 大字需呼吸）
 
-   [THEME-DEDUP C2] 統一骨架：結構規則歸 base（content.css）、
-   數值經 26 必備 token 供給（見 theme-guide.md 凍結規格）。
+   依賴主檔提供：
+     · 結構性間距 token、按鈕／工具列尺寸
+     · --divider-w / --radius-* ← 此檔覆寫
    ============================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap");
 
-/* ══ tokens（26 必備·theme-guide §2）══ */
 :root {
   /* ── 色票：白底 + 純黑 + 三原色點綴 ── */
   --color-bg: #fbf9f1;                   /* 畫布米白：Composition 紙底 */
@@ -49,15 +49,6 @@
   /* BUG-F1 Bug 5（ui-fixes-batch B7）：中欄共用最大寬度 token、覆寫主檔 760px 預設 */
   --content-max-w: 820px;
 
-  /* ── 異值結構 token（THEME-DEDUP·規則在 base、值在此覆寫）── */
-  --pc-pad: var(--space-6) var(--space-8);
-  --figure-margin-y: var(--space-6);
-  --byline-margin-b: var(--space-6);
-  --byline-pad-b: var(--space-2);
-  --byline-border-w: 1px;
-  --figcaption-margin-t: var(--space-3);
-  --ph-border-w: 2px;                    /* Bauhaus 粗框 */
-
   /* ── 字體 token ── */
   --font-display: "Jost", "Futura", "Trebuchet MS",
                   "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -65,16 +56,15 @@
                "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
-/* ══ base 字體 ══ */
 body {
   font-family: var(--font-body);
   font-size: 14px;
 }
 .display-font { font-family: var(--font-display); }
 
-/* ══ chrome 標題 ══ */
 /* 中欄 served：純白畫面 */
 #content-area { background: var(--color-bg-served); }
+
 /* ── 三欄標題：Bauhaus 大寫寬字距 ── */
 #sidebar h1 .title,
 #chat-header > .h-title {
@@ -94,9 +84,10 @@ body {
   color: var(--color-text);
 }
 
-/* ══ 內容（#paper-content 系）══ */
+/* ── 文章內容 ── */
 #paper-content {
-  /* [THEME-DEDUP C2] padding 歸 base、值走 :root --pc-pad */
+  /* BUG-F1 Bug 5（ui-fixes-batch B7）：max-width 已由 :root --content-max-w (820px) 覆寫、此處刪除重複定義 */
+  padding: var(--space-6) var(--space-8);
 }
 #paper-content h1 {
   font-family: var(--font-display);
@@ -112,7 +103,9 @@ body {
   font-size: 22px;
   font-weight: 600;
   letter-spacing: 0;
-  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base；[THEME-DEDUP C2] 底線歸 base（--divider-w/--color-divider 經 token 生效） */
+  /* FE-RHYTHM-UNIFY：垂直 margin 移交 base */
+  border-bottom: var(--divider-w) solid var(--color-divider);
+  padding-bottom: var(--space-2);
 }
 #paper-content h3 {
   font-family: var(--font-display);
@@ -136,18 +129,16 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--color-text-muted);
-  /* [THEME-DEDUP C2] 間距/底線歸 base（--byline-*）；底線色以白名單 border-color 覆（Bauhaus 用 divider 純黑、非 base default border-strong） */
-  border-color: var(--color-divider);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-divider);
 }
+#paper-content .figure { margin: var(--space-6) 0; }
 
-/* ══ figure 佔位 ══ */
 /* ── figure 佔位：抽象幾何構成 ──
    Kandinsky Composition VIII 的暗示：
    左下一個黃色圓、右上一條對角線 + 紅點。
    不寫實、只是「畫面有東西」的視覺重量。 */
-#paper-content .figure {
-  /* [THEME-DEDUP C2] margin 歸 base（--figure-margin-y） */
-}
 #paper-content .figure .ph {
   background-color: var(--color-bg-served);
   background-image:
@@ -165,7 +156,7 @@ body {
       var(--color-accent) 49.7%,
       var(--color-accent) 50.3%,
       transparent 50.3%);
-  /* [THEME-DEDUP C2] 邊框寬歸 base（--ph-border-w: 2px）；色＝base default divider */
+  border: 2px solid var(--color-divider);
   font-family: var(--font-display);
   color: var(--color-text);
   font-size: 11px;
@@ -177,12 +168,7 @@ body {
   font-size: 13px;
   color: var(--color-text-muted);
   font-style: italic;
-  /* [THEME-DEDUP C2] margin-top 歸 base（--figcaption-margin-t） */
+  margin-top: var(--space-3);
   text-align: center;
   line-height: 1.6;
 }
-
-/* ══ 裝飾幾何層（.ph::before·全主題必在、未用者留空）══ */
-#paper-content .figure .ph::before { }
-
-/* ══ 進階 chrome 覆寫層（本主題未使用）══ */
