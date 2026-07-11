@@ -323,11 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
     t = t.replace(/__IMG_PLACEHOLDER_(\d+)__/g, function (m, i) { return imgBlocks[i]; });
     // 6. marked.parse（math PUA 佔位穿透）
     let html = marked.parse(t);
-    // === [SEC-XSS C2] === 6.5 輸出消毒：marked 產出 HTML 經 DOMPurify 過濾（防 stored XSS、
-    // 一處覆蓋全部 6 個 markdown innerHTML sink）。置於 KaTeX 回填「前」：
-    // PUA 哨兵（MO/MC）為純文字節點、sanitize 原樣保留 → 步驟 7 回填正則照常；
-    // KaTeX 為可信產出、於消毒後插入不被過濾（含 MathML/樣式標籤）。
-    html = DOMPurify.sanitize(html);
     // 7. 回填 math：先還原公式內 __ESC_DOLLAR__→\$（步驟 7 鐵律），再 katex 渲染、壞式優雅降級
     html = html.replace(new RegExp(MO + '(\\d+)' + MC, 'g'), function (m, i) {
       const item = mathBlocks[i];

@@ -45,25 +45,6 @@ def test_fetch_vendor_script_has_dompurify_section():
     assert "sha256sum" in sh, "腳本缺 SHA-256 校驗輸出"
 
 
-def test_render_markdown_sanitizes_between_marked_and_katex():
-    """⑤（C2）renderMarkdownWithMath 於 marked.parse 後、KaTeX 回填前呼叫 DOMPurify.sanitize。"""
-    html = INDEX_HTML.read_text(encoding="utf-8")
-    start = html.find("function renderMarkdownWithMath")
-    assert start >= 0, "缺 renderMarkdownWithMath 函數"
-    end = html.find("makeThrottledRenderer", start)
-    fn = html[start:end]
-    p_marked = fn.find("let html = marked.parse(t)")
-    p_sanitize = fn.find("html = DOMPurify.sanitize(html)")
-    # 真呼叫點（函數頂部鐵律註解亦提及 katex.renderToString、須以 return 前綴鎖定實際回填）
-    p_katex = fn.find("return katex.renderToString(")
-    assert p_marked >= 0, "函數內缺 marked.parse(t) 呼叫"
-    assert p_sanitize >= 0, "函數內缺 DOMPurify.sanitize(html) 消毒接線"
-    assert p_katex >= 0, "函數內缺 katex.renderToString 回填呼叫"
-    assert p_marked < p_sanitize < p_katex, (
-        "消毒接線位置錯誤：須在 marked.parse 之後、KaTeX 回填之前"
-    )
-
-
 def test_vendor_readme_registers_dompurify():
     """④ vendor README 含 dompurify 分節（版本 + SHA-256 指紋、且指紋與實體相符）。"""
     md = VENDOR_README.read_text(encoding="utf-8")
