@@ -7,8 +7,6 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E">
 <!-- === [FE-PERF-2 C1] === marked 9.1.6 自託管（原 CDN 同版換源、離線/GFW 零跨源依賴、比照 KaTeX vendored；defer 屬 C2） -->
 <script src="/static/vendor/marked/marked.min.js" defer></script>
-<!-- === [SEC-XSS C1] === DOMPurify 3.1.6 自託管（HTML 消毒引擎·marked 輸出防 stored XSS；接線見 SEC-XSS C2/C3） -->
-<script src="/static/vendor/dompurify/purify.min.js" defer></script>
 <!-- === [RAG-12 C1] === 自託管 KaTeX 0.16.47（前端數學渲染、離線/GFW；接線見 RAG-12 C2/C3） -->
 <!-- === [FE-PERF-2 C4] === KaTeX 兩支核心字型 preload（preload scanner 於 CSSOM 建成前即抓、消公式字型 FOUT/版跳；僅此二支、防無公式頁過度預載） -->
 <link rel="preload" href="/static/vendor/katex/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>

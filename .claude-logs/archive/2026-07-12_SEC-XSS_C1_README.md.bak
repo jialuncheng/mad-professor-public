@@ -1,22 +1,7 @@
 # static/vendor — 自託管前端依賴
 
-> RAG-12（FE-Refactor·katex）+ FE-PERF-2（marked）+ SEC-XSS（dompurify）。前端資產自託管（離線/GFW 穩定、不依賴外部 CDN）。
+> RAG-12（FE-Refactor）。前端數學渲染資產自託管（離線/GFW 穩定、字型不依賴外部 CDN）。
 > 刷新：重跑 `tools/fetch_frontend_vendor.sh`（會重新下載並印 SHA-256）。
-
-## dompurify/ — HTML 消毒引擎
-
-| 項目 | 值 |
-|---|---|
-| 版本 | **3.1.6** |
-| 官方來源 | npm `dompurify@3.1.6`（`npm pack` 取 `dist/purify.min.js`，等同 https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js ） |
-| 用途 | marked 產出 HTML 之輸出消毒防 stored XSS（SEC-XSS·`renderMarkdownWithMath` 樞紐 + 來源/元數據 sink；接線見 C2/C3） |
-| 載入 | `static/index.html` head：`<script src="/static/vendor/dompurify/purify.min.js" defer></script>`（於 marked 之後、與 marked/katex 同 defer 節奏） |
-
-### 資產 SHA-256（dompurify 3.1.6）
-
-```
-c0845096a7c4a6741f362ac506c94c1c7d27dc603bcc1bf64a587f76f2dbe3a1  purify.min.js
-```
 
 ## katex/ — KaTeX 數學渲染引擎
 
