@@ -24,11 +24,6 @@ if str(ROOT) not in sys.path:
 from processor.md_restore_processor import _render_header_en, _render_header_zh  # noqa: E402
 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
-# TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，CSS 存在性斷言改讀聯集源
-_CSS_DIR = ROOT / 'static' / 'css'
-CSS_SURFACE = STATIC_HTML + '\n' + '\n'.join(
-    f.read_text(encoding='utf-8') for f in sorted(_CSS_DIR.glob('*.css'))
-)
 
 
 # ─────────────────── 後端 academic path：HTML div + wrap（FE-AESTHETICS C1）───────────────────
@@ -175,6 +170,6 @@ def test_b10_frontend_class_hook_not_in_print_media():
         r'\.paper-header-meta\s*\{[^}]*display:\s*flex',
         re.DOTALL,
     )
-    assert pat.search(CSS_SURFACE), (
+    assert pat.search(STATIC_HTML), (
         'FE-AESTHETICS C2：.paper-header-meta 應有 display: flex 規則（置中對稱 HTML 排版）'
     )

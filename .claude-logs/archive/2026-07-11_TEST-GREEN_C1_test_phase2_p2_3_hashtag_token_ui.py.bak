@@ -22,11 +22,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
-# TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，CSS 存在性斷言改讀聯集源
-_CSS_DIR = ROOT / 'static' / 'css'
-CSS_SURFACE = STATIC_HTML + '\n' + '\n'.join(
-    f.read_text(encoding='utf-8') for f in sorted(_CSS_DIR.glob('*.css'))
-)
 COMPONENTS_MD = (ROOT / 'design' / 'docs' / 'components.md').read_text(encoding='utf-8')
 
 
@@ -71,12 +66,12 @@ def test_chat_input_has_empty_before_placeholder_css():
     """§3.3.5-#1：CSS `#chat-input:empty::before { content: attr(data-placeholder); ... }`。"""
     assert re.search(
         r'#chat-input:empty::before\s*\{[^}]*content:\s*attr\(data-placeholder\)',
-        CSS_SURFACE
+        STATIC_HTML
     ), '應有 #chat-input:empty::before + content:attr(data-placeholder)'
     # pointer-events: none 防誤觸
     assert re.search(
         r'#chat-input:empty::before\s*\{[^}]*pointer-events:\s*none',
-        CSS_SURFACE, re.DOTALL
+        STATIC_HTML, re.DOTALL
     )
 
 
@@ -90,7 +85,7 @@ def test_chat_input_disabled_visual_contract_via_contenteditable_false():
         r'#chat-input\[contenteditable=["\']false["\']\]\s*\{[^}]*cursor:\s*not-allowed',
         re.DOTALL
     )
-    assert pat.search(CSS_SURFACE), (
+    assert pat.search(STATIC_HTML), (
         '#chat-input[contenteditable="false"] 應顯式設 cursor:not-allowed'
     )
 
@@ -149,15 +144,15 @@ def test_hashtag_autocomplete_anchored_to_container():
     + #chat-input-area 為 position:relative 錨點。"""
     assert re.search(
         r'#chat-input-area\s*\{[^}]*position:\s*relative',
-        CSS_SURFACE, re.DOTALL
+        STATIC_HTML, re.DOTALL
     ), '#chat-input-area 應為 position:relative（dropdown 定位錨點）'
     assert re.search(
         r'#hashtag-autocomplete\.hashtag-popup\s*\{[^}]*position:\s*absolute',
-        CSS_SURFACE, re.DOTALL
+        STATIC_HTML, re.DOTALL
     )
     assert re.search(
         r'#hashtag-autocomplete\.hashtag-popup\s*\{[^}]*bottom:\s*100%',
-        CSS_SURFACE, re.DOTALL
+        STATIC_HTML, re.DOTALL
     ), 'dropdown 應 bottom:100%（永遠在 input 正上方）'
 
 
@@ -166,14 +161,14 @@ def test_hashtag_autocomplete_anchored_to_container():
 
 def test_hashtag_token_css_defined():
     """`.hashtag-token` + `.hashtag-token-remove` CSS 必須存在。"""
-    assert re.search(r'\.hashtag-token\s*\{', CSS_SURFACE), '.hashtag-token 樣式必須定義'
-    assert re.search(r'\.hashtag-token-remove\s*\{', CSS_SURFACE)
+    assert re.search(r'\.hashtag-token\s*\{', STATIC_HTML), '.hashtag-token 樣式必須定義'
+    assert re.search(r'\.hashtag-token-remove\s*\{', STATIC_HTML)
     # 藍色 = var(--color-accent)（依 components.md §11.2.2）
     pat = re.compile(
         r'\.hashtag-token\s*\{[^}]*background:\s*var\(--color-accent\)',
         re.DOTALL
     )
-    assert pat.search(CSS_SURFACE), '.hashtag-token 背景應為 var(--color-accent)'
+    assert pat.search(STATIC_HTML), '.hashtag-token 背景應為 var(--color-accent)'
 
 
 # ─────────────────── 8. components.md §11.2 Hashtag Token ───────────────────

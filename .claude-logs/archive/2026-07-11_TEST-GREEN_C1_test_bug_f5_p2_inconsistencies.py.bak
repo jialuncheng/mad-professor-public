@@ -17,11 +17,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
-# TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，CSS 存在性斷言改讀聯集源
-_CSS_DIR = ROOT / 'static' / 'css'
-CSS_SURFACE = STATIC_HTML + '\n' + '\n'.join(
-    f.read_text(encoding='utf-8') for f in sorted(_CSS_DIR.glob('*.css'))
-)
 COMPONENTS_MD = (ROOT / 'design' / 'docs' / 'components.md').read_text(encoding='utf-8')
 INTERACTION_MD = (ROOT / 'design' / 'docs' / 'interaction.md').read_text(encoding='utf-8')
 
@@ -61,7 +56,7 @@ def test_b1_main_scale_tokens_in_current_title():
         r'#current-title\s+\.title-zh\s*\{[^}]*font-size:\s*var\(--font-2xl\)[^}]*font-weight:\s*700',
         re.DOTALL,
     )
-    assert pat_title_zh.search(CSS_SURFACE), (
+    assert pat_title_zh.search(STATIC_HTML), (
         'B1：#current-title .title-zh 應 font-size: var(--font-2xl) + font-weight: 700'
     )
 
@@ -70,7 +65,7 @@ def test_b1_main_scale_tokens_in_current_title():
         r'#current-title\s+\.title-en\s*\{[^}]*font-size:\s*var\(--font-sm\)',
         re.DOTALL,
     )
-    assert pat_title_en.search(CSS_SURFACE), '#current-title .title-en 應 font-size: var(--font-sm)'
+    assert pat_title_en.search(STATIC_HTML), '#current-title .title-en 應 font-size: var(--font-sm)'
 
     # FE-AESTHETICS C2（2026-05-29）：.title-meta 已刪除，改用 #abstract-toolbar 獨立區塊
     assert '#current-title .title-meta' not in STATIC_HTML, (
@@ -82,7 +77,7 @@ def test_b1_main_scale_tokens_in_current_title():
         r'#abstract-toolbar\s+details\.title-abstract\s*\{[^}]*font-size:\s*var\(--font-base\)\s*;',
         re.DOTALL,
     )
-    assert pat_abstract.search(CSS_SURFACE), (
+    assert pat_abstract.search(STATIC_HTML), (
         '#abstract-toolbar details.title-abstract 應 font-size: var(--font-base);（無 fallback）'
     )
 
@@ -91,7 +86,7 @@ def test_b1_main_scale_tokens_in_current_title():
         r'#abstract-toolbar\s+details\.title-abstract\s*>\s*summary\s*\{[^}]*font-size:\s*var\(--font-xs\)',
         re.DOTALL,
     )
-    assert pat_summary.search(CSS_SURFACE), (
+    assert pat_summary.search(STATIC_HTML), (
         '#abstract-toolbar details.title-abstract > summary 應 font-size: var(--font-xs)'
     )
 

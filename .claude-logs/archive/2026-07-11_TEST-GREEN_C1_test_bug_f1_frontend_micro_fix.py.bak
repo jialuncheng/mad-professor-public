@@ -17,11 +17,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
-# TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，CSS 存在性斷言改讀聯集源
-_CSS_DIR = ROOT / 'static' / 'css'
-CSS_SURFACE = STATIC_HTML + '\n' + '\n'.join(
-    f.read_text(encoding='utf-8') for f in sorted(_CSS_DIR.glob('*.css'))
-)
 THEMES = {
     name: (ROOT / 'static' / 'themes' / f'{name}.css').read_text(encoding='utf-8')
     for name in ('kahn', 'kandinsky', 'mies', 'nara')
@@ -57,7 +52,7 @@ def test_bug3_placeholder_has_newline_entity_and_pre_wrap():
     # HTML data-placeholder 用 &#10; 換行（覆蓋既有 `；` 連字）
     assert re.search(
         r'data-placeholder="輸入問題（Ctrl\+Enter 送出）&#10;輸入 # 可加入 hashtag',
-        CSS_SURFACE,
+        STATIC_HTML,
     ), 'data-placeholder 應用 &#10; 取代既有 `；` 連字（HTML 語境）'
 
     # CSS :empty::before 含 white-space:pre-wrap（讓 &#10; / \n 顯示為實際換行）
@@ -65,7 +60,7 @@ def test_bug3_placeholder_has_newline_entity_and_pre_wrap():
         r'#chat-input:empty::before\s*\{[^}]*white-space:\s*pre-wrap',
         re.DOTALL,
     )
-    assert pat_pre_wrap.search(CSS_SURFACE), (
+    assert pat_pre_wrap.search(STATIC_HTML), (
         '#chat-input:empty::before 應含 white-space: pre-wrap'
     )
 
@@ -74,7 +69,7 @@ def test_bug3_placeholder_has_newline_entity_and_pre_wrap():
         r'#chat-input\s*\{[^}]*min-height:\s*56px',
         re.DOTALL,
     )
-    assert pat_min_h.search(CSS_SURFACE), (
+    assert pat_min_h.search(STATIC_HTML), (
         '#chat-input 應 min-height: 56px 預留兩行 placeholder 高度（C1）'
     )
 
@@ -82,7 +77,7 @@ def test_bug3_placeholder_has_newline_entity_and_pre_wrap():
     # 應有 `（搜尋模式）...\n輸入 #`
     assert re.search(
         r"'（搜尋模式）輸入問題（Ctrl\+Enter 送出）\\n輸入 # 可加入 hashtag",
-        CSS_SURFACE,
+        STATIC_HTML,
     ), 'search-mode toggle JS 字面 placeholder 應用 \\n 換行（取代既有 ；）'
 
 
@@ -95,7 +90,7 @@ def test_bug4_export_btn_collapse_important():
         r'#chat-panel\.collapsed\s*>\s*#chat-header\s*>\s*#chat-header-actions\s*>\s*:not\(#chat-toggle\)\s*\{\s*display:\s*none\s*!important',
         re.DOTALL,
     )
-    assert pat.search(CSS_SURFACE), (
+    assert pat.search(STATIC_HTML), (
         '#chat-panel.collapsed > #chat-header > #chat-header-actions > :not(#chat-toggle) '
         '應拆出獨立 rule + display:none !important（蓋過 enableChat inline style）'
     )
@@ -105,11 +100,11 @@ def test_bug4_export_btn_collapse_important():
 
 
 def test_bug5_content_max_w_token_in_root():
-    """Bug 5：出廠 CSS（分包 globals.css）:root 含 --content-max-w token、預設 760px。"""
-    # 分包 css :root 含 --content-max-w（TEST-GREEN C1：CSS 已拆檔、改讀聯集源）
+    """Bug 5：主檔 :root 含 --content-max-w token、預設 760px。"""
+    # 主檔 :root 含 --content-max-w
     assert re.search(
         r'--content-max-w:\s*760px',
-        CSS_SURFACE,
+        STATIC_HTML,
     ), '主檔 :root 應含 --content-max-w: 760px 預設'
 
 
@@ -120,28 +115,28 @@ def test_bug5_content_toolbar_and_paper_content_use_token_and_themes_override():
         r'#content-toolbar\s*\{[^}]*max-width:\s*var\(--content-max-w\)',
         re.DOTALL,
     )
-    assert pat_toolbar.search(CSS_SURFACE), '#content-toolbar 應 max-width: var(--content-max-w)'
+    assert pat_toolbar.search(STATIC_HTML), '#content-toolbar 應 max-width: var(--content-max-w)'
 
     # #paper-content 用 token
     pat_paper = re.compile(
         r'#paper-content\s*\{[^}]*max-width:\s*var\(--content-max-w\)',
         re.DOTALL,
     )
-    assert pat_paper.search(CSS_SURFACE), '#paper-content 應 max-width: var(--content-max-w)'
+    assert pat_paper.search(STATIC_HTML), '#paper-content 應 max-width: var(--content-max-w)'
 
     # #current-title details.title-abstract 含 width:100%（撐滿 toolbar）
     pat_abstract = re.compile(
         r'#abstract-toolbar\s+details\.title-abstract\s*\{[^}]*width:\s*100%',
         re.DOTALL,
     )
-    assert pat_abstract.search(CSS_SURFACE), (
+    assert pat_abstract.search(STATIC_HTML), (
         '#abstract-toolbar details.title-abstract 應 width:100% + box-sizing'
     )
     pat_box = re.compile(
         r'#abstract-toolbar\s+details\.title-abstract\s*\{[^}]*box-sizing:\s*border-box',
         re.DOTALL,
     )
-    assert pat_box.search(CSS_SURFACE), 'details.title-abstract 應 box-sizing: border-box'
+    assert pat_box.search(STATIC_HTML), 'details.title-abstract 應 box-sizing: border-box'
 
     # 4 主題各自含 --content-max-w 覆寫
     expected_widths = {'kahn': 720, 'kandinsky': 820, 'mies': 860, 'nara': 800}

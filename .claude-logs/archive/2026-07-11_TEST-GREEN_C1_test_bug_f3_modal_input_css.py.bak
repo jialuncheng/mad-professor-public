@@ -13,11 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 STATIC_HTML = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
-# TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，CSS 存在性斷言改讀聯集源
-_CSS_DIR = ROOT / 'static' / 'css'
-CSS_SURFACE = STATIC_HTML + '\n' + '\n'.join(
-    f.read_text(encoding='utf-8') for f in sorted(_CSS_DIR.glob('*.css'))
-)
 
 
 def test_bug7_modal_input_css_defined():
@@ -28,7 +23,7 @@ def test_bug7_modal_input_css_defined():
         r'\.modal-box\s+\.modal-input\s*,\s*\.modal-box\s+input\[type="text"\]\s*\{',
         re.DOTALL,
     )
-    assert pat.search(CSS_SURFACE), (
+    assert pat.search(STATIC_HTML), (
         '.modal-box .modal-input 與 .modal-box input[type="text"] 必須以雙 selector 同時宣告'
         '（既有 #tag-input 用 class、未來新 input 走廣義）'
     )
@@ -39,7 +34,7 @@ def test_bug7_modal_input_css_defined():
         r'\.modal-box\s+\.modal-input\s*,\s*\.modal-box\s+input\[type="text"\]\s*\{([^}]*)\}',
         re.DOTALL,
     )
-    m = body_pat.search(CSS_SURFACE)
+    m = body_pat.search(STATIC_HTML)
     assert m, '.modal-input rule body 取得失敗'
     body = m.group(1)
     for token in (
@@ -64,7 +59,7 @@ def test_bug7_modal_input_focus_uses_color_mix_cross_theme():
         r'\.modal-box\s+\.modal-input:focus\s*,\s*\.modal-box\s+input\[type="text"\]:focus\s*\{([^}]*)\}',
         re.DOTALL,
     )
-    m = pat.search(CSS_SURFACE)
+    m = pat.search(STATIC_HTML)
     assert m, (
         '.modal-input:focus 與 input[type="text"]:focus 必須雙 selector 同時宣告'
     )

@@ -7,8 +7,7 @@ RAG-14 C1 靜態驗收測試：CSS 氣泡滿寬 + sendMessage × 過濾
   - test_qa_group_css_block_exists
   - test_sendmessage_filters_hashtag_token_remove
 
-所有測試為純靜態 grep，無需 server 啟動；CSS 存在性測試讀
-index.html + static/css/*.css 聯集（TEST-GREEN C1）、JS 測試讀 index.html。
+所有測試為純靜態 grep，讀 static/index.html，無需 server 啟動。
 """
 
 import pathlib
@@ -21,19 +20,11 @@ def _html() -> str:
     return STATIC_HTML.read_text(encoding="utf-8")
 
 
-def _css_surface() -> str:
-    """TEST-GREEN C1：CSS 已由 FE-CSS-GOV C1 拆至 static/css/ 分包，
-    CSS 存在性斷言改讀 index.html + 分包之聯集源。"""
-    css_dir = STATIC_HTML.parent / 'css'
-    css = '\n'.join(f.read_text(encoding='utf-8') for f in sorted(css_dir.glob('*.css')))
-    return _html() + '\n' + css
-
-
 def test_msg_user_has_sticky_positioning():
     """
     .msg-user 必須有 position: sticky（C1 RAG-14 Sticky header 要求）。
     """
-    content = _css_surface()
+    content = _html()
     assert "position: sticky" in content, (
         ".msg-user block 缺少 'position: sticky'；請確認 C1 CSS 修改已落地。"
     )
@@ -44,7 +35,7 @@ def test_msg_user_msg_ai_have_stretch_width():
     .msg-user 與 .msg-ai 皆須為 align-self: stretch（滿寬顯示）。
     count >= 2 確保兩個 block 都已改。
     """
-    content = _css_surface()
+    content = _html()
     count = content.count("align-self: stretch")
     assert count >= 2, (
         f"預期 'align-self: stretch' 出現 >= 2 次（.msg-user + .msg-ai），實際：{count}。"
@@ -63,7 +54,7 @@ def test_qa_group_css_block_exists():
     """
     .qa-group CSS block 必須存在（C2 DOM 結構前置，C1 一併加入 CSS）。
     """
-    content = _css_surface()
+    content = _html()
     assert ".qa-group" in content, (
         "找不到 '.qa-group' CSS 定義；請確認 C1 已在 .msg-user 後插入 .qa-group block。"
     )
