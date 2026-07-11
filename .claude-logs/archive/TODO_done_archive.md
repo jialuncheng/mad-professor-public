@@ -11,6 +11,21 @@
 | C1 | CSS Surface Repoint：6 測試檔新增獨立聯集源 `CSS_SURFACE`／`_css_surface()`〔index.html + sorted `static/css/*.css` 七分包串接·import 期一次計算〕+ 依 tasks §4.1 repoint 15 stale 斷言頂層搜尋目標〔`re.compile` pattern 本體/正負向語意/count 門檻零改寫·diff 實證〕；現行通過 20 測試續讀原 `STATIC_HTML`/`_html()` 零回歸〔f5 title-meta 全域負向留原源·rag14 flex-end/flex-start 負向 css 零命中實證·f3 rgba body-scoped 自動繼承〕；六檔 15 failed/20 passed → 35 passed、全套件 690→**705 passed / 3 skipped / 0 failed**；`.bak`×6 落 `.claude-logs/archive/`〔deviation：根層 archive/ 不存在·循既有慣例〕 | `a4e6e5b` |
 | checkout | 成果收官歸檔：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6.1 四驗收〔ship 後實測重跑 35+705〕/ 不可動〔C1 commit 內容物==宣告 12 檔·機器證〕/ 提示詞 3 份稽核入版控 / msg 草稿〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1 報告→executions/〕+ TODO 雙層結案 + §7.2 純測試無 handoff 顯式豁免 | `3a71293` |
 
+### FE-Refactor SEC-XSS 前端輸出消毒（DOMPurify 自託管 × markdown 樞紐消毒 × 來源/元數據加固；PROJECT-REVIEW 安全 #2 MEDIUM stored XSS 關閉）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Vendor & Load：`npm pack dompurify@3.1.6` 自託管 `static/vendor/dompurify/`〔SHA-256 `c0845096…dbe3a1` 登記 README〕+ index.html head defer 載入〔marked 後〕+ fetch_frontend_vendor.sh 釘版下載/校驗段 + `tests/test_sec_xss_guard.py` 四靜態守衛〔含 README 指紋==實測 hash 雙向漂移抓〕；純載入零行為變更；708→712 passed | `d5ef6b6` |
+| C2 | Markdown Sanitize：`renderMarkdownWithMath` 於 marked.parse 後、KaTeX 回填前插 `DOMPurify.sanitize(html)`＝**一處覆蓋 6 個 markdown innerHTML sink**；管線鐵律守恆〔diff 僅 +5 行·佔位步驟 1-5/7 一字不改·PUA 哨兵文字節點保留·KaTeX 可信產出消毒後回填〕；守衛 +1 接線位置斷言；712→713 passed | `ecd2e95` |
+| C3 | Sources & Meta Hardening：`renderSources` 節點化〔createElement+textContent+**href 僅 http/https**·惡意 scheme 不設 href〕+ `normalizeAcademicHeader` 五欄與 `renderPapers` 兩標題**變數單體消毒**〔靜態模板 data-tip/SVG byte 原樣·守衛斷言〕；~27 靜態/清空 sink 一字不改；守衛 +2；713→**715 passed** | `9b07117` |
+| checkout | 成果收官：Conformance 五維度全綠〔守衛收官重跑 7 passed·後端零觸·遞增綠燈 708→715〕+ baton 歸檔 + TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-12_SEC-XSS_DOMPurify輸出消毒_plan_v1.md`。
+> **動因**：PROJECT-REVIEW 安全 #2 MEDIUM stored XSS——marked 原始輸出直接進 innerHTML 無消毒；文件衍生值（grounding 來源/meta/標題）字串插值轉活。
+> **防禦分層**：樞紐消毒（C2·6 sink 一處覆蓋）+ 邊角加固（C3·節點化/scheme 白名單/變數單體）+ 供應鏈（C1·自託管釘版+指紋守衛）；7 靜態守衛測試常駐防漂移。
+> **§7.2**：純前端、無跨 Phase code handoff、顯式豁免。
+> **⚠️ baron E2E**：LaTeX 論文渲染不退化／`<img onerror>` 消毒驗證／來源連結+tooltip+header 五欄正常。
+
 ### FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（目錄級凍結規格 × 9 支全正規化 × 模板 × 常駐契約腳本；FE-CSS-GOV C3 外溢升級）
 
 | Commit | 內容 | Hash |

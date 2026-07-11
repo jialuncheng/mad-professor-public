@@ -13,6 +13,7 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
+- ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…checkout 待回填、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
 - ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…`3a71293`、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（`2380420`…`ef16383`、6 commits·26 token/16 選擇器凍結×9 支全正規化×模板+契約腳本）→ archive/TODO_done_archive.md
