@@ -13,8 +13,9 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…checkout 待回填、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
-- ✅ FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（`2380420`…checkout 待回填、6 commits·26 token/16 選擇器凍結×9 支全正規化×模板+契約腳本）→ archive/TODO_done_archive.md
+- ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…`3a71293`、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（`2380420`…`ef16383`、6 commits·26 token/16 選擇器凍結×9 支全正規化×模板+契約腳本）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor FE-CSS-GOV CSS 治理與作用域收斂（`32e3a1a`…`6fea7dc`、6 commits·C3/C4/C5 三度 re-scope）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor DOC-SYNC-1 設計文件現況對齊（`c8d6bcb`…`d4ce75a`、2 commits）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`bc2bcc4`、5 commits）→ archive/TODO_done_archive.md
@@ -355,6 +356,9 @@
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
+
+### SEC-SECRET (✅ 已完成)
+- ✅ ~~SEC-SECRET SESSION_SECRET fail-closed~~（已落地、hotfix `a7fa87f` + checkout 收官；BE-Hotfix 治 PROJECT-REVIEW 安全 #1 HIGH〔CWE-798 公開硬編碼簽章金鑰致 admin 認證繞過〕——settings.py 移除硬編碼 fallback 常數、未設生成臨時隨機密鑰〔`token_urlsafe(48)`〕+ `SESSION_SECRET_IS_EPHEMERAL` 旗標；web_server.py 生產環境未設 / 過弱〔<32〕金鑰拒絕啟動；新增 test_session_secret_failclosed.py〔3 測試·autouse 防污染 fixture〕；§5 SOP 雙核查合規、全套件 708 passed；review 補強弱金鑰守衛 + 測試污染清理 + 雙檔常數檢查）
 
 ### TEST-GREEN (✅ 已完成)
 - ✅ ~~TEST-GREEN 前端CSS測試改讀分包~~（已落地、C1 `a4e6e5b` + checkout 收官；6 測試檔新增 CSS 分包聯集源〔`CSS_SURFACE`/`_css_surface()`·sorted glob 決定性〕+ repoint 15 stale 斷言〔pattern 零改寫〕、20 通過測試零回歸；全套件 690→705 passed / 0 failed 綠燈基線恢復；治 FE-CSS-GOV C1 拆檔致測試源與被測物脫節）

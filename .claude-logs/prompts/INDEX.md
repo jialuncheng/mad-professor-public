@@ -1,7 +1,10 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-11（TEST-GREEN Check 收官）
+最後更新：2026-07-11（SEC-SECRET Check 收官）
 
+- 2026-07-11 — `2026-07-11_SEC-SECRET_check_提示詞.md`（Check·checkout 收官·BE-Hotfix：Conformance 五維度〔目標規格〔settings Ephemeral + web_server prod 未設/弱金鑰雙 fail-closed〕/ 驗收〔fail-closed 測試通過含 teardown 污染清理〕/ 不可動〔僅 settings+web_server+1 新測試〕/ 提示詞歸檔稽核 / msg 草稿〕→ 全綠後 baton mv→hotfixes/ + TODO 雙層結案 + hash 自癒〔SEC-SECRET 真 hash 雙源回填〕+ 提示詞入版控 + 直產 checkout 執行報告〔staged 白名單自檢〕;commit 由 baron 手動）
+- 2026-07-11 — `2026-07-11_SEC-SECRET_run_提示詞.md`（Run·BE-Hotfix：SEC-SECRET-hotfix 落地——改 settings.py〔+import secrets·未設生成臨時隨機+SESSION_SECRET_IS_EPHEMERAL 旗標〕+ web_server.py〔prod 未設/弱<32 拒啟動·移除硬編碼 fallback 常數〕+ 新增 tests/test_session_secret_failclosed.py〔含 autouse 防污染 fixture〕;§5 SOP 核查+真實 pytest+§8 baron 命令〔逐檔 git add 含 2 .bak〕;三防線·baton 待 Checkout 歸檔）
+- 2026-07-11 — `2026-07-11_SEC-SECRET_hotfix_提示詞.md`（hotfix 文件·BE-Hotfix：PROJECT-REVIEW 安全 #1——SESSION_SECRET 硬編碼 fallback 常數〔`web_server.py:379 or "insecure-dev-secret-change-me"`〕致認證繞過；產 fail-closed hotfix 文件〔prod 未設拒啟動·dev 臨時隨機·絕不落地常數〕含真因/最小 diff/§5 SOP 核查/commit 草稿，暫存 baton/·依 template_hotfix）
 - 2026-07-11 — `2026-07-11_TEST-GREEN_Check_提示詞.md`（Check·checkout 收官·FE-Refactor：Conformance 五維度〔plan §2 五規格項對照 C1 報告 / tasks §6 四驗收條件〔35 passed·705 passed·pattern 零改 diff·6 檔聯集源〕/ 不可動〔業務碼·static 資產·pattern 本體·20 通過測試專用源〕/ 提示詞歸檔+版控稽核〔untracked 即 git add〕/ msg 草稿完整性〕→ 全綠後 TODO 結案〔完成表格+hash 自癒回填 C1 真實 hash+移出 active+類別索引 ✅〕+ baton 一次性 mv 歸檔〔plan→plans/·tasks→tasks/·C1 報告→executions/·逐檔 git add〕+ baton 僅剩 README 驗證 + 直產 checkout 執行報告〔Conformance 總驗+staged 白名單自檢實貼〕;TEST-GREEN 全案結案）
 - 2026-07-11 — `2026-07-11_TEST-GREEN_C1_run_提示詞.md`（C1 Run·FE-Refactor：CSS Surface Repoint——6 測試檔備份 `.bak`→archive/ 後新增 CSS 分包聯集源〔b2/f1/f3/f5/phase2 檔級 `CSS_SURFACE = STATIC_HTML + static/css/*.css` 排序串接·rag14 並列 `_css_surface()` helper〕+ 依 tasks §4.1 逐檔 repoint 15 個 stale 失敗斷言改讀聯集源;斷言 pattern 本體/正負向語意/期望值零改寫、現行 20 通過測試續讀原源零回歸;驗收 6 檔 35 passed + 全套件 705 passed/3 skipped/0 failed;執行報告暫存 baton 嚴禁 git add;TODO C1→✅/checkout→WIP + hash 自癒）
 - 2026-07-11 — `2026-07-11_TEST-GREEN_Tasks_提示詞.md`（Tasks·FE-Refactor：依 plan v1.1〔OQ1-5 拍板·聯集源方案 A〕拆 TEST-GREEN 為最小可逆原子 commits——修 15 個 stale 前端 CSS 測試〔6 檔僅讀 index.html→改讀 index.html+static/css/*.css 聯集〕、末 commit checkout、各階段執行報告暫存 baton、斷言 regex 本體不可動、僅改源字串組成；§0.5 成果盤點+§8 六維度+§1 中文括號命名；同步 TODO 🟡 WIP·依賴 THEME-DEDUP）

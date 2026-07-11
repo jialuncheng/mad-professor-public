@@ -9,7 +9,7 @@
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | CSS Surface Repoint：6 測試檔新增獨立聯集源 `CSS_SURFACE`／`_css_surface()`〔index.html + sorted `static/css/*.css` 七分包串接·import 期一次計算〕+ 依 tasks §4.1 repoint 15 stale 斷言頂層搜尋目標〔`re.compile` pattern 本體/正負向語意/count 門檻零改寫·diff 實證〕；現行通過 20 測試續讀原 `STATIC_HTML`/`_html()` 零回歸〔f5 title-meta 全域負向留原源·rag14 flex-end/flex-start 負向 css 零命中實證·f3 rgba body-scoped 自動繼承〕；六檔 15 failed/20 passed → 35 passed、全套件 690→**705 passed / 3 skipped / 0 failed**；`.bak`×6 落 `.claude-logs/archive/`〔deviation：根層 archive/ 不存在·循既有慣例〕 | `a4e6e5b` |
-| checkout | 成果收官歸檔：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6.1 四驗收〔ship 後實測重跑 35+705〕/ 不可動〔C1 commit 內容物==宣告 12 檔·機器證〕/ 提示詞 3 份稽核入版控 / msg 草稿〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1 報告→executions/〕+ TODO 雙層結案 + §7.2 純測試無 handoff 顯式豁免 | `待 baron 回填` |
+| checkout | 成果收官歸檔：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6.1 四驗收〔ship 後實測重跑 35+705〕/ 不可動〔C1 commit 內容物==宣告 12 檔·機器證〕/ 提示詞 3 份稽核入版控 / msg 草稿〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1 報告→executions/〕+ TODO 雙層結案 + §7.2 純測試無 handoff 顯式豁免 | `3a71293` |
 
 ### FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（目錄級凍結規格 × 9 支全正規化 × 模板 × 常駐契約腳本；FE-CSS-GOV C3 外溢升級）
 
@@ -20,7 +20,7 @@
 | C2 | Builtin Normalize：4 內建全檔重寫統一 9 段骨架＝26 token 顯式寫滿〔7 結構 token 各自原值〕+ 剝 9 結構屬性 + 白名單色補償〔kandinsky byline divider/kahn ph border-strong〕+ 兩槽〔kahn ::before 入槽·chrome marker×4〕；**宣告級 delta 對帳**〔刪==計畫/加==token+補償/其餘 multiset 零改寫〕+ token 值==原值；theme-guide 重寫**目錄級凍結規格源** | `0fd4ca6` |
 | C3 | Uploads Normalize：5 支清 `#demo-bar` 死碼〔22-26 宣告/支〕+ 26 token〔值==C0 baseline〕+ 剝可剝結構〔fuller dashed 保留〕+ 補償色 + 兩槽〔**apple/google chrome 段逐宣告零改寫**·機器證〕；**遺留登記**〔全 5 支 pre-FE-RHYTHM 節奏 margin/fuller dashed×2+tnum/apple-google ph border-radius→theme-guide §11.3〕；免重排〔段序天然符骨架〕 | `bf4577c` |
 | C4 | Template & Guard：`design/docs/theme-template.css`〔9 段+26 佔位+16 選擇器+兩槽·避 /api/themes 掃描〕+ `tools/check_css_governance.py`〔純標準庫·四類檢查·exit 0/1·--file〕；**首跑全量（主檔 7+主題 9+模板 1）全綠** + **突變負測 5 違規全抓**；theme-guide §8 指模板+機器驗收必跑 | `3cad5f0` |
-| checkout | 成果收官：Conformance 五維度全綠〔腳本收官重跑 EXIT 0·index.html/後端零觸·apple/google chrome 原樣·7 提示詞稽核〕+ baton 一次性歸檔 + TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔腳本收官重跑 EXIT 0·index.html/後端零觸·apple/google chrome 原樣·7 提示詞稽核〕+ baton 一次性歸檔 + TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `ef16383` |
 
 > **修法依據**：`plans/2026-07-09_THEME-DEDUP_主題結構去重_plan_v1.md`（v7·全 13 OQ 定案：Q1-A 全 token 化/Q2 白名單自由度/Q_dir 9 支全治理/Q_decor 統一槽/Q6 模板/Q_hook 不掛）。
 > **動因**：FE-CSS-GOV C3 外溢升級——baron 拍板「訂死主題規格」：凍結規格（26 必備 token/16 選擇器+2 槽/統一 9 段骨架/白名單含 text-align）×目錄級（任何主題非僅 4 內建）× 9 支全正規化 × 治本雙件套（模板+契約腳本）。
@@ -1135,6 +1135,14 @@
 | 7e-2 v2 | pipeline_core 整合 ResumeProcessor + md_cleaner 跳過（保留 doc_analyzer 雙保險 = baron Q6） | `70889aa` |
 
 > **7e-3 v2** 為 baron OrcStack 端到端 backfill 驗證（重新上傳 DeHunt / 黃忠偉 / 江元杰）、無 commit、純驗證活動；驗證滿意後本系列收尾。
+
+---
+
+### Phase 4.X SEC-SECRET 密鑰安全修補
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| SEC-SECRET-hotfix | SESSION_SECRET fail-closed：settings.py 移除硬編碼 fallback 常數、未設時生成臨時隨機密鑰（token_urlsafe(48)）+ SESSION_SECRET_IS_EPHEMERAL 旗標；web_server.py 生產環境未設 / 過弱（<32）金鑰拒絕啟動 + add_middleware 移除 `or "insecure-dev-secret-change-me"`；新增 test_session_secret_failclosed.py（3 測試·含 autouse 防污染 fixture）。修 PROJECT-REVIEW 安全 #1 HIGH（CWE-798 認證繞過）；全套件 708 passed。 | `a7fa87f` |
 
 ---
 
