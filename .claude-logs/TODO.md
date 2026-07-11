@@ -13,7 +13,9 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ FE-Refactor FE-CSS-GOV CSS 治理與作用域收斂（`32e3a1a`…checkout 待回填、6 commits·C3/C4/C5 三度 re-scope）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…checkout 待回填、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（`2380420`…checkout 待回填、6 commits·26 token/16 選擇器凍結×9 支全正規化×模板+契約腳本）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor FE-CSS-GOV CSS 治理與作用域收斂（`32e3a1a`…`6fea7dc`、6 commits·C3/C4/C5 三度 re-scope）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor DOC-SYNC-1 設計文件現況對齊（`c8d6bcb`…`d4ce75a`、2 commits）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor FE-PERF-2 前端效能紅線四項實修（`337764e`…`bc2bcc4`、5 commits）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor CONTEXT-1 session載入鏈瘦身與context治理（`1219a87`…`5d3be98`、5 commits）→ archive/TODO_done_archive.md
@@ -100,14 +102,6 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
-
-- ⬜ **THEME-DEDUP 主題結構去重（FE-CSS-GOV C3 外溢·baron 拍板收官後獨立開 plan）**
-  - 由來：FE-CSS-GOV C3 舊 85 行審計未涵蓋後補的裝飾 CSS（如 kahn `.ph::before` 天窗光線）；C3 縮為死碼+契約、結構去重整包外溢
-  - 範疇：對**全部** `static/themes/*.css` 完整重審 → 共用結構（4 主題同值，如 `#paper-content h2 border-bottom+padding-bottom`）上移 base；異值結構（`padding`/`.figure margin`/`.byline`/`figcaption margin-top`）token 化入 globals tokens 層；裝飾佔位幾何（`.ph`/`.ph::before`）保留主題（Q8 carve-out）
-  - 規格依據：`design/docs/theme-guide.md §1 白名單 + §8 方向`（FE-CSS-GOV C3 立）
-  - 時序：**FE-CSS-GOV 全案 checkout 之後**（吃 C4 瘦身 token + C5-C7 收斂 class 之終態、避交疊）
-  - 工時：待 plan 評估（FE-Refactor·預估 3-5 commits）
-  - 依賴：FE-CSS-GOV 收官
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -361,6 +355,9 @@
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
+
+### TEST-GREEN (✅ 已完成)
+- ✅ ~~TEST-GREEN 前端CSS測試改讀分包~~（已落地、C1 `a4e6e5b` + checkout 收官；6 測試檔新增 CSS 分包聯集源〔`CSS_SURFACE`/`_css_surface()`·sorted glob 決定性〕+ repoint 15 stale 斷言〔pattern 零改寫〕、20 通過測試零回歸；全套件 690→705 passed / 0 failed 綠燈基線恢復；治 FE-CSS-GOV C1 拆檔致測試源與被測物脫節）
 
 ### FE-PERF (✅ 已完成)
 - ✅ ~~FE-PERF-2 前端效能紅線四項實修~~（已落地、C1 `337764e` + C2 `0de91af` + C3 `b2f21d8` + C4 `8e5d1fa` + checkout 收官；FE-Refactor 實碼落地 Osmani 稽核 FE 包——C1 marked 9.1.6 自託管 / C2 defer+DOMContentLoaded 整包〔零重排〕 / C3 rAF+160ms 串流節流〔四出口收斂·管線零觸碰·node smoke 5/5〕 / C4 字型 preload+scroll passive+content-visibility 記憶尺寸型；U8 相容底線 Safari 18+ 拍板；首次 FE 必讀 SOP 實碼 dogfood；零後端零 golden；⚠️ baron 瀏覽器 E2E 七項）→ archive/TODO_done_archive.md
