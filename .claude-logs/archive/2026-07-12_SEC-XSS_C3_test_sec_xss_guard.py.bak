@@ -64,38 +64,6 @@ def test_render_markdown_sanitizes_between_marked_and_katex():
     )
 
 
-def _fn_slice(html, name, end_marker):
-    start = html.find(f"function {name}")
-    assert start >= 0, f"缺 {name} 函數"
-    end = html.find(end_marker, start)
-    assert end > start, f"{name} 切片終點 {end_marker} 未找到"
-    return html[start:end]
-
-
-def test_render_sources_is_node_built_with_scheme_whitelist():
-    """⑥（C3）renderSources 節點化：無 href 字串拼接、含 createElement/textContent/http(s) 白名單。"""
-    html = INDEX_HTML.read_text(encoding="utf-8")
-    fn = _fn_slice(html, "renderSources", "function loadChatHistory")
-    assert 'href="${s.uri}"' not in fn, "renderSources 仍有 href 字串拼接（stored XSS 面）"
-    assert "${s.title}" not in fn, "renderSources 仍有 title 字串插值"
-    assert "createElement('a')" in fn or 'createElement("a")' in fn, "缺 createElement('a') 節點化"
-    assert "textContent" in fn, "標題應以 textContent 賦值"
-    assert "https?" in fn, "缺 http/https scheme 白名單判定"
-
-
-def test_meta_and_paper_list_sanitize_variables_only():
-    """⑦（C3）normalizeAcademicHeader 五欄與 renderPapers 標題＝變數單體消毒；靜態模板不進 sanitizer。"""
-    html = INDEX_HTML.read_text(encoding="utf-8")
-    hdr = _fn_slice(html, "normalizeAcademicHeader", "// 列印")
-    assert hdr.count("DOMPurify.sanitize(") == 5, "normalizeAcademicHeader 應恰五欄單體消毒"
-    papers = _fn_slice(html, "renderPapers", "async function loadPapers")
-    assert "DOMPurify.sanitize(resolveDisplayTitle" in papers, "displayTitle 未單體消毒"
-    assert "DOMPurify.sanitize(resolveDisplaySubtitle" in papers, "displaySubtitle 未單體消毒"
-    # 靜態模板守恆：data-tip 與 svg 選單按鈕原樣（不被改寫/不進 sanitizer 包裹）
-    assert 'data-tip="文件選單"' in papers, "paper-menu-btn data-tip 靜態模板被動到"
-    assert "<svg viewBox=" in papers, "svg 選單圖示靜態模板被動到"
-
-
 def test_vendor_readme_registers_dompurify():
     """④ vendor README 含 dompurify 分節（版本 + SHA-256 指紋、且指紋與實體相符）。"""
     md = VENDOR_README.read_text(encoding="utf-8")

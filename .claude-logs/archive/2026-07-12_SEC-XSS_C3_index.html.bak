@@ -1501,9 +1501,8 @@ function renderPapers() {
     const item = document.createElement('div');
     item.className = 'paper-item';
     item.dataset.id = p.id;
-    // === [SEC-XSS C3] === 標題變數單體消毒（值為文件衍生）；下方靜態模板（data-tip/<svg>）不進 sanitizer
-    const displayTitle = DOMPurify.sanitize(resolveDisplayTitle(p));
-    const displaySubtitle = DOMPurify.sanitize(resolveDisplaySubtitle(p));
+    const displayTitle = resolveDisplayTitle(p);
+    const displaySubtitle = resolveDisplaySubtitle(p);
     item.innerHTML = `
       <div class="paper-item-header">
         <div class="paper-item-titles">
@@ -1633,13 +1632,11 @@ function normalizeAcademicHeader() {
     }
     return '';
   }
-  // === [SEC-XSS C3] === 變數單體消毒：欄位值為文件衍生（textContent 提取後仍將插回 innerHTML、
-  // 字面 "<img onerror=…>" 會轉活）→ 逐欄 sanitize；靜態 div 模板本身不進 sanitizer
-  const authorsVal  = DOMPurify.sanitize(extractField(rawText, ['作者', 'Authors']));
-  const dateVal     = DOMPurify.sanitize(extractField(rawText, ['日期', 'Date']));
-  const venueVal    = DOMPurify.sanitize(extractField(rawText, ['出處', 'Venue']));
-  const doiVal      = DOMPurify.sanitize(extractField(rawText, ['DOI']));
-  const keywordsVal = DOMPurify.sanitize(extractField(rawText, ['關鍵字', 'Keywords']));
+  const authorsVal  = extractField(rawText, ['作者', 'Authors']);
+  const dateVal     = extractField(rawText, ['日期', 'Date']);
+  const venueVal    = extractField(rawText, ['出處', 'Venue']);
+  const doiVal      = extractField(rawText, ['DOI']);
+  const keywordsVal = extractField(rawText, ['關鍵字', 'Keywords']);
   if (!authorsVal && !dateVal && !venueVal && !doiVal && !keywordsVal) return;
   const htmlBits = [];
   if (authorsVal) htmlBits.push(`  <div class="header-authors">${authorsVal}</div>`);
@@ -1786,22 +1783,11 @@ async function deletePaper(paperId, title) {
 // 在 AI 訊息泡泡後渲染來源區塊
 function renderSources(aiMsg, sources) {
   if (!sources || !sources.length) return;
-  // === [SEC-XSS C3] === 節點化組裝（廢字串拼 innerHTML）：title 走 textContent、
-  // href 僅接受 http/https scheme（javascript:/data: 等一律不設 href）——grounding 來源防 stored XSS
   const div = document.createElement('div');
   div.className = 'msg-sources';
-  div.appendChild(document.createTextNode('來源：'));
-  sources.forEach((s, i) => {
-    if (i > 0) div.appendChild(document.createTextNode('、'));
-    const a = document.createElement('a');
-    a.textContent = s.title || s.uri || '';
-    if (typeof s.uri === 'string' && /^https?:\/\//i.test(s.uri.trim())) {
-      a.href = s.uri.trim();
-      a.target = '_blank';
-      a.rel = 'noopener';
-    }
-    div.appendChild(a);
-  });
+  div.innerHTML = '來源：' + sources.map(s =>
+    `<a href="${s.uri}" target="_blank" rel="noopener">${s.title}</a>`
+  ).join('、');
   aiMsg.appendChild(div);
 }
 
