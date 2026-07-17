@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-07-18，SEC-HARDEN Check 收官）
+# Mad Professor — TODO（最後更新 2026-07-18，SOP-COMPLY Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ BE-Refactor SEC-HARDEN 後端安全縱深加固（`52ebae8`…`3942e20`、5 commits·XFF 可信代理右向左+timing 等化×CORS 白名單×例外遮蔽×主題覆寫守衛·PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉·715→745 綠燈·checkout hash 待 baron 回填）→ archive/TODO_done_archive.md
+- ✅ BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（`98f8848`…`0dff639`、4 commits·25 exc_info 補齊+llm 吞例外留痕×AST grep-gate 守衛×paper_manager 13 裸 commit 全清〔自持 7 begin+借用 6 呼叫端協調〕·PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉·745→748 綠燈·checkout hash 待 baron 回填）→ archive/TODO_done_archive.md
+- ✅ BE-Refactor SEC-HARDEN 後端安全縱深加固（`52ebae8`…`3942e20`、5 commits·XFF 可信代理右向左+timing 等化×CORS 白名單×例外遮蔽×主題覆寫守衛·PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉·715→745 綠燈·checkout `e287347`）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…`9586866`、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
 - ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…`3a71293`、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
@@ -362,6 +363,9 @@
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
+
+### SOP-COMPLY (✅ 已完成)
+- ✅ ~~SOP-COMPLY logging與DB_SOP合規清帳~~（已落地、C1 `98f8848` + C2 `68987e8` + C3 `0dff639` + checkout 收官；BE-Refactor 實施專案自身 logging/database SOP 清帳——C1 日誌合規〔9 檔 25 處 except 內 logger.error 補 exc_info〔AST 精確·排除 14 續行假陽性+1 非-except 守衛〕+ llm/client:181 吞例外改 warning(exc_info) 留痕 + tests/test_sop_comply_guard.py AST grep-gate 防回歸〕/ C2 自持交易守護〔paper_manager 7 處 with s.begin() 移除顯式 commit·begin 置 session 起始防 autobegin·後讀 u.id/c.id 外移等價〕/ C3 借用交易呼叫端協調〔原子：6 helper 移除 session.commit()〔create_folder 補 flush 保 f.id〕+ web_server 5 folder/tag 端點包 begin〔ValueError→400 保留〕+ 3 測試檔 15 寫入區塊包 begin〔斷言零動〕〕；paper_manager 裸 commit 13→0 全清、745→748 passed；C1/C2 共檔 paper_manager 以 C2 .bak 分離 staging 乾淨分次 ship；範圍外債 tools/regen_rag.py:252 留 baron 拍板）
 
 ### SEC-HARDEN (✅ 已完成)
 - ✅ ~~SEC-HARDEN 後端安全縱深加固~~（已落地、C1 `52ebae8` + C2 `a5e2bd4` + C3 `bc5d5f4` + C4 `3942e20` + checkout 收官；BE-Refactor 治 PROJECT-REVIEW 安全縱深 5 項——C1 login 加固〔TRUSTED_PROXIES 可信代理閘控·XFF 右向左解析廢最左值封偽造繞過 rate-limit + dummy bcrypt timing 等化〔錯帳號/未設 hash 均跑·認證判定零動〕〕/ C2 CORS 收斂〔CORS_ALLOW_ORIGINS 顯式白名單拒 `*`·methods 實況收斂·不啟用 credentials〕/ C3 例外遮蔽〔broker+主軌/影子軌三 broad-Exception client 出口改通用訊息+exc_info=True·排除 3 處 ValueError 業務驗證〕/ C4 主題覆寫守衛〔BUILTIN_THEMES frozenset·sanitize 後 lower() 命中即 400·write_bytes 前攔截·既有 5 道過濾零弱化〕；tests/test_sec_harden.py 30 測試、715→745 passed；C1 deviation：stale XFF 測試契約同步〔test_api_performance_and_robustness〕；⚠️ 反向代理部署須設 TRUSTED_PROXIES、生產跨源須設 CORS_ALLOW_ORIGINS）

@@ -1,7 +1,13 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-18（SEC-HARDEN Check 收官）
+最後更新：2026-07-18（SOP-COMPLY Check 收官）
 
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_Check_提示詞.md`（Check·checkout 收官·BE-Refactor：Conformance 五維度〔plan §2 五規格項對照 C1-C3 報告 / tasks §6 驗收〔AST 歸零+裸 commit 歸零+748 綠燈〕/ 不可動〔訊息語意·非-except 白名單·斷言本體·業務邏輯〕/ 提示詞 6 份歸檔稽核 / msg 草稿〕→ 全綠後 TODO 雙層結案〔active 移除+archive 追加表格+索引 pointer+類別索引〕+ C1-C3 hash 自癒 + baton 一次性 mv 歸檔〔plan/tasks/C1-C3 報告〕+ 6 提示詞入版控 + staged 白名單自檢實貼 + 直產 checkout 執行報告〔§7.2 純後端無 handoff 豁免〕;SOP-COMPLY 全案結案〔logging 25+1 / DB 13 全清〕;commit 由 baron 手動）
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_C3_run_提示詞.md`（C3 Run·BE-Refactor：Borrow-Session Transaction Coordination——**原子三合一**：`paper_manager.py` 6 借用 helper〔create_folder/update_folder/delete_folder/_apply_folder_path_tags/set_paper_folder/set_paper_tags〕移除 `session.commit()`〔交易邊界移交呼叫端〕+ `web_server.py` 5 folder/tag 端點包 `with s.begin():`〔except ValueError→400 保留·begin 內拋自動 rollback〕+ 3 直呼測試檔〔test_paper_tags/test_normalize_tag/test_folder_auto_tags〕包 `with s.begin():`〔斷言期望值本體嚴禁動〕;§6.3 grep 裸 commit 歸零+§6.4 全套件+§6.5 SOP 核查;5 `.bak`;執行報告暫存 baton;TODO C3→✅/checkout→WIP+hash 自癒;git add 5 檔+5 .bak）
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_C2_run_提示詞.md`（C2 Run·BE-Refactor：Self-Owned Transaction Guard——`paper_manager.py` 7 處自持型 `with SessionLocal() as s: … s.commit()`〔82/274/287/387/415/424/1055〕→ 寫入區包 `with s.begin():` 移除顯式 commit〔比照 db.py::init_db 正範式·begin 區僅含寫入·極短交易〕;**借用型 6 處嚴禁動**〔C3 原子範圍〕;§6.2 grep〔期望僅剩借用 6〕+§6.4 全套件+§6.5 SOP 核查;1 `.bak`;執行報告暫存 baton;TODO C2→✅/C3→WIP+hash 自癒;git add 1 檔+1 .bak）
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_C1_run_提示詞.md`（C1 Run·BE-Refactor：Logging Hardening——9 檔業務碼 except 區 25 處 `logger.error` 補 `exc_info=True`〔AST 精確·訊息文字/控制流零動·非-except 守衛日誌嚴禁加載〕+ `llm/client.py:181` grounding 解析吞例外改 warning(exc_info=True) 留痕降級〔該檔僅此點可動〕+ 新建 `tests/test_sop_comply_guard.py` AST 守衛〔except 區 logger.error 必含 exc_info·grep-gate 防回歸〕;10 檔 .bak;§6.1+§6.5 SOP 核查;執行報告暫存 baton;TODO C1→✅/C2→WIP+hash 自癒;git add 11 檔+10 .bak）
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_tasks_提示詞.md`（Tasks·BE-Refactor：依 plan v1.1〔OQ1-6 拍板〕拆 SOP-COMPLY 為最小可逆原子 commits——C1 日誌合規〔25 處 except 內 logger.error 補 exc_info + llm/client:181 吞例外改 warning + grep-gate 守衛測試〕/ C2 自持交易守護〔paper_manager 7 自持 commit 包 with s.begin()〕/ C3 借用交易呼叫端協調〔6 借用 helper 移除 commit + web_server 端點 + 3 測試檔包 with s.begin()·原子〕/ checkout；各 commit §6 SOP 核查、執行報告暫存 baton；§0.5+§8 六維度+§1 中文括號；同步 TODO 🟡 WIP·依賴無）
+- 2026-07-18 — `2026-07-18_SOP-COMPLY_plan_提示詞.md`（plan·BE-Refactor：PROJECT-REVIEW 程式碼品質 #1——logger.error 丟棄 stack trace〔補 exc_info〕+ llm/client.py:181 靜默吞例外 + paper_manager 13 處裸 commit〔DB SOP〕；開 logging/DB SOP 合規清帳 plan 暫存 baton/·依 template_plan/WORKFLOW_SOP/framework；不含 commit 建議）
 - 2026-07-18 — `2026-07-18_SEC-HARDEN_Check_提示詞.md`（Check·checkout 收官·BE-Refactor：Conformance 五維度〔plan §2 七規格項對照 C1-C4 報告 / tasks §6 驗收〔grep+745 綠燈遞增鏈〕/ 不可動〔認證判定·ValueError×3·sanitize 五道·SSE 協定〕/ 提示詞 7 份歸檔稽核 / msg 草稿〕→ 全綠後 TODO 雙層結案〔active 移除+archive 追加表格+索引 pointer+類別索引〕+ C1-C4 hash 自癒〔`52ebae8`/`a5e2bd4`/`bc5d5f4`/C4〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C4 報告〕+ 7 提示詞入版控 + staged 白名單自檢實貼 + 直產 checkout 執行報告〔§7.2 純後端無 handoff 豁免〕;SEC-HARDEN 全案結案〔PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉〕;commit 由 baron 手動）
 - 2026-07-18 — `2026-07-18_SEC-HARDEN_C4_run_提示詞.md`（C4 Run·BE-Refactor：Theme Overwrite Guard——模組級 `BUILTIN_THEMES` frozenset〔mies/kahn/kandinsky/nara〕+ theme 上傳 sanitize 後 `sanitized.lower()` 命中內建即 400 拒絕〔`write_bytes` 前攔截·大小寫不敏感·防 macOS 覆寫〕;既有 sanitize/traversal/大小限制零弱化;test_sec_harden 追加 mies/Mies→400 不寫檔;§6.4 grep+§6.5 全套件+§6.6 SOP 核查;執行報告暫存 baton;TODO C4→✅/checkout→WIP+hash 自癒;git add 2 檔+1 .bak）
 - 2026-07-18 — `2026-07-18_SEC-HARDEN_C3_run_提示詞.md`（C3 Run·BE-Refactor：Error Masking——broker 串流（`:168` 區）+ 主軌 run_pipeline / 影子軌 run_pipeline_shadow 之 broad `Exception` client 出口 `str(e)`→通用訊息、詳情 `logger.error(..., exc_info=True)` 落 server log;**排除** 3 處 `except ValueError` HTTPException〔`:1136/:1159/:1223` 業務驗證·不動〕;test_sec_harden 追加遮蔽驗證;§6.3 grep+§6.5 全套件+§6.6 SOP 核查〔新增 logger.error 須 exc_info〕;執行報告暫存 baton;TODO C3→✅/C4→WIP+hash 自癒;git add 2 檔+1 .bak）
@@ -43,11 +49,19 @@
 - 2026-07-09 — `2026-07-09_DOC-SYNC-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：依 plan v2〔六 OQ 定案·Q6 規模釘死〕拆 **C1 — Docs Truth Sync**〔components 6 幽靈去毒〔5 標註+dropdown-popup 更正實名〕+ dom-reference 補 48 ID〔輕量欄位·≤160 行〕+ 兩檔同步戳 + token 三檔頂部零差驗證註·5 檔一 commit〕+ **checkout**;index.html 唯讀對照;同步 TODO 🟡 WIP）
 - 2026-07-09 — `2026-07-09_DOC-SYNC-1_plan_提示詞.md`（plan·DOC-Refactor：design/docs 現況對齊「清帳版」——實測 dom-reference 覆蓋率 36%〔27/75 ID〕+ components 6 幽靈 class〔規劃寫成現況〕→ 清幽靈+補漏記、**刻意不深耕**〔ownership map/@layer 原則/theme-guide 改寫留 FE-CSS-GOV 各 commit 配套〕;token 契約層實測零差不動;不含 commit 建議）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_Check_提示詞.md`（Check·checkout 收官·FE-Refactor：Conformance 五維度〔plan §2 U1-U8 跨 commit 覆蓋 / tasks §6 / 不可動 / 提示詞 7 份稽核 / msg 草稿〕→ baton 一次性歸檔〔plan/tasks/C1-C4 報告·audit 兩份長駐不碰〕+ TODO 雙層結案〔framework §2.5 v5〕+ hash 自癒 + **鐵律 checkout 報告直產 executions/ 含 staged 白名單自檢**;FE-PERF-2 全案結案）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_C4_run_提示詞.md`（C4 Run·FE-Refactor：Paint Hints——KaTeX 兩核心字型 preload〔as=font+crossorigin·消 FOUT〕+ 兩處 scroll 監聽 `{capture:true,passive:true}`〔已核實無 preventDefault〕+ `.msg-user`/`.msg-ai` `content-visibility:auto`+`contain-intrinsic-size:auto 120px`〔記憶尺寸型·禁固定值·底線 Safari 18+ 基線內〕;git add 僅 index.html+.bak;C1–C4 實作完結、餘 checkout）
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### SOP-COMPLY 系列（logging 與 DB SOP 合規清帳）
+- ✅ **SOP-COMPLY logging與DB_SOP合規清帳（2026-07-18 plan v1.1 六 OQ 拍板 → Tasks → C1-C3 → Check 收官·BE-Refactor·已結案）**
+  - `2026-07-18_SOP-COMPLY_plan_提示詞.md` — plan（PROJECT-REVIEW 程式碼品質 #1〔except 區 logger.error 缺 exc_info〕+ llm:181 靜默吞例外 + paper_manager 13 處裸 commit〔DB SOP〕；開合規清帳 plan 暫存 baton/）
+  - `2026-07-18_SOP-COMPLY_tasks_提示詞.md` — Tasks（依 plan v1.1〔OQ1-6 拍板〕拆：C1 Logging Hardening〔25 exc_info + llm:181 + grep-gate 守衛〕/ C2 自持交易守護〔paper_manager 7 自持 commit 包 with s.begin()〕/ C3 借用交易呼叫端協調〔6 helper + web_server 5 端點 + 3 測試·原子〕/ checkout）
+  - `2026-07-18_SOP-COMPLY_C1_run_提示詞.md` — C1 Run（Logging Hardening：9 檔 except 區 25 處 logger.error 補 exc_info + llm/client.py:181 吞例外改 warning 留痕 + AST 守衛測試 test_sop_comply_guard.py 防回歸）
+  - `2026-07-18_SOP-COMPLY_C2_run_提示詞.md` — C2 Run（Self-Owned Transaction Guard：paper_manager 7 處自持型 session 包 `with s.begin():` 移除顯式 commit；借用型 6 處不動＝C3 原子範圍）
+  - `2026-07-18_SOP-COMPLY_C3_run_提示詞.md` — C3 Run（Borrow-Session Transaction Coordination·原子：6 借用 helper 移除 session.commit() + web_server 5 端點包 begin + 3 直呼測試檔包 begin；裸 commit 歸零）
+  - `2026-07-18_SOP-COMPLY_Check_提示詞.md` — Check/checkout 收官（Conformance 五維度全綠 → TODO 雙層結案+hash 自癒 + baton 一次性歸檔〔plan/tasks/C1-C3 報告〕+ 6 提示詞入版控 + staged 白名單自檢 + 直產 checkout 執行報告；SOP-COMPLY 全案結案）
 
 ### SEC-HARDEN 系列（後端安全縱深加固）
 - ✅ **SEC-HARDEN 後端安全縱深加固（2026-07-12 plan v1 → v1.1 七 OQ 拍板 → Tasks → C1-C4 → Check 收官·BE-Refactor·已結案）**
@@ -66,6 +80,7 @@
   - `2026-07-09_FE-PERF-2_C1_run_提示詞.md` — C1 Run（Marked Vendoring：marked 9.1.6 鎖版自 cdnjs 下載自託管 `static/vendor/marked/` + index.html src 換本地路徑〔不加 defer·屬 C2〕;§6.1 驗收 cdnjs=0+node smoke）
   - `2026-07-09_FE-PERF-2_C2_run_提示詞.md` — C2 Run（Deferred Boot：前置閘 `on[a-z]+=` 核查〔期望零 inline handler〕→ marked/katex 加 defer → inline 主 script 整包 `DOMContentLoaded`〔頭尾插入+marker·嚴禁重排縮排〕;§6.2+node --check）
   - `2026-07-09_FE-PERF-2_C3_run_提示詞.md` — C3 Run（Stream Throttle：`makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併同幀〕+ 主串流/replay 兩路接線;消 O(n²) 熱路徑;`renderMarkdownWithMath` 內部嚴禁改）
+  - `2026-07-09_FE-PERF-2_C4_run_提示詞.md` — C4 Run（Paint Hints：KaTeX 兩核心字型 preload〔消 FOUT〕+ scroll 監聽 passive×2 + `.msg-*` content-visibility 記憶尺寸型;C1–C4 實作完結）
 
 ### TEST-GREEN 系列（前端 CSS 測試改讀分包）
 - ✅ **TEST-GREEN 前端CSS測試改讀分包（2026-07-10 plan v1 → v1.1 五 OQ 拍板 → Tasks → C1 → Check 收官·FE-Refactor·已結案）**

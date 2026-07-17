@@ -4,6 +4,19 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（實施專案自身 logging/database SOP——except 區 exc_info 全補 × 吞例外留痕 × paper_manager 裸 commit 13→0；PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Logging Hardening：9 檔 25 處 `except` 內 `logger.error` 補 `exc_info=True`〔AST 精確清單·位元組級插入·訊息/控制流零動·排除 14 續行假陽性 + `rag_retriever:96` 非-except 守衛〕+ `llm/client.py:181` `except: pass`→`logging.warning("grounding source parse failed", exc_info=True)` + 新 `tests/test_sop_comply_guard.py`〔AST grep-gate：except 內 logger.error 必含 exc_info + 範圍自檢 + grounding 非裸 pass〕；745→748 passed；範圍外發現 `tools/regen_rag.py:252` 不動留 baron | `98f8848` |
+| C2 | Self-Owned Transaction Guard：`paper_manager.py` 7 處自持型 `with SessionLocal() as s: … s.commit()` → `with s.begin():` 自動守護〔5 處複合 with + `ensure_admin`/`append_chat_message` 內層 begin·後讀 u.id/c.id 外移等價；begin 置 session 起始防 autobegin〕；借用 6 處零觸碰；748 passed 零退化 | `68987e8` |
+| C3 | Borrow-Session Transaction Coordination（原子）：6 借用 helper 移除 `session.commit()`〔`create_folder` 補 `session.flush()` 保 log f.id〕+ `web_server.py` 5 folder/tag 端點（4 session 區塊）包 `with s.begin():`〔ValueError→400 保留·begin 內拋自動 rollback〕+ 3 測試檔 15 寫入區塊包 begin〔斷言本體零動〕；**paper_manager 裸 commit 歸零＝DB SOP §5.2 全清**；748 passed | `0dff639` |
+| checkout | 成果收官：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6 驗收 / 不可動 / 提示詞 6 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C3 報告→executions/〕+ TODO 雙層結案 + hash 自癒 + staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-18_SOP-COMPLY_logging與DB_SOP合規清帳_plan_v1.md`（v1.1 六 OQ 拍板）。
+> **動因**：PROJECT-REVIEW 程式碼品質 #1（except 區 logger.error 丟 traceback）+ `llm/client:181` 靜默吞例外 + `paper_manager` 13 裸 commit（database SOP §5.2）。
+> **備註**：C1/C2 共檔 `paper_manager.py`（C1 先於 C2 執行但後 ship）——以 C2 `.bak`＝C1 完成態快照分離 staging、兩 commit 乾淨分次落地；`set_paper_folder` 移動+自動標籤由兩段 commit 併呼叫端單一交易（更安全）；範圍外債 `tools/regen_rag.py:252`（tools/ 非清帳範圍）留 baron 拍板。
+
 ### BE-Refactor SEC-HARDEN 後端安全縱深加固（PROJECT-REVIEW 安全縱深 5 項全關閉——login XFF/timing × CORS × 例外遮蔽 × 主題覆寫守衛；web_server.py + settings 2 新 config）
 
 | Commit | 內容 | Hash |
@@ -12,7 +25,7 @@
 | C2 | CORS Restriction：settings +`CORS_ALLOW_ORIGINS`〔預設本機 8080 兩形態·解析層一律剔 `*`〕+ CORSMiddleware `["*"]`→顯式白名單 + methods 實況收斂〔GET/POST/PATCH/DELETE/OPTIONS〕+ headers=Content-Type、不啟用 credentials；+5 測試 729→734 passed | `a5e2bd4` |
 | C3 | Error Masking：broker〔廣播+DB 落聊天歷史雙出口〕+ 主軌/影子軌 status SSE 三 broad-`Exception` client 出口 `str(e)`→通用訊息、主軌 `logger.error` 補 `exc_info=True`；**排除** 3 處 ValueError HTTPException〔業務驗證·源碼守衛 count==3 鎖定〕；+5 測試〔含 broker 行為遮蔽·敏感路徑注入實測〕734→739 passed | `bc5d5f4` |
 | C4 | Theme Overwrite Guard：模組級 `BUILTIN_THEMES` frozenset〔mies/kahn/kandinsky/nara〕+ sanitize 後 `lower()` 命中內建即 400〔`write_bytes` 前攔截·大小寫不敏感·防 macOS APFS 覆寫〕、既有 5 道過濾零弱化；+6 測試 739→745 passed | `3942e20` |
-| checkout | 成果收官：Conformance 五維度全綠〔plan §2 七規格項 / tasks §6 驗收 / 不可動 / 提示詞 7 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C4 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔含 GOV-PATH-FIX checkout=`52ebae8` 判定〕+ staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔plan §2 七規格項 / tasks §6 驗收 / 不可動 / 提示詞 7 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C4 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔含 GOV-PATH-FIX checkout=`52ebae8` 判定〕+ staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `e287347` |
 
 > **修法依據**：`plans/2026-07-12_SEC-HARDEN_後端安全縱深加固_plan_v1.md`（v1.1 七 OQ 拍板）。
 > **動因**：PROJECT-REVIEW 安全審查 #3（XFF 偽造繞過 rate-limit·MEDIUM）/ #4（CORS `*`）/ #5（`str(e)` 外洩）/ #6（主題覆寫內建）/ #8（login timing oracle）。
