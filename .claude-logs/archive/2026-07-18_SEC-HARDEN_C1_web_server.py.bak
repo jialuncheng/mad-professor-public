@@ -316,30 +316,6 @@ if not settings.AUTH_PASSWORD_HASH:
 _login_attempts: dict = {}  # ip -> [失敗時間戳]
 _login_lock = threading.Lock()
 
-# === [SEC-HARDEN C1 START] ===
-# #8 timing 等化：模組級常數合法 bcrypt hash（cost 12、與正式 hash 同量級）。
-# 錯誤帳號 / AUTH_PASSWORD_HASH 未設時亦跑一次 dummy 比對、等化登入回應時間，
-# 不洩「帳號是否有效 / 密碼是否已初始化」之 timing oracle。
-_DUMMY_BCRYPT_HASH = "$2b$12$K2ZWmsDRLLhk7THprAwSreP/F05yauUdyV4GjtD4wTZKKUqRI8tzS"
-
-
-def _resolve_client_ip(request: Request) -> str:
-    """#3 login rate-limit 真實 client IP 解析（可信代理閘控·右向左）。
-
-    僅當直連 peer 屬 settings.TRUSTED_PROXIES 才採信 X-Forwarded-For：
-    由右向左遍歷 XFF 鏈、逐一剝除可信代理 IP、取第一個非白名單 IP 為真實 client IP。
-    嚴禁取最左值——攻擊者自注入 `XFF: fake_ip` 時鏈為 `fake_ip, real, proxy`、
-    最左即偽造。peer 非可信（直連 / 未設白名單）→ 一律用 socket peer。
-    """
-    peer = request.client.host if request.client else "unknown"
-    if peer in settings.TRUSTED_PROXIES:
-        xff = request.headers.get("X-Forwarded-For", "")
-        for hop in reversed([p.strip() for p in xff.split(",") if p.strip()]):
-            if hop not in settings.TRUSTED_PROXIES:
-                return hop
-    return peer
-# === [SEC-HARDEN C1 END] ===
-
 _PUBLIC_PREFIXES = ("/static/login",)
 _PUBLIC_PATHS = {"/login", "/logout", "/api/health"}
 
@@ -442,12 +418,15 @@ async def login_page():
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    # === [SEC-HARDEN C1 START] #3 XFF 可信代理閘控（取代 API-PERF C2 最左值取法）===
-    # peer 屬 TRUSTED_PROXIES 才採信 XFF（右向左剝可信代理取真實 client IP）、否則用
-    # socket peer；偽造 XFF 無法繞過 5 次/分鐘鎖定。API-PERF C2「反向代理部署不鎖死
-    # 閘道」目標保留——由部署設定 settings.TRUSTED_PROXIES 達成。
-    ip = _resolve_client_ip(request)
-    # === [SEC-HARDEN C1 END] ===
+    # === [API-PERF C2 START] U5 真實 IP 解析（防反向代理閘道鎖死）===
+    # 優先取 X-Forwarded-For 最左（真實 client IP），無則降級 request.client.host；
+    # 確保暴力破解僅鎖死惡意用戶實體 IP、不鎖死 Docker/Nginx/LB 代理閘道 IP。
+    _xff = request.headers.get("X-Forwarded-For")
+    if _xff:
+        ip = _xff.split(",")[0].strip() or "unknown"
+    else:
+        ip = request.client.host if request.client else "unknown"
+    # === [API-PERF C2 END] ===
     now = time.time()
     with _login_lock:
         fails = [t for t in _login_attempts.get(ip, []) if now - t < 60]
@@ -465,15 +444,6 @@ async def login(request: Request, username: str = Form(...), password: str = For
         except Exception as e:
             logger.warning(f"密碼驗證失敗: {str(e)}")
             ok = False
-    else:
-        # === [SEC-HARDEN C1 START] #8 timing 等化 ===
-        # 錯誤帳號 / AUTH_PASSWORD_HASH 未設 → 亦跑一次 dummy bcrypt 比對，
-        # 使兩類失敗路徑與「正確帳號錯誤密碼」路徑耗時等化（不影響認證結果判定）。
-        try:
-            bcrypt.checkpw(password.encode("utf-8"), _DUMMY_BCRYPT_HASH.encode("utf-8"))
-        except Exception:
-            pass
-        # === [SEC-HARDEN C1 END] ===
 
     if ok:
         with _login_lock:

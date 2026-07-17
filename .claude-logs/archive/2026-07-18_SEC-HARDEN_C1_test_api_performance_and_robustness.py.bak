@@ -128,25 +128,10 @@ def test_upload_oversize_returns_413(tmp_path, monkeypatch):
 
 
 def test_x_forwarded_for_parsing(monkeypatch):
-    """U5（SEC-HARDEN C1 契約更新）：XFF 僅在 peer 屬可信代理時右向左採信。
-
-    原 API-PERF C2「最左值取法」可被偽造繞過 rate-limit（PROJECT-REVIEW #3），
-    SEC-HARDEN C1 改為可信代理閘控；本測試同步改斷言新契約——
-    「不鎖死代理閘道」目標由 TRUSTED_PROXIES 白名單達成、不再犧牲防偽造。
-    """
-    import settings
+    """U5：X-Forwarded-For 最左 IP 作為鎖定鍵；無 XFF 才降級 client.host。"""
     import web_server
 
-    # peer（9.9.9.9）非可信（TRUSTED_PROXIES 預設空）→ 偽造 XFF 不採信、鎖定鍵＝socket peer
-    monkeypatch.setattr(settings, "TRUSTED_PROXIES", frozenset())
-    web_server._login_attempts.pop("9.9.9.9", None)
-    asyncio.run(web_server.login(_FakeReq(xff="1.2.3.4, 10.0.0.1"), username="wrong_user", password="x"))
-    assert "9.9.9.9" in web_server._login_attempts
-    assert "1.2.3.4" not in web_server._login_attempts    # 偽造最左值未被採信
-    web_server._login_attempts.pop("9.9.9.9", None)
-
-    # peer 可信 → 右向左剝除可信代理、取真實 client IP（不鎖閘道目標保留）
-    monkeypatch.setattr(settings, "TRUSTED_PROXIES", frozenset({"9.9.9.9", "10.0.0.1"}))
+    # 有 XFF → 鎖定鍵為最左真實 IP（非代理鏈後段、非 client.host）
     web_server._login_attempts.pop("1.2.3.4", None)
     asyncio.run(web_server.login(_FakeReq(xff="1.2.3.4, 10.0.0.1"), username="wrong_user", password="x"))
     assert "1.2.3.4" in web_server._login_attempts
@@ -154,7 +139,6 @@ def test_x_forwarded_for_parsing(monkeypatch):
     web_server._login_attempts.pop("1.2.3.4", None)
 
     # 無 XFF → 降級 client.host
-    monkeypatch.setattr(settings, "TRUSTED_PROXIES", frozenset())
     web_server._login_attempts.pop("5.5.5.5", None)
     asyncio.run(web_server.login(_FakeReq(xff=None, client_host="5.5.5.5"), username="wrong_user", password="x"))
     assert "5.5.5.5" in web_server._login_attempts

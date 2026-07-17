@@ -13,7 +13,7 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…checkout 待回填、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
+- ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…`9586866`、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
 - ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…`3a71293`、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor THEME-DEDUP 主題規格凍結與結構去重（`2380420`…`ef16383`、6 commits·26 token/16 選擇器凍結×9 支全正規化×模板+契約腳本）→ archive/TODO_done_archive.md
@@ -104,6 +104,20 @@
 ## 🟡 進行中 / ⬜ 未開始（依優先序）
 
 ### 🔴 高優先
+
+- ✅ **GOV-PATH-FIX 校正下游治理檔 stale worktree 路徑**（hotfix·DOC-Refactor·`.claude-logs/hotfixes/2026-07-12_GOV-PATH-FIX_stale_worktree_path_hotfix.md`）
+  - 校正 CONTEXT-1 C2 漏改之 3 下游治理檔殘留已刪除 worktree `hopeful-yalow-902c50`：`template_prompt_for_tasks.md`（工作目錄硬規則對齊 CLAUDE.md §3·元凶）/ `framework §9.1`（重點句去硬編）/ `GOVERNANCE_OVERVIEW.md`（6 導航連結改相對路徑·去死絕對前綴）
+  - 驗收：3 活躍源 `grep hopeful-yalow-902c50` 零殘留 + GOVERNANCE_OVERVIEW `file:///`=0 + 4 相對目標實檔可解析；歷史檔依 WORKFLOW_SOP §2 不溯及既往、不動；fix `31f7500` + checkout 收官歸檔（hotfix 規劃書 mv→hotfixes/）；Checkout Hash：`待 baron 回填`
+
+- 🟡 **SEC-HARDEN 後端安全縱深加固**（`.claude-logs/baton/2026-07-12_SEC-HARDEN_後端安全縱深加固_plan_v1.md`）
+  - [/] 🟡 WIP: C1 — Login Hardening（登入加固·#3 XFF 右向左 + #8 timing 等化）
+  - [ ] ⬜ 未開始: C2 — CORS Restriction（CORS 收斂·#4）
+  - [ ] ⬜ 未開始: C3 — Error Masking（例外遮蔽·#5 broad Exception·排除 ValueError）
+  - [ ] ⬜ 未開始: C4 — Theme Overwrite Guard（主題覆寫守衛·#6 大小寫不敏感）
+  - [ ] checkout — 成果收官歸檔（成果歸檔與移出暫存）
+  - 背景：PROJECT-REVIEW 安全縱深 5 項全在 web_server.py；新增 settings TRUSTED_PROXIES/CORS_ALLOW_ORIGINS 2 config；BE-Refactor 每 commit §5 SOP 核查；⚠️ 反向代理部署須設 TRUSTED_PROXIES（否則回退 API-PERF C2）
+  - 工時：5 個 commits（4 impl + checkout）
+  - 依賴：無
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）

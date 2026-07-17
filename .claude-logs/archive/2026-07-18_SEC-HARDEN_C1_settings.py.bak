@@ -131,18 +131,6 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "admin")
 AUTH_PASSWORD_HASH = os.getenv("AUTH_PASSWORD_HASH", "")
 
-# === [SEC-HARDEN C1 START] ===
-# #3 XFF 可信代理白名單：僅當直連 peer（request.client.host）屬本清單時，
-# login rate-limit 才採信 X-Forwarded-For（由右向左剝除可信代理、取真實 client IP）。
-# 預設空（安全優先）＝不採信任何 XFF、一律以 socket peer 為 rate-limit key。
-# ⚠️ 反向代理（Docker/Nginx/LB）部署必須於 .env 設 TRUSTED_PROXIES（逗號分隔代理 IP，
-#    如 TRUSTED_PROXIES=10.0.0.1,172.17.0.1）；否則所有 client 收斂為閘道 IP、
-#    一人觸發鎖定即鎖死全部（回退 API-PERF C2 修正之問題）。
-TRUSTED_PROXIES = frozenset(
-    p.strip() for p in os.getenv("TRUSTED_PROXIES", "").split(",") if p.strip()
-)
-# === [SEC-HARDEN C1 END] ===
-
 # SEC-SECRET fail-closed：未設定時絕不回退為可預測的硬編碼常數。
 # - 已設定 → 直接採用。
 # - 未設定 → 生成臨時隨機密鑰（config 層不 fatal，防誤傷不用 session 的 CLI 工具）；
