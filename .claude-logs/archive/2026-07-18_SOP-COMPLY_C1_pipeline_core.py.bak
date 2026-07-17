@@ -355,8 +355,8 @@ class PipelineCore:
                                 self.logger.info(f"階段 {pid} {s} 完成")
                                 self.logger.info(f"[並行] {pid} {s} 完成（耗時 {duration:.1f}s）")
                             except Exception as e:
-                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}", exc_info=True)
-                                self.logger.error(f"[並行] {pid} {s} 失敗（耗時 {duration:.1f}s）: {e}", exc_info=True)
+                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}")
+                                self.logger.error(f"[並行] {pid} {s} 失敗（耗時 {duration:.1f}s）: {e}")
                                 if s == 'analyze':
                                     raise
                                 # detect_domain 失敗：soft fallback，不中止
@@ -407,11 +407,11 @@ class PipelineCore:
                                     f"{time.time() - _par_t0:.2f}s（並行）"
                                 )
                             except Exception as e:
-                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}", exc_info=True)
+                                self.logger.error(f"階段 {pid} {s} 失敗: {str(e)}")
                                 self.logger.error(
                                     f"[stage] {pid} {s} 失敗 耗時="
                                     f"{time.time() - _par_t0:.2f}s（並行）: {e}"
-                                , exc_info=True)
+                                )
                                 if s == 'translate':
                                     raise
 

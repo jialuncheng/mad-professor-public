@@ -163,7 +163,7 @@ class ResumeProcessor(PDFParser):
                 # === [VISION-HOTFIX-1 END] ===
             )
         except Exception as e:
-            self.logger.error(f"Vision 履歷解析失敗 {paper_name}: {e}", exc_info=True)
+            self.logger.error(f"Vision 履歷解析失敗 {paper_name}: {e}")
             raise PDFParseError(f"Vision resume parse failed: {e}") from e
 
         if not text or not text.strip():

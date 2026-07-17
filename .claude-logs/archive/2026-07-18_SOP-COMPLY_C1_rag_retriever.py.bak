@@ -86,7 +86,7 @@ class RagRetriever:
                     return True
                 return False
         except Exception as e:
-            logger.error(f"添加新论文 owner={owner_id} {paper_id} 失敗: {str(e)}", exc_info=True)
+            logger.error(f"添加新论文 owner={owner_id} {paper_id} 失敗: {str(e)}")
             return False
 
     def load_vector_store(self, vector_store_path: str) -> Optional[FAISS]:
@@ -105,7 +105,7 @@ class RagRetriever:
             logger.info(f"成功加载向量库: {vector_store_path}")
             return store
         except Exception as e:
-            logger.error(f"載入向量庫失敗: {str(e)}", exc_info=True)
+            logger.error(f"載入向量庫失敗: {str(e)}")
             return None
 
     def _get_vector_store(self, owner_id: int, paper_id: str) -> Optional[FAISS]:
@@ -265,7 +265,7 @@ class RagRetriever:
             return "\n\n".join(result_parts)
 
         except Exception as e:
-            logger.error(f"結構化檢索失敗: {str(e)}", exc_info=True)
+            logger.error(f"結構化檢索失敗: {str(e)}")
             return ""
 
     def retrieve_multi_with_context(

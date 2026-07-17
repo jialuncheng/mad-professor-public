@@ -179,11 +179,7 @@ class LLMClient:
                     if found:
                         self._last_grounding_sources = found
                 except Exception:
-                    # === [SOP-COMPLY C1] 吞例外根除：解析失敗屬降級非致命、
-                    # 留痕不中斷串流（logging SOP §3·plan OQ4）===
-                    logging.getLogger(__name__).warning(
-                        "grounding source parse failed", exc_info=True
-                    )
+                    pass
 
             cn_end_marks = '。！？'
             en_end_marks = '.!?;'

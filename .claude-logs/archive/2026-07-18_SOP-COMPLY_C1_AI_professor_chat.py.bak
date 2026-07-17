@@ -36,7 +36,7 @@ class AIProfessorChat:
             self.llm_client = LLMClient.get_instance()
             self.logger.info("AI對話助手初始化完成")
         except Exception as e:
-            self.logger.error(f"初始化AI對話組件失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"初始化AI對話組件失敗: {str(e)}")
 
     def _read_file(self, filepath: str) -> str:
         try:
@@ -211,7 +211,7 @@ class AIProfessorChat:
                    'grounding_sources': grounding}
 
         except Exception as e:
-            self.logger.error(f"處理查詢失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"處理查詢失敗: {str(e)}")
             yield {'type': 'sentence', 'text': f"抱歉，處理問題時出現錯誤: {str(e)}"}
             yield {'type': 'done', 'reply': '', 'grounding_sources': []}
 
@@ -272,7 +272,7 @@ class AIProfessorChat:
             return default
 
         except Exception as e:
-            self.logger.error(f"決策失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"決策失敗: {str(e)}")
             return default
 
     def _get_macro_context(self, query: str, paper_data: Dict[str, Any] = None) -> str:
@@ -297,7 +297,7 @@ class AIProfessorChat:
                         parts.append(text)
             return "\n\n".join(parts)
         except Exception as e:
-            self.logger.error(f"取得宏觀上下文失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"取得宏觀上下文失敗: {str(e)}")
             return ""
 
     def _get_rag_context(self, query: str, owner_id: int = None,
@@ -312,7 +312,7 @@ class AIProfessorChat:
             )
             return context or ""
         except Exception as e:
-            self.logger.error(f"RAG檢索失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"RAG檢索失敗: {str(e)}")
             return ""
 
     def _prepare_final_messages(self, query: str, context_info: str, function_name: str = None,

@@ -516,7 +516,7 @@ class RagProcessor:
                     self.logger.warning(f"无法继续导航, 节点类型: {type(node)}, 路径: {json_path}, 位置: {i+1}/{len(keys)}")
                     return None
         except Exception as e:
-            self.logger.error(f"解析JSON路径时出错: {json_path}, 错误: {str(e)}", exc_info=True)
+            self.logger.error(f"解析JSON路径时出错: {json_path}, 错误: {str(e)}")
             return None
             
         return node

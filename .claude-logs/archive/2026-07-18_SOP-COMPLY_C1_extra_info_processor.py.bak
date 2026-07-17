@@ -124,7 +124,7 @@ class ExtraInfoProcessor:
                 try:
                     data["summary"] = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
                 except Exception as e:
-                    self.logger.error(f"生成整體文件摘要失敗: {str(e)}", exc_info=True)
+                    self.logger.error(f"生成整體文件摘要失敗: {str(e)}")
                     data["summary"] = ""
             else:
                 self.logger.warning("文件無可用內容，整體摘要留空")
@@ -368,7 +368,7 @@ class ExtraInfoProcessor:
             summary = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return summary
         except Exception as e:
-            self.logger.error(f"生成章节 {section.get('title', '未命名章节')} 的总结失败: {str(e)}", exc_info=True)
+            self.logger.error(f"生成章节 {section.get('title', '未命名章节')} 的总结失败: {str(e)}")
             return ""
     
     def generate_questions(self, sections):
@@ -469,7 +469,7 @@ class ExtraInfoProcessor:
             questions = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return questions
         except Exception as e:
-            self.logger.error(f"生成文本块问题失败: {str(e)}", exc_info=True)
+            self.logger.error(f"生成文本块问题失败: {str(e)}")
             return ""
     
     def _generate_questions_for_graph(self, caption, section_summary, graph_type):
@@ -506,7 +506,7 @@ class ExtraInfoProcessor:
             questions = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return questions
         except Exception as e:
-            self.logger.error(f"生成{graph_type_text}块问题失败: {str(e)}", exc_info=True)
+            self.logger.error(f"生成{graph_type_text}块问题失败: {str(e)}")
             return ""
     
     def _find_text_context_backwards(self, content_blocks, start_index):
@@ -599,5 +599,5 @@ class ExtraInfoProcessor:
             formula_analysis = self.llm.chat(messages, stream=True, model=settings.LLM_EXTRA_INFO_MODEL).replace("\n", " ").strip()
             return formula_analysis
         except Exception as e:
-            self.logger.error(f"生成公式解析失败: {str(e)}", exc_info=True)
+            self.logger.error(f"生成公式解析失败: {str(e)}")
             return ""

@@ -42,7 +42,7 @@ def _read_title_from_rag_tree(final_paths: dict) -> tuple:
                 title = tree_data.get('title', '')
                 translated_title = tree_data.get('translated_title', '')
         except Exception as e:
-            logger.error(f"讀取 rag_tree 標題失敗: {str(e)}", exc_info=True)
+            logger.error(f"讀取 rag_tree 標題失敗: {str(e)}")
     return title, translated_title
 
 
@@ -52,7 +52,7 @@ def _ensure_db() -> None:
     try:
         db.init_db()
     except Exception as e:
-        logger.error(f"init_db 失敗: {str(e)}", exc_info=True)
+        logger.error(f"init_db 失敗: {str(e)}")
 
 
 def get_user_by_username(username: str):

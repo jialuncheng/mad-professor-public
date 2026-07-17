@@ -195,7 +195,7 @@ async def _run_stream_background(session: StreamSession, history: list,
                 logger.error(
                     f"[broker] DB append assistant failed "
                     f"paper={session.paper_uuid}: {e}"
-                , exc_info=True)
+                )
         # 從 active_streams 移除
         async with streams_lock:
             active_streams.pop((session.owner_id, session.paper_db_id), None)

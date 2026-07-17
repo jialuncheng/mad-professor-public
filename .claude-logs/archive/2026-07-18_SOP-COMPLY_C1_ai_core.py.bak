@@ -34,7 +34,7 @@ class AICore:
             self.logger.info("RAG 檢索器初始化完成")
             return True
         except Exception as e:
-            self.logger.error(f"初始化 RAG 檢索器失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"初始化 RAG 檢索器失敗: {str(e)}")
             return False
 
     def add_paper_vector_store(self, owner_id: int, paper_id: str,
@@ -88,7 +88,7 @@ class AICore:
                    'grounding_sources': grounding_sources}
 
         except Exception as e:
-            self.logger.error(f"query_stream 失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"query_stream 失敗: {str(e)}")
             yield {'sentence': f'抱歉，處理問題時出現錯誤: {str(e)}',
                    'done': True, 'grounding_sources': []}
 
@@ -117,7 +117,7 @@ class AICore:
             # === [LAZYLOAD-MULTI-1 C2 END] ===
             return True
         except Exception as e:
-            self.logger.error(f"載入論文快取失敗: {str(e)}", exc_info=True)
+            self.logger.error(f"載入論文快取失敗: {str(e)}")
             return False
 
     def remove_paper(self, owner_id: int, paper_id: str) -> None:
