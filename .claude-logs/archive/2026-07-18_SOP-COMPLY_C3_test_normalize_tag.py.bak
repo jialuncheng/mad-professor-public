@@ -127,7 +127,7 @@ def test_set_paper_tags_lowercases_input(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(s, owner_id=1, paper_uuid='r2_test',
                           tags=['HR', 'Engineering'])
 
@@ -142,7 +142,7 @@ def test_set_paper_tags_dedups_after_lowercase(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(s, owner_id=1, paper_uuid='r2_test',
                           tags=['HR', 'hr', 'Hr'])
 
@@ -157,7 +157,7 @@ def test_set_paper_tags_chinese_preserved(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(s, owner_id=1, paper_uuid='r2_test',
                           tags=['人資', '工程', '  人資  '])
 

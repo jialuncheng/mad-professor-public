@@ -95,7 +95,7 @@ def test_set_paper_tags_upsert(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(
             s, owner_id=1, paper_uuid='r1_test',
             tags=['plant', 'complex system'],
@@ -115,12 +115,12 @@ def test_set_paper_tags_overwrite(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(
             s, owner_id=1, paper_uuid='r1_test',
             tags=['old_a', 'old_b'],
         )
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(
             s, owner_id=1, paper_uuid='r1_test',
             tags=['new_only'],
@@ -142,7 +142,7 @@ def test_set_paper_tags_strips_whitespace_and_empty(temp_db):
     db_mod_p, models_mod, pm = temp_db
     _make_paper(db_mod_p, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_tags(
             s, owner_id=1, paper_uuid='r1_test',
             tags=['  plant  ', '', '   ', 'system', None, 42],  # 含非 str

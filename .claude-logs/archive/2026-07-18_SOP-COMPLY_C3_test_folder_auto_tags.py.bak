@@ -125,7 +125,7 @@ def test_move_paper_to_folder_auto_adds_path_tags(temp_db):
         leaf_id = _make_folder_chain(s, models_mod, 1, ['HR', 'CV'])
         _make_paper(s, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_test')
@@ -143,7 +143,7 @@ def test_move_to_nested_folder_adds_all_levels(temp_db):
         leaf_id = _make_folder_chain(s, models_mod, 1, ['A', 'B', 'C', 'D'])
         _make_paper(s, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_test')
@@ -161,7 +161,7 @@ def test_auto_tag_lowercase_standardization(temp_db):
         leaf_id = _make_folder_chain(s, models_mod, 1, ['ENGINEERING', 'BackEnd'])
         _make_paper(s, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_test')
@@ -181,7 +181,7 @@ def test_auto_tag_dedups_against_existing(temp_db):
             "user_tags": ["hr", "manual_tag"]
         })
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_test')
@@ -201,12 +201,12 @@ def test_move_to_unclassified_keeps_existing_tags(temp_db):
         _make_paper(s, models_mod)
 
     # 先移到 HR/CV、自動加 ['hr', 'cv']
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
     assert _read_user_tags(db_mod_p, models_mod, 'r3_test') == ['hr', 'cv']
 
     # 再移回未分類、tag 應保留
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', None)
     assert _read_user_tags(db_mod_p, models_mod, 'r3_test') == ['hr', 'cv']
 
@@ -230,7 +230,7 @@ def test_apply_helper_handles_corrupt_metadata_json(temp_db):
         s.commit()
 
     # 移到 HR、不應該爆、且應補上 'hr'
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_corrupt', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_corrupt')
@@ -248,7 +248,7 @@ def test_chinese_folder_name_preserved_as_tag(temp_db):
         leaf_id = _make_folder_chain(s, models_mod, 1, ['人資', '履歷'])
         _make_paper(s, models_mod)
 
-    with db_mod_p.SessionLocal() as s, s.begin():
+    with db_mod_p.SessionLocal() as s:
         pm.set_paper_folder(s, 1, 'r3_test', leaf_id)
 
     tags = _read_user_tags(db_mod_p, models_mod, 'r3_test')

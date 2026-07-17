@@ -580,9 +580,7 @@ def create_folder(session, owner_id: int, name: str,
     _check_sibling_dup(session, owner_id, parent_id, name)
     f = Folder(owner_id=owner_id, name=name, parent_id=parent_id, sort_order=0)
     session.add(f)
-    # [SOP-COMPLY C3] 交易邊界移交呼叫端（with s.begin() 自動 commit/rollback）；
-    # flush 先取得自增 f.id 供 log 與回傳消費、不提交交易。
-    session.flush()
+    session.commit()
     logger.info(f"建立資料夾: owner={owner_id} id={f.id} {name}")
     return f
 
@@ -623,6 +621,7 @@ def update_folder(session, owner_id: int, folder_id: int,
         f.parent_id = new_parent
     if sort_order is not None:
         f.sort_order = sort_order
+    session.commit()
     logger.info(f"更新資料夾: owner={owner_id} id={folder_id}")
     return f
 
@@ -637,6 +636,7 @@ def delete_folder(session, owner_id: int, folder_id: int) -> int:
         raise ValueError("資料夾不存在")
     removed = len(_descendant_ids(session, owner_id, folder_id))
     session.delete(f)
+    session.commit()
     logger.info(f"刪除資料夾: owner={owner_id} id={folder_id}（含子共 {removed} 個）")
     return removed
 
@@ -722,6 +722,7 @@ def _apply_folder_path_tags(session, owner_id: int, paper_uuid: str,
     if appended:
         meta["user_tags"] = existing
         p.metadata_json = json.dumps(meta, ensure_ascii=False)
+        session.commit()
         logger.info(
             f"自動標籤: owner={owner_id} {paper_uuid} "
             f"folder={folder_id} → +{appended}"
@@ -745,6 +746,7 @@ def set_paper_folder(session, owner_id: int, paper_uuid: str,
         if _get_folder_row(session, owner_id, folder_id) is None:
             raise ValueError("目標資料夾不存在")
     p.folder_id = folder_id
+    session.commit()
     logger.info(f"論文歸檔: owner={owner_id} {paper_uuid} → folder={folder_id}")
 
     # RAG-1 R3：移動成功後自動加 folder 路徑 tag（不阻塞 core）
@@ -840,6 +842,7 @@ def set_paper_tags(session, owner_id: int, paper_uuid: str,
 
     meta["user_tags"] = cleaned
     p.metadata_json = json.dumps(meta, ensure_ascii=False)
+    session.commit()
     logger.info(
         f"標籤寫入: owner={owner_id} {paper_uuid} → tags={cleaned}"
     )
