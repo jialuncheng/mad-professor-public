@@ -16,7 +16,9 @@ C3 — Error Masking（例外遮蔽）：
      影子軌 status SSE）→ 通用訊息、詳情 logger.error(exc_info=True) 落 server log；
      3 處 ValueError 業務驗證 HTTPException 維持原樣（不可動守衛）。
 
-（C4 主題守衛 之測試於該 commit 追加。）
+C4 — Theme Overwrite Guard（主題覆寫守衛）：
+  #6 模組級 BUILTIN_THEMES frozenset + theme 上傳 sanitize 後 lower() 命中內建
+     4 名即 400 拒絕、write_bytes 前攔截（大小寫不敏感）；既有 5 道過濾零弱化。
 """
 import sys
 from pathlib import Path
@@ -353,3 +355,85 @@ class TestErrorMasking:
             'logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}", '
             "exc_info=True)" in src
         )
+
+
+# ── #6 主題覆寫守衛（C4）───────────────────────────────────────────
+
+
+class _FakeThemeUpload:
+    """最小 UploadFile 替身：upload_theme 僅消費 .filename + async read()。"""
+
+    def __init__(self, filename: str, content: bytes = b"body { color: red; }"):
+        self.filename = filename
+        self._content = content
+
+    async def read(self):
+        return self._content
+
+
+class TestThemeOverwriteGuard:
+    def test_builtin_themes_frozen_and_complete(self):
+        """模組級 BUILTIN_THEMES 為 frozenset 且恰含 4 個內建名。"""
+        assert isinstance(web_server.BUILTIN_THEMES, frozenset)
+        assert web_server.BUILTIN_THEMES == {"mies", "kahn", "kandinsky", "nara"}
+
+    def test_builtin_name_rejected_400_no_write(self, tmp_path, monkeypatch):
+        """上傳 mies.css → 400、不寫檔。"""
+        import asyncio
+        from fastapi import HTTPException
+
+        monkeypatch.setattr(web_server, "BASE_DIR", tmp_path)
+        with pytest.raises(HTTPException) as ei:
+            asyncio.run(web_server.upload_theme(file=_FakeThemeUpload("mies.css")))
+        assert ei.value.status_code == 400
+        assert "不可覆寫內建主題" in ei.value.detail
+        assert not (tmp_path / "static" / "themes" / "mies.css").exists()
+
+    def test_case_variant_rejected_400_no_write(self, tmp_path, monkeypatch):
+        """大小寫變體 Mies.css / KAHN.css → 400、不寫檔（防大小寫不敏感檔案系統覆寫）。"""
+        import asyncio
+        from fastapi import HTTPException
+
+        monkeypatch.setattr(web_server, "BASE_DIR", tmp_path)
+        for name in ("Mies.css", "KAHN.css", "Kandinsky.css", "nArA.css"):
+            with pytest.raises(HTTPException) as ei:
+                asyncio.run(web_server.upload_theme(file=_FakeThemeUpload(name)))
+            assert ei.value.status_code == 400
+            assert "不可覆寫內建主題" in ei.value.detail
+        themes_dir = tmp_path / "static" / "themes"
+        assert not themes_dir.exists() or not any(themes_dir.iterdir())
+
+    def test_non_builtin_upload_still_works(self, tmp_path, monkeypatch):
+        """非內建名（含大寫）照常上傳成功——既有行為零回歸。"""
+        import asyncio
+
+        monkeypatch.setattr(web_server, "BASE_DIR", tmp_path)
+        resp = asyncio.run(
+            web_server.upload_theme(file=_FakeThemeUpload("My_Custom_Theme.css"))
+        )
+        assert resp["filename"] == "My_Custom_Theme.css"
+        assert (tmp_path / "static" / "themes" / "My_Custom_Theme.css").exists()
+
+    def test_existing_filters_not_weakened(self, tmp_path, monkeypatch):
+        """既有 5 道過濾零弱化：非 .css 拒絕 / 過大 413 仍有效。"""
+        import asyncio
+        from fastapi import HTTPException
+
+        monkeypatch.setattr(web_server, "BASE_DIR", tmp_path)
+        with pytest.raises(HTTPException) as ei:
+            asyncio.run(web_server.upload_theme(file=_FakeThemeUpload("theme.txt")))
+        assert ei.value.status_code == 400
+        with pytest.raises(HTTPException) as ei:
+            asyncio.run(
+                web_server.upload_theme(
+                    file=_FakeThemeUpload("big.css", content=b"x" * (100 * 1024 + 1))
+                )
+            )
+        assert ei.value.status_code == 413
+
+    def test_guard_placed_before_write_bytes(self):
+        """源碼守衛：BUILTIN_THEMES 檢查必須位於 write_bytes 之前。"""
+        src = (ROOT / "web_server.py").read_text(encoding="utf-8")
+        guard_pos = src.index("sanitized.lower() in BUILTIN_THEMES")
+        write_pos = src.index("target.write_bytes(content)")
+        assert guard_pos < write_pos

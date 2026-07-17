@@ -1267,12 +1267,6 @@ async def update_paper(paper_uuid: str, req: PaperUpdate,
 
 # ── 主題上傳（RAG-1 R2 子項 B）──
 
-# === [SEC-HARDEN C4 START] ===
-# #6 內建主題名單（系統資產、不可被上傳覆寫）；與 list_themes 內建清單同源對齊。
-BUILTIN_THEMES = frozenset({"mies", "kahn", "kandinsky", "nara"})
-# === [SEC-HARDEN C4 END] ===
-
-
 @app.post("/api/themes/upload")
 async def upload_theme(file: UploadFile = File(...)):
     """RAG-1 R2 子項 B：上傳自訂主題 CSS。
@@ -1302,13 +1296,6 @@ async def upload_theme(file: UploadFile = File(...)):
     sanitized = _re.sub(r"_+", "_", sanitized).strip("_")
     if not sanitized:
         raise HTTPException(status_code=400, detail="檔名無效")
-
-    # === [SEC-HARDEN C4 START] #6 內建主題覆寫守衛（大小寫不敏感）===
-    # sanitize 後名稱轉小寫命中內建集即 400 拒絕、不寫檔——防 `Mies.css` 於
-    # 大小寫不敏感檔案系統（macOS APFS 預設）覆寫內建 CSS 資產；既有 5 道過濾零弱化。
-    if sanitized.lower() in BUILTIN_THEMES:
-        raise HTTPException(status_code=400, detail="不可覆寫內建主題")
-    # === [SEC-HARDEN C4 END] ===
 
     # 大小檢查
     content = await file.read()
