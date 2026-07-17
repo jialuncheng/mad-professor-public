@@ -69,21 +69,17 @@ def ensure_admin():
     """確保 admin user 存在，回傳 (id, username)。"""
     _ensure_db()
     with db.SessionLocal() as s:
-        # [SOP-COMPLY C2] with s.begin()：成功自動 commit、失敗自動 rollback；
-        # created 旗標讓 log（含 commit 後才有的 u.id）移出交易區。
-        with s.begin():
-            u = s.query(User).filter_by(username=settings.AUTH_USERNAME).one_or_none()
-            created = u is None
-            if created:
-                u = User(
-                    username=settings.AUTH_USERNAME,
-                    password_hash=settings.AUTH_PASSWORD_HASH or "",
-                    display_name=settings.AUTH_USERNAME,
-                    role="admin",
-                    is_active=True,
-                )
-                s.add(u)
-        if created:
+        u = s.query(User).filter_by(username=settings.AUTH_USERNAME).one_or_none()
+        if u is None:
+            u = User(
+                username=settings.AUTH_USERNAME,
+                password_hash=settings.AUTH_PASSWORD_HASH or "",
+                display_name=settings.AUTH_USERNAME,
+                role="admin",
+                is_active=True,
+            )
+            s.add(u)
+            s.commit()
             logger.info(f"建立 admin user: {u.username} (id={u.id})")
         return (u.id, u.username)
 
@@ -244,7 +240,7 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
     domain_val = (domain or '').strip() or None
     doc_type_val = (doc_type or '').strip() or None
     orig_fn_val = (original_filename or '').strip() or None
-    with db.SessionLocal() as s, s.begin():
+    with db.SessionLocal() as s:
         p = s.query(Paper).filter_by(
             owner_id=owner_id, paper_uuid=paper_uuid
         ).one_or_none()
@@ -275,18 +271,20 @@ def upsert_paper(output_dir, owner_id: int, paper_uuid: str,
             if meta_json is not None:
                 p.metadata_json = meta_json
             p.status = 'done'
+        s.commit()
     logger.info(f"papers DB 更新完成: owner={owner_id} {paper_uuid}")
 
 
 def delete_paper(output_dir, owner_id: int, paper_uuid: str) -> bool:
     """刪 DB row（cascade conversations）+ 實體目錄。"""
     _ensure_db()
-    with db.SessionLocal() as s, s.begin():
+    with db.SessionLocal() as s:
         p = s.query(Paper).filter_by(
             owner_id=owner_id, paper_uuid=paper_uuid
         ).one_or_none()
         if p is not None:
             s.delete(p)
+            s.commit()
     d = paper_dir(output_dir, owner_id, paper_uuid)
     if d.exists():
         shutil.rmtree(d, ignore_errors=True)
@@ -381,13 +379,12 @@ def append_chat_message(paper_db_id: int, user_id: int, role: str,
     """
     _ensure_db()
     with db.SessionLocal() as s:
-        # [SOP-COMPLY C2] begin() 自動守護；c.id 於 commit 後、session 內讀取（自動 refresh）
-        with s.begin():
-            c = Conversation(
-                paper_id=paper_db_id, user_id=user_id, role=role,
-                content=content, grounding_sources=grounding_sources or None,
-            )
-            s.add(c)
+        c = Conversation(
+            paper_id=paper_db_id, user_id=user_id, role=role,
+            content=content, grounding_sources=grounding_sources or None,
+        )
+        s.add(c)
+        s.commit()
         cid = c.id
     logger.info(
         f"對話訊息已 append: paper_id={paper_db_id} role={role} "
@@ -402,7 +399,7 @@ def save_chat_history(paper_db_id: int, user_id: int, history: list) -> None:
     history 每筆 dict 可選帶 grounding_sources（list）。寫入順序＝id 順序。
     """
     _ensure_db()
-    with db.SessionLocal() as s, s.begin():
+    with db.SessionLocal() as s:
         s.query(Conversation).filter_by(paper_id=paper_db_id).delete()
         for m in history or []:
             if not isinstance(m, dict):
@@ -415,14 +412,16 @@ def save_chat_history(paper_db_id: int, user_id: int, history: list) -> None:
                 content=m.get("content", ""),
                 grounding_sources=gs if gs else None,
             ))
+        s.commit()
     logger.info(f"對話紀錄已儲存: paper_id={paper_db_id}（{len(history or [])} 則）")
 
 
 def delete_conversations(paper_db_id: int) -> None:
     """刪除該 paper 的所有對話（刪 paper 時 DB 已 cascade，此為顯式輔助）。"""
     _ensure_db()
-    with db.SessionLocal() as s, s.begin():
+    with db.SessionLocal() as s:
         s.query(Conversation).filter_by(paper_id=paper_db_id).delete()
+        s.commit()
 
 
 # ─────────────────────── 向量庫 / 資源載入 ───────────────────────
@@ -1046,13 +1045,14 @@ def replace_paper_chunks(paper_db_id: int, chunks: list) -> int:
         寫入筆數
     """
     _ensure_db()
-    with db.SessionLocal() as s, s.begin():
+    with db.SessionLocal() as s:
         s.query(PaperChunk).filter_by(paper_id=paper_db_id).delete()
         if chunks:
             from sqlalchemy import insert
             s.execute(insert(PaperChunk), [
                 {**c, "paper_id": paper_db_id} for c in chunks
             ])
+        s.commit()
     return len(chunks)
 
 
