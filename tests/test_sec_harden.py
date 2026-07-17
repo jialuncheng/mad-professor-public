@@ -11,7 +11,12 @@ C2 — CORS Restriction（CORS 收斂）：
   #4 CORSMiddleware allow_origins 由 ["*"] 收斂為 settings.CORS_ALLOW_ORIGINS
      顯式白名單（env 覆寫、"*" 於 settings 層一律剔除）；不啟用 allow_credentials。
 
-（C3 例外遮蔽 / C4 主題守衛 之測試於各自 commit 逐階段追加。）
+C3 — Error Masking（例外遮蔽）：
+  #5 broad `Exception` client-facing 出口（broker 廣播/DB 落歷史 + pipeline 主軌/
+     影子軌 status SSE）→ 通用訊息、詳情 logger.error(exc_info=True) 落 server log；
+     3 處 ValueError 業務驗證 HTTPException 維持原樣（不可動守衛）。
+
+（C4 主題守衛 之測試於該 commit 追加。）
 """
 import sys
 from pathlib import Path
@@ -272,3 +277,79 @@ class TestCorsRestriction:
             # 還原：撤銷 env 後重載、防污染其他測試（settings 為模組級 config）
             monkeypatch.undo()
             importlib.reload(settings)
+
+
+# ── #5 例外遮蔽（C3）───────────────────────────────────────────────
+
+
+class TestErrorMasking:
+    def test_no_raw_str_e_in_task_error_sinks(self):
+        """源碼守衛：processing_tasks error 賦值不得為 str(e)（status SSE → 前端）。"""
+        src = (ROOT / "web_server.py").read_text(encoding="utf-8")
+        assert "['error'] = str(e)" not in src
+
+    def test_no_raw_str_e_in_broker_error_msg(self):
+        """源碼守衛：broker 廣播訊息不得內插 str(e)（(生成失敗) 夾帶例外細節）。"""
+        src = (ROOT / "web_server.py").read_text(encoding="utf-8")
+        assert "{str(e)[:200]}" not in src
+
+    def test_valueerror_http_exceptions_preserved(self):
+        """不可動守衛：3 處 ValueError 業務驗證 HTTPException(detail=str(e)) 維持原樣。"""
+        src = (ROOT / "web_server.py").read_text(encoding="utf-8")
+        assert src.count("raise HTTPException(status_code=400, detail=str(e))") == 3
+
+    def test_broker_stream_error_masked(self, monkeypatch):
+        """行為：broker 串流例外 → 廣播與 DB 落歷史均為通用訊息、無 raw 例外細節。"""
+        import asyncio
+
+        marker = "/secret/path/leak.py"
+
+        class _BoomCore:
+            def query_stream(self, **kwargs):
+                raise RuntimeError(f"boom at {marker}")
+
+        db_writes = []
+
+        def _capture_append(*args, **kwargs):
+            db_writes.append((args, kwargs))
+
+        monkeypatch.setattr(web_server, "ai_core", _BoomCore())
+        monkeypatch.setattr(
+            web_server.paper_manager, "append_chat_message", _capture_append
+        )
+
+        session = web_server.StreamSession(
+            owner_id=1, paper_db_id=1, paper_uuid="test-mask", query="q",
+        )
+
+        async def run():
+            q = asyncio.Queue(maxsize=10)
+            session.subscribers.append(q)
+            await web_server._run_stream_background(session, [], None, False)
+            chunks = []
+            while not q.empty():
+                chunks.append(q.get_nowait())
+            return chunks
+
+        chunks = asyncio.run(run())
+        # 廣播出口：通用訊息、無 raw 例外
+        error_chunks = [c for c in chunks if c.get("error")]
+        assert len(error_chunks) == 1
+        assert error_chunks[0]["sentence"] == "（生成失敗）處理發生錯誤，請稍後再試"
+        assert marker not in error_chunks[0]["sentence"]
+        assert session.done is True
+        # DB 落歷史出口（前端 reload 可見）：同為通用訊息、無 raw 例外
+        assert len(db_writes) == 1
+        db_content = db_writes[0][0][3]  # (paper_db_id, owner_id, role, content)
+        assert marker not in db_content
+        assert db_content == "（生成失敗）處理發生錯誤，請稍後再試"
+        # server 內部診斷欄位保留 raw（非 client-facing、全檔無讀取點）
+        assert marker in session.error
+
+    def test_masked_pipeline_logger_has_exc_info(self):
+        """logging SOP 守衛：被遮蔽 sink 對應之 logger.error 必含 exc_info=True。"""
+        src = (ROOT / "web_server.py").read_text(encoding="utf-8")
+        assert (
+            'logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}", '
+            "exc_info=True)" in src
+        )

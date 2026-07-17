@@ -165,12 +165,7 @@ async def _run_stream_background(session: StreamSession, history: list,
             await _broadcast(session, chunk)
         session.done = True
     except Exception as e:
-        # === [SEC-HARDEN C3 START] #5 例外遮蔽 ===
-        # client 出口（廣播 + DB 落歷史）改通用訊息、不再夾帶 str(e)（防洩路徑/
-        # schema/堆疊上下文）；詳情由下方 logger.error(exc_info=True) 落 server log；
-        # session.error 為 server 內部狀態（全檔無讀取點）、保留原值供除錯。
-        error_msg = "（生成失敗）處理發生錯誤，請稍後再試"
-        # === [SEC-HARDEN C3 END] ===
+        error_msg = f"(生成失敗) {str(e)[:200]}"
         session.error = str(e)
         logger.error(
             f"[broker] stream error paper={session.paper_uuid}: {e}",
@@ -684,10 +679,8 @@ async def run_pipeline(owner_id: int, paper_id: str, pdf_path: str, doc_type: st
         with tasks_lock:
             if task_key in processing_tasks:
                 processing_tasks[task_key]['status'] = 'error'
-                # === [SEC-HARDEN C3] #5 例外遮蔽：status SSE → 前端、改通用訊息 ===
-                processing_tasks[task_key]['error'] = "處理失敗，請稍後再試"
-        # === [SEC-HARDEN C3] 詳情落 server log（logging SOP：exc_info=True）===
-        logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}", exc_info=True)
+                processing_tasks[task_key]['error'] = str(e)
+        logger.error(f"論文處理失敗: owner={owner_id} {paper_id} - {str(e)}")
 
 
 # === [PIPE-SCAFFOLD OP-1 START] 影子 B 軌派發單元 ===
@@ -800,8 +793,7 @@ async def run_pipeline_shadow(owner_id: int, paper_id: str, pdf_path: str, doc_t
         with tasks_lock:
             if shadow_key in processing_tasks:
                 processing_tasks[shadow_key]['status'] = 'error'
-                # === [SEC-HARDEN C3] #5 例外遮蔽：status SSE → 前端、改通用訊息 ===
-                processing_tasks[shadow_key]['error'] = "處理失敗，請稍後再試"
+                processing_tasks[shadow_key]['error'] = str(e)
         # 影子失敗不影響 A 軌正本（plan v3 U2）
         logger.error(
             f"影子論文處理失敗（不影響 A 軌正本）: owner={owner_id} {paper_id_shadow} - {e}",
