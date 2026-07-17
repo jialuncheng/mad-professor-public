@@ -143,20 +143,6 @@ TRUSTED_PROXIES = frozenset(
 )
 # === [SEC-HARDEN C1 END] ===
 
-# === [SEC-HARDEN C2 START] ===
-# #4 CORS 顯式來源白名單：取代 web_server CORSMiddleware `allow_origins=["*"]` 萬用字元。
-# 預設含應用自身來源（uvicorn 0.0.0.0:8080）之本機兩形態（localhost / 127.0.0.1）；
-# 生產部署以 env CORS_ALLOW_ORIGINS 逗號分隔覆寫為實際站域；
-# 萬用字元 "*" 一律剔除（拒 `*`、防 env 誤設回退萬用）。
-# 註：應用前端與 API 同源、正常瀏覽不經 CORS；本白名單僅約束顯式跨源呼叫。
-_raw_cors_origins = os.getenv(
-    "CORS_ALLOW_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"
-)
-CORS_ALLOW_ORIGINS = [
-    o.strip() for o in _raw_cors_origins.split(",") if o.strip() and o.strip() != "*"
-]
-# === [SEC-HARDEN C2 END] ===
-
 # SEC-SECRET fail-closed：未設定時絕不回退為可預測的硬編碼常數。
 # - 已設定 → 直接採用。
 # - 未設定 → 生成臨時隨機密鑰（config 層不 fatal，防誤傷不用 session 的 CLI 工具）；

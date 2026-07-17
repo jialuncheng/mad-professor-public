@@ -274,17 +274,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Mad Professor Web API", lifespan=lifespan)
 
-# === [SEC-HARDEN C2 START] #4 CORS 收斂（取代 allow_origins=["*"] 萬用字元）===
-# 顯式來源白名單 settings.CORS_ALLOW_ORIGINS（env 可覆寫、"*" 於 settings 層一律剔除）；
-# methods 依實際 API 面收斂（grep @app.<method> 實況：GET/POST/PATCH/DELETE + preflight）；
-# 維持**不啟用** allow_credentials（cookie 不跨源）。應用前端同源、不經 CORS、不受影響。
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ALLOW_ORIGINS,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-# === [SEC-HARDEN C2 END] ===
 
 # ── 登入 / Session ──
 

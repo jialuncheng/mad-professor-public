@@ -7,7 +7,11 @@ C1 — Login Hardening（登入加固）：
   #8 login timing 等化：錯誤帳號 / AUTH_PASSWORD_HASH 未設 → 亦跑一次 dummy
      bcrypt 比對（模組級常數 _DUMMY_BCRYPT_HASH）；認證結果判定不變。
 
-（C2 CORS / C3 例外遮蔽 / C4 主題守衛 之測試於各自 commit 逐階段追加。）
+C2 — CORS Restriction（CORS 收斂）：
+  #4 CORSMiddleware allow_origins 由 ["*"] 收斂為 settings.CORS_ALLOW_ORIGINS
+     顯式白名單（env 覆寫、"*" 於 settings 層一律剔除）；不啟用 allow_credentials。
+
+（C3 例外遮蔽 / C4 主題守衛 之測試於各自 commit 逐階段追加。）
 """
 import sys
 from pathlib import Path
@@ -215,3 +219,56 @@ class TestLoginTimingEqualization:
             follow_redirects=False,
         )
         assert "error=locked" in resp.headers["location"]
+
+
+# ── #4 CORS 收斂（C2）───────────────────────────────────────────────
+
+
+def _cors_middleware_kwargs():
+    """自 app.user_middleware 取 CORSMiddleware 之註冊參數。"""
+    from fastapi.middleware.cors import CORSMiddleware
+
+    for m in web_server.app.user_middleware:
+        if m.cls is CORSMiddleware:
+            return m.kwargs
+    raise AssertionError("CORSMiddleware 未註冊")
+
+
+class TestCorsRestriction:
+    def test_settings_origins_explicit_and_no_wildcard(self):
+        """settings.CORS_ALLOW_ORIGINS 為非空顯式清單、不含萬用字元。"""
+        assert isinstance(settings.CORS_ALLOW_ORIGINS, list)
+        assert settings.CORS_ALLOW_ORIGINS  # 非空
+        assert "*" not in settings.CORS_ALLOW_ORIGINS
+
+    def test_middleware_origins_not_wildcard(self):
+        """CORSMiddleware allow_origins 已收斂＝settings 白名單、非 ["*"]。"""
+        kwargs = _cors_middleware_kwargs()
+        assert kwargs["allow_origins"] == settings.CORS_ALLOW_ORIGINS
+        assert "*" not in kwargs["allow_origins"]
+
+    def test_middleware_methods_headers_not_wildcard(self):
+        """allow_methods / allow_headers 依需收斂、非萬用字元。"""
+        kwargs = _cors_middleware_kwargs()
+        assert "*" not in kwargs["allow_methods"]
+        assert set(kwargs["allow_methods"]) == {"GET", "POST", "PATCH", "DELETE", "OPTIONS"}
+        assert "*" not in kwargs["allow_headers"]
+
+    def test_credentials_not_enabled(self):
+        """allow_credentials 維持未啟用（不可動清單：嚴禁啟用）。"""
+        kwargs = _cors_middleware_kwargs()
+        assert kwargs.get("allow_credentials", False) is False
+
+    def test_env_wildcard_is_filtered(self, monkeypatch):
+        """env 誤設 "*" → settings 解析層剔除、不回退萬用。"""
+        import importlib
+
+        monkeypatch.setenv("CORS_ALLOW_ORIGINS", "*, https://ok.example.com ,")
+        try:
+            importlib.reload(settings)
+            assert settings.CORS_ALLOW_ORIGINS == ["https://ok.example.com"]
+            assert "*" not in settings.CORS_ALLOW_ORIGINS
+        finally:
+            # 還原：撤銷 env 後重載、防污染其他測試（settings 為模組級 config）
+            monkeypatch.undo()
+            importlib.reload(settings)
