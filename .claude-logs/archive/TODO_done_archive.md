@@ -4,6 +4,20 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor SEC-HARDEN 後端安全縱深加固（PROJECT-REVIEW 安全縱深 5 項全關閉——login XFF/timing × CORS × 例外遮蔽 × 主題覆寫守衛；web_server.py + settings 2 新 config）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Login Hardening：settings +`TRUSTED_PROXIES`〔預設空·安全優先〕+ `_resolve_client_ip` 可信代理閘控**右向左**解析〔廢 XFF 最左值取法·封偽造繞過 5 次/分鐘鎖定·API-PERF C2 不鎖閘道目標由部署設定保留〕+ 模組級 dummy bcrypt timing 等化〔錯帳號/未設 hash 均跑一次比對·認證結果判定零動〕+ 新 `tests/test_sec_harden.py` 14 測試；deviation：stale XFF 測試契約同步〔`test_api_performance_and_robustness.py` 原斷言最左值取法·C1 報告 §4.4〕；715→729 passed | `52ebae8` |
+| C2 | CORS Restriction：settings +`CORS_ALLOW_ORIGINS`〔預設本機 8080 兩形態·解析層一律剔 `*`〕+ CORSMiddleware `["*"]`→顯式白名單 + methods 實況收斂〔GET/POST/PATCH/DELETE/OPTIONS〕+ headers=Content-Type、不啟用 credentials；+5 測試 729→734 passed | `a5e2bd4` |
+| C3 | Error Masking：broker〔廣播+DB 落聊天歷史雙出口〕+ 主軌/影子軌 status SSE 三 broad-`Exception` client 出口 `str(e)`→通用訊息、主軌 `logger.error` 補 `exc_info=True`；**排除** 3 處 ValueError HTTPException〔業務驗證·源碼守衛 count==3 鎖定〕；+5 測試〔含 broker 行為遮蔽·敏感路徑注入實測〕734→739 passed | `bc5d5f4` |
+| C4 | Theme Overwrite Guard：模組級 `BUILTIN_THEMES` frozenset〔mies/kahn/kandinsky/nara〕+ sanitize 後 `lower()` 命中內建即 400〔`write_bytes` 前攔截·大小寫不敏感·防 macOS APFS 覆寫〕、既有 5 道過濾零弱化；+6 測試 739→745 passed | `3942e20` |
+| checkout | 成果收官：Conformance 五維度全綠〔plan §2 七規格項 / tasks §6 驗收 / 不可動 / 提示詞 7 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C4 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔含 GOV-PATH-FIX checkout=`52ebae8` 判定〕+ staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-12_SEC-HARDEN_後端安全縱深加固_plan_v1.md`（v1.1 七 OQ 拍板）。
+> **動因**：PROJECT-REVIEW 安全審查 #3（XFF 偽造繞過 rate-limit·MEDIUM）/ #4（CORS `*`）/ #5（`str(e)` 外洩）/ #6（主題覆寫內建）/ #8（login timing oracle）。
+> **⚠️ 運維**：① 反向代理（Docker/Nginx/LB）部署**必須** `.env` 設 `TRUSTED_PROXIES`（否則回退 API-PERF C2 閘道鎖死問題）；② 生產跨源部署須設 `CORS_ALLOW_ORIGINS`（預設僅本機 8080）；③ 前端錯誤訊息已通用化、診斷一律看 server log（exc_info 完整堆疊）。
+
 ### FE-Refactor TEST-GREEN 前端CSS測試改讀分包（15 stale 前端 CSS 測試改讀 static/css 分包聯集；FE-CSS-GOV C1 拆檔之測試面收尾）
 
 | Commit | 內容 | Hash |
@@ -18,7 +32,7 @@
 | C1 | Vendor & Load：`npm pack dompurify@3.1.6` 自託管 `static/vendor/dompurify/`〔SHA-256 `c0845096…dbe3a1` 登記 README〕+ index.html head defer 載入〔marked 後〕+ fetch_frontend_vendor.sh 釘版下載/校驗段 + `tests/test_sec_xss_guard.py` 四靜態守衛〔含 README 指紋==實測 hash 雙向漂移抓〕；純載入零行為變更；708→712 passed | `d5ef6b6` |
 | C2 | Markdown Sanitize：`renderMarkdownWithMath` 於 marked.parse 後、KaTeX 回填前插 `DOMPurify.sanitize(html)`＝**一處覆蓋 6 個 markdown innerHTML sink**；管線鐵律守恆〔diff 僅 +5 行·佔位步驟 1-5/7 一字不改·PUA 哨兵文字節點保留·KaTeX 可信產出消毒後回填〕；守衛 +1 接線位置斷言；712→713 passed | `ecd2e95` |
 | C3 | Sources & Meta Hardening：`renderSources` 節點化〔createElement+textContent+**href 僅 http/https**·惡意 scheme 不設 href〕+ `normalizeAcademicHeader` 五欄與 `renderPapers` 兩標題**變數單體消毒**〔靜態模板 data-tip/SVG byte 原樣·守衛斷言〕；~27 靜態/清空 sink 一字不改；守衛 +2；713→**715 passed** | `9b07117` |
-| checkout | 成果收官：Conformance 五維度全綠〔守衛收官重跑 7 passed·後端零觸·遞增綠燈 708→715〕+ baton 歸檔 + TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔守衛收官重跑 7 passed·後端零觸·遞增綠燈 708→715〕+ baton 歸檔 + TODO 雙層結案 + hash 自癒 + staged 白名單自檢 | `9586866` |
 
 > **修法依據**：`plans/2026-07-12_SEC-XSS_DOMPurify輸出消毒_plan_v1.md`。
 > **動因**：PROJECT-REVIEW 安全 #2 MEDIUM stored XSS——marked 原始輸出直接進 innerHTML 無消毒；文件衍生值（grounding 來源/meta/標題）字串插值轉活。

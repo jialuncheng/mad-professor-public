@@ -1,4 +1,4 @@
-# Mad Professor — TODO（最後更新 2026-07-09，CONTEXT-1 C4 瘦身歸檔）
+# Mad Professor — TODO（最後更新 2026-07-18，SEC-HARDEN Check 收官）
 
 > 本文件為 **Single Source of Truth**（依 `.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md` §2.1）。
 > **任何規劃 / 執行 / hotfix 前必先 view 框架文件**：`.claude-logs/PROJECT_PROGRESS_CONTROL_FRAMEWORK.md`
@@ -13,6 +13,7 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
+- ✅ BE-Refactor SEC-HARDEN 後端安全縱深加固（`52ebae8`…`3942e20`、5 commits·XFF 可信代理右向左+timing 等化×CORS 白名單×例外遮蔽×主題覆寫守衛·PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉·715→745 綠燈·checkout hash 待 baron 回填）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…`9586866`、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
 - ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor TEST-GREEN 前端CSS測試改讀分包（`a4e6e5b`…`3a71293`、2 commits·15 stale 斷言改讀 CSS 分包聯集×705 綠燈基線恢復）→ archive/TODO_done_archive.md
@@ -107,17 +108,7 @@
 
 - ✅ **GOV-PATH-FIX 校正下游治理檔 stale worktree 路徑**（hotfix·DOC-Refactor·`.claude-logs/hotfixes/2026-07-12_GOV-PATH-FIX_stale_worktree_path_hotfix.md`）
   - 校正 CONTEXT-1 C2 漏改之 3 下游治理檔殘留已刪除 worktree `hopeful-yalow-902c50`：`template_prompt_for_tasks.md`（工作目錄硬規則對齊 CLAUDE.md §3·元凶）/ `framework §9.1`（重點句去硬編）/ `GOVERNANCE_OVERVIEW.md`（6 導航連結改相對路徑·去死絕對前綴）
-  - 驗收：3 活躍源 `grep hopeful-yalow-902c50` 零殘留 + GOVERNANCE_OVERVIEW `file:///`=0 + 4 相對目標實檔可解析；歷史檔依 WORKFLOW_SOP §2 不溯及既往、不動；fix `31f7500` + checkout 收官歸檔（hotfix 規劃書 mv→hotfixes/）；Checkout Hash：`待 baron 回填`
-
-- 🟡 **SEC-HARDEN 後端安全縱深加固**（`.claude-logs/baton/2026-07-12_SEC-HARDEN_後端安全縱深加固_plan_v1.md`）
-  - [/] 🟡 WIP: C1 — Login Hardening（登入加固·#3 XFF 右向左 + #8 timing 等化）
-  - [ ] ⬜ 未開始: C2 — CORS Restriction（CORS 收斂·#4）
-  - [ ] ⬜ 未開始: C3 — Error Masking（例外遮蔽·#5 broad Exception·排除 ValueError）
-  - [ ] ⬜ 未開始: C4 — Theme Overwrite Guard（主題覆寫守衛·#6 大小寫不敏感）
-  - [ ] checkout — 成果收官歸檔（成果歸檔與移出暫存）
-  - 背景：PROJECT-REVIEW 安全縱深 5 項全在 web_server.py；新增 settings TRUSTED_PROXIES/CORS_ALLOW_ORIGINS 2 config；BE-Refactor 每 commit §5 SOP 核查；⚠️ 反向代理部署須設 TRUSTED_PROXIES（否則回退 API-PERF C2）
-  - 工時：5 個 commits（4 impl + checkout）
-  - 依賴：無
+  - 驗收：3 活躍源 `grep hopeful-yalow-902c50` 零殘留 + GOVERNANCE_OVERVIEW `file:///`=0 + 4 相對目標實檔可解析；歷史檔依 WORKFLOW_SOP §2 不溯及既往、不動；fix `31f7500` + checkout 收官歸檔（hotfix 規劃書 mv→hotfixes/）；Checkout Hash：`52ebae8`（歸檔檔隨 SEC-HARDEN C1 commit 落地·SEC-HARDEN Check 自癒判定）
 
 - 🔵 **CHAT-STRUCT-1 — 結構化欄位確定性回答（履歷聯絡 #5·選 C）**（**⚠️ 原 plan `.claude-logs/baton/2026-06-08_CHAT-STRUCT-1_結構化欄位確定性回答_plan_v1.md` 已隨舊 worktree 刪除遺失、待獨立重建**〔RESCUE-1 C4 標·見文末遺失清單〕；規格骨架保存於下列子項）
   - #5：履歷 candidate_name/phone/email/domain 只在 DB metadata_json + final_zh header、不入向量 → 「他的 email/電話?」RAG 撈不到（聯絡屬結構化、嵌入效果差、RAG 非對的工具）
@@ -371,6 +362,9 @@
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
+
+### SEC-HARDEN (✅ 已完成)
+- ✅ ~~SEC-HARDEN 後端安全縱深加固~~（已落地、C1 `52ebae8` + C2 `a5e2bd4` + C3 `bc5d5f4` + C4 `3942e20` + checkout 收官；BE-Refactor 治 PROJECT-REVIEW 安全縱深 5 項——C1 login 加固〔TRUSTED_PROXIES 可信代理閘控·XFF 右向左解析廢最左值封偽造繞過 rate-limit + dummy bcrypt timing 等化〔錯帳號/未設 hash 均跑·認證判定零動〕〕/ C2 CORS 收斂〔CORS_ALLOW_ORIGINS 顯式白名單拒 `*`·methods 實況收斂·不啟用 credentials〕/ C3 例外遮蔽〔broker+主軌/影子軌三 broad-Exception client 出口改通用訊息+exc_info=True·排除 3 處 ValueError 業務驗證〕/ C4 主題覆寫守衛〔BUILTIN_THEMES frozenset·sanitize 後 lower() 命中即 400·write_bytes 前攔截·既有 5 道過濾零弱化〕；tests/test_sec_harden.py 30 測試、715→745 passed；C1 deviation：stale XFF 測試契約同步〔test_api_performance_and_robustness〕；⚠️ 反向代理部署須設 TRUSTED_PROXIES、生產跨源須設 CORS_ALLOW_ORIGINS）
 
 ### SEC-SECRET (✅ 已完成)
 - ✅ ~~SEC-SECRET SESSION_SECRET fail-closed~~（已落地、hotfix `a7fa87f` + checkout 收官；BE-Hotfix 治 PROJECT-REVIEW 安全 #1 HIGH〔CWE-798 公開硬編碼簽章金鑰致 admin 認證繞過〕——settings.py 移除硬編碼 fallback 常數、未設生成臨時隨機密鑰〔`token_urlsafe(48)`〕+ `SESSION_SECRET_IS_EPHEMERAL` 旗標；web_server.py 生產環境未設 / 過弱〔<32〕金鑰拒絕啟動；新增 test_session_secret_failclosed.py〔3 測試·autouse 防污染 fixture〕；§5 SOP 雙核查合規、全套件 708 passed；review 補強弱金鑰守衛 + 測試污染清理 + 雙檔常數檢查）

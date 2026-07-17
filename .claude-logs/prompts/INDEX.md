@@ -1,7 +1,12 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-12（GOV-PATH-FIX Check 收官）
+最後更新：2026-07-18（SEC-HARDEN Check 收官）
 
+- 2026-07-18 — `2026-07-18_SEC-HARDEN_Check_提示詞.md`（Check·checkout 收官·BE-Refactor：Conformance 五維度〔plan §2 七規格項對照 C1-C4 報告 / tasks §6 驗收〔grep+745 綠燈遞增鏈〕/ 不可動〔認證判定·ValueError×3·sanitize 五道·SSE 協定〕/ 提示詞 7 份歸檔稽核 / msg 草稿〕→ 全綠後 TODO 雙層結案〔active 移除+archive 追加表格+索引 pointer+類別索引〕+ C1-C4 hash 自癒〔`52ebae8`/`a5e2bd4`/`bc5d5f4`/C4〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C4 報告〕+ 7 提示詞入版控 + staged 白名單自檢實貼 + 直產 checkout 執行報告〔§7.2 純後端無 handoff 豁免〕;SEC-HARDEN 全案結案〔PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉〕;commit 由 baron 手動）
+- 2026-07-18 — `2026-07-18_SEC-HARDEN_C4_run_提示詞.md`（C4 Run·BE-Refactor：Theme Overwrite Guard——模組級 `BUILTIN_THEMES` frozenset〔mies/kahn/kandinsky/nara〕+ theme 上傳 sanitize 後 `sanitized.lower()` 命中內建即 400 拒絕〔`write_bytes` 前攔截·大小寫不敏感·防 macOS 覆寫〕;既有 sanitize/traversal/大小限制零弱化;test_sec_harden 追加 mies/Mies→400 不寫檔;§6.4 grep+§6.5 全套件+§6.6 SOP 核查;執行報告暫存 baton;TODO C4→✅/checkout→WIP+hash 自癒;git add 2 檔+1 .bak）
+- 2026-07-18 — `2026-07-18_SEC-HARDEN_C3_run_提示詞.md`（C3 Run·BE-Refactor：Error Masking——broker 串流（`:168` 區）+ 主軌 run_pipeline / 影子軌 run_pipeline_shadow 之 broad `Exception` client 出口 `str(e)`→通用訊息、詳情 `logger.error(..., exc_info=True)` 落 server log;**排除** 3 處 `except ValueError` HTTPException〔`:1136/:1159/:1223` 業務驗證·不動〕;test_sec_harden 追加遮蔽驗證;§6.3 grep+§6.5 全套件+§6.6 SOP 核查〔新增 logger.error 須 exc_info〕;執行報告暫存 baton;TODO C3→✅/C4→WIP+hash 自癒;git add 2 檔+1 .bak）
+- 2026-07-18 — `2026-07-18_SEC-HARDEN_C2_run_提示詞.md`（C2 Run·BE-Refactor：CORS Restriction——settings +CORS_ALLOW_ORIGINS〔env 清單·預設應用來源+localhost/127.0.0.1·拒 `*`〕+ web_server CORSMiddleware `allow_origins=["*"]`→顯式白名單、methods/headers 依需收斂、嚴禁啟用 allow_credentials;test_sec_harden 追加 CORS 非 `*` 斷言;§6.2 grep+§6.5 全套件+§6.6 SOP 核查;執行報告暫存 baton;TODO C2→✅/C3→WIP+hash 自癒;git add 3 檔+2 .bak）
+- 2026-07-18 — `2026-07-18_SEC-HARDEN_C1_run_提示詞.md`（C1 Run·BE-Refactor：Login Hardening——settings +TRUSTED_PROXIES、僅 Peer 為可信代理時由右向左解析 XFF 鏈〔廢最左值取法·封 IP 偽造繞過 rate-limit〕+ 模組級 dummy bcrypt hash 等化登入 timing〔無效帳號/未設 hash 均跑 dummy 比對〕+ 新 tests/test_sec_harden.py;認證結果判定本體不可動;§6.1 pytest 全套+§6.6 SOP 核查;執行報告暫存 baton;TODO C1→✅/C2→WIP+hash 自癒;git add 3 檔+2 .bak）
 - 2026-07-12 — `2026-07-12_GOV-PATH-FIX_Check_提示詞.md`（Check·checkout 收官·DOC-Refactor：Conformance 三維度〔目標規格 3 下游檔 stale 路徑零殘留〔grep hopeful-yalow-902c50=0 + GOVERNANCE_OVERVIEW file:///=0〕/ fix commit `31f7500` 含 3 治理檔+3 .bak 零業務碼 / 歷史檔不溯及既往 64 處刻意保留〕→ 全綠後 baton hotfix 規劃書 mv→hotfixes/ + TODO 結案〔fix `31f7500` 回填·checkout 待回填〕+ 提示詞入版控 + 直產 checkout 執行報告〔staged 白名單自檢〕;hotfix 兩 commit〔fix+checkout〕;commit 由 baron 手動）
 - 2026-07-12 — `2026-07-12_GOV-PATH-FIX_hotfix_提示詞.md`（hotfix 文件·DOC-Refactor：稽核發現 CONTEXT-1 C2 更新 CLAUDE.md §3 主 repo 雙視圖時漏改 3 下游治理檔仍硬編死 worktree〔template_prompt_for_tasks.md:67 元凶 / framework §9.2:282 / GOVERNANCE_OVERVIEW.md 6 連結〕；產校正 hotfix 文件含真因/3 檔 diff/commit 草稿·暫存 baton/·依 template_hotfix；歷史檔不溯及既往）
 - 2026-07-12 — `2026-07-12_SEC-HARDEN_tasks_提示詞.md`（Tasks·BE-Refactor：依 plan v1.1〔OQ1-7 拍板〕拆 SEC-HARDEN 為最小可逆原子 commits——C1 登入加固〔#3 XFF 右向左解析 + #8 timing 等化·同 login 函式〕/ C2 CORS 收斂〔#4〕/ C3 例外遮蔽〔#5 broad Exception·排除 ValueError〕/ C4 主題覆寫守衛〔#6 大小寫不敏感〕/ checkout；各 commit 綁 test_sec_harden + §5 SOP 核查、執行報告暫存 baton；§0.5 成果盤點+§8 六維度+§1 中文括號命名；同步 TODO 🟡 WIP·依賴無）
@@ -39,15 +44,28 @@
 - 2026-07-09 — `2026-07-09_DOC-SYNC-1_plan_提示詞.md`（plan·DOC-Refactor：design/docs 現況對齊「清帳版」——實測 dom-reference 覆蓋率 36%〔27/75 ID〕+ components 6 幽靈 class〔規劃寫成現況〕→ 清幽靈+補漏記、**刻意不深耕**〔ownership map/@layer 原則/theme-guide 改寫留 FE-CSS-GOV 各 commit 配套〕;token 契約層實測零差不動;不含 commit 建議）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_Check_提示詞.md`（Check·checkout 收官·FE-Refactor：Conformance 五維度〔plan §2 U1-U8 跨 commit 覆蓋 / tasks §6 / 不可動 / 提示詞 7 份稽核 / msg 草稿〕→ baton 一次性歸檔〔plan/tasks/C1-C4 報告·audit 兩份長駐不碰〕+ TODO 雙層結案〔framework §2.5 v5〕+ hash 自癒 + **鐵律 checkout 報告直產 executions/ 含 staged 白名單自檢**;FE-PERF-2 全案結案）
 - 2026-07-09 — `2026-07-09_FE-PERF-2_C4_run_提示詞.md`（C4 Run·FE-Refactor：Paint Hints——KaTeX 兩核心字型 preload〔as=font+crossorigin·消 FOUT〕+ 兩處 scroll 監聽 `{capture:true,passive:true}`〔已核實無 preventDefault〕+ `.msg-user`/`.msg-ai` `content-visibility:auto`+`contain-intrinsic-size:auto 120px`〔記憶尺寸型·禁固定值·底線 Safari 18+ 基線內〕;git add 僅 index.html+.bak;C1–C4 實作完結、餘 checkout）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_C3_run_提示詞.md`（C3 Run·FE-Refactor：Stream Throttle——新增 `makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併同幀〕+ 主串流接線〔sentence→update·done 首行 flush·catch 補 flush〕+ replay 接線〔sentence→update·done 首行 cancel+沿用原收尾·cursor 語意〕;消 O(n²) 熱路徑;`renderMarkdownWithMath` 內部嚴禁改;git add 僅 index.html+.bak）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_C2_run_提示詞.md`（C2 Run·FE-Refactor：Deferred Boot——前置閘 `on[a-z]+=` 核查〔期望零 inline handler〕→ marked/katex 兩 script 加 defer → inline 主 script（~2200 行）整包 `DOMContentLoaded`〔頭尾插入+marker·嚴禁重排縮排·deferred 先於 DOMContentLoaded 保證 marked.use 安全〕;§6.2+node --check 語法驗;git add 僅 index.html+.bak）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_C1_run_提示詞.md`（C1 Run·FE-Refactor：Marked Vendoring——marked 9.1.6 鎖版自 cdnjs 原 URL 下載自託管 `static/vendor/marked/marked.min.js` + `index.html:8` src 換本地路徑〔**不加 defer**·換源與時序解耦、defer 屬 C2〕;§6.1 驗收 cdnjs=0+node smoke;.bak 落 `.claude-logs/archive/`;git add 僅 index.html+vendor+.bak）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_Tasks_提示詞.md`（Tasks·FE-Refactor：依 plan v3〔八 OQ 定案+底線 Safari 18+〕拆 5 commit〔C1 marked 9.1.6 自託管換源 / C2 defer+inline script DOMContentLoaded 整包〔前置閘 on[a-z]+= 期望 0〕 / C3 串流 rAF+160ms 節流+done 收尾+滾動同批〔主串流+replay 兩路〕 / C4 字型 preload×2+scroll passive×2+content-visibility 記憶尺寸型 / checkout〕;修改邊界僅 static/index.html+vendor/marked;每 Run 產 .bak 入 git;同步 TODO 🟡 WIP）
-- 2026-07-09 — `2026-07-09_FE-PERF-2_plan_提示詞.md`（plan·FE-Refactor：依 `baton/frontend_browser_standards_audit.md` 落實性複核之「FE 包」開 plan——#1 串流 O(n²) 重排〔rAF 節流+chunk.done 收尾全量〕/ #3 marked 自託管 9.1.6+defer〔連帶 inline script DOMContentLoaded 化·body 零 inline handler 已驗〕/ #4 KaTeX 兩核心字型 preload / #7 scroll passive;純 static/index.html+vendor、SSE 契約不變、零後端零 golden;**首次 dogfood FE 必讀 SOP 實碼**;不含 commit 建議）
 > 本檔案在每次新增提示詞時必須同步更新。
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### SEC-HARDEN 系列（後端安全縱深加固）
+- ✅ **SEC-HARDEN 後端安全縱深加固（2026-07-12 plan v1 → v1.1 七 OQ 拍板 → Tasks → C1-C4 → Check 收官·BE-Refactor·已結案）**
+  - `2026-07-12_SEC-HARDEN_plan_提示詞.md` — plan（PROJECT-REVIEW 安全縱深 5 項〔#3 XFF / #4 CORS / #5 str(e) / #6 主題覆寫 / #8 timing〕全在 web_server.py；開加固 plan 暫存 baton/）
+  - `2026-07-12_SEC-HARDEN_tasks_提示詞.md` — Tasks（依 plan v1.1 拆最小可逆原子 commits：C1 登入加固 / C2 CORS 收斂 / C3 例外遮蔽 / C4 主題覆寫守衛 / checkout；各 commit 綁 test_sec_harden + §5 SOP 核查）
+  - `2026-07-18_SEC-HARDEN_C1_run_提示詞.md` — C1 Run（Login Hardening：settings +TRUSTED_PROXIES + XFF 右向左解析〔封 IP 偽造〕+ 模組級 dummy bcrypt timing 等化 + 新 tests/test_sec_harden.py；認證判定本體不可動）
+  - `2026-07-18_SEC-HARDEN_C2_run_提示詞.md` — C2 Run（CORS Restriction：settings +CORS_ALLOW_ORIGINS〔預設應用來源+本機·拒 `*`〕+ CORSMiddleware 顯式白名單、不啟用 credentials；test_sec_harden 追加非 `*` 斷言）
+  - `2026-07-18_SEC-HARDEN_C3_run_提示詞.md` — C3 Run（Error Masking：broker + pipeline 主軌/影子軌 broad `Exception` client 出口改通用訊息 + `logger.error(exc_info=True)`；排除 3 處 ValueError HTTPException；test_sec_harden 追加遮蔽驗證）
+  - `2026-07-18_SEC-HARDEN_C4_run_提示詞.md` — C4 Run（Theme Overwrite Guard：模組級 `BUILTIN_THEMES` frozenset + sanitize 後 `lower()` 命中內建 4 名即 400、`write_bytes` 前攔截〔大小寫不敏感〕；既有守衛零弱化；test_sec_harden 追加 mies/Mies→400 不寫檔）
+  - `2026-07-18_SEC-HARDEN_Check_提示詞.md` — Check/checkout 收官（Conformance 五維度全綠 → TODO 雙層結案+hash 自癒 + baton 一次性歸檔〔plan/tasks/C1-C4 報告〕+ 7 提示詞入版控 + staged 白名單自檢 + 直產 checkout 執行報告；SEC-HARDEN 全案結案）
+
+### FE-PERF-2 系列（前端效能紅線四項實修）
+- ✅ **FE-PERF-2 前端效能紅線四項實修（2026-07-09 plan v3 → Tasks → C1-C4 → Check 收官·FE-Refactor·已結案；C1-C4/Check 提示詞見依時間排序、超期後陸續移入本節）**
+  - `2026-07-09_FE-PERF-2_plan_提示詞.md` — plan（依 `baton/frontend_browser_standards_audit.md` 落實性複核之「FE 包」開 plan——#1 串流 O(n²) 重排〔rAF 節流+chunk.done 收尾全量〕/ #3 marked 自託管 9.1.6+defer〔連帶 inline script DOMContentLoaded 化〕/ #4 KaTeX 兩核心字型 preload / #7 scroll passive;純 static/index.html+vendor、零後端零 golden;首次 dogfood FE 必讀 SOP 實碼;不含 commit 建議）
+  - `2026-07-09_FE-PERF-2_Tasks_提示詞.md` — Tasks（依 plan v3〔八 OQ 定案+底線 Safari 18+〕拆 5 commit〔C1 marked 自託管 / C2 defer+DOMContentLoaded 整包 / C3 串流 rAF+160ms 節流 / C4 字型 preload+scroll passive+content-visibility / checkout〕;修改邊界僅 static/index.html+vendor/marked）
+  - `2026-07-09_FE-PERF-2_C1_run_提示詞.md` — C1 Run（Marked Vendoring：marked 9.1.6 鎖版自 cdnjs 下載自託管 `static/vendor/marked/` + index.html src 換本地路徑〔不加 defer·屬 C2〕;§6.1 驗收 cdnjs=0+node smoke）
+  - `2026-07-09_FE-PERF-2_C2_run_提示詞.md` — C2 Run（Deferred Boot：前置閘 `on[a-z]+=` 核查〔期望零 inline handler〕→ marked/katex 加 defer → inline 主 script 整包 `DOMContentLoaded`〔頭尾插入+marker·嚴禁重排縮排〕;§6.2+node --check）
+  - `2026-07-09_FE-PERF-2_C3_run_提示詞.md` — C3 Run（Stream Throttle：`makeThrottledRenderer`〔rAF+160ms·update/flush/cancel·scrollTop 併同幀〕+ 主串流/replay 兩路接線;消 O(n²) 熱路徑;`renderMarkdownWithMath` 內部嚴禁改）
 
 ### TEST-GREEN 系列（前端 CSS 測試改讀分包）
 - ✅ **TEST-GREEN 前端CSS測試改讀分包（2026-07-10 plan v1 → v1.1 五 OQ 拍板 → Tasks → C1 → Check 收官·FE-Refactor·已結案）**
