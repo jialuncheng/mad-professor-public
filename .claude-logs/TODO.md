@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（`98f8848`…`0dff639`、4 commits·25 exc_info 補齊+llm 吞例外留痕×AST grep-gate 守衛×paper_manager 13 裸 commit 全清〔自持 7 begin+借用 6 呼叫端協調〕·PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉·745→748 綠燈·checkout hash 待 baron 回填）→ archive/TODO_done_archive.md
+- ✅ DOC-Refactor BRAINSTORM-1 brainstorming問答與視覺伴讀（`3602a42`…`待 baron 回填`、3 commits·vendor superpowers brainstorming 不裝 plugin·C1 問答骨架 SOP+視覺伴讀指引〔溯源 header+spec→template_plan 對照+兩護欄+移除 auto-commit〕/C2 5 腳本+smoke 入 tools〔逐字＝上游·start-server.sh 僅 4 落點行·server.cjs 零編輯·smoke HTTP 200〕/Checkout·畫圖 server smoke 實證·零 .py）→ archive/TODO_done_archive.md
+- ✅ BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（`98f8848`…`0dff639`、4 commits·25 exc_info 補齊+llm 吞例外留痕×AST grep-gate 守衛×paper_manager 13 裸 commit 全清〔自持 7 begin+借用 6 呼叫端協調〕·PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉·745→748 綠燈·checkout `fb3e76a`）→ archive/TODO_done_archive.md
 - ✅ BE-Refactor SEC-HARDEN 後端安全縱深加固（`52ebae8`…`3942e20`、5 commits·XFF 可信代理右向左+timing 等化×CORS 白名單×例外遮蔽×主題覆寫守衛·PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉·715→745 綠燈·checkout `e287347`）→ archive/TODO_done_archive.md
 - ✅ FE-Refactor SEC-XSS 前端輸出消毒（`d5ef6b6`…`9586866`、4 commits·DOMPurify 樞紐消毒×6 sink+邊角加固·708→715 綠燈）→ archive/TODO_done_archive.md
 - ✅ BE-Hotfix SEC-SECRET SESSION_SECRET fail-closed（`a7fa87f`、1 commit·移除硬編碼 fallback 常數×prod 未設/弱<32 拒啟動×dev 臨時隨機×708 綠燈·修 PROJECT-REVIEW 安全 #1 HIGH CWE-798）→ archive/TODO_done_archive.md
@@ -363,6 +364,9 @@
 
 ### CHECKOUT-GUARD (✅ 已完成)
 - ✅ ~~CHECKOUT-GUARD 收官 git-add 白名單鐵律~~（已落地、C1 `81179d8` + C2 `dbd6d24` + checkout 收官；DOC-Refactor 治 FE-PERF-1 收官跨任務混檔——`WORKFLOW_SOP §3` 立「收官 git-add 白名單鐵律〔逐檔·禁 `git add .`/`-A`/`<目錄>`·commit 前 `git diff --cached` staged 自檢〕+ checkout 執行報告鐵律」+§99.2 v6·三模板〔run/check/execution §8 警語 + check 收官第五步自檢/第六步 mandate 報告〕；§2.5 純文件鐵律選定〔hook enforcement 列 backlog〕；§7.2 純 DOC 豁免；零業務碼；**首次 dogfood checkout 執行報告鐵律 + Check 階段當場攔下 C2 未 commit〕**）
+
+### BRAINSTORM (✅ 已完成)
+- ✅ ~~BRAINSTORM-1 brainstorming問答與視覺伴讀~~（已落地、C1 `3602a42` + C2 `2113db1` + Checkout 收官；DOC-Refactor vendor superpowers brainstorming〔`obra/superpowers@d884ae0`〕不裝 plugin——C1 新建 sop/ 作業 SOP〔問答骨架 8 步 + 落點 baton/ + 溯源 header + spec→template_plan 對照〔四樣護欄留階段 1〕+ 兩護欄 + 移除 auto-commit〕+ 視覺伴讀指引〔scripts/→.claude-logs/tools/〕/ C2 vendored 5 腳本+smoke 入 tools/〔4 檔逐字＝上游·start-server.sh 僅 4 落點行〔.superpowers/brainstorm→.claude-logs/baton/.brainstorm〕·server.cjs 零編輯·**smoke 實測 HTTP 200 端到端**〕；全文完整根路徑防呆；§7.2 純 DOC+tooling 豁免；零 .py/.bak；⚠️ baron E2E 兩路〔純問答路 spec 落 baton+溯源 header / 視覺伴讀路 server 起+瀏覽器+events+mockup 落 baton gitignored〕）
 
 ### SOP-COMPLY (✅ 已完成)
 - ✅ ~~SOP-COMPLY logging與DB_SOP合規清帳~~（已落地、C1 `98f8848` + C2 `68987e8` + C3 `0dff639` + checkout 收官；BE-Refactor 實施專案自身 logging/database SOP 清帳——C1 日誌合規〔9 檔 25 處 except 內 logger.error 補 exc_info〔AST 精確·排除 14 續行假陽性+1 非-except 守衛〕+ llm/client:181 吞例外改 warning(exc_info) 留痕 + tests/test_sop_comply_guard.py AST grep-gate 防回歸〕/ C2 自持交易守護〔paper_manager 7 處 with s.begin() 移除顯式 commit·begin 置 session 起始防 autobegin·後讀 u.id/c.id 外移等價〕/ C3 借用交易呼叫端協調〔原子：6 helper 移除 session.commit()〔create_folder 補 flush 保 f.id〕+ web_server 5 folder/tag 端點包 begin〔ValueError→400 保留〕+ 3 測試檔 15 寫入區塊包 begin〔斷言零動〕〕；paper_manager 裸 commit 13→0 全清、745→748 passed；C1/C2 共檔 paper_manager 以 C2 .bak 分離 staging 乾淨分次 ship；範圍外債 tools/regen_rag.py:252 留 baron 拍板）

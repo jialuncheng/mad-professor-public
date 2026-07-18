@@ -4,6 +4,19 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### DOC-Refactor BRAINSTORM-1 brainstorming問答與視覺伴讀（vendor superpowers brainstorming·不裝 plugin——問答骨架 SOP + 視覺伴讀畫圖整套抽進 .claude-logs/·落點/溯源/護欄改寫貼合本專案）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Brainstorming SOP & Visual Companion：新建 `.claude-logs/sop/2026-07-18_brainstorming_設計發想作業_SOP_手冊.md`（問答骨架 8 步 + 落點規範〔spec→baton/·禁 docs/superpowers/〕 + 溯源 header 樣板 + spec→template_plan 欄位對照〔四樣護欄留階段 1〕 + 兩護欄 + 移除 auto-commit + 視覺伴讀章）+ `.claude-logs/sop/2026-07-18_brainstorming_visual-companion_指引.md`（vendored·scripts/→.claude-logs/tools/·10 處）；全文完整根路徑防呆；零 .py/.bak | `3602a42` |
+| C2 | Vendored Scripts & Env Redirect：vendored 5 腳本 + 1 smoke 入 `.claude-logs/tools/`（來源 obra/superpowers@d884ae0）；server.cjs/helper.js/stop-server.sh/frame-template.html 逐字＝上游〔diff 零差〕，start-server.sh 僅改 4 落點行〔.superpowers/brainstorm→.claude-logs/baton/.brainstorm·server.cjs 零編輯〕，新增 test_brainstorm_server_smoke.sh〔**實測 HTTP 200 端到端**〕；mockup 落點 gitignored；零 .py/.bak | `2113db1` |
+| Checkout | 收官歸檔與驗證：Conformance 五維度全綠〔plan §2 六規格項 / tasks §6 七驗收〔grep+node--check+smoke 200〕/ 不可動〔業務碼零改·server.cjs 零編輯〕/ 提示詞 4 份稽核 / msg 草稿〕+ baton 一次性 mv 歸檔〔plan→plans/〔更名去 vendoring〕·tasks→tasks/·C1-C2 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔C1 `3602a42`/C2 `2113db1`〕+ staged 白名單自檢 + §7.2 純 DOC+tooling 顯式豁免 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-18_BRAINSTORM-1_brainstorming問答與視覺伴讀_plan.md`（v2·Q1–Q7 拍板 + review 三點併入）。
+> **動因**：baron 欲在設計/功能發想階段用 superpowers brainstorming（含視覺伴讀畫圖）；整包裝 plugin 有五治理衝突〔14-skill 污染/落點撞 §3/auto-commit 撞 §1.3/遙測/各環境各裝〕→ 改 vendor 檔案、落點護欄寫死。畫圖 server 經 smoke 實證可運作。
+
+---
+
 ### BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（實施專案自身 logging/database SOP——except 區 exc_info 全補 × 吞例外留痕 × paper_manager 裸 commit 13→0；PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉）
 
 | Commit | 內容 | Hash |
@@ -11,7 +24,7 @@
 | C1 | Logging Hardening：9 檔 25 處 `except` 內 `logger.error` 補 `exc_info=True`〔AST 精確清單·位元組級插入·訊息/控制流零動·排除 14 續行假陽性 + `rag_retriever:96` 非-except 守衛〕+ `llm/client.py:181` `except: pass`→`logging.warning("grounding source parse failed", exc_info=True)` + 新 `tests/test_sop_comply_guard.py`〔AST grep-gate：except 內 logger.error 必含 exc_info + 範圍自檢 + grounding 非裸 pass〕；745→748 passed；範圍外發現 `tools/regen_rag.py:252` 不動留 baron | `98f8848` |
 | C2 | Self-Owned Transaction Guard：`paper_manager.py` 7 處自持型 `with SessionLocal() as s: … s.commit()` → `with s.begin():` 自動守護〔5 處複合 with + `ensure_admin`/`append_chat_message` 內層 begin·後讀 u.id/c.id 外移等價；begin 置 session 起始防 autobegin〕；借用 6 處零觸碰；748 passed 零退化 | `68987e8` |
 | C3 | Borrow-Session Transaction Coordination（原子）：6 借用 helper 移除 `session.commit()`〔`create_folder` 補 `session.flush()` 保 log f.id〕+ `web_server.py` 5 folder/tag 端點（4 session 區塊）包 `with s.begin():`〔ValueError→400 保留·begin 內拋自動 rollback〕+ 3 測試檔 15 寫入區塊包 begin〔斷言本體零動〕；**paper_manager 裸 commit 歸零＝DB SOP §5.2 全清**；748 passed | `0dff639` |
-| checkout | 成果收官：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6 驗收 / 不可動 / 提示詞 6 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C3 報告→executions/〕+ TODO 雙層結案 + hash 自癒 + staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `待 baron 回填` |
+| checkout | 成果收官：Conformance 五維度全綠〔plan §2 五規格項 / tasks §6 驗收 / 不可動 / 提示詞 6 份稽核 / msg〕+ baton 歸檔〔plan→plans/·tasks→tasks/·C1-C3 報告→executions/〕+ TODO 雙層結案 + hash 自癒 + staged 白名單自檢 + §7.2 純後端無 handoff 顯式豁免 | `fb3e76a` |
 
 > **修法依據**：`plans/2026-07-18_SOP-COMPLY_logging與DB_SOP合規清帳_plan_v1.md`（v1.1 六 OQ 拍板）。
 > **動因**：PROJECT-REVIEW 程式碼品質 #1（except 區 logger.error 丟 traceback）+ `llm/client:181` 靜默吞例外 + `paper_manager` 13 裸 commit（database SOP §5.2）。
