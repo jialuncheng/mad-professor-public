@@ -370,51 +370,11 @@ def test_p3_translated_title_whole(monkeypatch, tmp_path):
 
 
 def test_p3_translated_title_section(monkeypatch, tmp_path):
-    """[PIPE-INGEST C3] 分段路譯題唯一源＝P1 title（slot 撈題廢除、plan v4 §2.3）。
-
-    原斷言 `== "ZH::Sec1"`（頂層 title slot）依規格更新——正是標題錯置三受害者之病根。
-    """
+    """U5c ②：分段路 → translated_title 取頂層 title slot 譯後文字。"""
     _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
-    ctx = _p3_ctx(_tiles_p3(), title="Big Headline")
+    ctx = _p3_ctx(_tiles_p3())
     LiteDocPipeline().run_phase3(ctx)
-    assert ctx.raw_metadata["translated_title"]["value"] == "ZH::Big Headline"   # P1 title、非 slot
-
-
-def test_p3_post_strip_uses_correct_translated_title(monkeypatch, tmp_path):
-    """[PIPE-INGEST C3] post-strip 以正確譯題為 key：tiles 首節為標題回聲時、譯後層被剝除。"""
-    _setup_p3_mocks(monkeypatch, tmp_path, "x" * 16000)
-    tiles = [                                     # 三節內容均衡、避開 heading 退化 fallback
-        {"title": "Big Headline",
-         "content": [{"type": "text", "content": "lead-in text one"}], "children": []},  # 標題回聲節
-        {"title": "Sec1",
-         "content": [{"type": "text", "content": "body one content"}], "children": []},
-        {"title": "Sec2",
-         "content": [{"type": "text", "content": "body two content"}], "children": []},
-    ]
-    ctx = _p3_ctx(tiles, title="Big Headline")
-    spec = LiteDocPipeline().run_phase3(ctx)
-    zh = Path(spec.final_zh_path).read_text(encoding="utf-8")
-    body = zh.split("</div>")[-1]                 # 扉頁之後的內文
-    assert "ZH::Big Headline" not in body         # 回聲 heading 已剝（譯題 key 正確才剝得到）
-    assert "ZH::lead-in text one" in body         # 回聲節內文不受累
-    assert "ZH::body one content" in body
-
-
-def test_p3_dead_paths_removed():
-    """[PIPE-INGEST C3] slot 撈題方法與 source_lang 啟發式 dead code 已自模組移除。"""
-    import inspect
-    src = inspect.getsource(lp)
-    assert "_extract_translated_title" not in src
-    assert "_detect_source_lang" not in src
-
-
-def test_cover_prompt_normalization_rules():
-    """[PIPE-INGEST C3] cover-prompt 含 publisher OCR 自癒與作者 Title Case 規則（plan v4 §2.8）。"""
-    p = lp._LITEDOC_META_SYSTEM_PROMPT
-    assert "official name" in p
-    assert "AI6Z -> a16z" in p
-    assert "Title Case" in p
-    assert "Do NOT invent a publisher" in p
+    assert ctx.raw_metadata["translated_title"]["value"] == "ZH::Sec1"   # 頂層 title slot
 
 
 def test_p3_html_meta_header(monkeypatch, tmp_path):

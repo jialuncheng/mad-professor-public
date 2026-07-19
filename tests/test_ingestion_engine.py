@@ -285,3 +285,68 @@ class TestTilingCompat:
             if item.get("type") == "text"
         )
 # === [PIPE-INGEST C1 END] ===
+
+
+# === [PIPE-INGEST C3 START] §7.2 跨 Phase 整合測試（WORKFLOW_SOP §7.2、Checkout 必驗）===
+class TestCrossPhaseIntegration:
+    """cleaned md + 判型 → assemble → collect_render_slots → key-changing mock 翻譯 → 組裝。
+
+    key-changing transform（譯文≠原文）為 §7.2 硬要求——純 mock 同 key 兩端不予承認；
+    斷言接縫不變式：figure 全穿透 / 標題不入內文 / meta 零重播 / node key 原文基準對位。
+    """
+
+    def _run_chain(self):
+        from pipelines import section_engine
+
+        result = ie.assemble(SAMPLE_MD, SAMPLE_STRUCTURE)
+        slots = section_engine.collect_render_slots(result["sections"], 0, "")
+        # key-changing mock 翻譯：譯文＝[譯] 前綴（≠ 原文）
+        zh_by_index = {
+            i: f"[譯]{s['text']}"
+            for i, s in enumerate(slots)
+            if s["kind"] in ("title", "content")
+        }
+        rendered = []
+        for i, slot in enumerate(slots):
+            if slot["kind"] == "raw":
+                rendered.append(slot["text"])
+            elif slot["kind"] == "title":
+                rendered.append(f"{'#' * slot['level']} {zh_by_index[i]}")
+            else:
+                rendered.append(zh_by_index[i])
+        return result, slots, zh_by_index, "\n\n".join(rendered)
+
+    def test_figures_survive_key_changing_chain(self):
+        """缺陷② 接縫不變式：figure content 經 raw slot 穿透至譯後組裝輸出。"""
+        _result, _slots, _zh, out = self._run_chain()
+        assert "![fig alt](images/pic1.jpg)" in out
+
+    def test_title_and_meta_not_replayed(self):
+        """缺陷①③ 接縫不變式：文件標題與 meta 行零重播於譯後內文。"""
+        _result, _slots, _zh, out = self._run_chain()
+        assert "Doc Main Title" not in out
+        assert "AUTHOR ONE" not in out
+        assert "PUBLISHER NEWS" not in out
+        # 非 meta 內文（epigraph）正常穿透（防過度剔除）
+        assert "[譯]Earth is the cradle of humanity." in out
+
+    def test_node_key_alignment_under_translation(self):
+        """P2/P4 對位不變式：summary_key＝原文標題 path、譯文改變 key 不動（RAG-ASYNC #1 防回歸）。"""
+        from pipelines import section_engine
+
+        _result, slots, zh_by_index, _out = self._run_chain()
+        title_slots = [(i, s) for i, s in enumerate(slots) if s["kind"] == "title"]
+        keys = [s["key"] for _i, s in title_slots]
+        assert "Section Alpha" in keys
+        assert "Section Alpha/Alpha Child" in keys
+        # 模擬 P2 section_summaries（key＝原文標題 path）→ 譯後仍可對位
+        mock_summaries = {k: f"摘要-{k}" for k in keys}
+        for i, s in title_slots:
+            assert s["key"] in mock_summaries          # key-changing 下 key 零位移
+            assert zh_by_index[i] != s["key"]           # 譯文確實已變（非同 key 假整合）
+        # collect_rag_sections：summary_key 保原文 path、title 存譯文（雙欄分離）
+        sink = []
+        section_engine.collect_rag_sections(slots, zh_by_index, True, sink)
+        alpha = [x for x in sink if x.get("summary_key") == "Section Alpha"]
+        assert alpha and alpha[0]["title"] == "[譯]Section Alpha"
+# === [PIPE-INGEST C3 END] ===

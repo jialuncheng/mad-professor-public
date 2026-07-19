@@ -53,7 +53,8 @@ from processor.translator import InjectionContext, TranslateMode, Translator
 logger = logging.getLogger(__name__)
 
 # === [PIPE-LITEDOC C3 START] 啟發式常數 + 原生 metadata cover-prompt（方案 A、不耦合 A 軌）===
-# [PIPE-INGEST C3] 原 CJK 啟發式常數隨 source_lang dead code 一併移除（唯一消費者）
+_CJK_MIN = 20
+_CJK_RATIO = 0.2
 _META_INPUT_CHARS = 4000   # metadata 抽取只看文首（標題/作者/出處集中於此）
 
 # B 軌原生文字 metadata 抽取（plan §2.5 方案 A）：含 URL→組織名解碼指引，輸出純 JSON。
@@ -65,14 +66,8 @@ _LITEDOC_META_SYSTEM_PROMPT = (
     "Rules:\n"
     "1. If a URL is present and the publisher is not explicitly stated, decode the publisher from the "
     "URL domain (e.g. cnn.com -> CNN, nytimes.com -> The New York Times).\n"
-    # === [PIPE-INGEST C3] publisher 正規化 / OCR 自癒 + 作者 Title Case（plan v4 §2.8）===
-    "2. publisher: output the organization's official name; fix obvious OCR distortions of "
-    "well-known outlet names (e.g. AI6Z -> a16z, G00gle -> Google). Do NOT invent a publisher "
-    "that is not indicated by the text or URL.\n"
-    "3. authors: normalize letter casing to Title Case (e.g. MARC ANDREESSEN -> Marc Andreessen); "
-    "keep name order and spelling unchanged.\n"
-    "4. Missing fields: use \"\" for strings and [] for authors. Do NOT invent values.\n"
-    "5. Return ONLY a valid JSON object with keys title, authors, date, publisher, url. "
+    "2. Missing fields: use \"\" for strings and [] for authors. Do NOT invent values.\n"
+    "3. Return ONLY a valid JSON object with keys title, authors, date, publisher, url. "
     "No markdown fences, no commentary."
 )
 
@@ -304,8 +299,14 @@ class LiteDocPipeline(DocumentStrategy):
                 return s.lstrip("#").strip() or paper_name
         return paper_name
 
-    # === [PIPE-INGEST C3] 原 source_lang 啟發式 dead code 已移除
-    #（PIPE-LITEDOC-HOTFIX-1 起由 section_engine.classify_source_lang 接替、全庫零 caller）===
+    @staticmethod
+    def _detect_source_lang(markdown_text: str) -> str:
+        """source_lang 啟發式：CJK 顯著佔比 → 'zh'，否則 'en'。"""
+        cjk = sum(1 for ch in markdown_text if "一" <= ch <= "鿿")
+        letters = sum(1 for ch in markdown_text if ch.isascii() and ch.isalpha())
+        if cjk >= _CJK_MIN and cjk >= letters * _CJK_RATIO:
+            return "zh"
+        return "en"
     # === [PIPE-LITEDOC C3 END] ===
 
     # === [PIPE-LITEDOC C4 START] P2 六步（消費 section_engine + 三真理源）===
@@ -459,8 +460,7 @@ class LiteDocPipeline(DocumentStrategy):
           ① InjectionContext（lcc/glossary/zh_summary/domain_name/doc_type）。
           ② size-gate：is_zh→不重譯;否則 `len(full_text)<門檻 或 無 section 或 heading 退化`→
              `translate_whole`（一鍵）;否則 `restore_sections_markdown`（逐 section 並行）。
-          ③ translated_title 唯一源＝P1 title（PIPE-INGEST C3、slot 撈題廢除）：
-             is_zh→title 原樣；分段/一鍵→皆 translate_unit(title) 同式。
+          ③ U5c translated_title 三路：is_zh→title / 分段→頂層 title slot 譯後 / 一鍵→translate_unit(title)。
           ④ rag 旁路：collect_rag_sections（分段/zh）或 single_container_sections（一鍵/兜底）→ ctx.rag_sections。
           ⑤ HTML 扉頁：`# 標題` + `render_meta_header_html` prepend final_zh（譯題）/ final_en（原題）。
           ⑥ translated_title 經 ctx.raw_metadata 旁路傳 P4（既有旁路、不動凍結合約）。
@@ -520,9 +520,8 @@ class LiteDocPipeline(DocumentStrategy):
                     sections, inj, tr, True, max_workers=settings.LLM_MAX_CONCURRENT,
                 )
                 section_engine.collect_rag_sections(slots, zh_by_index, True, rag_sections)
-                # === [PIPE-INGEST C3] U5c ② slot 撈題廢除：譯題唯一源＝P1 title（與 whole 分支同式；
-                # 根治標題錯置三受害者——zh 扉頁 # 標題 / HTML <title> / PDF /Title）===
-                translated_title = section_engine.translate_unit(title, inj, tr, "title") if title else title
+                # U5c ②：分段 → 取頂層（第一個）title slot 之譯後文字
+                translated_title = self._extract_translated_title(slots, zh_by_index) or title
 
         en_text = full_text
         ctx.rag_sections = rag_sections
@@ -566,7 +565,16 @@ class LiteDocPipeline(DocumentStrategy):
         return spec
 
     # ── P3 私有輔助 ──
-    # === [PIPE-INGEST C3] 原 U5c ② slot 撈題方法已廢除（譯題唯一源＝P1 title、雙源歸一）===
+    @staticmethod
+    def _extract_translated_title(
+        slots: List[Dict[str, Any]], zh_by_index: Dict[int, str]
+    ) -> str:
+        """U5c ②：取頂層（第一個）title slot 之譯後文字作 translated_title。"""
+        for i, slot in enumerate(slots):
+            if slot.get("kind") == "title":
+                return (zh_by_index.get(i) or slot.get("text") or "").strip()
+        return ""
+
     def _render_meta_headers(
         self, ctx: PipelineContext, title: str, translated_title: str
     ) -> tuple:
