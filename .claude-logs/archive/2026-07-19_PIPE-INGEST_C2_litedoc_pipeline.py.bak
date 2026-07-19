@@ -34,14 +34,13 @@ from typing import Any, Dict, List, Optional
 import paper_manager
 import settings
 from processor.doc_analyzer import DocAnalyzer
+from processor.json_processor import JsonProcessor
 from processor.md_cleaner import MarkdownCleaner
+from processor.md_processor import MarkdownProcessor
 from processor.pdf_processor import PDFProcessor
 from processor.tiling_processor import TilingProcessor
 from processor import meta_normalizer
 # === [PIPE-LITEDOC C3 END] ===
-# === [PIPE-INGEST C2 START] B 軌自有攝入組裝（A 軌 md2json/行級分塊借用鏈退場）===
-from pipelines import ingestion_engine
-# === [PIPE-INGEST C2 END] ===
 
 # === [PIPE-LITEDOC C4 START] P2 六步所需（三真理源 + section_engine）===
 from pipelines import section_engine
@@ -208,46 +207,17 @@ class LiteDocPipeline(DocumentStrategy):
         return spec
 
     # ── P1 私有輔助 ──
-    # === [PIPE-INGEST C2 START] P1 攝入組裝切換 ingestion_engine ===
-    # litedoc 之 meta 判型集（route-specific 注入、引擎零字面量；對齊 doc_structure 判型 schema）
-    _META_TYPES = ("title", "authors", "publication_info")
-
     def _build_tiles(
         self, md_path: Path, output_dir: Path, paper_name: str, doc_type: str
     ) -> List[Dict[str, Any]]:
-        """ingestion_engine 組裝 → TextTiling（PIPE-INGEST C2、litedoc 不 opt-out）。
-
-        cleaned md + doc_structure 判型 → `ingestion_engine.assemble`（title 不丟 / meta 行
-        分離不受連續性限制 / figure 帶 `content=![alt](src)`）→ 寫 processed 相容 JSON →
-        `TilingProcessor` 零改續用（index/part 由 tiling 自補）。A 軌 md2json／行級分塊
-        借用鏈於 litedoc 退場；`_structured.json` 不再產出。
-        doc_structure 讀取失敗 → structure=None soft（引擎退化為無 meta 分離、不阻斷）。
-        """
-        markdown_text = md_path.read_text(encoding="utf-8")
-        structure: Optional[Dict[str, Any]] = None
-        sidecar = md_path.parent / f"{md_path.stem}_doc_structure.json"
-        try:
-            structure = json.loads(sidecar.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001 — sidecar 缺失/壞損不阻斷 P1
-            logger.warning(
-                "[PIPE-INGEST P1] %s doc_structure 讀取失敗（soft、無 meta 分離）: %s",
-                paper_name, exc, exc_info=True,
-            )
-        result = ingestion_engine.assemble(
-            markdown_text, structure, meta_types=self._META_TYPES
-        )
+        """md2json → json_process → TextTiling（litedoc 不 opt-out、news/web 短文跑 tiling 無妨）。"""
+        structured = output_dir / f"{paper_name}_structured.json"
+        MarkdownProcessor().process(str(md_path), str(structured))
         processed = output_dir / f"{paper_name}_processed.json"
-        processed.write_text(
-            json.dumps(
-                {"title": result["title"], "sections": result["sections"]},
-                ensure_ascii=False, indent=2,
-            ),
-            encoding="utf-8",
-        )
+        JsonProcessor().process(str(structured), str(processed))
         tiled = output_dir / f"{paper_name}_tiled.json"
         TilingProcessor().process(str(processed), str(tiled), doc_type=doc_type)
         return self._load_tiles(tiled)
-    # === [PIPE-INGEST C2 END] ===
 
     @staticmethod
     def _load_tiles(tiled_path: Path) -> List[Dict[str, Any]]:

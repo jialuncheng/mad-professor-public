@@ -63,7 +63,14 @@ def _setup_p1_mocks(monkeypatch, tmp_path, *, llm_json, capture=None):
                 capture["analyzer_doc_type"] = doc_type
             return p
 
-    # === [PIPE-INGEST C2] Md/Json fake 移除——攝入組裝改走真 ingestion_engine（純函式、直跑）===
+    class _FakeMd:
+        def process(self, a, b):
+            Path(b).write_text("{}", encoding="utf-8")
+
+    class _FakeJson:
+        def process(self, a, b):
+            Path(b).write_text("{}", encoding="utf-8")
+
     class _FakeTiling:
         def process(self, a, b, doc_type=""):
             Path(b).write_text(
@@ -80,6 +87,8 @@ def _setup_p1_mocks(monkeypatch, tmp_path, *, llm_json, capture=None):
     monkeypatch.setattr(lp, "PDFProcessor", _FakePDF)
     monkeypatch.setattr(lp, "MarkdownCleaner", _FakeCleaner)
     monkeypatch.setattr(lp, "DocAnalyzer", _FakeAnalyzer)
+    monkeypatch.setattr(lp, "MarkdownProcessor", _FakeMd)
+    monkeypatch.setattr(lp, "JsonProcessor", _FakeJson)
     monkeypatch.setattr(lp, "TilingProcessor", _FakeTiling)
     import llm.client
     monkeypatch.setattr(llm.client.LLMClient, "get_instance", classmethod(lambda cls: _FakeLLM()))
@@ -150,86 +159,6 @@ def test_p1_shadow_title_suffix(monkeypatch, tmp_path):
     _setup_p1_mocks(monkeypatch, tmp_path, llm_json='{"title":"News X","authors":[]}')
     spec = LiteDocPipeline().run_phase1(_p1_ctx(tmp_path, paper_id="p1_shadow"))
     assert spec.title == "News X (測試)"
-
-
-# ──────────────────────────────────────────────────────────────────────────
-# PIPE-INGEST C2：P1 攝入組裝切換 ingestion_engine
-# ──────────────────────────────────────────────────────────────────────────
-def _walk_tiles(sections, texts, figs):
-    for s in sections:
-        for it in s.get("content", []):
-            if isinstance(it, dict):
-                if it.get("type") == "text":
-                    texts.append(str(it.get("content", "")))
-                elif it.get("type") == "figure":
-                    figs.append(it)
-        _walk_tiles(s.get("children", []), texts, figs)
-
-
-def test_p1_build_tiles_via_ingestion_engine(tmp_path):
-    """C2：_build_tiles 走 ingestion_engine——meta 行分離不入 tiles、title 不入內文、
-    figure 帶 content（真 TilingProcessor bypass 路徑、零 API）。"""
-    md = tmp_path / "doc.md"
-    md.write_text("\n".join([
-        "# Doc Title",                    # 0 title
-        "",                               # 1
-        "Epigraph line stays in body.",   # 2 intro（非 meta、夾於 meta 塊之間）
-        "",                               # 3
-        "BYLINE AUTHOR ONE",              # 4 authors
-        "",                               # 5
-        "PUB HOUSE NEWS",                 # 6 publication_info
-        "",                               # 7
-        "## Alpha",                       # 8
-        "Alpha body.",                    # 9
-        "![a](images/x.jpg)",             # 10
-    ]), encoding="utf-8")
-    (tmp_path / "doc_doc_structure.json").write_text(_json.dumps({
-        "structure": [
-            {"start": 0, "end": 0, "type": "title"},
-            {"start": 4, "end": 4, "type": "authors"},
-            {"start": 6, "end": 6, "type": "publication_info"},
-        ]
-    }), encoding="utf-8")
-    out = tmp_path / "out"
-    out.mkdir()
-    tiles = LiteDocPipeline()._build_tiles(md, out, "doc", "news")
-    texts, figs = [], []
-    _walk_tiles(tiles, texts, figs)
-    body = "\n".join(texts)
-    # meta 行（authors/publication_info 判型、非連續）不入 tiles
-    assert "BYLINE AUTHOR ONE" not in body
-    assert "PUB HOUSE NEWS" not in body
-    # 文件標題不入內文；非 meta 行（epigraph）保留
-    assert "Doc Title" not in body
-    assert "Epigraph line stays in body." in body
-    # figure 帶可重建 content（缺陷② 全鏈）
-    assert figs and figs[0].get("content") == "![a](images/x.jpg)"
-    # processed 相容檔產出、_structured.json 不再產
-    assert (out / "doc_processed.json").exists()
-    assert not (out / "doc_structured.json").exists()
-
-
-def test_p1_build_tiles_soft_fail_without_structure(tmp_path):
-    """C2：doc_structure sidecar 缺失 → soft 退化（無 meta 分離、不阻斷、body 全保留）。"""
-    md = tmp_path / "doc.md"
-    md.write_text("# T\n\nBYLINE X\n\n## S\nBody.", encoding="utf-8")
-    out = tmp_path / "out"
-    out.mkdir()
-    tiles = LiteDocPipeline()._build_tiles(md, out, "doc", "news")
-    texts, figs = [], []
-    _walk_tiles(tiles, texts, figs)
-    body = "\n".join(texts)
-    assert "BYLINE X" in body       # 無判型 → 不分離（回現況行為）
-    assert "Body." in body
-
-
-def test_p1_borrowed_chain_retired():
-    """C2：A 軌組裝借用鏈於 litedoc 退場（模組層零 import、引擎已接線）。"""
-    import inspect
-    src = inspect.getsource(lp)
-    assert "MarkdownProcessor" not in src
-    assert "JsonProcessor" not in src
-    assert "ingestion_engine" in src
 
 
 # ──────────────────────────────────────────────────────────────────────────
