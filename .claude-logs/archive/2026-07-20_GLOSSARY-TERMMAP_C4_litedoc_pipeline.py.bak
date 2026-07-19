@@ -517,12 +517,8 @@ class LiteDocPipeline(DocumentStrategy):
                 translated_title = section_engine.translate_unit(title, inj, tr, "title") if title else title
             else:
                 mode = "section"
-                # === [GLOSSARY-TERMMAP C4] 摘要型滑窗：per-section 注入前一鄰近摘要（容缺）===
                 zh_text, slots, zh_by_index = section_engine.restore_sections_markdown(
                     sections, inj, tr, True, max_workers=settings.LLM_MAX_CONCURRENT,
-                    slot_context_fn=self._make_slot_context_fn(
-                        inj, gspec.section_summaries or {}
-                    ),
                 )
                 section_engine.collect_rag_sections(slots, zh_by_index, True, rag_sections)
                 # === [PIPE-INGEST C3] U5c ② slot 撈題廢除：譯題唯一源＝P1 title（與 whole 分支同式；
@@ -571,41 +567,6 @@ class LiteDocPipeline(DocumentStrategy):
         return spec
 
     # ── P3 私有輔助 ──
-    # === [GLOSSARY-TERMMAP C4 START] 摘要型滑窗上下文工廠（parallel-safe、容缺）===
-    @staticmethod
-    def _make_slot_context_fn(
-        inj: InjectionContext, section_summaries: Dict[str, str]
-    ) -> Optional[Any]:
-        """P3 摘要型滑窗（plan v2 §2.7）：依 slot 所屬 section（原文標題 path、與 P2/P4 同基準）
-        注入**前一鄰近 section** 之繁中摘要。
-
-        - **parallel-safe**：摘要 P2 已算、factory 純讀零跨執行緒狀態；InjectionContext frozen
-          → `model_copy(update=...)` 產新實例、共用 inj 不受污染。
-        - **注入路徑**：translator `_build_user_prompt` 以 `zh_summary` 優先於 `preceding`
-          （既有順序）——故鄰近摘要**合併入 zh_summary**（全文摘要＋鄰近段摘要＝BOOK 三層
-          滑窗語意）確保實際浮出、`preceding` 同步攜帶原始鄰近摘要（語意欄位）。
-        - **容缺**：無 summaries → 回 None（引擎走預設共用 inj、行為零變）；slot 之 key 無前鄰
-          或前鄰摘要缺 → 沿用共用 inj。
-        - **嚴禁譯文型 preceding**（跨 section 逼序列、破壞並行收益）——本 factory 僅用 P2 摘要。
-        """
-        if not section_summaries:
-            return None
-        keys = list(section_summaries.keys())
-        prev_of = {k: keys[i - 1] for i, k in enumerate(keys) if i > 0}
-
-        def _slot_context(index: int, slot: Dict[str, Any]) -> InjectionContext:
-            prev_key = prev_of.get(slot.get("key") or "")
-            prev_sum = section_summaries.get(prev_key) if prev_key else None
-            if not prev_sum:
-                return inj
-            combined = ((inj.zh_summary or "") + f"\n\n鄰近前段摘要參考：{prev_sum}").strip()
-            return inj.model_copy(
-                update={"preceding": prev_sum, "zh_summary": combined}
-            )
-
-        return _slot_context
-    # === [GLOSSARY-TERMMAP C4 END] ===
-
     # === [PIPE-INGEST C3] 原 U5c ② slot 撈題方法已廢除（譯題唯一源＝P1 title、雙源歸一）===
     def _render_meta_headers(
         self, ctx: PipelineContext, title: str, translated_title: str

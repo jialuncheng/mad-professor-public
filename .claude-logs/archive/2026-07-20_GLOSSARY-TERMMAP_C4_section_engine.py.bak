@@ -22,7 +22,7 @@ import logging
 import re
 import time
 from difflib import SequenceMatcher
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -208,11 +208,8 @@ def collect_render_slots(
 
     slot 型態：
     - title  ：{"kind":"title","text":標題,"level":HEADING 層級,"key":原文標題 path}
-    - content：{"kind":"content","text":待翻正文,"key":所屬 section 原文標題 path}（組裝時套段落正規化）
-    - raw    ：{"kind":"raw","text":原文,"key":所屬 section 原文標題 path}（formula/figure/table，不翻、passthrough）
-
-    [GLOSSARY-TERMMAP C4] content/raw slot 補 "key"＝所屬 section 之原文標題 path（純加法欄位、
-    既有消費者零讀取）——供呼叫端 slot_context_fn 依 section 配發翻譯上下文（摘要型滑窗）。
+    - content：{"kind":"content","text":待翻正文}（組裝時套段落正規化）
+    - raw    ：{"kind":"raw","text":原文}（formula/figure/table，不翻、passthrough）
 
     title slot `key`＝原文標題 path（RAG-ASYNC-HOTFIX-1、slot 翻譯前收集故 text 即原文）；
     `level`＝min(2+depth,6)（HEADING-HOTFIX-1，頂層 h2、每下潛 +1、上限 h6）。
@@ -234,16 +231,16 @@ def collect_render_slots(
                 itype = item.get("type")
                 content = item.get("content", "") or ""
                 if itype == "text":
-                    out.append({"kind": "content", "text": content, "key": node_key})
+                    out.append({"kind": "content", "text": content})
                 else:
                     # formula / figure / table 等：保留原文結構、不翻
                     if content:
-                        out.append({"kind": "raw", "text": content, "key": node_key})
+                        out.append({"kind": "raw", "text": content})
             else:
                 # 容錯：content 為純字串 list（md_processor 原始型態）
                 txt = str(item).strip()
                 if txt:
-                    out.append({"kind": "content", "text": txt, "key": node_key})
+                    out.append({"kind": "content", "text": txt})
         for child in sec.get("children", []) or []:
             if isinstance(child, dict):
                 out.extend(collect_render_slots([child], depth + 1, node_key))
@@ -346,7 +343,6 @@ def is_heading_degraded(
 def restore_sections_markdown(
     sections: List[Dict[str, Any]], inj: Any, tr: Any, translate: bool, *,
     max_workers: int,
-    slot_context_fn: Optional[Callable[[int, Dict[str, Any]], Any]] = None,
 ) -> Tuple[str, List[Dict[str, Any]], Dict[int, str]]:
     """逐 section：收集有序 render slot → 並行翻譯 → 按序組裝，回 (markdown, slots, zh_by_index)。
 
@@ -355,10 +351,6 @@ def restore_sections_markdown(
     保序回填、單 unit 失敗退原文異常隔離；③ 按 slot 原序組裝（title 套 HEADING 層級、content
     套段落正規化、raw 原文）。
     **rag section 旁路**由呼叫端以回傳之 slots+zh_by_index 自建（引擎不知 rag、Zero coupling）。
-
-    [GLOSSARY-TERMMAP C4] `slot_context_fn(index, slot)`（可選、純加法）：提供時每一翻譯單元
-    以其回傳值作該單元之 InjectionContext（摘要型滑窗等 per-section 上下文配發）；None（預設）
-    ＝全 slot 共用 `inj`、現行為等價。factory 須為純讀（parallel-safe、無跨執行緒狀態）。
     """
     slots = collect_render_slots(sections, 0, "")
     zh_by_index: Dict[int, str] = {}
@@ -371,11 +363,7 @@ def restore_sections_markdown(
         if todo:
             with ThreadPoolExecutor(max_workers=max(1, max_workers)) as ex:
                 fut_to_idx = {
-                    ex.submit(
-                        translate_unit, slot["text"],
-                        slot_context_fn(i, slot) if slot_context_fn else inj,
-                        tr, ttype,
-                    ): i
+                    ex.submit(translate_unit, slot["text"], inj, tr, ttype): i
                     for i, slot, ttype in todo
                 }
                 for fut, i in fut_to_idx.items():
