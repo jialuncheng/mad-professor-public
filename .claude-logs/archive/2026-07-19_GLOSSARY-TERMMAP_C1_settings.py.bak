@@ -112,13 +112,6 @@ EMBEDDING_MAX_CONCURRENT = int(os.getenv("EMBEDDING_MAX_CONCURRENT", "5"))
 LLM_USE_GLOSSARY_ALIGN = os.getenv("LLM_USE_GLOSSARY_ALIGN", "false").lower() in ("1", "true", "yes")
 # === [DOMAIN-NORM C3 END] ===
 
-# === [GLOSSARY-TERMMAP C1 START] ===
-# 術語 census 切塊字元上限（plan v2 §2.1 N1、Q3 拍板預設 6000≈2-4 段）。
-# build_termmap 以此沿「段落邊界」累積切塊逐塊 census（塊小召回準、塊大省呼叫）；
-# 與翻譯 size-gate（15k）無關——前者為 census 召回、後者為輸出品質，兩獨立。env 可調免 commit。
-GLOSSARY_CENSUS_CHUNK_CHARS = int(os.getenv("GLOSSARY_CENSUS_CHUNK_CHARS", "6000"))
-# === [GLOSSARY-TERMMAP C1 END] ===
-
 # === [META-NORM C1 START] ===
 # 封面 metadata 自癒飛輪總開關（依 tasks U5）。
 # False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。
