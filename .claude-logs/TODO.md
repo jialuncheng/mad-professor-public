@@ -13,7 +13,8 @@
 
 > 完整成果表格與註解 → `archive/TODO_done_archive.md`（framework §2.1 雙層結構；hash 區間＝該任務表格首末 commit、依歸檔檔內出現序）。
 
-- ✅ BE-Refactor PIPE-INGEST litedoc攝入自有化與品質根治（`e7b9e6c`…`ab65208`、3 commits·B 軌自有攝入引擎 `pipelines/ingestion_engine.py`〔零文體字面量·注入式·figure 帶 content〕/C2 litedoc P1 切換借用鏈退場/C3 譯題單一源〔根治扉頁/分頁名/PDF Title 三受害者〕+cover-prompt OCR 自癒+dead code 清理·§7.2 key-changing 整合測試·748→780 passed·術語④⑤/括號移交 GLOSSARY-TERMMAP·checkout `待 baron 回填`）→ archive/TODO_done_archive.md
+- ✅ BE-Refactor GLOSSARY-TERMMAP 事前定案術語表與glossary旗標開啟（`16a5f09`…`6b5c975`、5 commits·`GlossaryManager.build_termmap` 五路共用 builder〔切塊 census→分流廢早退→只翻未知→定案 upsert〕/三路 `_heal_glossary` 收斂單一源/translator 免括號句/litedoc 摘要型滑窗〔section_engine 純加法〕/旗標末位點火〔新預設 805 passed〕·接收 PIPE-INGEST 缺陷④⑤根治·checkout `待 baron 回填`）→ archive/TODO_done_archive.md
+- ✅ BE-Refactor PIPE-INGEST litedoc攝入自有化與品質根治（`e7b9e6c`…`ab65208`、3 commits·B 軌自有攝入引擎 `pipelines/ingestion_engine.py`〔零文體字面量·注入式·figure 帶 content〕/C2 litedoc P1 切換借用鏈退場/C3 譯題單一源〔根治扉頁/分頁名/PDF Title 三受害者〕+cover-prompt OCR 自癒+dead code 清理·§7.2 key-changing 整合測試·748→780 passed·術語④⑤/括號移交 GLOSSARY-TERMMAP·checkout `3133333`）→ archive/TODO_done_archive.md
 - ✅ DOC-Refactor BRAINSTORM-1 brainstorming問答與視覺伴讀（`3602a42`…`c258af2`、3 commits·vendor superpowers brainstorming 不裝 plugin·C1 問答骨架 SOP+視覺伴讀指引〔溯源 header+spec→template_plan 對照+兩護欄+移除 auto-commit〕/C2 5 腳本+smoke 入 tools〔逐字＝上游·start-server.sh 僅 4 落點行·server.cjs 零編輯·smoke HTTP 200〕/Checkout·畫圖 server smoke 實證·零 .py）→ archive/TODO_done_archive.md
 - ✅ BE-Refactor SOP-COMPLY logging與DB_SOP合規清帳（`98f8848`…`0dff639`、4 commits·25 exc_info 補齊+llm 吞例外留痕×AST grep-gate 守衛×paper_manager 13 裸 commit 全清〔自持 7 begin+借用 6 呼叫端協調〕·PROJECT-REVIEW 程式碼品質 #1 + DB SOP §5.2 關閉·745→748 綠燈·checkout `fb3e76a`）→ archive/TODO_done_archive.md
 - ✅ BE-Refactor SEC-HARDEN 後端安全縱深加固（`52ebae8`…`3942e20`、5 commits·XFF 可信代理右向左+timing 等化×CORS 白名單×例外遮蔽×主題覆寫守衛·PROJECT-REVIEW #3/#4/#5/#6/#8 全關閉·715→745 綠燈·checkout `e287347`）→ archive/TODO_done_archive.md
@@ -438,6 +439,9 @@
 
 ### META-NORM (✅ 已完成·PIPE 共用真理源家族第 4 員)
 - ✅ ~~META-NORM 封面元數據自癒飛輪與動態欄位登記~~（已落地、C1 `ae407ef` + C2 `6dd48f8` + C3 `6c37a1d` + C4 `dedd915` + C5 `d2a3db2` + C6 `6bb440e` + C7 收官；解 PIPE-SLIDES 實測 C+D；MetaField/MetaFieldAlias 兩表 + MetaNormalizer 飛輪〔reserved BS1/黑名單 Q9/label BS4/temp=0 Q2〕+ P1 開放抽取/封面放寬接線 + subtitle〔D〕+ 前端通用渲染〔排除集 BS2/排序 BS7〕；§7.2 key-changing 整合正面達標；旗標 LLM_USE_META_NORM 預設 False；⚠️ baron 漸進開+Vision golden 重捕+餵養 CHAT-STRUCT-1）
+
+### GLOSSARY-TERMMAP (✅ 已完成·事前定案術語表)
+- ✅ ~~GLOSSARY-TERMMAP 事前定案術語表與glossary旗標開啟~~（已落地、C1 `16a5f09` + C2 `30684e5` + C3 `83f0503` + C4 `c571c5b` + C5 `6b5c975` + Checkout 收官；`GlossaryManager.build_termmap` 五路共用 builder〔N1 段落切塊→N2 並行 census 只認詞→N3 去重/分流**廢飛輪早退**→N4 只翻未知→N5 定案 upsert 永不吃收割〕、三路 `_heal_glossary` 收斂單一實作源、translator 免括號句〔缺陷④〕、litedoc 摘要型滑窗〔section_engine 純加法 slot_context_fn·前鄰摘要 model_copy 注入·容缺〕、旗標 `LLM_USE_GLOSSARY_ALIGN` 預設 true 末位點火〔env 單點關回〕；§7.2 key-changing 整合測試〔多單元注入完全一致〕；780→805 passed；⚠️ baron 影子 E2E：清 GlobalGlossary 歸零→SpaceX 樣本硬驗收〔全文單一譯法/同字括號 ≤1〕+跨文件累積+slides census 觀察項〔tasks §4.5〕）
 
 ### PIPE-INGEST (✅ 已完成·litedoc 攝入自有化)
 - ✅ ~~PIPE-INGEST litedoc攝入自有化與品質根治~~（已落地、C1 `e7b9e6c` + C2 `ca4e0e7` + C3 `ab65208` + Checkout 收官；B 軌自有攝入組裝引擎 `pipelines/ingestion_engine.py`〔零文體字面量·注入式·title 不丟·meta 判型逐塊獨立·figure 帶 content〕、litedoc P1 脫離 A 軌 md_processor/json_processor 借用鏈、P3 譯題單一源＝P1 title〔廢 slot 撈題·根治扉頁/分頁名/PDF /Title 三受害者〕、cover-prompt publisher OCR 自癒+Title Case、dead code 清理；§7.2 key-changing 整合測試；748→780 passed；術語④⑤/括號移交 GLOSSARY-TERMMAP 前後腳；⚠️ baron 影子 E2E 驗結構項〔標題/圖片 ≥19/無 meta 重複/venue=a16z〕）

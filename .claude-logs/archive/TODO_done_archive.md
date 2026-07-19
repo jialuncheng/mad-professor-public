@@ -4,6 +4,20 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor GLOSSARY-TERMMAP 事前定案術語表與glossary旗標開啟（`GlossaryManager.build_termmap` 五路共用 builder·三路 `_heal_glossary` 收斂廢飛輪早退·termmap 注入全篇一致·接收 PIPE-INGEST 移交缺陷④⑤根治·plan v2 六 OQ 拍板）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Termmap Builder（術語定案表產生器）：`build_termmap` 五步〔N1 段落邊界切塊→N2 並行 census 純 LLM 只認詞〔單塊 soft〕→N3a `_normalize_key` 三方同函式去重→N3b `query_cascade` 分流已知∪未知〔**廢早退**〕→N4 未知一次批次翻譯〔慣例不譯者譯法＝原文〕→N5 `source="termmap_decided"` 定案 upsert〔永不吃收割〕〕+ `GLOSSARY_CENSUS_CHUNK_CHARS=6000`〔Q3〕+ `tests/test_glossary_termmap.py` 13 測試〔含 Q1 廢早退回歸：DB 已有詞仍抽仍寫〕；純加法零接線；780→793 passed | `16a5f09` |
+| C2 | Litedoc Termmap Switch（litedoc 收斂與括號約束）：litedoc P2 `_heal_glossary` 13 行早退鏈→委派 build_termmap〔傳 full_text·census 吃全文根治抽詞綁摘要〕+ translator 強約束 gated 區塊補「譯名＝原文者免括號」句〔母 prompt 檔零動·缺陷④根治點〕+ §7.2 整合測試 ×2〔key-changing·三並行單元 prompt 完全一致＝全篇譯法唯一結構性保證〕；793→797 passed | `30684e5` |
+| C3 | Resume & Slides Convergence（resume 與 slides 等價收斂）：兩路 `_heal_glossary` 同式收斂〔resume 傳既讀 md 全文/slides 傳 tiles 合併頁文本·現場既有變數零新增讀取〕、`if existing` 早退全庫歸零〔三路單一實作源達成〕；resume 原⑩⑪測試依 Q1 規格改寫〔⑪原斷言即早退契約本身〕+ slides 新增 ×2；797→799 passed | `83f0503` |
+| C4 | Sliding Summary Window（litedoc 摘要型滑窗注入）：section_engine 純加法〔`slot_context_fn` 可選參數＋content/raw slot 補 `key`＝原文標題 path·缺省 identity 等價實證·resume 零改〕+ litedoc P3 上下文工廠〔前一鄰近 section 繁中摘要·`model_copy(update=...)` frozen 安全複製·zh_summary 合併浮出對齊 translator 既有優先序·容缺三態·禁譯文型 preceding〕；799→805 passed | `c571c5b` |
+| C5 | Glossary Flag-On（旗標預設開啟）：`LLM_USE_GLOSSARY_ALIGN` 預設 false→true 末位點火〔env 單點關回〕+ `.env.example` Glossary 段〔關回/清庫重跑/census 常數〕+ 測試旗標掃描 22 處/8 檔〔僅 test_slide_pipeline 需隔離：`_run_p2` 參數化＋§7.2 補 patch·斷言 100% 零動〕；新預設下 805 passed | `6b5c975` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6 驗收〔§7.2 整合正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C5 報告〕+ 9 提示詞入版控〔含 plan/review 依 PIPE-INGEST 前例併入〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-19_GLOSSARY-TERMMAP_事前定案術語表與glossary旗標開啟_plan.md`（v2·六 OQ 拍板）+ `tasks/2026-07-19_GLOSSARY-TERMMAP_事前定案術語表與glossary旗標開啟_tasks.md`（§4.5 含點火後 slides census 觀察項）。
+> ⚠️ baron 影子 E2E（plan §8.2）：**先清 GlobalGlossary 表歸零基線**→重傳 SpaceX 樣本驗硬驗收〔`sentient sun` 全文單一譯法/`SpaceX (SpaceX)` 同字括號 ≤1〕→查 DB 定案詞入庫→重傳第二份同域樣本驗跨文件累積〔免費一致〕→resume/slides 各抽一樣本零退化→slides census 觀察項〔figure_description、濾點座標見 tasks §4.5〕。
+
 ### BE-Refactor PIPE-INGEST litedoc攝入自有化與品質根治（B 軌自有攝入組裝引擎——litedoc P1 脫離 A 軌 md_processor/json_processor 借用鏈·治影子輸出結構六缺陷之①②③⑥·plan v4 純結構化定位、術語④⑤/括號移交 GLOSSARY-TERMMAP 前後腳）
 
 | Commit | 內容 | Hash |
@@ -11,7 +25,7 @@
 | C1 | Ingestion Engine（攝入引擎本體）：新建 `pipelines/ingestion_engine.py`（extract_title / mark_meta_lines〔判型逐塊獨立標記·廢連續性假設·soft-fail〕/ split_blocks〔figure 必帶 `content=![alt](src)`〕/ build_sections〔title 零加工·原文標題 path 基準零位移〕/ assemble 五純函式·零文體字面量·零 import A 軌）+ `tests/test_ingestion_engine.py` 23 測試〔含零字面量靜態掃描+真 TilingProcessor bypass 直餵〕；純加法零接線；748→771 passed | `e7b9e6c` |
 | C2 | Litedoc P1 Switchover（litedoc P1 切換攝入引擎）：`_build_tiles` 改呼 `ingestion_engine.assemble`（cleaned md+doc_structure sidecar→processed 相容 JSON·meta 行分離不入 tiles·`_structured.json` 停產）→ TilingProcessor 零改續用；MarkdownProcessor/JsonProcessor import 退場〔grep 0 命中含註解層〕；測試 +3〔真引擎+真 tiling 全鏈·soft-fail·借用鏈退場靜態掃描〕；771→774 passed | `ca4e0e7` |
 | C3 | Title Single-Source & P1 Cleanups（譯題單一源與 P1 清理）：P3 section/whole 譯題一律 `translate_unit(P1 title)`、廢 `_extract_translated_title`〔根治標題錯置三受害者：扉頁 #標題/HTML title/PDF /Title〕→ post-strip 取得正確 key〔測試實證回聲被剝〕+ cover-prompt 增 publisher 正規化/OCR 自癒〔AI6Z→a16z〕/作者 Title Case + 移除 `_detect_source_lang` dead code〔含孤兒常數·resume/slides 活代碼零碰〕+ §7.2 key-changing 整合測試 ×3〔figure 穿透/meta 零重播/node key 對位〕；774→780 passed | `ab65208` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 §2 純結構化規格項對照 / tasks §6 驗收〔含 §7.2 整合測試正面達標〕/ 不可動清單〔A 軌/前兩路/section_engine/母 prompt 全零改·禁 constraints 鷹架〕/ 提示詞 5 份稽核〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C3 報告〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 §2 純結構化規格項對照 / tasks §6 驗收〔含 §7.2 整合測試正面達標〕/ 不可動清單〔A 軌/前兩路/section_engine/母 prompt 全零改·禁 constraints 鷹架〕/ 提示詞 5 份稽核〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C3 報告〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `3133333` |
 
 > **修法依據**：`plans/2026-07-18_PIPE-INGEST_litedoc攝入自有化與品質根治_plan.md`（v4·選 1 定案）+ `tasks/2026-07-19_PIPE-INGEST_litedoc攝入自有化與品質根治_tasks.md`。
 > ⚠️ baron 影子 E2E（plan §8.2 結構項）：重傳 SpaceX 樣本驗標題/分頁名/圖片 ≥19 張/無 meta 重複/venue=a16z；括號/術語屬 GLOSSARY-TERMMAP 前後腳、不在本案驗收。
