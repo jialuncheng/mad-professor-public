@@ -312,12 +312,8 @@ def test_p2_section_summary_nonfatal_isolation(monkeypatch):
 # === [RAG-ASYNC C5 END] ===
 
 
-# === [GLOSSARY-TERMMAP C3 START] 原⑩⑪兩測試依 plan v2 §2.2 規格更新（早退契約廢除）===
-def test_run_phase2_glossary_builds_termmap(monkeypatch):
-    """⑩（更新）旗標 ON → P2 走共用 build_termmap：注入全文（census 源）＋摘要對＋LCC。
-
-    原斷言綁 `query_cascade→缺詞 extract_terms→upsert` 早退鏈——Q1 拍板廢除、依規格改寫。
-    """
+def test_run_phase2_glossary_selfheal_injects_summary_and_lcc(monkeypatch):
+    """⑩ 旗標 ON 缺詞自癒：extract_terms 注入原文摘要(source_text)與 LCC(domain)、upsert 冪等。"""
     monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", True)
     monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: "QA")
     _mock_p2_common(monkeypatch)
@@ -327,29 +323,31 @@ def test_run_phase2_glossary_builds_termmap(monkeypatch):
         def __init__(self, *a, **k):
             pass
 
-        def build_termmap(self, full_text, abstract, translated_abstract,
-                          source_lang, target_lang, domain, **kw):
-            captured.update(full_text=full_text, src=abstract,
-                            tgt=translated_abstract, domain=domain)
-            return {"python": "派森"}
+        def query_cascade(self, s, t, domain):
+            return {}  # 缺詞
+
+        def extract_terms(self, src, tgt, s, t, domain):
+            captured.update(src=src, tgt=tgt, domain=domain)
+            return [("Python", "派森")]
+
+        def upsert_terms(self, pairs, s, t, domain):
+            captured["upsert"] = len(pairs)
+            return len(pairs)
 
     monkeypatch.setattr(rp, "GlossaryManager", FakeGM)
     s = ResumePipeline()
     # === [PIPE-RESUME v9 C6 START] ===
     spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
     # === [PIPE-RESUME v9 C6 END] ===
-    assert captured["full_text"] == "履歷全文 Python"   # census 吃全文（非僅摘要）
-    assert captured["src"] == "原文摘要"                 # 摘要對引導風格
-    assert captured["tgt"] == "中文摘要"
-    assert captured["domain"] == "QA"                    # LCC 注入 domain
-    assert spec.glossary == {"python": "派森"}           # 定案表入交付合約
+    assert captured["src"] == "原文摘要"     # 原文摘要注入抽詞 source
+    assert captured["tgt"] == "中文摘要"     # 譯文摘要為 translated（雙用）
+    assert captured["domain"] == "QA"        # LCC 注入 domain
+    assert captured["upsert"] == 1
+    assert spec.glossary == {"Python": "派森"}
 
 
-def test_run_phase2_no_early_return_cache_contract(monkeypatch):
-    """⑪（更新）舊「cache hit 早退」契約廢除：路級一律走 build_termmap、不直呼 query_cascade。
-
-    早退分流語意（DB 已有詞仍抽仍寫）由 build_termmap 內部保證（test_glossary_termmap Q1 回歸）。
-    """
+def test_run_phase2_cache_hit_zero_extract(monkeypatch):
+    """⑪ query_cascade 命中（cache hit）→ 不呼 extract_terms（0 抽詞 LLM）。"""
     monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", True)
     monkeypatch.setattr(rp, "normalize_to_lcc", lambda raw, context_text=None: "QA")
     _mock_p2_common(monkeypatch)
@@ -358,17 +356,21 @@ def test_run_phase2_no_early_return_cache_contract(monkeypatch):
         def __init__(self, *a, **k):
             pass
 
-        def query_cascade(self, *a, **k):
-            raise AssertionError("路級不應直呼 query_cascade——早退鏈已廢、一律走 build_termmap")
+        def query_cascade(self, s, t, domain):
+            return {"AI": "人工智慧"}  # 命中
 
-        def build_termmap(self, *a, **kw):
-            return {"ai": "人工智慧", "raptor": "[譯]Raptor"}   # 已知∪新翻定案表
+        def extract_terms(self, *a, **k):
+            raise AssertionError("cache hit 不應呼叫 extract_terms")
+
+        def upsert_terms(self, *a, **k):
+            raise AssertionError("cache hit 不應呼叫 upsert_terms")
 
     monkeypatch.setattr(rp, "GlossaryManager", FakeGM)
     s = ResumePipeline()
+    # === [PIPE-RESUME v9 C6 START] ===
     spec = s.run_phase2(_ctx_with_ingestion(raw_metadata={"domain": {"value": "程式設計"}}))
-    assert spec.glossary == {"ai": "人工智慧", "raptor": "[譯]Raptor"}
-# === [GLOSSARY-TERMMAP C3 END] ===
+    # === [PIPE-RESUME v9 C6 END] ===
+    assert spec.glossary == {"AI": "人工智慧"}
 
 
 # ─────────────────── 5. P3 Translation & Restore 契約 ───────────────────

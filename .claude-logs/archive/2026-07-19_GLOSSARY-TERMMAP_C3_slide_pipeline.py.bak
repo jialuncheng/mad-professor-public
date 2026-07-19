@@ -524,12 +524,11 @@ class SlidePipeline(DocumentStrategy):
             TranslateMode.DEEP_THINK, "abstract",
         )
 
-        # ④ Glossary 事前定案術語表（旗標閘門；GLOSSARY-TERMMAP C3：census→分流→定案、
-        #    廢早退飛輪滾動；LLM 全在 DB 交易外、upsert 冪等）
+        # ④ Glossary 級聯自癒（旗標閘門、LLM 交易外、upsert 冪等）
         glossary = {}
         if settings.LLM_USE_GLOSSARY_ALIGN:
             glossary = self._heal_glossary(
-                full_text, source_lang, _TARGET_LANG, lcc, abstract, translated_abstract)
+                source_lang, _TARGET_LANG, lcc, abstract, translated_abstract)
 
         # lcc → Domains.name（PK 唯讀免交易）
         domain_name = self._resolve_domain_name(lcc)
@@ -650,19 +649,19 @@ class SlidePipeline(DocumentStrategy):
                 zh[keys[int(mm.group(1)) - 1]] = mm.group(2).strip()
         return {k: zh.get(k) or raw[k] for k in keys}
 
-    # === [GLOSSARY-TERMMAP C3 START] P2 術語自癒收斂共用 build_termmap ===
     @staticmethod
-    def _heal_glossary(full_text, source_lang, target_lang, lcc,
-                       abstract, translated_abstract) -> dict:
-        """④ 事前定案術語表（鏡像 resume、plan v2 §2.2）：全文 census → 分流（已知 ∪ 未知、
-        廢早退）→ 僅未知批次翻譯 → 定案 upsert。委派共用 `GlossaryManager.build_termmap`。
-        """
+    def _heal_glossary(source_lang, target_lang, lcc, abstract, translated_abstract) -> dict:
+        """④ Glossary 級聯查詢 + 缺詞自癒（鏡像 resume：LLM 交易外、upsert 冪等）。"""
         from processor.glossary_extractor import GlossaryManager
-        return GlossaryManager().build_termmap(
-            full_text, abstract, translated_abstract,
-            source_lang, target_lang, lcc,
-        )
-    # === [GLOSSARY-TERMMAP C3 END] ===
+        gm = GlossaryManager()
+        existing = gm.query_cascade(source_lang, target_lang, domain=lcc)
+        if existing:
+            return existing
+        pairs = gm.extract_terms(
+            abstract, translated_abstract, source_lang, target_lang, domain=lcc)
+        if pairs:
+            gm.upsert_terms(pairs, source_lang, target_lang, domain=lcc)
+        return {k: v for k, v in pairs}
 
     @staticmethod
     def _resolve_domain_name(lcc: str):

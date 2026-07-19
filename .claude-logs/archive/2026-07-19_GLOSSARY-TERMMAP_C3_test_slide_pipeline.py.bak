@@ -255,47 +255,6 @@ def test_p2_six_step_spec_and_key_uniqueness(monkeypatch):
     assert spec.section_summaries['p01_財務報表'] == '摘要A'
 
 
-# === [GLOSSARY-TERMMAP C3 START] P2 glossary 段收斂 build_termmap ===
-def test_p2_glossary_flag_on_builds_termmap(monkeypatch):
-    """C3：旗標開 → slides P2 走共用 build_termmap（合併頁文本為 census 源、早退鏈廢除）。"""
-    import settings as st
-    import processor.glossary_extractor as ge_mod
-    monkeypatch.setattr(st, 'LLM_USE_GLOSSARY_ALIGN', True)
-    captured = {}
-
-    class _FakeGM:
-        def __init__(self, *a, **k):
-            pass
-
-        def build_termmap(self, full_text, abstract, translated_abstract,
-                          source_lang, target_lang, domain, **kw):
-            captured.update(full_text=full_text, abstract=abstract, domain=domain)
-            return {'spacex': 'SpaceX'}
-
-    monkeypatch.setattr(ge_mod, 'GlossaryManager', _FakeGM)
-    tiles = [_tile(1, '開場', '- alpha 內容'), _tile(2, '結論', '- beta 內容')]
-    outputs = [
-        "整份摘要。\ndomain: Tech",
-        '[{"i":1,"title":"開場","summary":"s1"}, {"i":2,"title":"結論","summary":"s2"}]',
-        "1. 譯s1\n2. 譯s2",
-    ]
-    spec, _ctx, _fake = _run_p2(monkeypatch, tiles, outputs)
-    assert spec.glossary == {'spacex': 'SpaceX'}          # 定案表入交付合約
-    assert 'alpha 內容' in captured['full_text']           # census 吃合併頁文本
-    assert 'beta 內容' in captured['full_text']
-    assert captured['domain'] == 'TK'                      # LCC 注入 domain
-
-
-def test_p2_heal_glossary_no_early_return_source():
-    """C3：slides 模組層早退鏈已廢（`if existing` 靜態掃描歸零、委派單一實作源）。"""
-    import inspect
-    import pipelines.slide_pipeline as sp
-    src = inspect.getsource(sp)
-    assert "if existing" not in src
-    assert "build_termmap" in src
-# === [GLOSSARY-TERMMAP C3 END] ===
-
-
 def test_p2_missing_title_generated_and_backfilled(monkeypatch):
     """U5 ②：無標題頁順產標題、回填 tiles、key 含生成標題。"""
     tiles = [_tile(1, '', '- 內容甲')]

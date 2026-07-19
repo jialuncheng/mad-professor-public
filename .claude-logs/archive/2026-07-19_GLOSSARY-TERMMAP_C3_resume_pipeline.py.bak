@@ -365,12 +365,11 @@ class ResumePipeline(DocumentStrategy):
             abstract, summary_ctx, TranslateMode.DEEP_THINK, "abstract"
         )
 
-        # ③ Glossary 事前定案術語表（旗標閘門；GLOSSARY-TERMMAP C3：census→分流→定案、
-        #    廢早退飛輪滾動；LLM 全在 DB 交易外、upsert 冪等）
+        # ③ Glossary 自癒（旗標閘門；LLM 在 DB 交易外、回寫冪等）
         glossary: Dict[str, str] = {}
         if settings.LLM_USE_GLOSSARY_ALIGN:
             glossary = self._heal_glossary(
-                full_text, source_lang, _TARGET_LANG, lcc, abstract, translated_abstract
+                source_lang, _TARGET_LANG, lcc, abstract, translated_abstract
             )
 
         # ④ lcc → Domains.name（PK 唯讀免交易）
@@ -478,19 +477,22 @@ class ResumePipeline(DocumentStrategy):
         )
     # === [PIPE-SECTION-BASE C1 END] ===
 
-    # === [GLOSSARY-TERMMAP C3 START] P2 術語自癒收斂共用 build_termmap ===
     def _heal_glossary(
-        self, full_text: str, source_lang: str, target_lang: str, lcc: str,
+        self, source_lang: str, target_lang: str, lcc: str,
         abstract: str, translated_abstract: str,
     ) -> Dict[str, str]:
-        """事前定案術語表（plan v2 §2.2）：全文 census → 分流（已知 ∪ 未知、廢早退）→
-        僅未知批次翻譯 → 定案 upsert。委派共用 `GlossaryManager.build_termmap`（五路單一實作源）。
-        """
-        return GlossaryManager().build_termmap(
-            full_text, abstract, translated_abstract,
-            source_lang, target_lang, lcc,
+        """Glossary 級聯查詢 + 缺詞自癒（LLM 在 DB 交易外、upsert 冪等回寫）。"""
+        gm = GlossaryManager()
+        existing = gm.query_cascade(source_lang, target_lang, domain=lcc)
+        if existing:
+            return existing
+        # 缺詞：以 (abstract, translated_abstract) 雙語樣本抽詞（LLM 交易外）→ 冪等回寫
+        pairs = gm.extract_terms(
+            abstract, translated_abstract, source_lang, target_lang, domain=lcc
         )
-    # === [GLOSSARY-TERMMAP C3 END] ===
+        if pairs:
+            gm.upsert_terms(pairs, source_lang, target_lang, domain=lcc)
+        return {key: val for key, val in pairs}
 
     def _resolve_domain_name(self, lcc: str) -> Optional[str]:
         """lcc → Domains.name（PK 唯讀檢索、無 session.begin() 寫交易；database SOP）。"""
