@@ -4,13 +4,25 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor PIPE-INGEST litedoc攝入自有化與品質根治（B 軌自有攝入組裝引擎——litedoc P1 脫離 A 軌 md_processor/json_processor 借用鏈·治影子輸出結構六缺陷之①②③⑥·plan v4 純結構化定位、術語④⑤/括號移交 GLOSSARY-TERMMAP 前後腳）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Ingestion Engine（攝入引擎本體）：新建 `pipelines/ingestion_engine.py`（extract_title / mark_meta_lines〔判型逐塊獨立標記·廢連續性假設·soft-fail〕/ split_blocks〔figure 必帶 `content=![alt](src)`〕/ build_sections〔title 零加工·原文標題 path 基準零位移〕/ assemble 五純函式·零文體字面量·零 import A 軌）+ `tests/test_ingestion_engine.py` 23 測試〔含零字面量靜態掃描+真 TilingProcessor bypass 直餵〕；純加法零接線；748→771 passed | `e7b9e6c` |
+| C2 | Litedoc P1 Switchover（litedoc P1 切換攝入引擎）：`_build_tiles` 改呼 `ingestion_engine.assemble`（cleaned md+doc_structure sidecar→processed 相容 JSON·meta 行分離不入 tiles·`_structured.json` 停產）→ TilingProcessor 零改續用；MarkdownProcessor/JsonProcessor import 退場〔grep 0 命中含註解層〕；測試 +3〔真引擎+真 tiling 全鏈·soft-fail·借用鏈退場靜態掃描〕；771→774 passed | `ca4e0e7` |
+| C3 | Title Single-Source & P1 Cleanups（譯題單一源與 P1 清理）：P3 section/whole 譯題一律 `translate_unit(P1 title)`、廢 `_extract_translated_title`〔根治標題錯置三受害者：扉頁 #標題/HTML title/PDF /Title〕→ post-strip 取得正確 key〔測試實證回聲被剝〕+ cover-prompt 增 publisher 正規化/OCR 自癒〔AI6Z→a16z〕/作者 Title Case + 移除 `_detect_source_lang` dead code〔含孤兒常數·resume/slides 活代碼零碰〕+ §7.2 key-changing 整合測試 ×3〔figure 穿透/meta 零重播/node key 對位〕；774→780 passed | `ab65208` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 §2 純結構化規格項對照 / tasks §6 驗收〔含 §7.2 整合測試正面達標〕/ 不可動清單〔A 軌/前兩路/section_engine/母 prompt 全零改·禁 constraints 鷹架〕/ 提示詞 5 份稽核〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C3 報告〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-18_PIPE-INGEST_litedoc攝入自有化與品質根治_plan.md`（v4·選 1 定案）+ `tasks/2026-07-19_PIPE-INGEST_litedoc攝入自有化與品質根治_tasks.md`。
+> ⚠️ baron 影子 E2E（plan §8.2 結構項）：重傳 SpaceX 樣本驗標題/分頁名/圖片 ≥19 張/無 meta 重複/venue=a16z；括號/術語屬 GLOSSARY-TERMMAP 前後腳、不在本案驗收。
+
 ### DOC-Refactor BRAINSTORM-1 brainstorming問答與視覺伴讀（vendor superpowers brainstorming·不裝 plugin——問答骨架 SOP + 視覺伴讀畫圖整套抽進 .claude-logs/·落點/溯源/護欄改寫貼合本專案）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | Brainstorming SOP & Visual Companion：新建 `.claude-logs/sop/2026-07-18_brainstorming_設計發想作業_SOP_手冊.md`（問答骨架 8 步 + 落點規範〔spec→baton/·禁 docs/superpowers/〕 + 溯源 header 樣板 + spec→template_plan 欄位對照〔四樣護欄留階段 1〕 + 兩護欄 + 移除 auto-commit + 視覺伴讀章）+ `.claude-logs/sop/2026-07-18_brainstorming_visual-companion_指引.md`（vendored·scripts/→.claude-logs/tools/·10 處）；全文完整根路徑防呆；零 .py/.bak | `3602a42` |
 | C2 | Vendored Scripts & Env Redirect：vendored 5 腳本 + 1 smoke 入 `.claude-logs/tools/`（來源 obra/superpowers@d884ae0）；server.cjs/helper.js/stop-server.sh/frame-template.html 逐字＝上游〔diff 零差〕，start-server.sh 僅改 4 落點行〔.superpowers/brainstorm→.claude-logs/baton/.brainstorm·server.cjs 零編輯〕，新增 test_brainstorm_server_smoke.sh〔**實測 HTTP 200 端到端**〕；mockup 落點 gitignored；零 .py/.bak | `2113db1` |
-| Checkout | 收官歸檔與驗證：Conformance 五維度全綠〔plan §2 六規格項 / tasks §6 七驗收〔grep+node--check+smoke 200〕/ 不可動〔業務碼零改·server.cjs 零編輯〕/ 提示詞 4 份稽核 / msg 草稿〕+ baton 一次性 mv 歸檔〔plan→plans/〔更名去 vendoring〕·tasks→tasks/·C1-C2 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔C1 `3602a42`/C2 `2113db1`〕+ staged 白名單自檢 + §7.2 純 DOC+tooling 顯式豁免 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 五維度全綠〔plan §2 六規格項 / tasks §6 七驗收〔grep+node--check+smoke 200〕/ 不可動〔業務碼零改·server.cjs 零編輯〕/ 提示詞 4 份稽核 / msg 草稿〕+ baton 一次性 mv 歸檔〔plan→plans/〔更名去 vendoring〕·tasks→tasks/·C1-C2 報告→executions/〕+ TODO 雙層結案 + hash 自癒〔C1 `3602a42`/C2 `2113db1`〕+ staged 白名單自檢 + §7.2 純 DOC+tooling 顯式豁免 | `c258af2` |
 
 > **修法依據**：`plans/2026-07-18_BRAINSTORM-1_brainstorming問答與視覺伴讀_plan.md`（v2·Q1–Q7 拍板 + review 三點併入）。
 > **動因**：baron 欲在設計/功能發想階段用 superpowers brainstorming（含視覺伴讀畫圖）；整包裝 plugin 有五治理衝突〔14-skill 污染/落點撞 §3/auto-commit 撞 §1.3/遙測/各環境各裝〕→ 改 vendor 檔案、落點護欄寫死。畫圖 server 經 smoke 實證可運作。
