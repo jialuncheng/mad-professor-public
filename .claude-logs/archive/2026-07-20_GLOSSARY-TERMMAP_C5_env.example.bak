@@ -66,14 +66,3 @@ SESSION_SECRET=
 # 未設定時預設 sqlite:///<專案根>/data/mad-professor.db
 # Phase 1 接線後才實際使用；未來換 PostgreSQL 只改此行。
 # DATABASE_URL=sqlite:///./data/mad-professor.db
-
-# ── Glossary 術語一致性（GLOSSARY-TERMMAP C5 起預設開啟）──
-# 領域術語自癒與一致性注入總開關（DOMAIN-NORM + GLOSSARY-CORE + GLOSSARY-TERMMAP 全鏈）。
-# 預設 true：B 軌五路 P2 以 build_termmap 建「事前定案術語表」（切塊 census → 已知∪未知分流
-# → 僅未知批次翻譯 → 定案 upsert）、P3 逐翻譯單元注入術語強約束（含「譯名＝原文者免括號」）。
-# 關回方式：取消註解下行設為 false（單點回退、不需改代碼）；測試期術語庫壞了可直接清
-# GlobalGlossary 表重跑（DB 可丟、定案會重建）。
-# LLM_USE_GLOSSARY_ALIGN=false
-
-# 術語 census 切塊字元上限（預設 6000≈2-4 段；塊小召回準、塊大省 LLM 呼叫）。
-# GLOSSARY_CENSUS_CHUNK_CHARS=6000

@@ -201,14 +201,8 @@ def _make_p2_ctx(tiles, paper_id='deck1'):
     return ctx
 
 
-def _run_p2(monkeypatch, tiles, chat_outputs, lcc_capture=None, glossary_align=False):
-    """共用 harness：fake chat / Translator / normalize_to_lcc / domain_name。
-
-    [GLOSSARY-TERMMAP C5] 旗標防禦性隔離：預設翻轉 true 後、本 harness 顯式 patch False
-    （既有測試依賴旗標關之 P2 行為；旗標開路由 test_p2_glossary_flag_on_builds_termmap 自 patch True 覆蓋）。
-    """
-    import settings as _st
-    monkeypatch.setattr(_st, "LLM_USE_GLOSSARY_ALIGN", glossary_align)
+def _run_p2(monkeypatch, tiles, chat_outputs, lcc_capture=None):
+    """共用 harness：fake chat / Translator / normalize_to_lcc / domain_name。"""
     import llm.client as llm_client
     import pipelines.slide_pipeline as sp
     from pipelines.slide_pipeline import SlidePipeline
@@ -285,7 +279,7 @@ def test_p2_glossary_flag_on_builds_termmap(monkeypatch):
         '[{"i":1,"title":"開場","summary":"s1"}, {"i":2,"title":"結論","summary":"s2"}]',
         "1. 譯s1\n2. 譯s2",
     ]
-    spec, _ctx, _fake = _run_p2(monkeypatch, tiles, outputs, glossary_align=True)
+    spec, _ctx, _fake = _run_p2(monkeypatch, tiles, outputs)
     assert spec.glossary == {'spacex': 'SpaceX'}          # 定案表入交付合約
     assert 'alpha 內容' in captured['full_text']           # census 吃合併頁文本
     assert 'beta 內容' in captured['full_text']
@@ -511,10 +505,6 @@ def test_integration_p2_p3_p4_key_changing(monkeypatch, tmp_path):
     import processor.domain_normalizer as dn_mod
     from processor import rag_indexer
     from pipelines.slide_pipeline import SlidePipeline
-
-    # [GLOSSARY-TERMMAP C5] 旗標防禦性隔離（預設翻轉 true 後、本測試 chat 佇列依旗標關設計）
-    import settings as _st
-    monkeypatch.setattr(_st, "LLM_USE_GLOSSARY_ALIGN", False)
 
     tiles = [_t4(1, 'Power Architecture', '800V rack power delivery details.'),
              _t4(2, 'Power Architecture', 'Vienna rectifier specs and SiC.')]
