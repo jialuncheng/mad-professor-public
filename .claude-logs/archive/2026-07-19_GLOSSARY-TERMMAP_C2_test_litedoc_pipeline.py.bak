@@ -251,7 +251,7 @@ class _FakeP2LLM:
 
 def _setup_p2_mocks(monkeypatch, tmp_path, tiles):
     monkeypatch.setattr(settings, "OUTPUT_DIR", tmp_path / "out")
-    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)   # glossary skip（預設路）
+    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", False)   # glossary skip
     # normalize_to_lcc / Translator / domain_name patch（隔離三真理源 LLM/DB）
     monkeypatch.setattr(lp, "normalize_to_lcc", lambda raw, context_text=None: "general")
 
@@ -298,40 +298,6 @@ def test_p2_section_summaries_key_is_original_title_path(monkeypatch, tmp_path):
     assert isinstance(spec.section_summaries, dict)
     assert set(spec.section_summaries.keys()) == {"Intro", "Detail"}   # 原文標題 path
     assert all(v.startswith("摘要") for v in spec.section_summaries.values())
-
-
-# === [GLOSSARY-TERMMAP C2 START] P2 glossary 段收斂 build_termmap ===
-def test_p2_glossary_flag_on_calls_build_termmap(monkeypatch, tmp_path):
-    """C2：旗標開 → P2 glossary 段走共用 build_termmap（傳 full_text＋摘要對、廢 _heal 早退鏈）。"""
-    _setup_p2_mocks(monkeypatch, tmp_path, _tiles_2())
-    monkeypatch.setattr(settings, "LLM_USE_GLOSSARY_ALIGN", True)
-    captured = {}
-
-    class _FakeGM:
-        def build_termmap(self, full_text, abstract, translated_abstract,
-                          source_lang, target_lang, domain, **kw):
-            captured.update(full_text=full_text, abstract=abstract,
-                            translated=translated_abstract,
-                            source_lang=source_lang, target_lang=target_lang,
-                            domain=domain)
-            return {"spacex": "SpaceX"}
-
-    monkeypatch.setattr(lp, "GlossaryManager", _FakeGM)
-    spec = LiteDocPipeline().run_phase2(_p2_ctx(_tiles_2()))
-    assert spec.glossary == {"spacex": "SpaceX"}          # 定案表入交付合約
-    assert captured["full_text"] == "EN FULL TEXT"        # census 吃全文（非僅摘要）
-    assert captured["abstract"] == "全文摘要句"
-    assert captured["translated"] == "譯：全文摘要句"
-    assert captured["domain"] == "general"
-
-
-def test_p2_heal_glossary_no_early_return_source(monkeypatch, tmp_path):
-    """C2：litedoc 模組層早退鏈已廢（`if existing` 靜態掃描歸零、委派單一實作源）。"""
-    import inspect
-    src = inspect.getsource(lp)
-    assert "if existing" not in src
-    assert "build_termmap" in src
-# === [GLOSSARY-TERMMAP C2 END] ===
 
 
 # ──────────────────────────────────────────────────────────────────────────

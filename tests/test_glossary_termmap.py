@@ -237,3 +237,53 @@ class TestSoftDegrade:
         assert result == {"starship": "星艦"}    # 已知仍交付、未知該次缺席
         assert all(r.source == "seed" for r in _rows(session_factory))  # 未寫入任何收割物
 # === [GLOSSARY-TERMMAP C1 END] ===
+
+
+# === [GLOSSARY-TERMMAP C2 START] §7.2 跨 Phase 整合測試（WORKFLOW_SOP §7.2、Checkout 必驗）===
+class TestCrossPhaseIntegration:
+    """P2 build_termmap 定案表 → InjectionContext.glossary → translator 逐單元注入。
+
+    key-changing transform：非同字詞之定案譯文≠原文（`[譯]` 前綴）——純 mock 同 key
+    兩端不予承認；斷言接縫不變式：多並行單元注入完全一致（全篇一致之結構性保證）、
+    同字定案存在、免括號 System constraint 句存在、旗標關零注入回歸。
+    """
+
+    def _build(self, session_factory):
+        llm = _TermmapMockLLM(census_terms=["Sentient Sun", "SpaceX", "Starship"])
+        gm = GlossaryManager(llm=llm, session_factory=session_factory)
+        text = "\n\n".join([
+            "para1: Sentient Sun rises over SpaceX.",
+            "para2: the Sentient Sun again.",
+            "para3: Starship built by SpaceX.",
+        ])
+        return gm.build_termmap(text, "abs", "譯abs", "en", "zh-tw", "tech")
+
+    def test_termmap_injection_consistent_across_units(self, session_factory, monkeypatch):
+        import settings as st
+        from processor.translator import InjectionContext, Translator
+
+        termmap = self._build(session_factory)
+        # key-changing：非同字詞譯文≠原文；SpaceX 同字定案
+        assert termmap["sentient sun"] == "[譯]Sentient Sun"
+        assert termmap["spacex"] == "SpaceX"
+
+        monkeypatch.setattr(st, "LLM_USE_GLOSSARY_ALIGN", True)
+        inj = InjectionContext(lcc="tech", glossary=termmap, doc_type="news")
+        # 模擬 P3 多並行翻譯單元：每單元 system prompt 各自組建
+        prompts = [Translator()._build_system_prompt(inj, "content") for _ in range(3)]
+        for p in prompts:
+            assert "- sentient sun → [譯]Sentient Sun" in p    # 定案行逐單元注入
+            assert "- spacex → SpaceX" in p                     # 同字定案行
+            assert "不得另加括號注解原文" in p                    # 免括號 System constraint 句
+        assert len(set(prompts)) == 1    # 各單元注入完全一致 → 全篇譯法唯一之結構性保證
+
+    def test_flag_off_zero_injection_regression(self, session_factory, monkeypatch):
+        import settings as st
+        from processor.translator import InjectionContext, Translator
+
+        monkeypatch.setattr(st, "LLM_USE_GLOSSARY_ALIGN", False)
+        inj = InjectionContext(lcc="tech", glossary={"a": "乙"}, doc_type="news")
+        p = Translator()._build_system_prompt(inj, "content")
+        assert "術語強約束" not in p
+        assert "不得另加括號注解原文" not in p    # 旗標關＝gated 區塊整段缺席（回歸）
+# === [GLOSSARY-TERMMAP C2 END] ===

@@ -133,8 +133,6 @@ class Translator:
                 "\n\n【術語強約束 System constraint】以下專有名詞譯法不可違背，翻譯時必須與論文譯本完全一致"
                 "（大小寫不敏感：正文出現相同單詞時，無論其原文大小寫，均強制套用該對應譯法）：\n"
                 f"{term_lines}"
-                # === [GLOSSARY-TERMMAP C2] 免括號約束（缺陷④根治；gated 區塊、母 prompt 檔零動）===
-                "\n術語譯法與原文相同者，直接沿用原文、不得另加括號注解原文。"
             )
 
         # ⑤ 額外約束注入（ctx.constraints；文字級約束，不 gate 旗標）
