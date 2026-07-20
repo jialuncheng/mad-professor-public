@@ -4,6 +4,18 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor IMG-FILTER 垃圾圖三規則確定性過濾（面積/長寬比/報頭判型行界·免 Vision 零 LLM·門檻經 23 圖實測校正廢 spec F7 長邊軸·接 PIPE-INGEST 圖片保留後·design spec F7）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Image Filter Module（圖片過濾器模組）：新建 `pipelines/image_filter.py`〔`_read_image_size` stdlib PNG 前 24B/JPEG SOF 掃描·SOS/EOI 終止防無效遍歷·零 Pillow〕+ `make_figure_filter` 三規則閉包〔③報頭零 IO 先行→①面積→②長寬比·`Path(src).name` 解析·fail-open ×3·DROP 審計 log·enabled=False→None〕+ settings 三常數〔**plan v2 校正值 100000/4.0 廢長邊軸**·spec 原門檻誤殺 481×369 禁令入行註〕+ `.env.example` + `tests/test_image_filter.py` 17 測試〔**481×369=177k 必 KEEP 守門**·邊界值·caplog 審計〕；純加法零接線；805→822 passed | `de3a475` |
+| C2 | Engine Figure-Filter Hook（引擎純加法注入點）：`ingestion_engine` `figure_filter=None` 貫穿三函式〔split_blocks/build_sections/assemble〕+ DROP 閘門置 caption 查找後〔**已匹配 caption `used[cap_idx]=True` 防孤兒圖說退化**·review 硬要求〕；litedoc 未接線（界線）、預設 None 等價〔26 既有測試原樣過〕；測試 +5〔全過濾孤兒守門/恆 True 同 None/選擇性過濾逐項保序/src 零轉換〕；822→827 passed | `f39f8cb` |
+| C3 | Litedoc Pre-pass Wiring（litedoc 報頭預掃接線）：`_collect_header_srcs`〔判型 blocks `max(end)` 行界**收窄**（非孤兒容器·防誤殺 hero 圖）·同語意 regex src 零轉換·三態 soft 降級 ∅〕+ `_build_tiles` 注入 `make_figure_filter(md 同目錄 images/, header_srcs)`〔ENABLED=false→None spy 釘死〕；**三規則自此於 litedoc 生效**；§7.2 整合測試〔實體 PNG 全鏈·報頭 DROP·**481 chart KEEP 守門**·caption 未殘留〕；827→831 passed | `8cfaf5b` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-20_IMG-FILTER_垃圾圖三規則確定性過濾_plan.md`（v2·五 OQ 拍板·門檻經 23 圖實測校正）+ `tasks/2026-07-20_IMG-FILTER_垃圾圖三規則確定性過濾_tasks.md`。
+> ⚠️ baron 影子 E2E（plan §8.2 硬判）：重傳 SpaceX 樣本——3 垃圾（Share 鈕/頭像裝飾/互動列橫條）消失、20 內容全在〔特驗 `9896a383` 481×369 chart 與 `366e4094` hero 圖〕、後端 log 三筆 DROP 審計；第二樣本（The_hidden_risks）驗門檻泛化；RAG 一輪迴歸。
+
 ### BE-Refactor GLOSSARY-TERMMAP 事前定案術語表與glossary旗標開啟（`GlossaryManager.build_termmap` 五路共用 builder·三路 `_heal_glossary` 收斂廢飛輪早退·termmap 注入全篇一致·接收 PIPE-INGEST 移交缺陷④⑤根治·plan v2 六 OQ 拍板）
 
 | Commit | 內容 | Hash |
@@ -13,7 +25,7 @@
 | C3 | Resume & Slides Convergence（resume 與 slides 等價收斂）：兩路 `_heal_glossary` 同式收斂〔resume 傳既讀 md 全文/slides 傳 tiles 合併頁文本·現場既有變數零新增讀取〕、`if existing` 早退全庫歸零〔三路單一實作源達成〕；resume 原⑩⑪測試依 Q1 規格改寫〔⑪原斷言即早退契約本身〕+ slides 新增 ×2；797→799 passed | `83f0503` |
 | C4 | Sliding Summary Window（litedoc 摘要型滑窗注入）：section_engine 純加法〔`slot_context_fn` 可選參數＋content/raw slot 補 `key`＝原文標題 path·缺省 identity 等價實證·resume 零改〕+ litedoc P3 上下文工廠〔前一鄰近 section 繁中摘要·`model_copy(update=...)` frozen 安全複製·zh_summary 合併浮出對齊 translator 既有優先序·容缺三態·禁譯文型 preceding〕；799→805 passed | `c571c5b` |
 | C5 | Glossary Flag-On（旗標預設開啟）：`LLM_USE_GLOSSARY_ALIGN` 預設 false→true 末位點火〔env 單點關回〕+ `.env.example` Glossary 段〔關回/清庫重跑/census 常數〕+ 測試旗標掃描 22 處/8 檔〔僅 test_slide_pipeline 需隔離：`_run_p2` 參數化＋§7.2 補 patch·斷言 100% 零動〕；新預設下 805 passed | `6b5c975` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6 驗收〔§7.2 整合正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C5 報告〕+ 9 提示詞入版控〔含 plan/review 依 PIPE-INGEST 前例併入〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6 驗收〔§7.2 整合正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔〔plan/tasks/C1-C5 報告〕+ 9 提示詞入版控〔含 plan/review 依 PIPE-INGEST 前例併入〕+ TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `0fab08a` |
 
 > **修法依據**：`plans/2026-07-19_GLOSSARY-TERMMAP_事前定案術語表與glossary旗標開啟_plan.md`（v2·六 OQ 拍板）+ `tasks/2026-07-19_GLOSSARY-TERMMAP_事前定案術語表與glossary旗標開啟_tasks.md`（§4.5 含點火後 slides census 觀察項）。
 > ⚠️ baron 影子 E2E（plan §8.2）：**先清 GlobalGlossary 表歸零基線**→重傳 SpaceX 樣本驗硬驗收〔`sentient sun` 全文單一譯法/`SpaceX (SpaceX)` 同字括號 ≤1〕→查 DB 定案詞入庫→重傳第二份同域樣本驗跨文件累積〔免費一致〕→resume/slides 各抽一樣本零退化→slides census 觀察項〔figure_description、濾點座標見 tasks §4.5〕。
