@@ -45,10 +45,6 @@ from pipelines import ingestion_engine
 # === [IMG-FILTER C3 START] 垃圾圖三規則過濾（接 assemble figure_filter 注入點）===
 from pipelines import image_filter
 # === [IMG-FILTER C3 END] ===
-# === [PIPE-INGEST-FITZ C3 START] born-digital 文字層快速道 + 連字修復 ===
-from pipelines import ligature_repair
-from processor import fitz_processor
-# === [PIPE-INGEST-FITZ C3 END] ===
 
 # === [PIPE-LITEDOC C4 START] P2 六步所需（三真理源 + section_engine）===
 from pipelines import section_engine
@@ -155,19 +151,10 @@ class LiteDocPipeline(DocumentStrategy):
         output_dir.mkdir(parents=True, exist_ok=True)
         paper_name = pdf_path.stem
 
-        # ① pdf2md：文字層閘門（PIPE-INGEST-FITZ C3）——born-digital 走 fitz 本地直抽、
-        #    未達標/失敗 fail-open 退既有 MinerU 路；flag off 時行為與現行等價。
-        md_path = self._ingest_markdown(ctx, pdf_path, output_dir)
+        # ① pdf2md：MinerU 文字解析（非 Vision）
+        md_path = Path(PDFProcessor().parse(str(pdf_path), str(output_dir)))
         # ② 強制 md_cleaner（非 resume/slides 跳過；浮水印/純數字行清理）
         MarkdownCleaner().clean(md_path)
-        # ②' 連字壞字修復（清洗後、③判型前——行內替換行數不變、行索引同基準）
-        if settings.LITEDOC_LIGATURE_REPAIR_ENABLED:
-            md_path.write_text(
-                ligature_repair.repair_ligatures(
-                    md_path.read_text(encoding="utf-8")
-                ),
-                encoding="utf-8",
-            )
         markdown_text = md_path.read_text(encoding="utf-8")
 
         # ③ analyze：DocAnalyzer + U2.1 映射（soft-fail）
@@ -229,43 +216,6 @@ class LiteDocPipeline(DocumentStrategy):
         return spec
 
     # ── P1 私有輔助 ──
-    # === [PIPE-INGEST-FITZ C3 START] 文字層閘門（born-digital 快速道）===
-    def _ingest_markdown(self, ctx, pdf_path: Path, output_dir: Path) -> Path:
-        """P1 ① pdf2md 閘門：中位數頁字元數 ≥ 門檻走 fitz 直抽、否則既有 MinerU 路。
-
-        fail-open 鐵律：閘門判定或 fitz 直抽任何異常 → warning（exc_info）退 MinerU、
-        絕不讓新 impl 阻斷攝入；flag off → 直走 MinerU、行為與現行 byte 等價。
-        """
-        if settings.LITEDOC_FITZ_ENABLED:
-            try:
-                median = fitz_processor.median_page_chars(str(pdf_path))
-                if median >= settings.LITEDOC_FITZ_MIN_CHARS_PER_PAGE:
-                    md_path = Path(
-                        fitz_processor.FitzProcessor().parse(
-                            str(pdf_path), str(output_dir)
-                        )
-                    )
-                    logger.info(
-                        "[PIPE-INGEST-FITZ P1] %s 閘門判定 born-digital"
-                        "（median=%.0f ≥ %d）→ fitz 直抽",
-                        ctx.paper_id, median,
-                        settings.LITEDOC_FITZ_MIN_CHARS_PER_PAGE,
-                    )
-                    return md_path
-                logger.info(
-                    "[PIPE-INGEST-FITZ P1] %s 閘門判定文字層不足"
-                    "（median=%.0f < %d）→ 退 MinerU",
-                    ctx.paper_id, median,
-                    settings.LITEDOC_FITZ_MIN_CHARS_PER_PAGE,
-                )
-            except Exception as exc:  # noqa: BLE001 — fail-open 退 MinerU
-                logger.warning(
-                    "[PIPE-INGEST-FITZ P1] %s fitz 快速道失敗（fail-open 退 MinerU）: %s",
-                    ctx.paper_id, exc, exc_info=True,
-                )
-        return Path(PDFProcessor().parse(str(pdf_path), str(output_dir)))
-    # === [PIPE-INGEST-FITZ C3 END] ===
-
     # === [PIPE-INGEST C2 START] P1 攝入組裝切換 ingestion_engine ===
     # litedoc 之 meta 判型集（route-specific 注入、引擎零字面量；對齊 doc_structure 判型 schema）
     _META_TYPES = ("title", "authors", "publication_info")

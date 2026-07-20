@@ -87,16 +87,3 @@ SESSION_SECRET=
 # IMG_FILTER_MIN_AREA=100000
 # 規則②長寬比上限（超過即濾；預設 4.0：垃圾橫條 5.47 / 內容最大 1.85）。
 # IMG_FILTER_MAX_ASPECT=4.0
-
-# ── born-digital 文字層快速道（PIPE-INGEST-FITZ C3 起預設開啟）──
-# 文字攝入路 P1：有完整文字層的 PDF 走 fitz 本地直抽（快、零 OCR 噪音）、
-# 無/稀疏文字層或直抽失敗自動退回既有外部解析服務（fail-open）。
-# 關回方式：取消註解下行設為 false（單點回退＝一律走既有解析路、不需改代碼）。
-# LITEDOC_FITZ_ENABLED=false
-
-# 文字層閘門門檻：每頁字元數「中位數」≥ 此值判 born-digital（網頁列印遠超、掃描=0）。
-# LITEDOC_FITZ_MIN_CHARS_PER_PAGE=150
-
-# 連字壞字修復（Pro1les/;rst 類 PDF 字型層共病；行內替換、雙閘防誤殺）。
-# 關回方式：取消註解下行設為 false（修復步跳過、md 原樣）。
-# LITEDOC_LIGATURE_REPAIR_ENABLED=false

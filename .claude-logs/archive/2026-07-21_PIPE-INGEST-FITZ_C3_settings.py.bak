@@ -132,18 +132,6 @@ IMG_FILTER_MIN_AREA = int(os.getenv("IMG_FILTER_MIN_AREA", "100000"))
 IMG_FILTER_MAX_ASPECT = float(os.getenv("IMG_FILTER_MAX_ASPECT", "4.0"))
 # === [IMG-FILTER C1 END] ===
 
-# === [PIPE-INGEST-FITZ C3 START] ===
-# born-digital 文字層快速道（plan v2、Q4 拍板預設開；影子軌隔離、env 單點關回不需 commit）。
-# False → 文字攝入路 P1 一律走既有外部解析服務、行為與現行 byte 等價。
-LITEDOC_FITZ_ENABLED = os.getenv("LITEDOC_FITZ_ENABLED", "true").lower() in ("1", "true", "yes")
-# 文字層閘門門檻（Q3 拍板）：每頁字元數「中位數」≥ 此值判 born-digital 走 fitz 直抽；
-# 網頁列印 PDF 每頁遠超此值、掃描件＝0，鴻溝巨大；中位數抗封面/尾頁稀疏頁干擾。
-LITEDOC_FITZ_MIN_CHARS_PER_PAGE = int(os.getenv("LITEDOC_FITZ_MIN_CHARS_PER_PAGE", "150"))
-# 連字壞字修復開關（PDF 字型層共病、兩攝入來源同享；行內替換行數不變、雙閘防誤殺）。
-# False → P1 修復步跳過、md 原樣。
-LITEDOC_LIGATURE_REPAIR_ENABLED = os.getenv("LITEDOC_LIGATURE_REPAIR_ENABLED", "true").lower() in ("1", "true", "yes")
-# === [PIPE-INGEST-FITZ C3 END] ===
-
 # === [META-NORM C1 START] ===
 # 封面 metadata 自癒飛輪總開關（依 tasks U5）。
 # False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。
