@@ -68,10 +68,7 @@ _LITEDOC_META_SYSTEM_PROMPT = (
     "You are a document metadata extractor. Analyze the provided text from the beginning of a "
     "news article or web document and extract metadata as a JSON object.\n"
     "Fields: title (str), authors (list of str), date (str, e.g. 2026-06-19), "
-    "publisher (str: news outlet / publishing organization), url (str if present), "
-    # === [LANG-DETECT C1] +language 欄（ISO 639-1、搭既有 metadata LLM 便車、零多呼叫）===
-    "language (str: ISO 639-1 two-letter code of the document's main body language, "
-    "e.g. en/it/de/fr/ja).\n"
+    "publisher (str: news outlet / publishing organization), url (str if present).\n"
     "Rules:\n"
     "1. If a URL is present and the publisher is not explicitly stated, decode the publisher from the "
     "URL domain (e.g. cnn.com -> CNN, nytimes.com -> The New York Times).\n"
@@ -82,11 +79,8 @@ _LITEDOC_META_SYSTEM_PROMPT = (
     "3. authors: normalize letter casing to Title Case (e.g. MARC ANDREESSEN -> Marc Andreessen); "
     "keep name order and spelling unchanged.\n"
     "4. Missing fields: use \"\" for strings and [] for authors. Do NOT invent values.\n"
-    # === [LANG-DETECT C1] 主體語言判定規則（非標題/URL 語言；不確定給空）===
-    "5. language: judge by the main body language of the text (not the title or URL); "
-    "use \"\" if unsure.\n"
-    "6. Return ONLY a valid JSON object with keys title, authors, date, publisher, url, "
-    "language. No markdown fences, no commentary."
+    "5. Return ONLY a valid JSON object with keys title, authors, date, publisher, url. "
+    "No markdown fences, no commentary."
 )
 
 
@@ -198,9 +192,6 @@ class LiteDocPipeline(DocumentStrategy):
         _lang_sample = section_engine.sample_body_text(tiles) or markdown_text[:2000]
         source_lang = section_engine.classify_source_lang(_lang_sample)
         # === [PIPE-LITEDOC-HOTFIX-1 END] ===
-        # === [LANG-DETECT C1] catch-all 限定合成：僅啟發式 'en' 時採信白名單過濾後的
-        # cover-prompt language 欄（it/de/fr 拉丁語系正名）；CJK/繁中判定權威不讓渡。===
-        source_lang = self._resolve_source_lang(meta, source_lang)
         publisher = str(meta.get("publisher") or "").strip()
 
         if ctx.paper_id.endswith("_shadow"):
@@ -389,24 +380,6 @@ class LiteDocPipeline(DocumentStrategy):
         except Exception as exc:  # noqa: BLE001 — 非致命：空 metadata、不阻斷
             logger.warning("[PIPE-LITEDOC P1] metadata 抽取失敗（soft、空）: %s", exc, exc_info=True)
             return {}
-
-    # === [LANG-DETECT C1 START] source_lang 合成（catch-all 限定、雙重白名單）===
-    @staticmethod
-    def _resolve_source_lang(meta: Dict[str, Any], heuristic: str) -> str:
-        """合成 source_lang：僅啟發式 catch-all 'en' 時嘗試採信 LLM language 欄。
-
-        - 啟發式 zh/hans/ja/ko（字元證據確定）→ 維持原判、LLM 不得翻案（繁中 bypass 權威不動搖）。
-        - 白名單雙閘：格式 `^[a-z]{2,3}$`（ISO 639-1/2、strip+lower 後）且**拒 zh 前綴**
-          （HOTFIX-1 鎖一契約於 producer 端強制——非繁嚴禁 zh* token、防 LLM 值繞過翻譯 gate）。
-        - 缺欄／怪值 → 退 'en'（與現行行為 100% 等價）。
-        """
-        if heuristic != "en":
-            return heuristic
-        lang = str(meta.get("language") or "").strip().lower()
-        if re.match(r"^[a-z]{2,3}$", lang) and not lang.startswith("zh"):
-            return lang
-        return "en"
-    # === [LANG-DETECT C1 END] ===
 
     def _resolve_title(
         self, meta: Dict[str, Any], markdown_text: str, paper_name: str
