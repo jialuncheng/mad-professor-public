@@ -121,17 +121,6 @@ LLM_USE_GLOSSARY_ALIGN = os.getenv("LLM_USE_GLOSSARY_ALIGN", "true").lower() in 
 GLOSSARY_CENSUS_CHUNK_CHARS = int(os.getenv("GLOSSARY_CENSUS_CHUNK_CHARS", "6000"))
 # === [GLOSSARY-TERMMAP C1 END] ===
 
-# === [IMG-FILTER C1 START] ===
-# 垃圾圖三規則確定性過濾（IMG-FILTER plan v2、任一命中即 DROP、fail-open）。
-# 總開關：過濾屬「刪內容」型操作、env 單點關回（false 即回全保留行為、不需 commit）。
-IMG_FILTER_ENABLED = os.getenv("IMG_FILTER_ENABLED", "true").lower() in ("1", "true", "yes")
-# 規則①面積下限（plan v2 §2.5 實測校正：垃圾 ≤50,400 / 內容最小 177,489、100k 居中 3.5× 邊際；
-# ⚠️ 廢除 spec F7 原始「長邊 600/面積 200k」門檻——會誤殺 481×369 內容 chart）。
-IMG_FILTER_MIN_AREA = int(os.getenv("IMG_FILTER_MIN_AREA", "100000"))
-# 規則②長寬比上限（實測：垃圾極端 5.47 / 內容最大 1.85、4.0 居中）。
-IMG_FILTER_MAX_ASPECT = float(os.getenv("IMG_FILTER_MAX_ASPECT", "4.0"))
-# === [IMG-FILTER C1 END] ===
-
 # === [META-NORM C1 START] ===
 # 封面 metadata 自癒飛輪總開關（依 tasks U5）。
 # False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。
