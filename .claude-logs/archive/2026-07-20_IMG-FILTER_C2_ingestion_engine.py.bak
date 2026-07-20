@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -126,21 +126,12 @@ def mark_meta_lines(
 # ──────────────────────────────────────────────────────────────────────────
 # 行級分塊（語意對齊既有分塊器；figure 補 content 鍵）
 # ──────────────────────────────────────────────────────────────────────────
-def split_blocks(
-    lines: List[str],
-    *,
-    figure_filter: Optional[Callable[[str, str], bool]] = None,
-) -> List[Dict[str, Any]]:
+def split_blocks(lines: List[str]) -> List[Dict[str, Any]]:
     """單次自上而下掃描，將行序列拆為 formula / figure / table / text blocks（保序）。
 
     與既有分塊器語意等價之差異點（皆為凍結契約之刻意行為）：
     - figure block **必帶** ``content=f"![alt](src)"``（可重建 markdown、穿透 raw slot）。
     - 空白行不產空 text block（下游合併語意不變）。
-
-    [IMG-FILTER C2] ``figure_filter(src, alt) -> bool``（可選、純加法）：提供時 figure block
-    產生前呼叫、回 False 即 **DROP**（block 與其已關聯 caption 皆不入；caption 行標
-    ``used[cap_idx]=True`` 防退化為孤兒 text block）；None（預設）＝現行為等價。
-    引擎自身零 IO——讀檔封裝於呼叫端注入之 closure 內。
     """
     blocks: List[Dict[str, Any]] = []
     n = len(lines)
@@ -167,20 +158,13 @@ def split_blocks(
         if m_img:
             used[i] = True
             alt, src = m_img.group("alt"), m_img.group("src")
-            caption, cap_idx = _find_caption(lines, i, used)
-            # === [IMG-FILTER C2] 過濾閘門：DROP 時 block 與 caption 皆不入；
-            # caption 行必標 used（防退化為孤兒 text block、plan v2 §2.2 硬要求）===
-            if figure_filter is not None and not figure_filter(src, alt):
-                if caption and cap_idx is not None:
-                    used[cap_idx] = True
-                i += 1
-                continue
             fig_block: Dict[str, Any] = {
                 "type": "figure",
                 "src": src,
                 "alt": alt,
                 "content": f"![{alt}]({src})",
             }
+            caption, cap_idx = _find_caption(lines, i, used)
             if caption and cap_idx is not None:
                 fig_block["caption"] = caption
                 used[cap_idx] = True
@@ -222,9 +206,7 @@ def _find_caption(
 # section 層級樹組裝
 # ──────────────────────────────────────────────────────────────────────────
 def build_sections(
-    lines: List[str], meta_flags: List[bool],
-    *,
-    figure_filter: Optional[Callable[[str, str], bool]] = None,
+    lines: List[str], meta_flags: List[bool]
 ) -> List[Dict[str, Any]]:
     """依 heading 層級將非 meta 行組裝為 section 樹（processed 相容 schema）。
 
@@ -242,12 +224,11 @@ def build_sections(
     def flush() -> None:
         nonlocal buffer
         if current is not None:
-            current["content"] = split_blocks(buffer, figure_filter=figure_filter)
+            current["content"] = split_blocks(buffer)
         elif any(ln.strip() for ln in buffer):
             orphan = {
                 "title": "", "level": 1,
-                "content": split_blocks(buffer, figure_filter=figure_filter),
-                "children": [],
+                "content": split_blocks(buffer), "children": [],
             }
             hierarchy.append(orphan)
         buffer = []
@@ -287,7 +268,6 @@ def assemble(
     structure: Optional[Dict[str, Any]] = None,
     *,
     meta_types: Tuple[str, ...] = DEFAULT_META_TYPES,
-    figure_filter: Optional[Callable[[str, str], bool]] = None,
 ) -> Dict[str, Any]:
     """cleaned markdown 全文 + 前段結構判型 → ``{"title", "meta", "sections"}``。
 
@@ -299,7 +279,7 @@ def assemble(
     lines = (markdown_text or "").split("\n")
     title, title_idx = extract_title(lines)
     meta, flags = mark_meta_lines(lines, structure, tuple(meta_types), title_idx)
-    sections = build_sections(lines, flags, figure_filter=figure_filter)
+    sections = build_sections(lines, flags)
     logger.info(
         "[PIPE-INGEST] assemble 完成 title=%r meta_types=%d sections=%d",
         title, len(meta), len(sections),
