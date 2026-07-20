@@ -4,6 +4,18 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor PIPE-INGEST-FITZ born-digital文字層快速道與連字修復（`PDFParser` 第二 impl fitz 本地直抽·litedoc P1 中位數閘門 fail-open·連字雙閘修復兩來源同享·meta 純正文零檔案屬性·design spec F6·plan v2 六 OQ 拍板）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Fitz Processor（Fitz 直抽處理器）：新建 `processor/fitz_processor.py`〔`FitzProcessor(PDFParser)` 第二 impl·MinerU 同形 .md：`\n\n` 段落+`#`/`##` 字級分群〔**正文字級＝總字元權重判定**·抗 `statistics.mode` 平手誤判〕+座標閱讀序+跨頁頂底帶剝除〔數字歸一 key ≥2 頁〕+圖 PNG/JPEG 限定 `page_{page_idx}_{xref}.{ext}` 防衝突·**零 `fitz.metadata`〔AST 測試守門〕**·失敗統一 `PDFParseError`〕+ `median_page_chars` 閘門輔助 + 16 測試〔fitz 程式化 fixture 零網路〕；純加法零接線；831→847 passed | `3cc3850` |
+| C2 | Ligature Repair（連字修復純函式）：新建 `pipelines/ligature_repair.py`〔`repair_ligatures` 行內替換**行數不變式**·「小寫×異常字元×小寫」窗口+`fi/fl/ff/ffi/ffl` 候選·**雙閘**：替換前數字縮寫/版本號正則排查〔防 `1st→fist`/`v1→vfi`〕+替換後詞形檢查〔系統字典 lazy 快取優先/內建 60 詞兜底·讀取失敗降級〕·fail-open 保留〕+ 22 測試〔正修/守門/字典缺席 monkeypatch〕；純加法零接線；847→869 passed | `ff7bf3f` |
+| C3 | Litedoc P1 Gate Wiring（litedoc P1 閘門與修復接線）：settings 三常數〔`LITEDOC_FITZ_ENABLED` true/`LITEDOC_FITZ_MIN_CHARS_PER_PAGE=150`/`LITEDOC_LIGATURE_REPAIR_ENABLED` true〕+ `.env.example` + P1 ①`_ingest_markdown` 閘門〔中位數 ≥150 走 fitz·例外 fail-open 退 MinerU + warning exc_info·flag off 零諮詢 byte 等價〕+ ②'修復步〔清洗後判型前·兩來源同享〕；P1 ③-⑦ 零動、A 軌四檔 git diff 零；6 測試含 **§7.2 整合**〔實體 PDF→真 FitzProcessor→真 cleaner/repair→**修復前行號建 sidecar 證行界對齊**→真 `_build_tiles`·連字已修/頁首已剪/圖穿透 image_filter〕；869→875 passed | `801f969` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-21_PIPE-INGEST-FITZ_born-digital文字層快速道與連字修復_plan.md`（v2·六 OQ 拍板）+ `tasks/` 同名 tasks。
+> ⚠️ baron 影子 E2E（plan §8.2）：重傳 SpaceX 樣本——後端 log 驗**走 fitz 路**（閘門審計）、23 頁全文完整（無 MinerU 跨頁截斷）、`Pro1les`/`;rst` 類連字消失、publisher=a16z（正文 URL 直抽）、IMG-FILTER 續效（3 垃圾 DROP/20 內容 KEEP）；掃描樣本驗閘門退 MinerU；`LITEDOC_FITZ_ENABLED=false` 應急關回實測。
+
 ### BE-Refactor IMG-FILTER 垃圾圖三規則確定性過濾（面積/長寬比/報頭判型行界·免 Vision 零 LLM·門檻經 23 圖實測校正廢 spec F7 長邊軸·接 PIPE-INGEST 圖片保留後·design spec F7）
 
 | Commit | 內容 | Hash |
@@ -11,7 +23,7 @@
 | C1 | Image Filter Module（圖片過濾器模組）：新建 `pipelines/image_filter.py`〔`_read_image_size` stdlib PNG 前 24B/JPEG SOF 掃描·SOS/EOI 終止防無效遍歷·零 Pillow〕+ `make_figure_filter` 三規則閉包〔③報頭零 IO 先行→①面積→②長寬比·`Path(src).name` 解析·fail-open ×3·DROP 審計 log·enabled=False→None〕+ settings 三常數〔**plan v2 校正值 100000/4.0 廢長邊軸**·spec 原門檻誤殺 481×369 禁令入行註〕+ `.env.example` + `tests/test_image_filter.py` 17 測試〔**481×369=177k 必 KEEP 守門**·邊界值·caplog 審計〕；純加法零接線；805→822 passed | `de3a475` |
 | C2 | Engine Figure-Filter Hook（引擎純加法注入點）：`ingestion_engine` `figure_filter=None` 貫穿三函式〔split_blocks/build_sections/assemble〕+ DROP 閘門置 caption 查找後〔**已匹配 caption `used[cap_idx]=True` 防孤兒圖說退化**·review 硬要求〕；litedoc 未接線（界線）、預設 None 等價〔26 既有測試原樣過〕；測試 +5〔全過濾孤兒守門/恆 True 同 None/選擇性過濾逐項保序/src 零轉換〕；822→827 passed | `f39f8cb` |
 | C3 | Litedoc Pre-pass Wiring（litedoc 報頭預掃接線）：`_collect_header_srcs`〔判型 blocks `max(end)` 行界**收窄**（非孤兒容器·防誤殺 hero 圖）·同語意 regex src 零轉換·三態 soft 降級 ∅〕+ `_build_tiles` 注入 `make_figure_filter(md 同目錄 images/, header_srcs)`〔ENABLED=false→None spy 釘死〕；**三規則自此於 litedoc 生效**；§7.2 整合測試〔實體 PNG 全鏈·報頭 DROP·**481 chart KEEP 守門**·caption 未殘留〕；827→831 passed | `8cfaf5b` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `2e03c2c` |
 
 > **修法依據**：`plans/2026-07-20_IMG-FILTER_垃圾圖三規則確定性過濾_plan.md`（v2·五 OQ 拍板·門檻經 23 圖實測校正）+ `tasks/2026-07-20_IMG-FILTER_垃圾圖三規則確定性過濾_tasks.md`。
 > ⚠️ baron 影子 E2E（plan §8.2 硬判）：重傳 SpaceX 樣本——3 垃圾（Share 鈕/頭像裝飾/互動列橫條）消失、20 內容全在〔特驗 `9896a383` 481×369 chart 與 `366e4094` hero 圖〕、後端 log 三筆 DROP 審計；第二樣本（The_hidden_risks）驗門檻泛化；RAG 一輪迴歸。
