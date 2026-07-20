@@ -42,9 +42,6 @@ from processor import meta_normalizer
 # === [PIPE-INGEST C2 START] B 軌自有攝入組裝（A 軌 md2json/行級分塊借用鏈退場）===
 from pipelines import ingestion_engine
 # === [PIPE-INGEST C2 END] ===
-# === [IMG-FILTER C3 START] 垃圾圖三規則過濾（接 assemble figure_filter 注入點）===
-from pipelines import image_filter
-# === [IMG-FILTER C3 END] ===
 
 # === [PIPE-LITEDOC C4 START] P2 六步所需（三真理源 + section_engine）===
 from pipelines import section_engine
@@ -241,14 +238,8 @@ class LiteDocPipeline(DocumentStrategy):
                 "[PIPE-INGEST P1] %s doc_structure 讀取失敗（soft、無 meta 分離）: %s",
                 paper_name, exc, exc_info=True,
             )
-        # === [IMG-FILTER C3] 報頭預掃 + 三規則過濾注入（ENABLED=false 時 filter=None 零過濾）===
-        header_srcs = self._collect_header_srcs(markdown_text, structure)
-        fig_filter = image_filter.make_figure_filter(
-            md_path.parent / "images", header_srcs
-        )
         result = ingestion_engine.assemble(
-            markdown_text, structure, meta_types=self._META_TYPES,
-            figure_filter=fig_filter,
+            markdown_text, structure, meta_types=self._META_TYPES
         )
         processed = output_dir / f"{paper_name}_processed.json"
         processed.write_text(
@@ -262,37 +253,6 @@ class LiteDocPipeline(DocumentStrategy):
         TilingProcessor().process(str(processed), str(tiled), doc_type=doc_type)
         return self._load_tiles(tiled)
     # === [PIPE-INGEST C2 END] ===
-
-    # === [IMG-FILTER C3 START] 報頭區圖片預掃（規則③之 producer）===
-    @staticmethod
-    def _collect_header_srcs(
-        markdown_text: str, structure: Optional[Dict[str, Any]]
-    ) -> set:
-        """掃「報頭行界」內之 `![](src)` 行、收集 src 集合（IMG-FILTER plan v2 §2.3）。
-
-        報頭行界＝doc_structure 判型 blocks 之 `max(end)`（**收窄界定**、非整個孤兒容器
-        ——首 heading 前可能有正文 hero 圖、plan §2.6）；src 以與 engine `_FIGURE_RE`
-        同語意之 regex 自 markdown 原文行抽出、**零轉換**（§4 接縫契約）。
-        structure 缺失／格式異常 → 回 ∅（規則③自然停用、①②照跑、soft）。
-        """
-        try:
-            blocks = structure.get("structure") if isinstance(structure, dict) else None
-            if not isinstance(blocks, list) or not blocks:
-                return set()
-            hdr_end = max(int(b["end"]) for b in blocks)
-        except Exception as exc:  # noqa: BLE001 — 判型異常 soft、規則③停用
-            logger.warning(
-                "[img-filter] 報頭行界解析失敗（規則③停用、①②照跑）: %s",
-                exc, exc_info=True,
-            )
-            return set()
-        srcs: set = set()
-        for line in markdown_text.split("\n")[: hdr_end + 1]:
-            m = re.match(r"^!\[.*?\]\((.*?)\)", line.strip())
-            if m and m.group(1):
-                srcs.add(m.group(1))
-        return srcs
-    # === [IMG-FILTER C3 END] ===
 
     @staticmethod
     def _load_tiles(tiled_path: Path) -> List[Dict[str, Any]]:
