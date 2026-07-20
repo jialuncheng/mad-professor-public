@@ -4,6 +4,16 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor LANG-DETECT cover-prompt語言欄與source_lang正名（cover-prompt +language ISO 欄·`_resolve_source_lang` catch-all 限定合成·雙重白名單拒 zh 前綴·根治拉丁語系判 en 致 GlobalGlossary 桶污染·`classify_source_lang` 原職零改·design spec F4·plan v2 四 OQ 拍板）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Language Field & Source-Lang Resolution（語言欄與 source_lang 合成）：`_LITEDOC_META_SYSTEM_PROMPT` Fields 增 `language` ISO 639-1 欄+Rule 5 主體語言判定〔非標題/URL·不確定給空〕+Rule 6 keys 同步〔搭既有 metadata LLM 便車·零多呼叫〕/ 私有 `_resolve_source_lang(meta, heuristic)`〔啟發式非 en〔zh/hans/ja/ko 字元證據確定〕維持原判 LLM 不得翻案·en 時雙重白名單 `^[a-z]{2,3}$`〔ISO 639-1/2 含三字碼〕**且拒 zh 前綴**〔HOTFIX-1 鎖一 producer 端強制·與 P3 `startswith("zh")` gate 謂詞同源〕·缺欄/怪值退 en 100% 等價〕/ `run_phase1` 單行接點〔正名值單點流入 spec·消費端零改〕；`section_engine`/`GlobalGlossary` git diff 零；45 測試〔契約/矩陣 37 案〔非 catch-all 24 維持+catch-all 白名單 13〕/端到端 it/缺欄安全網/**§7.2 整合**：語系 token en→it 貫穿 P2 `build_termmap` 捕參 `source_lang=it`+`target_lang=zh-tw`+P3 不 bypass+en 對照組不互污〕；875→920 passed | `c17e183` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 六規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢；⚠️ Check 首輪當場攔下 C1 未 commit〔CHECKOUT-GUARD 生效〕、baron 補 commit 後重收官 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-21_LANG-DETECT_cover-prompt語言欄與source_lang正名_plan.md`（v2·四 OQ 拍板）+ `tasks/` 同名 tasks。
+> ⚠️ baron 影子 E2E（plan §8.2）：義文樣本上傳——後端 log `source_lang=it`、`SELECT DISTINCT source_lang FROM global_glossary` 出現 `it` 桶且英文桶無義文新詞；英文（SpaceX）回歸 `en`、繁中 `zh` bypass 不翻譯、簡體 `hans` 轉繁照舊（HOTFIX-1 回歸）。
+
 ### BE-Refactor PIPE-INGEST-FITZ born-digital文字層快速道與連字修復（`PDFParser` 第二 impl fitz 本地直抽·litedoc P1 中位數閘門 fail-open·連字雙閘修復兩來源同享·meta 純正文零檔案屬性·design spec F6·plan v2 六 OQ 拍板）
 
 | Commit | 內容 | Hash |
@@ -11,7 +21,7 @@
 | C1 | Fitz Processor（Fitz 直抽處理器）：新建 `processor/fitz_processor.py`〔`FitzProcessor(PDFParser)` 第二 impl·MinerU 同形 .md：`\n\n` 段落+`#`/`##` 字級分群〔**正文字級＝總字元權重判定**·抗 `statistics.mode` 平手誤判〕+座標閱讀序+跨頁頂底帶剝除〔數字歸一 key ≥2 頁〕+圖 PNG/JPEG 限定 `page_{page_idx}_{xref}.{ext}` 防衝突·**零 `fitz.metadata`〔AST 測試守門〕**·失敗統一 `PDFParseError`〕+ `median_page_chars` 閘門輔助 + 16 測試〔fitz 程式化 fixture 零網路〕；純加法零接線；831→847 passed | `3cc3850` |
 | C2 | Ligature Repair（連字修復純函式）：新建 `pipelines/ligature_repair.py`〔`repair_ligatures` 行內替換**行數不變式**·「小寫×異常字元×小寫」窗口+`fi/fl/ff/ffi/ffl` 候選·**雙閘**：替換前數字縮寫/版本號正則排查〔防 `1st→fist`/`v1→vfi`〕+替換後詞形檢查〔系統字典 lazy 快取優先/內建 60 詞兜底·讀取失敗降級〕·fail-open 保留〕+ 22 測試〔正修/守門/字典缺席 monkeypatch〕；純加法零接線；847→869 passed | `ff7bf3f` |
 | C3 | Litedoc P1 Gate Wiring（litedoc P1 閘門與修復接線）：settings 三常數〔`LITEDOC_FITZ_ENABLED` true/`LITEDOC_FITZ_MIN_CHARS_PER_PAGE=150`/`LITEDOC_LIGATURE_REPAIR_ENABLED` true〕+ `.env.example` + P1 ①`_ingest_markdown` 閘門〔中位數 ≥150 走 fitz·例外 fail-open 退 MinerU + warning exc_info·flag off 零諮詢 byte 等價〕+ ②'修復步〔清洗後判型前·兩來源同享〕；P1 ③-⑦ 零動、A 軌四檔 git diff 零；6 測試含 **§7.2 整合**〔實體 PDF→真 FitzProcessor→真 cleaner/repair→**修復前行號建 sidecar 證行界對齊**→真 `_build_tiles`·連字已修/頁首已剪/圖穿透 image_filter〕；869→875 passed | `801f969` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 八規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `4b7e19a` |
 
 > **修法依據**：`plans/2026-07-21_PIPE-INGEST-FITZ_born-digital文字層快速道與連字修復_plan.md`（v2·六 OQ 拍板）+ `tasks/` 同名 tasks。
 > ⚠️ baron 影子 E2E（plan §8.2）：重傳 SpaceX 樣本——後端 log 驗**走 fitz 路**（閘門審計）、23 頁全文完整（無 MinerU 跨頁截斷）、`Pro1les`/`;rst` 類連字消失、publisher=a16z（正文 URL 直抽）、IMG-FILTER 續效（3 垃圾 DROP/20 內容 KEEP）；掃描樣本驗閘門退 MinerU；`LITEDOC_FITZ_ENABLED=false` 應急關回實測。
