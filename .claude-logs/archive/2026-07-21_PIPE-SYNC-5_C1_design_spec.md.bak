@@ -1,0 +1,180 @@
+---
+產出工具：brainstorming SOP（vendored superpowers brainstorming·不裝 plugin·BRAINSTORM-1）
+產出時間：2026-07-19（UTC+8）
+產出情境：baron dogfood 新 brainstorming SOP，拿 `baton/2026-07-18_PIPE-INGEST_litedoc攝入自有化與品質根治_plan.md`（v2）當案例 review，問答滾出六個相關但獨立的題目
+參考來源：PIPE-INGEST plan v2 + `baton/litedoc_shadow_artifacts/SpaceX_the_Sentient_Sun_shadow/`（SpaceX 真實中間產物）+ 現役碼實查（行號見內文）
+任務代號：PIPE-INGEST-REVIEW（design 探索·seeds 多個 plan，本身非 plan）
+---
+
+# PIPE-INGEST-REVIEW — litedoc 攝入與翻譯一致性 設計探索
+
+## §0 這份文件是什麼（原料定位）
+
+- 這是 brainstorming 發散的**設計 spec / 原料**，**不是 plan**。它彙整六個發現與方向，供各自後續開 `template_plan` 時引用。
+- **兩護欄（承 brainstorming SOP §4.2）**：
+  1. 本 spec 是輸入、不是 plan 半成品；各發現落地前，**§3 現況 grep 證據 / §4 跨 Phase 接縫契約 / §6 不可動清單 / §8 驗證計畫**四樣仍須在各自階段 1 手工長出。
+  2. 本 spec 已帶溯源 header。
+
+## §1 一句話結論
+
+PIPE-INGEST plan v2 **診斷正確、修法方向對**（SpaceX 真實產物完美驗證）。review 額外滾出五個相關題目，其中**「翻譯一致性」的正解是打開既有 glossary 機制**（非本地 band-aid），而「太重」經實查為**假議題**（不是效能問題）。六題分兩「線」（**非**專案既有 A軌/B軌術語——A軌=舊 pipeline_core 單體、B軌=新 PIPE 策略管線；litedoc 本身即 B軌一路），依賴順序見 §3。
+
+## §2 六個發現
+
+### F1 — §2.7「全文單一譯法」硬驗收，對不齊三路家族的實際能力
+- **問題**：plan §2.7 把「同一專名全文唯一譯法」寫成硬驗收，但 litedoc（含 resume/slides）都是 **section/頁 並行翻譯、跨單位零共享上下文**（`litedoc_pipeline.py:490` `max_workers`；§3 L66 `preceding` 未設）→ 機器本來就保不了「跨單位絕對一致」。
+- **三路實查對照**：resume/slides **都有** `_*_CONSTRAINTS`（`resume:548`/`slide:714`），**只有 litedoc 沒有**；三路 glossary 全關（`LLM_USE_GLOSSARY_ALIGN` 預設 false）、全 abstract-seeded；跨單位一致性全靠 constraints（軟）+ zh_summary（軟）。
+- **方向（更新·baron 選 1·2026-07-19）**：**F1「軟化 §2.7」路線廢除**。原軟化前提＝「constraints-only、沒有 build_termmap」；但 baron 決定 **build_termmap 與 PIPE-INGEST 前後腳做（空窗幾小時）**，故不為短空窗做 interim constraints（YAGNI）。改為：
+  - **PIPE-INGEST 純結構**（標題/meta/圖片/publisher/dead-code）——**§2.6 括號 + §2.7 術語一致從 PIPE-INGEST 移出**、不做 interim。
+  - **術語+括號（④⑤）交 build_termmap（F3）**——而且因 termmap **保證**全文一致，**§2.7 可用硬驗收「全文單一譯法」**（在 F3·非軟化）。
+  - 短空窗期間 litedoc 有括號噪音＝測試產物、無妨；build_termmap 一上即全解。
+- **範圍**：PIPE-INGEST 移除 §2.6/§2.7 interim（純結構化）；術語括號驗收移至 F3。
+
+### F2 — glossary 是現成的文件級一致性機制，只是被旗標關著；「太重」是假議題
+- **實查**：P2 建 glossary（`litedoc:312`）→ P3 帶入（`litedoc:454` `glossary=gspec.glossary`）→ translator 注入每單位（`translator.py:127`）——**全鏈接好**、v1 plan U4 就這樣規劃（旗標閘門）。
+- **「太重」拆解（`glossary_extractor.py` 實查）**：成本＝每份文件 1 次 LLM（`extract_terms`、**在 DB 交易外** L13/L120）+ 1 短查 + 1 極短冪等寫（`on_conflict_do_nothing` L212）→ **不是效能問題**。真正含意只有：(a) 單一全域旗標、五路一起開（部署隔離顧慮）；(b) 抽詞只讀摘要（品質未驗證）。而「跨五路」**是設計本意、非缺點**。
+- **方向**：直接打開 `LLM_USE_GLOSSARY_ALIGN`（內部專案、規模小，baron 判斷成立）。打開後一致性交給累積術語庫，F1 的 §2.7 也隨之落地。
+
+### F3 — 翻譯一致性根治：事前定案術語表（含飛輪早退修正）
+
+> 本節經多輪問答定稿；設計要點與整合流程圖對應（`glossary_predecided_termmap_integrated_p2_p3_flow`）。
+
+**問題（三層）**：
+1. **飛輪早退**：litedoc `_heal_glossary` 內 `if existing: return existing`（約 L400）——某 LCC 域一有詞即直接回、不抽新詞不寫庫 → **累積飛輪第一份後即停轉**（跨文件累積形同關閉）。**疑似 bug，落地前先向 baron 確認是否有意**。
+2. **抽詞綁摘要**：`extract_terms(source, translated)` 需**雙語**樣本對齊術語對，而 P2 當下唯一被翻的是摘要 → 只能抽摘要 → 漏 body 長尾（SpaceX×67/7段、a16z×13/3段、Starship×12/5段、Mars×12/6段——要一致的詞橫跨多段）。
+3. **first-write-wins 污染**：upsert `on_conflict_do_nothing`（L212），錯詞先寫即黏住、跨同 LCC 域傳染。**測試期可控＝壞了清庫重跑即可**（DB 可丟·不必背污染包袱）；生產後期才需 `tools/manage_glossary.py` / 清詞工具動手術。
+
+**否決的路徑（留痕）**：
+- ❌ **P3 後收割**（從翻完 body 抽詞對）：body 若已不一致，收割到的是任意/可能錯的譯法 → 寫死 DB 污染未來。**一致性只能事前決定、無事後補救**。
+- ❌ **regex 撈專名**：regex 判不了「是不是專名」（拉丁 case 啟發式、**CJK 完全失效**），只能當減量前置、不當判官 → 改**純 LLM census**。
+- ❌ **整篇一次 census**（雖 1M context 塞得下）：注意力稀釋、召回率掉、抽詞不準 → 改**切塊**。
+
+**方向：事前定案術語表（做成 `GlossaryManager` 共用 builder）**
+
+```
+（P2 · 五路共用 build_termmap，取代 litedoc/resume/slides 3 份重複 _heal_glossary）
+N1 切塊：門檻常數（如 GLOSSARY_CENSUS_CHUNK_CHARS）沿「段落邊界」累積、不切句中
+N2 逐塊 census（並行·比照 P3 範式）：純 LLM、**只認原文專名、不翻譯**
+N3a 去重：term_key 正規化聯集 → 唯一原文詞集（無衝突：同詞只一份）
+N3b DB 分流：query_cascade（**廢早退、改「已知 ∪ 新」**）→ {DB 已知〔有譯法〕 / 未知}
+N4 只翻未知詞：一次小呼叫（context=摘要）→ 新 term→譯法
+   定案表 = DB 已知 ∪ 新翻
+N5 upsert 定案表（寫「定案」·**非收割輸出**）
+（P3）
+定案表注入每段 → body 照表翻 → 全篇一致；殘角〔未 census 詞〕→ 測試期清庫重跑即可（清詞工具屬生產後期便利）
+```
+
+**關鍵設計要點**：
+- **census 只認詞、不翻** → 唯一詞集只翻一次 → **「同詞不同譯」衝突根本不發生**（免多數決/reconcile；此為定稿最大簡化）。
+- **純 LLM census + 切塊**：切小專注抽、召回準；沿段落邊界不切句中；可並行、wall-clock 不太增。census 切塊門檻**與翻譯 size-gate（15k）無關**——前者為召回、後者為輸出品質，兩獨立。
+- **翻譯量最小**：DB 已知免翻、只翻未知；body 不重翻（N4 只翻術語清單、P3 主體不動）。
+- **污染低**：DB 只吃「刻意定案」的詞、永不吃收割輸出。
+- **跨文件累積**：下一份同 LCC 文件 N3b 直接 query 到 SpaceX 定譯（免費）——飛輪修正後才成立。
+- **共用化**：N1–N5 = `GlossaryManager.build_termmap`，五路共享（飛輪修正 + census 一次全受惠）。
+
+**P3 注入與連貫（附論·size-gate + preceding 兩形態）**：
+- 定案表保**術語**一致，但**語篇連貫**（代名詞/語氣/跨段指涉）是另一回事，不能混。
+- **size-gate 該留**（勿全改逐段）：`translate_whole` 不只扛小文件，還扛「無 section / heading 退化」兩個**結構性 fallback**（`litedoc:475` `whole_mode = len<15k or not sections or degraded`）——沒 section 的文件根本沒東西可逐段。且小文件走整篇＝**免費全連貫**。→ 小文件整篇、大文件並行 + 定案表。
+- **preceding 兩形態（PIPE-SPEC 實證·修正上一版「一律陷阱」誤述）**：
+  - **摘要型**（parallel-safe）：BOOK 三層 Sliding Window「全書總摘要 + 鄰近 2 章詳細摘要 + 更前章壓縮故事線·≤3k tokens」（`PIPE-SPEC L724`），**摘要 P2 預算好、P3 拉現成 → 章節照樣並行**。**這才是連貫正解**；且 litedoc P2 已有 `section_summaries`（⑥·`litedoc:322` `build_section_summaries` → `{原文標題 path: zh 摘要}`）、**原料現成**、只是 P3 沒注入鄰近段摘要。＝我先前說的「zh_summary 升級 storyboard」同一件事。**精確**：section_summaries **現況只餵 P4 RAG**（`litedoc:590-610`）、非 P3 → 「現成」＝**摘要已算·注入待接**（省最貴的算摘要、要補的是 P3 接線）；且部分 section 摘要可能失敗缺 key → **注入須容缺、缺則略**。
+  - **譯文型**（serial）：僅用於「單一長章 >15k 內部切片」`preceding=[上切片結尾 500-800 字譯文]`（`PIPE-SPEC L728`、簽名註「僅長章滾動需要」L879）——跨 section 用才會逼序列。
+- **「5x」真相**：5x 是 RESUME-PERF-1 把 section 並行化的收益（331s→55s）、與 preceding 無關；resume section 獨立故不需 preceding。**不是 preceding 一律砍 5x，是譯文型 preceding 跨 section 才逼序列。**
+- **結論**：litedoc 連貫走**摘要型 sliding window**（注入鄰近 `section_summaries`·parallel-safe·section_summaries 現成）；**避免譯文型 preceding 跨 section**。溯源：BOOK 設計（PIPE-SPEC），惟 BOOK 管線未落地（plan_v7 遺失·RESCUE-1 待重建）、設計可借。
+
+**接收 PIPE-INGEST 移出項（baron 選 1）**：術語一致④⑤ + 括號從 PIPE-INGEST 移入本案；因定案表**保證**全文一致，**§2.7「全文單一譯法」可用硬驗收**（非軟化）；括號決定（`SpaceX→不加括號`）由定案表順帶。**與 PIPE-INGEST 前後腳做（空窗幾小時）**，PIPE-INGEST 不做 interim constraints。
+
+**範圍/依賴**：新任務（建議代號 `GLOSSARY-TERMMAP`）；`build_termmap` 共用改造 + 飛輪早退修正（中）；依賴 F4（源語言→census 手段·CJK 只能純 LLM）+ F2 旗標打開（**清詞工具非前提·生產後期便利·測試期清庫即可**）。切塊門檻為 settings 常數、可調。連貫附論（size-gate 保留 + 摘要型滑窗）可併入或另立小案。
+
+### F4 — 語言偵測掛錯地方：義大利文被判成英文
+- **實查**：`classify_source_lang`（`section_engine.py:565-579`）用 unicode 字元判，只吐 `{zh,hans,ja,ko,en}`，**拉丁語系（it/de/fr）全掉 catch-all `en`**（L579）。而 `GlobalGlossary` 按 `source_lang` 分桶 → **義大利文詞以 `en` 寫入、污染英文命名空間**、下一份真英文文件撈到義文詞。
+- **關鍵**：schema **支援多語**（source_lang 是欄、聯合唯一鍵含它）；**破的是偵測層**。
+- **方向**：P1 cover-prompt LLM **本來就讀整份文件**（`_LITEDOC_META_SYSTEM_PROMPT` L60），**多加一個 `language`(ISO) 欄** → 設 source_lang。**零新增偵測器、零多一次呼叫**。`classify_source_lang` 保留原職（繁中 bypass gate、HOTFIX-1），**不兼差**。
+- **範圍**：cover-prompt +1 欄（小）；是「多語 glossary」的**前置**（義文進場前必做）。
+
+### F5 — 開頭「亂七八糟」＝標題丟 + meta 沒分離（PIPE-INGEST 正解、與 glossary 無關）
+- **SpaceX 真實產物實證**：`tiled.title='SpaceX & the Sentient Sun'`（**對的**）但下游丟棄 → 譯題退回第一個 section 標題 `從未來逆向推導`（缺陷①）；meta 塊（epigraph/byline/publisher/標題/日期/導覽）**扉頁後整包重播**（缺陷③）；`SpaceX (SpaceX)`/`有意識的太陽 (the Sentient Sun)` 括號噪音（④）；「有**意識**」vs「有**感知**」一名多譯（⑤）；venue=`AI6Z NEWS` OCR（⑥）。
+- **兩 PDF 實測對照（pypdf 抽取·2026-07-19）**：`baton/SpaceX & the Sentient Sun.pdf`（源·23 頁·Safari born-digital·/Title=`OrbStack — SpaceX & the Sentient Sun`）vs `baton/從未來逆向推導 (測試).pdf`（B 軌成品·15 頁·Chrome 由前端 HTML 列印）。B 軌成品首頁一次攤開五缺陷：`# 從未來逆向推導`①→authors 對→`AI6Z NEWS · 2026-06-15`⑥→epigraph/byline/publisher/標題/date/nav 整包重播③→`SpaceX (SpaceX)`/`a16z (a16z)`/`America (America)`④→「有意識」vs「有感知」⑤。
+- **新發現：defect ① 汙染 PDF `/Title`**——B 軌成品 **PDF 文件屬性 `/Title='從未來逆向推導 (測試)'`** 亦錯。錯標題**三受害者**：扉頁 `# 標題` / 前端 HTML `<title>`（→ 瀏覽器分頁名）/ **PDF `/Title`**（HTML 列印帶下去）。同一根因（`_load_tiles` 丟 title + 譯題退回 section 標題）一路汙染到文件屬性層。→ 印證 PIPE-INGEST「譯題單一源」修正之必要（不只修畫面、連 PDF 屬性一起正）。
+- **結論**：這跟 META-NORM（欄位名標準化）無關、跟 glossary 無關——就是 **PIPE-INGEST plan 現有修法**（ingestion_engine meta 分離 + 譯題單一源）對準的東西。**真實產物驗證了 PIPE-INGEST 的診斷。**
+- **範圍（更新·baron 選 1）**：PIPE-INGEST **純結構**——標題單一源①/meta 分離③/圖片保留②/publisher 正規化⑥/dead code。**術語④⑤ + 括號不在本案**（移除 §2.6/§2.7 interim）、交 **build_termmap（F3）前後腳處理**。
+
+### F6 — 文字層快速道（born-digital 用 fitz、不用 MinerU）+ 連字修復
+- **實測**：SpaceX.pdf 是 born-digital（23 頁全有文字層、pypdf 直抽 OK）；直抽第一行就有 URL `https://www.a16z.news/...` → **publisher 直接正確 a16z**（順解缺陷⑥、比 OCR 準）。
+- **工具評比（你這用途）**：**fitz（PyMuPDF）首選**——已是 pin 依賴（`requirements.txt:26`）、快、保閱讀序、給區塊座標（剝列印頁首尾）、能抽圖、單一座標系。pdfplumber 只在要表格時；pypdf 堪用 fallback；poppler 系列非技術棧。
+- **路徑設計（baron 提、收斂後）**：
+  ```
+  A. 試抽文字層（fitz 算每頁字元數）
+  ├─ A.1 有文字層（born-digital）→ FitzProcessor：fitz 抽文字+圖、按座標組 .md（# 標題 + ![](images/) + 閱讀序）→ 接現有 clean/analyze/tiles/cover-prompt（全不動）
+  └─ A.2 無/稀疏 → 現有 MinerU PDFProcessor → 接現有流程
+  ```
+  - **收斂點**：原「有無圖片」分支（A.1.1/A.1.2）**取消**——born-digital 一律 fitz 包辦文字+圖，避開「MinerU 圖 + fitz 文字」兩座標系的接縫。
+  - **Meta 保證判得到**：下游只吃一個 markdown 檔（`PDFProcessor.parse` 寫 .md 回 path、`pdf_processor.py:158`）、**來源無關**；關鍵＝FitzProcessor 產出 MinerU 同形狀 .md。
+- **meta 來源決策（baron 2026-07-19·定案）**：meta **一律走正文分析**——cover-prompt 讀 markdown 抽 title/authors/date/publisher（title＝首個 `#`；publisher＝**正文 URL→a16z**，比 OCR/檔案屬性準）；**不讀 PDF 檔案屬性（/Title 等）**。
+  - **為什麼不用 fitz 直抽檔案 meta**：即使走 fitz、fitz 能拿 `fitz.metadata`（/Title），**也不用、不留 F6 fallback**。理由：① 檔案 meta 是**列印網頁產物、常汙染**（源檔 /Title=`OrbStack — SpaceX...` 帶前綴垃圾；B 軌成品 /Title 更是錯標題）；② **最準的信號（標題 heading、URL→publisher）全在正文**、檔案 meta 沒有正文所無之物；③ 加檔案 meta＝邊際/YAGNI（又為罕見情況多做事）。
+  - fitz（F6）**只用於抽正文文字**（其本職）、**不用於讀檔案 /Title**——即現在（MinerU 路）與未來（fitz 路）**meta 都純正文、零檔案屬性依賴**。
+- **連字壞字**（`Pro1les`/`;rst`/`de1ning`）：**PDF 字型 ToUnicode 映射壞**、直抽/MinerU 兩法都有、**換工具修不好** → 另做連字修復正規化（可放 FitzProcessor 或 MarkdownCleaner）。plan §2.10「MinerU 上游共病」措辭應改「PDF 字型層共病」。
+- **範圍**：FitzProcessor（P1 攝入層架構改動、中大）；連字修復（小、可獨立）。litedoc=news/web 大宗為單欄文章、對味；多欄/圖表密集較難。
+
+### F7 — 垃圾圖過濾（IMG-FILTER·三規則·確定性·免 Vision）
+- **問題**：litedoc 現況圖片全滅（缺陷②·PIPE-INGEST 修）；圖片保留**之後**，born-digital 網頁列印 PDF 會夾帶站台 chrome（logo/masthead/社群鈕/互動列）——非文章內容、該濾除。
+- **關鍵反直覺（實證）**：**Vision 描述不能判垃圾**——SpaceX 3 張迷你圖 Vision 全描述了，`da5d85`(互動列)→「用戶參與度計量指標」認得出、但 `b9fb4a`(150×88 裝飾)→被描述成「兩個對比的圓形視野」**當成內容漏判**。Vision 會盡責描述 logo/裝飾 → 靠描述判垃圾會漏。**用尺寸/位置、不用 Vision。**
+- **可靠訊號＝像素尺寸 + 長寬比（確定性·免 LLM）**：SpaceX 實測鴻溝——垃圾長邊 147/150/525、面積 13-50k；內容長邊 1575/1581、面積 1.4-2.1M（**面積差 28×**）。門檻怎麼設都不誤判。
+- **三規則過濾器**（任一命中即 DROP·互為保險）：
+  - ① 尺寸：`max(w,h) < MIN_LONG_SIDE(預設 600)` 或 `area < MIN_AREA(預設 200k)` → icon/logo/button
+  - ② 長寬比：`max(w/h,h/w) > MAX_ASPECT(預設 4.0)` → 橫幅/工具列/分隔線（`da5d85` 5.47 中）
+  - ③ 位置：落在 meta/報頭區（**複用 PIPE-INGEST 已分離之 meta 區·免費**）→ 站台 chrome
+  - 套 SpaceX：3 垃圾全 DROP（規則①）、20 內容全 KEEP、零誤判。
+- **工程**：尺寸由 `PIL.Image.open().size`（讀 header·快）或 fitz `get_image_rects()`（走 F6 更順）；hook 在 ingestion_engine 處理 figure block 時、進 section 樹前丟；門檻設 settings 常數可調。
+- **安全**：保守（只丟明確迷你/極端·邊界保留）；**記 log 不靜默丟**（hash+尺寸+規則·審計）；Vision 不參與丟的決策、只留給保留圖當 caption。
+- **範圍/依賴/順序**：新任務 `IMG-FILTER`（或 PIPE-INGEST 加法子項）；**必接在 PIPE-INGEST「圖片全保留（②）」之後**（先保留、再過濾）；規則③與 PIPE-INGEST meta 分離天然耦合。
+
+## §3 依賴與優先順序（配合依賴圖）
+
+> ⚠️ 以下「線」為本 review 的**主題分組**，**非**專案既有「A軌/B軌」（A軌=舊 pipeline_core、B軌=新 PIPE 策略管線）。避免撞名故不用「軌」字。
+
+### §3.1 推薦執行順序（baron 選 1·litedoc 品質一次做齊）
+
+> **baron 決定（2026-07-19·選 1）**：**PIPE-INGEST（純結構）+ build_termmap（術語括號）前後腳做**（空窗幾小時）、**不做 interim constraints**（YAGNI·不為短空窗蓋臨時鷹架）。清詞工具＝生產後期便利、非前提（測試期壞了清庫即可）。book/academic 兩路各自後續、繼承共用 build_termmap。
+
+| 序 | 做什麼 | 說明 |
+|---|---|---|
+| **1** | **F5** PIPE-INGEST（**純結構**：標題①/meta③/圖片②/publisher⑥/dead-code） | 治肉眼可見的結構亂·最高即時價值·改既有 plan **v4** |
+| **2** | **F2** 打開旗標 + **F3** build_termmap `GLOSSARY-TERMMAP` | 術語④⑤+括號一致·**與①前後腳·空窗幾小時**·含 section_summaries 連貫注入·§2.7 可**硬**驗收（termmap 保證）|
+| **3** | **F7** IMG-FILTER | 濾垃圾圖·三規則確定性（接 F5 圖片保留②後）|
+| **4** | **F6** FitzProcessor + 連字修復 | born-digital 文字層·順解 publisher⑥ |
+| ※ | **F4** LANG-DETECT | 語言偵測——en/ja 可延·**義文進場前必做**（glossary 分桶正確）|
+| ※ | 清詞工具 GLOSSARY-UI | **生產後期便利·非前提**·測試期清庫即可 |
+| ※ | book / academic 兩路 | 各自後續·繼承共用 build_termmap |
+
+- **排序原則**：即時價值優先（F5）／litedoc 術語靠 build_termmap **前後腳做齊**、不做用完即丟的 interim（YAGNI）／測試期 DB 可丟·不背污染包袱。
+- **連貫附論**（section_summaries 注入·size-gate 保留）併入 F3。
+- **⚠️ F1 已非「軟化 §2.7」**：見 F1 更新——§2.7 術語一致**移交 F3**（因 termmap 保證·可硬驗收）、PIPE-INGEST 純結構不做 interim；波次表舊「含 F1 §2.7 軟化」語意作廢。真正要開/改的 plan＝ **PIPE-INGEST 改 v4（純結構）** + F2 + F3（前後腳）+ F7〔可併入 PIPE-INGEST〕 + F6〔連字修復可併入〕｜（義文前）F4｜（生產後期）清詞工具｜book/academic 各自後續。
+
+## §4 各發現 → 未來 plan 對照（spec→template_plan）
+
+| 發現 | 落哪個 plan | spec 供給 template_plan | 四護欄仍須階段 1 補 |
+|---|---|---|---|
+| F1 | ~~PIPE-INGEST §2.7 軟化~~ **廢除**（baron 選 1）| — | 術語一致移交 F3、PIPE-INGEST 純結構、不做 interim |
+| F2 | 新任務 GLOSSARY-ON（**與 F5 前後腳**）| §2 目標（打開旗標 + 監控）| §3 現況 grep / §8 驗證（golden 重捕範圍）|
+| F3 | 新任務 GLOSSARY-TERMMAP（**與 F5 前後腳**）| §2 目標（定案表·共用 builder·飛輪修正·census 只認詞·**接收術語④⑤+括號·§2.7 可硬驗收**）| §3 現況 grep〔早退是否有意〕/ 接縫契約（census→定案表→P3 注入）/ 不可動 |
+| F4 | 新任務 LANG-DETECT（義文前）| §2 目標（cover-prompt +language）| §3 現況 / 不可動（classify_source_lang 不動）|
+| F5 | PIPE-INGEST 改 **v4·純結構** | §2 移除 §2.6/§2.7 interim（術語括號移交 F3）| §3 現況 / §8 驗證（結構項）|
+| F6 | 新任務 PIPE-INGEST-FITZ | §2 目標 + §2.5 候選（fitz-both vs 拆）| 接縫契約（FitzProcessor→.md）/ §8 驗證 |
+| F7 | 新任務 IMG-FILTER（或 PIPE-INGEST 子項）| §2 目標（三規則過濾·門檻常數）| §3 現況 / 接縫（figure block→過濾）/ 依賴 PIPE-INGEST 圖片保留② |
+
+## §5 過程中的自我修正記錄（誠實留痕·對齊 CLAUDE.md §1.8）
+
+- 「中間路：本地 census→constraints」**收回**——baron 指出它丟掉跨文件累積；正解是修 glossary 抽詞來源、寫回 DB。
+- 「太重」**收回為假議題**——實查 glossary 成本＝1 便宜 LLM + 短冪等寫、非效能問題；我先前是鸚鵡學 Q1 未查證。
+- 「單路開關 vs 全開」**收回**——過度設計；內部小專案直接全開即可。
+- 「P3 後收割術語對」**收回**——baron 指出收割已不一致的 body 會鎖進任意/錯譯；改「事前定案」（一致只能事前決定）。
+- 「1M context 塞得下就整篇 census 不用切」**收回**——baron 指出注意力稀釋致召回不準；改切塊（段落邊界·可並行）。
+- 「N4 需多數決/reconcile 解衝突」**簡化收斂**——baron 之「census 只認詞、不翻」使唯一詞集只翻一次、衝突根本不生，reconcile 免除。
+- F3 由「擴大抽詞（GLOSSARY-EXTRACT）」升級為「事前定案術語表（GLOSSARY-TERMMAP）·共用 builder·含飛輪早退修正」。
+- 「preceding ＝前段譯文＝一律陷阱砍 5x」**收回**——baron 憑舊規劃記憶質疑，翻 PIPE-SPEC 確認 preceding 有**兩形態**：摘要型（三層 sliding window·parallel-safe·連貫正解）／譯文型（僅長章切片·serial）。5x 是 RESUME-PERF-1 section 並行收益、與 preceding 無關。litedoc 連貫應走摘要型滑窗（section_summaries 現成）。
+- 「TRANSLATOR 沒落地」**澄清**（baron 記憶偏差）——TRANSLATOR 已落地（git `1558f79`…`0efa7e8`、translator.py 在跑、五路消費）；litedoc 只用 7 欄中 5 欄（缺 constraints/preceding）。「按 TRANSLATOR 改 litedoc」＝填欄位、非新設計。
+- 「PIPE-INGEST 做 §2.6/§2.7 interim constraints」**收回**（第四次「為假想情況過度設計」·baron 選 1）——baron 指出設計可一次寫完、build_termmap 與 PIPE-INGEST 前後腳做（空窗幾小時），**不需為短空窗蓋用完即丟的 constraints**（YAGNI）。改為：**PIPE-INGEST 純結構**、術語④⑤+括號**移交 build_termmap（F3·因 termmap 保證·§2.7 可硬驗收「全文單一譯法」）**。連帶 F1「軟化 §2.7」路線廢除、§3.1 改單一執行順序（F2+F3 與 F5 前後腳、非後移五路）。
+- 「清詞工具是打開旗標的前提」**收回**（過度謹慎·第三次「太重」反射）——baron 指出**測試期 DB 可丟·壞了清庫重跑即可**，不需工具；清詞工具是**生產後期便利**（累積出價值、想動手術改單詞才做）、非任何前提。連帶：F2 打開旗標測試期想開就開、glossary 線移出 W2 前置。
+- 「glossary 線與 litedoc 攝入線並行同期」**調整為 baron 決定「先五路後 glossary」**——glossary 是跨五路共用基建，五路齊了一次做省二次觸碰；階段一只做 litedoc 攝入線（F5/F7/F6·零 glossary），階段二才做 glossary 線（§3.1 兩階段）。
+- 「並行路零保證」**修正**——有 zh_summary 軟訊號，litedoc 只是比 resume/slides 少一道 constraints。
+- plan §2.10「MinerU 上游共病」**應改**「PDF 字型層共病」（連字壞字直抽也有）。
