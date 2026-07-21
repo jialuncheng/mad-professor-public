@@ -4,12 +4,23 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### DOC-Refactor PIPE-SYNC-5 PIPE-INGEST與GLOSSARY-TERMMAP回灌母plan與SPEC（治理債·兩案落地經驗回灌兩真理源 + design spec F7 門檻更正·就地 HTML 註解不 bump 檔名·四凍結合約零變·plan v2 五 OQ 拍板）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Spec & Plan Backfill（規格書與母計畫回灌）〔**合併版·三文件一次回灌**——baron C1 提示詞將 tasks 原 C1/C2 合併〕：**① PIPE-SPEC v8→v9**〔D1 新增 §1.2.6 `ingestion_engine` 契約章（家族**第 6 員**·`assemble(md, structure, meta_types, figure_filter) -> {title,meta,sections}` 純函式零文體字面量·四鐵律〔title 不丟/meta 非連續分離/figure 帶 content+caption/可選 figure_filter hook〔IMG-FILTER C2 注入點·預設 None byte 等價·DROP 連帶 caption used〕〕）+ §1.2.6.1 litedoc 攝入自有化接點〔借用鏈退場·`_structured.json` 不再產·P3 譯題單一源＝P1 title 根治三受害者〕/ D2 §1.2.2.1 `build_termmap` 事前定案 builder〔五步·廢飛輪早退·三路 _heal_glossary 收斂單一源·全文單一譯法可硬驗收〕/ D3 §0.3 家族 roster 增第 6 員 / D5 `LLM_USE_GLOSSARY_ALIGN` 預設 true 註 / D6 §4 Change Log + Revision v9〕；**② 母 plan v10**〔D_U7 LiteDoc 攝入現況 / D_U8 roster 第 6 員 + build_termmap 演進註 / D_85 §8.5 補三案 ✅〔PIPE-INGEST `e7b9e6c`…/GLOSSARY-TERMMAP `16a5f09`…/IMG-FILTER `de3a475`…〕/ Revision 加列·沿 PIPE-SYNC-4 不 bump 主版本〕；**③ design spec F7**〔D_F7 **廢長邊軸**·規則① 改 `area < 100000`·規則③ 收窄報頭判型行界·補實測校正註〔誤殺 481×369 內容 chart 理由〕·更正註以白話表述避免作廢 token 殘留〕；全增修 HTML 註解包裹、§1.1 四凍結合約區塊與 .bak diff 零差異、pytest 920 passed 零代碼副作用、3 `.bak` 入 archive/ | `cc53452` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 三回灌目標逐項對照 / 不可動全程零違〔零 .py、§1.1 四合約零差異〕/ 提示詞 5 份稽核〕+ **tasks §8 更正為「C1 合併版」**〔移除已失效獨立 C2、§0.5/§1/§4/§5/§6.2/§99.2 同步、原內容全數保留於合併 C1 ①②③三組無資訊遺失〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-21_PIPE-SYNC-5_PIPE-INGEST與GLOSSARY-TERMMAP回灌母plan與SPEC_plan.md`（v2·五 OQ 拍板）+ `tasks/` 同名 tasks（v2 合併版）。
+> ⚠️ **PIPE-SPEC v9 / design spec F7 本體留 gitignored baton**——改後內容不入 git tracked diff，審計鏈＝`archive/` 之 3 份 `.bak`（改前快照）+ C1 執行報告 §4 delta 描述（對齊 RESCUE-1「.bak + 執行報告 = 可重建」範式）；母 plan 為 tracked、改後內容已直接入版控。
+> ⚠️ **未納入（PIPE-SYNC-6 待辦）**：PIPE-INGEST-FITZ（FitzProcessor/閘門/連字修復）+ LANG-DETECT（cover-prompt language 欄合成）之契約回灌——plan §9 Q1 拍板留下一波，避免單案蔓延。
+
 ### BE-Refactor LANG-DETECT cover-prompt語言欄與source_lang正名（cover-prompt +language ISO 欄·`_resolve_source_lang` catch-all 限定合成·雙重白名單拒 zh 前綴·根治拉丁語系判 en 致 GlobalGlossary 桶污染·`classify_source_lang` 原職零改·design spec F4·plan v2 四 OQ 拍板）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | Language Field & Source-Lang Resolution（語言欄與 source_lang 合成）：`_LITEDOC_META_SYSTEM_PROMPT` Fields 增 `language` ISO 639-1 欄+Rule 5 主體語言判定〔非標題/URL·不確定給空〕+Rule 6 keys 同步〔搭既有 metadata LLM 便車·零多呼叫〕/ 私有 `_resolve_source_lang(meta, heuristic)`〔啟發式非 en〔zh/hans/ja/ko 字元證據確定〕維持原判 LLM 不得翻案·en 時雙重白名單 `^[a-z]{2,3}$`〔ISO 639-1/2 含三字碼〕**且拒 zh 前綴**〔HOTFIX-1 鎖一 producer 端強制·與 P3 `startswith("zh")` gate 謂詞同源〕·缺欄/怪值退 en 100% 等價〕/ `run_phase1` 單行接點〔正名值單點流入 spec·消費端零改〕；`section_engine`/`GlobalGlossary` git diff 零；45 測試〔契約/矩陣 37 案〔非 catch-all 24 維持+catch-all 白名單 13〕/端到端 it/缺欄安全網/**§7.2 整合**：語系 token en→it 貫穿 P2 `build_termmap` 捕參 `source_lang=it`+`target_lang=zh-tw`+P3 不 bypass+en 對照組不互污〕；875→920 passed | `c17e183` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 六規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢；⚠️ Check 首輪當場攔下 C1 未 commit〔CHECKOUT-GUARD 生效〕、baron 補 commit 後重收官 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 六規格項 / tasks §6〔§7.2 正面達標〕/ 不可動全程零違〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢；⚠️ Check 首輪當場攔下 C1 未 commit〔CHECKOUT-GUARD 生效〕、baron 補 commit 後重收官 | `2011a63` |
 
 > **修法依據**：`plans/2026-07-21_LANG-DETECT_cover-prompt語言欄與source_lang正名_plan.md`（v2·四 OQ 拍板）+ `tasks/` 同名 tasks。
 > ⚠️ baron 影子 E2E（plan §8.2）：義文樣本上傳——後端 log `source_lang=it`、`SELECT DISTINCT source_lang FROM global_glossary` 出現 `it` 桶且英文桶無義文新詞；英文（SpaceX）回歸 `en`、繁中 `zh` bypass 不翻譯、簡體 `hans` 轉繁照舊（HOTFIX-1 回歸）。
