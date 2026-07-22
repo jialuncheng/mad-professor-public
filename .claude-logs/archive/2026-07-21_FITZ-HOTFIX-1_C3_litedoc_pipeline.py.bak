@@ -118,9 +118,6 @@ def _is_number_dominated(line: str) -> bool:
     return numeric * 2 > len(tokens)
 
 
-# === [FITZ-HOTFIX-1 C3] 影子軌標題後綴（唯一字面量來源；R4 譯前剝、譯後重貼）===
-_SHADOW_SUFFIX = " (測試)"
-
 _MONTHS_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 _MONTHS_FULL = ("January", "February", "March", "April", "May", "June",
@@ -619,60 +616,6 @@ class LiteDocPipeline(DocumentStrategy):
         )
         return spec
 
-    # === [FITZ-HOTFIX-1 C3 START] R4 譯題 / R8 原文圖片過濾（P3 私有輔助）===
-    @staticmethod
-    def _translate_title(title_bare: str, inj, tr, is_shadow: bool) -> str:
-        """R4：譯題**餵去後綴 title**、影子軌譯後重貼恰一次 ` (測試)`。
-
-        根治雙後綴：原實作把帶後綴 title 餵 `translate_unit` → LLM 保留與否隨機、
-        且可能回**變體**（全形 `（測試）`／空格差異／譯寫）→ `web_server` 寫庫端
-        既有 `endswith(" (測試)")` 防重守衛（SHADOW-HOTFIX-2、`web_server.py:775`）
-        失配 → 再 append 成雙。改餵 bare 後 LLM 恆輸出乾淨譯文、後綴由本處**唯一**
-        重貼，寫庫端守衛恰好命中一次。（`web_server.py` 本案零改。）
-        """
-        if not title_bare:
-            return title_bare
-        translated = section_engine.translate_unit(title_bare, inj, tr, "title")
-        if is_shadow and translated and not translated.endswith(_SHADOW_SUFFIX):
-            translated = f"{translated}{_SHADOW_SUFFIX}"
-        return translated
-
-    def _filter_source_figures(self, ctx: PipelineContext, text: str) -> str:
-        """R8：對 P1 原始 md 全文做**行級圖片過濾**（DROP 即刪行）。
-
-        - `images_root` ＝ `output_dir/"images"`——與 P1 `_build_tiles` **同一路徑基準**
-          （`_read_source_text` 之 md_path 亦位於 output_dir），確保兩路 KEEP/DROP 一致。
-        - 旗標關（`make_figure_filter` 回 None）→ 整段 no-op、byte 等價。
-        - 任何解析/IO 異常 → fail-open 回原文（寧留勿誤刪、同 image_filter 哲學）。
-        """
-        try:
-            output_dir = paper_manager.paper_dir(
-                settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
-            )
-            fig_filter = image_filter.make_figure_filter(output_dir / "images")
-            if fig_filter is None:            # 旗標關 → no-op
-                return text
-            kept, dropped = [], 0
-            for line in text.split("\n"):
-                m = ingestion_engine._FIGURE_RE.match(line.strip())
-                if m and not fig_filter(m.group("src"), m.group("alt")):
-                    dropped += 1
-                    continue                  # DROP → 刪行
-                kept.append(line)
-            if dropped:
-                logger.info(
-                    "[FITZ-HOTFIX-1 P3] %s 原文圖片過濾 DROP %d 行（三通道同享）",
-                    ctx.paper_id, dropped,
-                )
-            return "\n".join(kept)
-        except Exception as exc:  # noqa: BLE001 — fail-open：過濾失敗不動原文
-            logger.warning(
-                "[FITZ-HOTFIX-1 P3] %s 原文圖片過濾失敗（fail-open 保留原文）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            return text
-    # === [FITZ-HOTFIX-1 C3 END] ===
-
     # ── P2 私有輔助 ──
     def _read_source_text(self, ctx: PipelineContext) -> str:
         """讀 P1 產出原文 markdown；失敗 fallback 由 tiles 重組。"""
@@ -770,19 +713,9 @@ class LiteDocPipeline(DocumentStrategy):
         full_text = self._read_source_text(ctx)
         title = (ctx.ingestion.title if ctx.ingestion else "") or ""
         # === [PIPE-LITEDOC-HOTFIX-1 START] ① pre-strip：原文層剝標題回聲（en 全模式 + zh whole/is_zh，exact）===
-        _title_bare = title.replace(_SHADOW_SUFFIX, "").strip()
+        _title_bare = title.replace(" (測試)", "").strip()
         full_text = section_engine.strip_title_echo(full_text, _title_bare)
         # === [PIPE-LITEDOC-HOTFIX-1 END] ===
-        # [FITZ-HOTFIX-1 C3 R4] 影子軌旗標（P1 已加後綴 → 譯後重貼恰一次）
-        _is_shadow_title = title.strip() != _title_bare
-        # === [FITZ-HOTFIX-1 C3 START] R8 單點行級圖片過濾（覆蓋 is_zh/whole/en_text 三消費者）===
-        # `full_text` 為 P1 原始 md（`_read_source_text` 直讀、未經 `_build_tiles` 之
-        # figure_filter），而 P3 三處消費者皆以之為素材：is_zh 分支 `zh_text=full_text`／
-        # whole 模式 `translate_whole(full_text)`／**`en_text=full_text`（無條件）**。
-        # 於此單點過濾一次即三路同收，並立「section mode 雙語圖片對稱」不變式
-        # （zh 走過濾後 tiles、en 走此處過濾後原文 → 兩側圖集相同）。
-        full_text = self._filter_source_figures(ctx, full_text)
-        # === [FITZ-HOTFIX-1 C3 END] ===
 
         inj = InjectionContext(
             lcc=gspec.lcc,
@@ -818,10 +751,7 @@ class LiteDocPipeline(DocumentStrategy):
                 zh_text = section_engine.translate_whole(full_text, inj, tr, True)
                 rag_sections = section_engine.single_container_sections(zh_text, title or "全文")
                 # U5c ③：一鍵/退化 → 對 title 額外單元翻一次（成本極低）
-                # [FITZ-HOTFIX-1 C3 R4] 譯題餵去後綴 title（LLM 不見 ` (測試)`）
-                translated_title = self._translate_title(
-                    _title_bare, inj, tr, _is_shadow_title
-                )
+                translated_title = section_engine.translate_unit(title, inj, tr, "title") if title else title
             else:
                 mode = "section"
                 # === [GLOSSARY-TERMMAP C4] 摘要型滑窗：per-section 注入前一鄰近摘要（容缺）===
@@ -834,10 +764,7 @@ class LiteDocPipeline(DocumentStrategy):
                 section_engine.collect_rag_sections(slots, zh_by_index, True, rag_sections)
                 # === [PIPE-INGEST C3] U5c ② slot 撈題廢除：譯題唯一源＝P1 title（與 whole 分支同式；
                 # 根治標題錯置三受害者——zh 扉頁 # 標題 / HTML <title> / PDF /Title）===
-                # [FITZ-HOTFIX-1 C3 R4] 譯題餵去後綴 title（LLM 不見 ` (測試)`）
-                translated_title = self._translate_title(
-                    _title_bare, inj, tr, _is_shadow_title
-                )
+                translated_title = section_engine.translate_unit(title, inj, tr, "title") if title else title
 
         en_text = full_text
         ctx.rag_sections = rag_sections
