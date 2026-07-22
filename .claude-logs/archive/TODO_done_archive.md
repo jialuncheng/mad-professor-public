@@ -4,12 +4,25 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Hotfix FITZ-HOTFIX-3 同位重繪去重、chrome線索回收與full_text meta歸零（治日文 NHK 樣本 E2E「標題全滅+publisher 空」+族群掃描 en 側 meta 洩漏·三刀 K1/K2/K3·`fitz_processor`+`litedoc_pipeline` 雙檔）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-3 | Overlap Dedup, Chrome Hint & Meta Zeroing（同位重繪去重、chrome 線索回收與 full_text meta 歸零）：**K1** `_collect_page` 同位重繪去重〔per-page `dedup_key`＝（文字, round(y0,1), round(x0,1), round(size,1)）·過濾瀏覽器列印 text-stroke 之同座標重繪副本（NHK 標題 ×4 實證）·防 `md_cleaner` 浮水印規則〔同 heading ≥3 全殺〕誤殺真標題→退回話題標籤「大谷翔平」·**每頁獨立故不干涉跨頁 chrome R2**〕〔A 軌沒中＝MinerU 自帶去重；R2 沒防＝跨頁 vs 同頁異物種〕/ **K2** chrome URL 線索回收〔`_assemble` 剝除點以 `_URL_RE` 捕 URL·`parse` 落 `{pdf_file.stem}_source_hints.json` sidecar〕+ litedoc `_load_source_hints` **三級 stem 定位**〔主路 pdf stem→glob 備路→∅ fail-open·**嚴禁 paper_id**〔影子軌 `_shadow` 陷阱〕〕+ `_extract_litedoc_metadata` `hints` 純加法**於 `[:_META_INPUT_CHARS]` 截斷之後拼接**〔防長文（NHK md 15K）尾接 hint 被截掉靜默失效·v2 自查陷阱·hint 只進 LLM 不寫 md〕→ cover-prompt rule 1 解 NHK 域名→publisher=NHK / **K3** `_strip_meta_source_lines` full_text 行級 meta 歸零〔**雙判據**＝① sidecar 判型 spans（type ∈ `_HEADER_META_TYPES` 行號區間）∪ ② R6 值比對整行相等（複用 `ingestion_engine.normalize_meta_values`/`_normalize_meta_text`·非子字串故正文提及作者不誤殺）·任一命中刪行·圖片行歸 R8 不碰·**接線於 `_read_source_text` 後、echo-strip/R8 之前**（sidecar 行號基準·刪行位移前）〕治 R6 只掛 tiles 路致 en 側〔`en_text=full_text` 所有模式〕meta 原文重播（SpaceX v3 `shadow_en` MARC/JUN vs `shadow_zh` 零·雙語文字不對稱）·一次覆蓋 en_text/whole zh/is_zh zh 三消費者·**恢復雙語文字對稱不變式**〔與 HOTFIX-2 圖片對稱成對〕；`md_cleaner`〔浮水印規則本體〕/`image_filter`/`ingestion_engine`/`rag_indexer`/`section_engine`/cover-prompt 六欄/`web_server` git diff 全零；15 新測試〔K1 同座標 ×4 去重+真 `MarkdownCleaner` 放行標題存活〔對照組未去重會被殺〕/合法異座標保留/每頁獨立·K2 URL 回收 sidecar+無 URL 零產出+stem 定位+缺檔空+**截斷窗斷言**〔>8000 字 md hint 仍入 LLM〕+byte 等價·K3 span/值雙判據剝除+正文不誤殺+圖片行不碰+**順序斷言 K3<echo<R8**+**雙語文字對稱**〕；978→993 passed | `8733d98` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔K1/K2/K3 規格逐項對照·單元與對稱測試 25 專屬全綠·不可動七檔全零 diff·K3 時序 L969<L973<L983·提示詞 3 份稽核〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`hotfixes/2026-07-22_FITZ-HOTFIX-3_同位重繪去重與chrome線索回收_hotfix.md`（template_hotfix、v3 定稿含 diff 草稿與 commit 表）。
+> ⚠️ **hotfix 檔歸屬 `hotfixes/`（依 WORKFLOW_SOP §2 權威源、承 HOTFIX-2 前例）**：Check 提示詞 §2 指示 mv 至 `tasks/`〔稱「充當 tasks.md」〕，但 §2 明定「緊急修補紀錄 → `hotfixes/`」且 6 份前例〔含 HOTFIX-2〕皆在 `hotfixes/`；依權威源置於 `hotfixes/`（若 baron 欲改回 `tasks/`，一行 `mv` 即可）。
+> ⚠️ **既有 C2 時序測試 spy 對齊**：`_extract_litedoc_metadata` 之 K2 `hints` 純加法簽名擴充致既有 `test_metadata_extraction_precedes_assemble` 之 spy〔硬編單參數〕失配 → spy 簽名對齊為 `(self, markdown_text, hints="")`〔斷言本體零動〕。
+> ⚠️ baron 影子 E2E：① NHK 樣本——標題＝完整日文系譯題＋恰一個 `(測試)`、**publisher=NHK**、date=2026-05-21、authors=0（誠實空）；log 驗 `[md_cleaner] 移除浮水印` **不再命中標題**；② SpaceX 回歸——標題/21 圖/meta 不退化＋**`shadow_en.md` grep `MARC ANDREESSEN`/`JUN 15` 歸零**、zh/en meta 行雙零對稱。
+> ⚠️ **契約回灌**：K1/K2/K3 併入 **PIPE-SYNC-6** 批次〔含族群鐵律「凡對 tiles 淨化必問 full_text」〕——與 PIPE-INGEST-FITZ／LANG-DETECT／FITZ-HOTFIX-1 八刀／HOTFIX-2 同批、待 E2E 綠燈後開。
+
 ### BE-Hotfix FITZ-HOTFIX-2 報頭行界收窄與雙語圖片對稱（治 HOTFIX-1 後 E2E「B 軌大圖不見」·兩刀 K1/K2·單檔 litedoc）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | HOTFIX-2 | Header Boundary Narrowing & Bilingual Figure Symmetry（報頭行界收窄與雙語圖片對稱）：**K1** `_collect_header_srcs` 行界由「**全部**判型塊 `max(end)`」收窄為「**meta 型塊** `max(end)`」〔真因＝DocAnalyzer 把正文判成 `intro_text`/`other`、行界被撐到文件深處（v3 實物 hdr_end=**119**）致封面大圖與 Falcon 9 照片被掃進報頭遭規則③誤殺；收窄後 **119→10**、兩圖獲救；無 meta 型塊 → 回 `set()` 規則③自然停用、①②照跑〕+ 新增類別常數 `_HEADER_META_TYPES = set(_META_TYPES) | {"title"}` **緊鄰 `_META_TYPES` 定義防常數漂移**〔與 `mark_meta_lines`「title 恆視 meta」語意同源·`| {"title"}` 為防禦性 no-op〕/ **K2** `_filter_source_figures` 新增 `_load_header_srcs` **三級定位**〔① 主路 `{Path(ctx.pdf_path).stem}_doc_structure.json`（與 `_read_source_text` 同 stem 基準）→ ② 備路 `sorted(glob("*_doc_structure.json"))` → ③ `set()` fail-open（warning+exc_info）；**嚴禁以 `ctx.paper_id` 拼接**——影子軌帶 `_shadow` 後綴而實體檔無（v3：`SpaceX_the_Sentient_Sun_doc_structure.json`）、拼接必 miss 致規則③靜默停用〕+ 複用**同一** `_collect_header_srcs` 算出集合注入 `make_figure_filter`〔原文通道原未傳 header_srcs → 規則③恆停用，而 tiles 通道有③ → 同圖兩通道判定不同、v3 實測 **en21 vs zh19** 不對稱；今**任何規則之 DROP 兩通道必同步**（結構性保證、非兩邊各算）〕·**恢復雙語圖片對稱不變式**；`image_filter` 三規則本體/門檻/工廠簽名零改、`fitz_processor`/`ingestion_engine`/`rag_indexer`/`web_server` 全零 diff；10 新測試〔K1 v3 真 sidecar 收窄・**119 vs 10 對照組**・無 meta 塊回 ∅・同源守衛／K2 主路 PDF stem・備路 glob・缺檔與壞檔 fail-open・規則③於原文通道生效・**雙語對稱斷言**〕；968→978 passed | `53feed8` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔K1/K2 規格逐項對照・單元與對稱測試 10/10・不可動六檔全零 diff・提示詞 3 份稽核〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔K1/K2 規格逐項對照・單元與對稱測試 10/10・不可動六檔全零 diff・提示詞 3 份稽核〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `18eb19f` |
 
 > **修法依據**：`plans/2026-07-22_FITZ-HOTFIX-2_報頭行界收窄與雙語圖片對稱_plan.md` + `tasks/` 同名 `_hotfix.md`（套 template_hotfix）。
 > ⚠️ **既有測試契約更新（預期行為變更）**：`test_collect_header_srcs_line_boundary`（IMG-FILTER C3）之 fixture 含 `{"start":2,"end":5,"type":"other"}`（**非 meta 型**）——舊界 5、K1 新界 4，故 `hdr2.jpg`(line 5) 不再列報頭集。該 `other` 塊正是實測中把行界撐到 119 之同類元凶，此為 K1 預期收窄；測試已更新至新契約並於 docstring 記明理由與溯源。
