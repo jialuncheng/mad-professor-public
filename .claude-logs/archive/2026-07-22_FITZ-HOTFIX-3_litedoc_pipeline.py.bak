@@ -269,10 +269,7 @@ class LiteDocPipeline(DocumentStrategy):
         # ⑦→前移 metadata：B 軌原生文字抽取（方案 A）。`_extract_litedoc_metadata`
         # 僅唯讀吃 `markdown_text`（簽名單參數、零 tiles 依賴）→ 調序安全無副作用；
         # 目的＝把已抽出之 meta **值**注入 `_build_tiles`→`assemble` 作確定性兜底（R6）。
-        # [FITZ-HOTFIX-3 K2] 附 fitz 回收之 chrome URL hint（補 publisher 唯一線索）。
-        meta = self._extract_litedoc_metadata(
-            markdown_text, hints=self._load_source_hints(output_dir, pdf_path)
-        )
+        meta = self._extract_litedoc_metadata(markdown_text)
 
         # ④⑤⑥ md2json → json_process → tiling（產物理分組 Tiles；帶 R6 meta 值集合）
         tiles = self._build_tiles(
@@ -476,43 +473,14 @@ class LiteDocPipeline(DocumentStrategy):
             return sections if isinstance(sections, list) else [data]
         return data if isinstance(data, list) else []
 
-    @staticmethod
-    def _load_source_hints(output_dir: Path, pdf_path: Path) -> str:
-        """[FITZ-HOTFIX-3 K2] 讀 fitz 回收之 chrome URL hint、附進 cover-prompt 輸入。
-
-        - 定位＝`{Path(pdf_path).stem}_source_hints.json`（與 md／doc_structure 同 stem
-          基準；HOTFIX-2 影子後綴教訓：**嚴禁 paper_id 組名**——影子軌帶 `_shadow` 而
-          實體檔無）。
-        - 缺檔／解析異常／空 URL → 回 ``""``（fail-open、行為與現行 100% 等價；
-          MinerU 路無此檔天然 no-op）。
-        """
-        try:
-            p = output_dir / f"{Path(pdf_path).stem}_source_hints.json"
-            if not p.exists():
-                return ""
-            urls = json.loads(p.read_text(encoding="utf-8")).get("urls") or []
-            if not urls:
-                return ""
-            return "\n\nSource URL (from page chrome): " + " ".join(urls[:3])
-        except Exception as exc:  # noqa: BLE001 — hint 屬加分項、失敗零影響
-            logger.warning(
-                "[PIPE-LITEDOC P1] source_hints 讀取失敗（略過）: %s", exc, exc_info=True
-            )
-            return ""
-
-    def _extract_litedoc_metadata(
-        self, markdown_text: str, hints: str = ""
-    ) -> Dict[str, Any]:
+    def _extract_litedoc_metadata(self, markdown_text: str) -> Dict[str, Any]:
         """B 軌原生文字 cover-prompt（方案 A）抽 title/authors/date/publisher/url + URL→組織解碼。
 
         soft-fail → 空 dict（不阻斷 P1）。temp=0 求確定性轉錄。
-        `hints`（[FITZ-HOTFIX-3 K2]、純加法預設 ``""`` → byte 等價）：fitz 回收之 chrome
-        URL 線索，**於文首 4000 字截斷之後拼接**（防長文尾接 hint 被截掉而靜默失效）。
         """
         from llm.client import LLMClient  # 惰性 import 避免模組載入期重量級依賴
 
-        # [FITZ-HOTFIX-3 K2] hint 於截斷「之後」拼接——保證必入 LLM 輸入窗
-        head = (markdown_text or "")[:_META_INPUT_CHARS] + (hints or "")
+        head = (markdown_text or "")[:_META_INPUT_CHARS]
         if not head.strip():
             return {}
         messages = [
@@ -722,108 +690,6 @@ class LiteDocPipeline(DocumentStrategy):
             )
             return set()
 
-    @staticmethod
-    def _locate_doc_structure(ctx: PipelineContext, output_dir: Path) -> Optional[dict]:
-        """[FITZ-HOTFIX-3 K3] 三級定位並解析 doc_structure sidecar（同 K2 `_load_header_srcs`
-        基準：pdf stem 主路 → glob 備路 → None 兜底；嚴禁 paper_id 組名）。"""
-        try:
-            sidecar = output_dir / f"{Path(ctx.pdf_path).stem}_doc_structure.json"
-            if not sidecar.exists():
-                candidates = sorted(output_dir.glob("*_doc_structure.json"))
-                if not candidates:
-                    return None
-                sidecar = candidates[0]
-            return json.loads(sidecar.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001 — 定位/解析失敗 → None（K3 退值比對單判據）
-            logger.warning(
-                "[FITZ-HOTFIX-3 K3] %s doc_structure 定位失敗（退值比對）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            return None
-
-    def _collect_p3_meta_values(self, ctx: PipelineContext) -> set:
-        """[FITZ-HOTFIX-3 K3] P3 端 meta 值集合（authors／venue ＋ raw_metadata date/url）。
-
-        複用 `ingestion_engine.normalize_meta_values`（與 R6 同一正規化源、防漂移）。
-        """
-        values: List[str] = []
-        ing = ctx.ingestion
-        if ing is not None:
-            values.extend(str(a) for a in (ing.authors or []) if str(a or "").strip())
-            names = [str(a).strip() for a in (ing.authors or []) if str(a or "").strip()]
-            if len(names) > 1:
-                values.append(" and ".join(names))
-                values.append(", ".join(names))
-            if getattr(ing, "venue", None):
-                values.append(str(ing.venue))
-        for key in ("date", "url", "publisher"):
-            cell = (ctx.raw_metadata or {}).get(key)
-            if isinstance(cell, dict) and str(cell.get("value") or "").strip():
-                values.append(str(cell["value"]))
-        return ingestion_engine.normalize_meta_values(values)
-
-    def _strip_meta_source_lines(self, ctx: PipelineContext, text: str) -> str:
-        """[FITZ-HOTFIX-3 K3] 對 P1 原始 md 全文剝 meta 原文行（行級、DROP 即刪行）。
-
-        雙判據（同 R6 語意、複用 `ingestion_engine` 同一正規化源）：
-        ① **sidecar 判型 spans**：type ∈ `_HEADER_META_TYPES` 之 blocks 行號區間
-          （行號僅在**原封行序**上使用、故 K3 接線必排 echo-strip／R8 之前）；
-        ② **值比對**：行文字 `_normalize_meta_text` 後**整行相等**於任一 meta 值才剝
-          （非子字串、同 R6 約束——正文句提及作者名不誤殺）。
-        任一判據命中 → 刪行；sidecar 缺 → 僅值比對；值集空 → 僅 spans；兩者皆缺 → no-op
-        （fail-open）。**圖片行不在判據內**（歸 R8 管、職責不重疊）。
-        """
-        try:
-            output_dir = paper_manager.paper_dir(
-                settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
-            )
-            structure = self._locate_doc_structure(ctx, output_dir)
-            norm_values = self._collect_p3_meta_values(ctx)
-
-            meta_line_idx: set = set()
-            blocks = structure.get("structure") if isinstance(structure, dict) else None
-            if isinstance(blocks, list):
-                for b in blocks:
-                    if str(b.get("type") or "") in self._HEADER_META_TYPES:
-                        try:
-                            start, end = int(b["start"]), int(b["end"])
-                        except Exception:  # noqa: BLE001 — 單塊格式異常跳過、不阻斷
-                            continue
-                        meta_line_idx.update(range(start, end + 1))
-
-            if not meta_line_idx and not norm_values:
-                return text                                   # 兩判據皆缺 → no-op
-
-            lines = text.split("\n")
-            kept: List[str] = []
-            dropped = 0
-            for i, line in enumerate(lines):
-                stripped = line.strip()
-                # 空行/圖片行一律保留（圖片行歸 R8、職責不重疊）
-                if stripped and not re.match(r"^!\[.*?\]\(.*?\)", stripped):
-                    hit_span = i in meta_line_idx
-                    hit_value = (
-                        bool(norm_values)
-                        and ingestion_engine._normalize_meta_text(stripped) in norm_values
-                    )
-                    if hit_span or hit_value:
-                        dropped += 1
-                        continue                              # DROP → 刪行
-                kept.append(line)
-            lines = kept
-            if dropped:
-                logger.info(
-                    "[FITZ-HOTFIX-3 K3] %s full_text meta 歸零 %d 行（三消費者同享）",
-                    ctx.paper_id, dropped,
-                )
-            return "\n".join(lines)
-        except Exception as exc:  # noqa: BLE001 — 淨化失敗 fail-open、不動原文
-            logger.warning(
-                "[FITZ-HOTFIX-3 K3] %s meta 歸零失敗（fail-open 保留原文）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            return text
-
     def _filter_source_figures(self, ctx: PipelineContext, text: str) -> str:
         """R8：對 P1 原始 md 全文做**行級圖片過濾**（DROP 即刪行）。
 
@@ -963,11 +829,6 @@ class LiteDocPipeline(DocumentStrategy):
         sections = (ctx.ingestion.tiles if ctx.ingestion else []) or []
         full_text = self._read_source_text(ctx)
         title = (ctx.ingestion.title if ctx.ingestion else "") or ""
-        # === [FITZ-HOTFIX-3 K3] full_text 行級 meta 歸零（單點、三消費者 is_zh/whole/en_text
-        # 同享）——R6 只掛 tiles 路致 en 側原文 meta 行重播（SpaceX v3 實證）；**必在
-        # echo-strip/R8 之前**（以 sidecar 行號比對、須作用在原封 md 行序上、刪行位移前）。===
-        full_text = self._strip_meta_source_lines(ctx, full_text)
-        # === [FITZ-HOTFIX-3 K3 END] ===
         # === [PIPE-LITEDOC-HOTFIX-1 START] ① pre-strip：原文層剝標題回聲（en 全模式 + zh whole/is_zh，exact）===
         _title_bare = title.replace(_SHADOW_SUFFIX, "").strip()
         full_text = section_engine.strip_title_echo(full_text, _title_bare)
