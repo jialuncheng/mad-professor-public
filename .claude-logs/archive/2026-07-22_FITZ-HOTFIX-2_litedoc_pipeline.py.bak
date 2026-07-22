@@ -364,11 +364,6 @@ class LiteDocPipeline(DocumentStrategy):
     # === [PIPE-INGEST C2 START] P1 攝入組裝切換 ingestion_engine ===
     # litedoc 之 meta 判型集（route-specific 注入、引擎零字面量；對齊 doc_structure 判型 schema）
     _META_TYPES = ("title", "authors", "publication_info")
-    # === [FITZ-HOTFIX-2 K1] 報頭行界之 meta 型別集（**與 `mark_meta_lines` 同源**）===
-    # 由上行 `_META_TYPES` 導出、緊鄰定義防兩端常數漂移；`| {"title"}` 對齊
-    # `mark_meta_lines`「title 恆視 meta」語意（現值已含 title、屬防禦性 no-op，
-    # 防未來 `_META_TYPES` tuple 調整時漏掉 title）。
-    _HEADER_META_TYPES = set(_META_TYPES) | {"title"}
 
     def _build_tiles(
         self, md_path: Path, output_dir: Path, paper_name: str, doc_type: str,
@@ -424,28 +419,16 @@ class LiteDocPipeline(DocumentStrategy):
     ) -> set:
         """掃「報頭行界」內之 `![](src)` 行、收集 src 集合（IMG-FILTER plan v2 §2.3）。
 
-        報頭行界＝doc_structure 判型 blocks 中 **meta 型塊**之 `max(end)`（**收窄界定**、
-        非整個孤兒容器——首 heading 前可能有正文 hero 圖、plan §2.6）；src 以與 engine
-        `_FIGURE_RE` 同語意之 regex 自 markdown 原文行抽出、**零轉換**（§4 接縫契約）。
+        報頭行界＝doc_structure 判型 blocks 之 `max(end)`（**收窄界定**、非整個孤兒容器
+        ——首 heading 前可能有正文 hero 圖、plan §2.6）；src 以與 engine `_FIGURE_RE`
+        同語意之 regex 自 markdown 原文行抽出、**零轉換**（§4 接縫契約）。
         structure 缺失／格式異常 → 回 ∅（規則③自然停用、①②照跑、soft）。
-
-        **[FITZ-HOTFIX-2 K1]** 行界原取**全部**判型塊之 `max(end)`——DocAnalyzer 會把
-        正文段落（`intro_text`／`other` 等）也判成塊，致行界被撐到文件深處（v3 實物：
-        hdr_end=119），把封面大圖與正文照片一併掃進「報頭」而遭規則③誤殺。今收窄為
-        **僅計 meta 型塊**（`_HEADER_META_TYPES`），回歸「報頭＝判型 meta 區」設計本意。
         """
         try:
             blocks = structure.get("structure") if isinstance(structure, dict) else None
             if not isinstance(blocks, list) or not blocks:
                 return set()
-            # [FITZ-HOTFIX-2 K1] 只計 meta 型塊；無 meta 型塊 → 規則③自然停用
-            meta_ends = [
-                int(b["end"]) for b in blocks
-                if str(b.get("type") or "") in LiteDocPipeline._HEADER_META_TYPES
-            ]
-            if not meta_ends:
-                return set()
-            hdr_end = max(meta_ends)
+            hdr_end = max(int(b["end"]) for b in blocks)
         except Exception as exc:  # noqa: BLE001 — 判型異常 soft、規則③停用
             logger.warning(
                 "[img-filter] 報頭行界解析失敗（規則③停用、①②照跑）: %s",
@@ -654,42 +637,6 @@ class LiteDocPipeline(DocumentStrategy):
             translated = f"{translated}{_SHADOW_SUFFIX}"
         return translated
 
-    def _load_header_srcs(
-        self, ctx: PipelineContext, output_dir: Path, text: str
-    ) -> set:
-        """[FITZ-HOTFIX-2 K2] 定位 doc_structure sidecar → 回報頭 src 集合（規則③素材）。
-
-        **sidecar 檔名基準＝原始 PDF stem、非 `paper_id`**：影子軌 `ctx.paper_id` 帶
-        `_shadow` 後綴而實體檔沒有（v3 實物：`SpaceX_the_Sentient_Sun_doc_structure.json`）
-        → **嚴禁以 `ctx.paper_id` 組檔名**（必 miss、規則③靜默停用、對稱再破）。三級定位：
-
-        1. **主路**：`{Path(ctx.pdf_path).stem}_doc_structure.json`（與 `_read_source_text`
-           之 md 定位**同一 stem 基準**、production 已證）；
-        2. **備路**：`sorted(output_dir.glob("*_doc_structure.json"))` 取首個
-           （per-paper 目錄唯一）；
-        3. **兜底**：皆失／解析異常 → `set()` fail-open（warning + exc_info）——
-           兩通道規則③**同步**停用、對稱維持。
-        """
-        try:
-            sidecar = output_dir / f"{Path(ctx.pdf_path).stem}_doc_structure.json"
-            if not sidecar.exists():                       # 備路 glob
-                candidates = sorted(output_dir.glob("*_doc_structure.json"))
-                if not candidates:
-                    logger.warning(
-                        "[FITZ-HOTFIX-2 K2] %s 找不到 doc_structure sidecar"
-                        "（規則③兩通道同步停用、①②照跑）", ctx.paper_id,
-                    )
-                    return set()
-                sidecar = candidates[0]
-            structure = json.loads(sidecar.read_text(encoding="utf-8"))
-            return self._collect_header_srcs(text, structure)
-        except Exception as exc:  # noqa: BLE001 — 定位/解析失敗 fail-open、對稱維持
-            logger.warning(
-                "[FITZ-HOTFIX-2 K2] %s 報頭集載入失敗（規則③兩通道同步停用）: %s",
-                ctx.paper_id, exc, exc_info=True,
-            )
-            return set()
-
     def _filter_source_figures(self, ctx: PipelineContext, text: str) -> str:
         """R8：對 P1 原始 md 全文做**行級圖片過濾**（DROP 即刪行）。
 
@@ -702,14 +649,7 @@ class LiteDocPipeline(DocumentStrategy):
             output_dir = paper_manager.paper_dir(
                 settings.OUTPUT_DIR, ctx.owner_id, ctx.paper_id
             )
-            # === [FITZ-HOTFIX-2 K2] 注入與 tiles 路同一份 header_srcs ===
-            # 原僅傳 images_root、未傳 header_srcs → 本通道規則③恆停用，而 tiles 路有 ③
-            # → 同一張圖兩通道判定不同、破壞雙語圖片對稱。今補傳同一集合（含 K1 新行界），
-            # 使**任何規則之 DROP 兩通道必同步**（結構性保證、非兩邊各算）。
-            header_srcs = self._load_header_srcs(ctx, output_dir, text)
-            fig_filter = image_filter.make_figure_filter(
-                output_dir / "images", header_srcs
-            )
+            fig_filter = image_filter.make_figure_filter(output_dir / "images")
             if fig_filter is None:            # 旗標關 → no-op
                 return text
             kept, dropped = [], 0
