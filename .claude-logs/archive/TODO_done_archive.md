@@ -4,6 +4,19 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Hotfix FITZ-HOTFIX-2 報頭行界收窄與雙語圖片對稱（治 HOTFIX-1 後 E2E「B 軌大圖不見」·兩刀 K1/K2·單檔 litedoc）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| HOTFIX-2 | Header Boundary Narrowing & Bilingual Figure Symmetry（報頭行界收窄與雙語圖片對稱）：**K1** `_collect_header_srcs` 行界由「**全部**判型塊 `max(end)`」收窄為「**meta 型塊** `max(end)`」〔真因＝DocAnalyzer 把正文判成 `intro_text`/`other`、行界被撐到文件深處（v3 實物 hdr_end=**119**）致封面大圖與 Falcon 9 照片被掃進報頭遭規則③誤殺；收窄後 **119→10**、兩圖獲救；無 meta 型塊 → 回 `set()` 規則③自然停用、①②照跑〕+ 新增類別常數 `_HEADER_META_TYPES = set(_META_TYPES) | {"title"}` **緊鄰 `_META_TYPES` 定義防常數漂移**〔與 `mark_meta_lines`「title 恆視 meta」語意同源·`| {"title"}` 為防禦性 no-op〕/ **K2** `_filter_source_figures` 新增 `_load_header_srcs` **三級定位**〔① 主路 `{Path(ctx.pdf_path).stem}_doc_structure.json`（與 `_read_source_text` 同 stem 基準）→ ② 備路 `sorted(glob("*_doc_structure.json"))` → ③ `set()` fail-open（warning+exc_info）；**嚴禁以 `ctx.paper_id` 拼接**——影子軌帶 `_shadow` 後綴而實體檔無（v3：`SpaceX_the_Sentient_Sun_doc_structure.json`）、拼接必 miss 致規則③靜默停用〕+ 複用**同一** `_collect_header_srcs` 算出集合注入 `make_figure_filter`〔原文通道原未傳 header_srcs → 規則③恆停用，而 tiles 通道有③ → 同圖兩通道判定不同、v3 實測 **en21 vs zh19** 不對稱；今**任何規則之 DROP 兩通道必同步**（結構性保證、非兩邊各算）〕·**恢復雙語圖片對稱不變式**；`image_filter` 三規則本體/門檻/工廠簽名零改、`fitz_processor`/`ingestion_engine`/`rag_indexer`/`web_server` 全零 diff；10 新測試〔K1 v3 真 sidecar 收窄・**119 vs 10 對照組**・無 meta 塊回 ∅・同源守衛／K2 主路 PDF stem・備路 glob・缺檔與壞檔 fail-open・規則③於原文通道生效・**雙語對稱斷言**〕；968→978 passed | `53feed8` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔K1/K2 規格逐項對照・單元與對稱測試 10/10・不可動六檔全零 diff・提示詞 3 份稽核〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-22_FITZ-HOTFIX-2_報頭行界收窄與雙語圖片對稱_plan.md` + `tasks/` 同名 `_hotfix.md`（套 template_hotfix）。
+> ⚠️ **既有測試契約更新（預期行為變更）**：`test_collect_header_srcs_line_boundary`（IMG-FILTER C3）之 fixture 含 `{"start":2,"end":5,"type":"other"}`（**非 meta 型**）——舊界 5、K1 新界 4，故 `hdr2.jpg`(line 5) 不再列報頭集。該 `other` 塊正是實測中把行界撐到 119 之同類元凶，此為 K1 預期收窄；測試已更新至新契約並於 docstring 記明理由與溯源。
+> ⚠️ **banner 拍板甲＝保留**（baron 指認封面 cover art、K1 使其獲救）。
+> ⚠️ baron 影子 E2E：v3 樣本重傳——**封面大圖與 Falcon 9 駁船降落照片回歸可見**、頭像/logo/分隔線仍被濾（①③兜底）、後端 log 規則③ DROP 筆數顯著下降且不再命中內容圖、**`final_en` 與 `final_zh` 圖片數相等**（v3 為 en21 vs zh19、修後應相等）。
+> ⚠️ **契約回灌**：K1/K2 併入 **PIPE-SYNC-6** 批次（與 PIPE-INGEST-FITZ／LANG-DETECT／FITZ-HOTFIX-1 八刀同批、待 E2E 綠燈後開）。
+
 ### BE-Refactor FITZ-HOTFIX-1 fitz路標題救回與雜訊通則修復（八刀 R1-R8·溯源 baron 影子 E2E 四缺陷·全刀驗收靶錨定 plan §3 實測數據·plan v4 六問拍板）
 
 | Commit | 內容 | Hash |
@@ -11,7 +24,7 @@
 | C1 | Fitz Processor Refinement（Fitz 處理器標題救回與結構修復）：**R1** 圖框內文字排除〔行 bbox×image rect 重疊 >50% 剔除·`_max_overlap_ratio` 純函式·圖本身仍保留〕/ **R2** `_repetition_key` 改複合 key `(數字歸一文字, round(size,1))`——**列印 PDF 通案**〔瀏覽器每頁印 `document.title` chrome 與真標題同文，純文字 key 使真標題必然撞自身頁首被誤殺；加字級後 7.0pt chrome 照剝、25.6pt 真標題唯一存活〕/ **R3** 字級候選擴前三級 → `#`/`##`/`###`〔**連帶修正 body 字級判定：正文字級只由非 band 行決定**——既有回歸測試攔下 chrome 字元量壓過正文致真正文誤判 `###`；候選仍由全體行枚舉以保留落頂 band 之真標題〕/ **R5** nav link-tiling 剝除〔`get_links()` 註記·**x 區間聯集**算覆蓋避免重疊 link 重複計·≥3 links 且 ≥60% 雙閘·無註記 no-op·讀取異常 warning 降級〕；單檔內聚、13 測試、920→933 passed | `e8d57a6` |
 | C2 | P1 Meta & Noise Cleanup（P1 元數據歸零與雜訊清理）：**R6** `ingestion_engine` `mark_meta_lines`/`assemble` 增純加法 `meta_values`〔正規化 casefold+僅留 alphanumeric·**整行相等非子字串包含**故正文提及作者名不誤殺·**判型成功與 soft-fail 兩路皆套用**不依賴判型心情〕+ **`_extract_litedoc_metadata` 時序前移**〔原 L191/L194 顛倒致值無法注入·唯讀零副作用·下游 `_resolve_title`/`source_lang` 消費位置原位不動〕+ `_collect_meta_values`〔authors 逐項/合併型+publisher+date 及 6 種列印變體〕/ **R7** `_clean_short_number_lines`〔≤3 token 數字過半·markdown 語法行首 `#!>-*|` 跳過·`^\d+([.,]\d+)*$` 精確 regex 使 v1.2/M1 不計·**命中改空行保行數不變式**〕；兩來源同享、25 測試、933→958 passed | `a666a11` |
 | C3 | P3 Title & Figure Convergence（P3 譯題與圖片過濾收斂）：**R4** `_translate_title` 兩處譯題改餵 `_title_bare`＋影子軌譯後唯一重貼〔**真因重判**：`web_server.py:775` 防重早由 SHADOW-HOTFIX-2 落地，病根是 LLM 回全形/空格**變體**致半形 `endswith` 失配；改餵 bare 後變體不生、守衛恰命中一次·**`web_server.py` git diff 零**〕/ **R8** `_filter_source_figures` P3 單點行級過濾〔複用引擎 `_FIGURE_RE`+`make_figure_filter`·`images_root` 與 `_build_tiles` 同基準·旗標關 no-op·異常 fail-open〕一次覆蓋 is_zh/whole/**en_text（無條件）** 三消費者 + 立 **section mode 雙語圖片對稱不變式**〔根治大改版以來 en 側取未過濾原文致雙語圖片不對稱〕；9 測試、958→967 passed | `e6f3e44` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 八刀 R1-R8 逐項對照 / tasks §6 驗收 / 不可動全程零違〕+ **§7.2 跨 Phase 整合測試補齊並通過**〔`test_seam_fitz_hotfix1_r1_to_r8_end_to_end`：真實 born-digital PDF〔chrome/三級標題/圖框黏字/nav/meta/計數/垃圾圖全靶〕→ 真 FitzProcessor → 真清洗鏈 → 真 `_build_tiles` → 真 `run_phase3` 端到端·967→968 passed〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 八刀 R1-R8 逐項對照 / tasks §6 驗收 / 不可動全程零違〕+ **§7.2 跨 Phase 整合測試補齊並通過**〔`test_seam_fitz_hotfix1_r1_to_r8_end_to_end`：真實 born-digital PDF〔chrome/三級標題/圖框黏字/nav/meta/計數/垃圾圖全靶〕→ 真 FitzProcessor → 真清洗鏈 → 真 `_build_tiles` → 真 `run_phase3` 端到端·967→968 passed〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `f5a3ec6` |
 
 > **修法依據**：`plans/2026-07-21_FITZ-HOTFIX-1_fitz路標題救回與雜訊通則修復_plan.md`（v4·六問拍板·八刀驗收靶全錨定 §3 實測）+ `tasks/` 同名 tasks。
 > ⚠️ **§7.2 整合測試於 Checkout 階段補齊**（tasks §6.4 原規劃「C3 或 Checkout 前補齊」、C3 未及）——依 WORKFLOW_SOP §7.2「缺此測試之多 Phase 任務不得判 🟢」硬性要求，本案跨 P1（R1/R2/R3/R5/R6/R7）與 P3（R4/R8）且有 md→tiles→full_text handoff、不適用豁免，故於收官前補寫並通過。
