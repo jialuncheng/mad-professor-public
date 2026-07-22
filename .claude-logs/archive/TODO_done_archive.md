@@ -4,12 +4,26 @@
 > active 任務與一行式索引見 `TODO.md`；本檔由各任務 checkout 依 framework §2.4/§2.5 **追加寫入**、嚴禁改寫既有列。
 > 建檔：CONTEXT-1 C4（2026-07-09）、來源＝TODO.md 原 L13–L1056 byte 逐字搬移。
 
+### BE-Refactor FITZ-HOTFIX-1 fitz路標題救回與雜訊通則修復（八刀 R1-R8·溯源 baron 影子 E2E 四缺陷·全刀驗收靶錨定 plan §3 實測數據·plan v4 六問拍板）
+
+| Commit | 內容 | Hash |
+|---|---|---|
+| C1 | Fitz Processor Refinement（Fitz 處理器標題救回與結構修復）：**R1** 圖框內文字排除〔行 bbox×image rect 重疊 >50% 剔除·`_max_overlap_ratio` 純函式·圖本身仍保留〕/ **R2** `_repetition_key` 改複合 key `(數字歸一文字, round(size,1))`——**列印 PDF 通案**〔瀏覽器每頁印 `document.title` chrome 與真標題同文，純文字 key 使真標題必然撞自身頁首被誤殺；加字級後 7.0pt chrome 照剝、25.6pt 真標題唯一存活〕/ **R3** 字級候選擴前三級 → `#`/`##`/`###`〔**連帶修正 body 字級判定：正文字級只由非 band 行決定**——既有回歸測試攔下 chrome 字元量壓過正文致真正文誤判 `###`；候選仍由全體行枚舉以保留落頂 band 之真標題〕/ **R5** nav link-tiling 剝除〔`get_links()` 註記·**x 區間聯集**算覆蓋避免重疊 link 重複計·≥3 links 且 ≥60% 雙閘·無註記 no-op·讀取異常 warning 降級〕；單檔內聚、13 測試、920→933 passed | `e8d57a6` |
+| C2 | P1 Meta & Noise Cleanup（P1 元數據歸零與雜訊清理）：**R6** `ingestion_engine` `mark_meta_lines`/`assemble` 增純加法 `meta_values`〔正規化 casefold+僅留 alphanumeric·**整行相等非子字串包含**故正文提及作者名不誤殺·**判型成功與 soft-fail 兩路皆套用**不依賴判型心情〕+ **`_extract_litedoc_metadata` 時序前移**〔原 L191/L194 顛倒致值無法注入·唯讀零副作用·下游 `_resolve_title`/`source_lang` 消費位置原位不動〕+ `_collect_meta_values`〔authors 逐項/合併型+publisher+date 及 6 種列印變體〕/ **R7** `_clean_short_number_lines`〔≤3 token 數字過半·markdown 語法行首 `#!>-*|` 跳過·`^\d+([.,]\d+)*$` 精確 regex 使 v1.2/M1 不計·**命中改空行保行數不變式**〕；兩來源同享、25 測試、933→958 passed | `a666a11` |
+| C3 | P3 Title & Figure Convergence（P3 譯題與圖片過濾收斂）：**R4** `_translate_title` 兩處譯題改餵 `_title_bare`＋影子軌譯後唯一重貼〔**真因重判**：`web_server.py:775` 防重早由 SHADOW-HOTFIX-2 落地，病根是 LLM 回全形/空格**變體**致半形 `endswith` 失配；改餵 bare 後變體不生、守衛恰命中一次·**`web_server.py` git diff 零**〕/ **R8** `_filter_source_figures` P3 單點行級過濾〔複用引擎 `_FIGURE_RE`+`make_figure_filter`·`images_root` 與 `_build_tiles` 同基準·旗標關 no-op·異常 fail-open〕一次覆蓋 is_zh/whole/**en_text（無條件）** 三消費者 + 立 **section mode 雙語圖片對稱不變式**〔根治大改版以來 en 側取未過濾原文致雙語圖片不對稱〕；9 測試、958→967 passed | `e6f3e44` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v4 八刀 R1-R8 逐項對照 / tasks §6 驗收 / 不可動全程零違〕+ **§7.2 跨 Phase 整合測試補齊並通過**〔`test_seam_fitz_hotfix1_r1_to_r8_end_to_end`：真實 born-digital PDF〔chrome/三級標題/圖框黏字/nav/meta/計數/垃圾圖全靶〕→ 真 FitzProcessor → 真清洗鏈 → 真 `_build_tiles` → 真 `run_phase3` 端到端·967→968 passed〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+
+> **修法依據**：`plans/2026-07-21_FITZ-HOTFIX-1_fitz路標題救回與雜訊通則修復_plan.md`（v4·六問拍板·八刀驗收靶全錨定 §3 實測）+ `tasks/` 同名 tasks。
+> ⚠️ **§7.2 整合測試於 Checkout 階段補齊**（tasks §6.4 原規劃「C3 或 Checkout 前補齊」、C3 未及）——依 WORKFLOW_SOP §7.2「缺此測試之多 Phase 任務不得判 🟢」硬性要求，本案跨 P1（R1/R2/R3/R5/R6/R7）與 P3（R4/R8）且有 md→tiles→full_text handoff、不適用豁免，故於收官前補寫並通過。
+> ⚠️ **兩處 plan↔代碼落差經 grep 更正並誠實留痕**：① R4「web_server 無防重」為 stale（SHADOW-HOTFIX-2 已落地）→ 收斂為單一 P3 端治本、該檔零改；② R3 落地暴露 `_heading_sizes` body 字級判定缺陷（既有回歸測試攔下）→ 連帶修正並加守門測試。
+> ⚠️ baron 影子 E2E（plan §8.2）：SpaceX 樣本驗標題正確／`#`+`##`×4+`###`×3 結構（section mode 回魂）／扉頁後零 meta 重播與零 nav 與零 `53 82 Share`／垃圾小圖消失且 hero 在／恰一個 `(測試)`；另傳 <15k 短文驗 whole 路圖片過濾（R8 雙通道同享之 E2E 證）；第二樣本泛化 + 掃描樣本退 MinerU 回歸。
+
 ### DOC-Refactor PIPE-SYNC-5 PIPE-INGEST與GLOSSARY-TERMMAP回灌母plan與SPEC（治理債·兩案落地經驗回灌兩真理源 + design spec F7 門檻更正·就地 HTML 註解不 bump 檔名·四凍結合約零變·plan v2 五 OQ 拍板）
 
 | Commit | 內容 | Hash |
 |---|---|---|
 | C1 | Spec & Plan Backfill（規格書與母計畫回灌）〔**合併版·三文件一次回灌**——baron C1 提示詞將 tasks 原 C1/C2 合併〕：**① PIPE-SPEC v8→v9**〔D1 新增 §1.2.6 `ingestion_engine` 契約章（家族**第 6 員**·`assemble(md, structure, meta_types, figure_filter) -> {title,meta,sections}` 純函式零文體字面量·四鐵律〔title 不丟/meta 非連續分離/figure 帶 content+caption/可選 figure_filter hook〔IMG-FILTER C2 注入點·預設 None byte 等價·DROP 連帶 caption used〕〕）+ §1.2.6.1 litedoc 攝入自有化接點〔借用鏈退場·`_structured.json` 不再產·P3 譯題單一源＝P1 title 根治三受害者〕/ D2 §1.2.2.1 `build_termmap` 事前定案 builder〔五步·廢飛輪早退·三路 _heal_glossary 收斂單一源·全文單一譯法可硬驗收〕/ D3 §0.3 家族 roster 增第 6 員 / D5 `LLM_USE_GLOSSARY_ALIGN` 預設 true 註 / D6 §4 Change Log + Revision v9〕；**② 母 plan v10**〔D_U7 LiteDoc 攝入現況 / D_U8 roster 第 6 員 + build_termmap 演進註 / D_85 §8.5 補三案 ✅〔PIPE-INGEST `e7b9e6c`…/GLOSSARY-TERMMAP `16a5f09`…/IMG-FILTER `de3a475`…〕/ Revision 加列·沿 PIPE-SYNC-4 不 bump 主版本〕；**③ design spec F7**〔D_F7 **廢長邊軸**·規則① 改 `area < 100000`·規則③ 收窄報頭判型行界·補實測校正註〔誤殺 481×369 內容 chart 理由〕·更正註以白話表述避免作廢 token 殘留〕；全增修 HTML 註解包裹、§1.1 四凍結合約區塊與 .bak diff 零差異、pytest 920 passed 零代碼副作用、3 `.bak` 入 archive/ | `cc53452` |
-| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 三回灌目標逐項對照 / 不可動全程零違〔零 .py、§1.1 四合約零差異〕/ 提示詞 5 份稽核〕+ **tasks §8 更正為「C1 合併版」**〔移除已失效獨立 C2、§0.5/§1/§4/§5/§6.2/§99.2 同步、原內容全數保留於合併 C1 ①②③三組無資訊遺失〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `待 baron 回填` |
+| Checkout | 收官歸檔與驗證：Conformance 全綠〔plan v2 §2 三回灌目標逐項對照 / 不可動全程零違〔零 .py、§1.1 四合約零差異〕/ 提示詞 5 份稽核〕+ **tasks §8 更正為「C1 合併版」**〔移除已失效獨立 C2、§0.5/§1/§4/§5/§6.2/§99.2 同步、原內容全數保留於合併 C1 ①②③三組無資訊遺失〕+ baton 一次性 mv 歸檔 + TODO 雙層結案 + hash 回填 + staged 白名單自檢 | `9ca13aa` |
 
 > **修法依據**：`plans/2026-07-21_PIPE-SYNC-5_PIPE-INGEST與GLOSSARY-TERMMAP回灌母plan與SPEC_plan.md`（v2·五 OQ 拍板）+ `tasks/` 同名 tasks（v2 合併版）。
 > ⚠️ **PIPE-SPEC v9 / design spec F7 本體留 gitignored baton**——改後內容不入 git tracked diff，審計鏈＝`archive/` 之 3 份 `.bak`（改前快照）+ C1 執行報告 §4 delta 描述（對齊 RESCUE-1「.bak + 執行報告 = 可重建」範式）；母 plan 為 tracked、改後內容已直接入版控。
