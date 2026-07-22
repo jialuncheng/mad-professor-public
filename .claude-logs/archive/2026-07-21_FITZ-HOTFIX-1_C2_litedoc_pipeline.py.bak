@@ -29,7 +29,7 @@ from pipelines.factory import PipelineFactory
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 import paper_manager
 import settings
@@ -88,75 +88,6 @@ _LITEDOC_META_SYSTEM_PROMPT = (
     "6. Return ONLY a valid JSON object with keys title, authors, date, publisher, url, "
     "language. No markdown fences, no commentary."
 )
-
-
-# === [FITZ-HOTFIX-1 C2 START] R7 數字為主短行清理（兩來源同享、保守版）===
-# markdown 語法行首：一律跳過（防誤殺 `- 1` 列表項／`# 1` 標題／`![alt](src)` 圖行／
-# `| 1 |` 表格列／`> 1` 引用／`* 1` 列表）
-_MD_SYNTAX_PREFIXES = ("#", "!", ">", "-", "*", "|")
-# 數字 token 精確匹配：整數／千分位／小數；含字母者（`v1.2`／`M1`）自動不計為數字
-_NUMERIC_TOKEN_RE = re.compile(r"^\d+([.,]\d+)*$")
-# 短行 token 數上限（超過即視為正文句、不碰）
-_SHORT_LINE_MAX_TOKENS = 3
-
-
-def _is_number_dominated(line: str) -> bool:
-    """R7 判定：≤3 token 且數字 token **過半** → 計數/統計類雜訊行。
-
-    設計依據（plan §3.7 block 分組運氣）：源 PDF 之 `53`/`82`/`Share` 同 block →
-    直抽併為一行 `53 82 Share`（帶詞、逃過既有純數字行規則）；`561` 獨立 block →
-    獨行純數字（既有規則可殺）。本判定對 block 分組**不敏感**、兩形態同收。
-    誠實邊界：`561 Likes` 型（1/2 不過半）會逃——保守版先行、寧漏勿誤殺。
-    """
-    stripped = line.strip()
-    if not stripped or stripped.startswith(_MD_SYNTAX_PREFIXES):
-        return False
-    tokens = stripped.split()
-    if not tokens or len(tokens) > _SHORT_LINE_MAX_TOKENS:
-        return False
-    numeric = sum(1 for tok in tokens if _NUMERIC_TOKEN_RE.match(tok))
-    return numeric * 2 > len(tokens)
-
-
-_MONTHS_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-_MONTHS_FULL = ("January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December")
-
-
-def _date_variants(iso_date: str) -> Set[str]:
-    """R6 輔助：ISO 日期 → 常見列印變體集合（扉頁重播多為人類可讀格式）。
-
-    `2026-06-15` → `Jun 15` / `June 15` / `Jun 15, 2026` / `June 15, 2026` /
-    `06/15/2026` / `2026/06/15`。非 ISO 格式或解析失敗 → 空集合（不阻斷）。
-    """
-    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", (iso_date or "").strip())
-    if not m:
-        return set()
-    year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    if not (1 <= month <= 12):
-        return set()
-    abbr, full = _MONTHS_ABBR[month - 1], _MONTHS_FULL[month - 1]
-    return {
-        f"{abbr} {day}", f"{full} {day}",
-        f"{abbr} {day}, {year}", f"{full} {day}, {year}",
-        f"{month:02d}/{day:02d}/{year}", f"{year}/{month:02d}/{day:02d}",
-    }
-
-
-def _clean_short_number_lines(text: str) -> str:
-    """剝除數字為主之短行（**行數不變式**：命中行改為空行、不刪行）。
-
-    行數不變 → 下游 doc_structure 判型行索引與 `assemble`／`_collect_header_srcs`
-    行界維持同基準（與連字修復同一哲學）。
-    """
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if _is_number_dominated(line):
-            logger.debug("[PIPE-LITEDOC P1] R7 剝除數字短行: %.40s", line.strip())
-            lines[i] = ""
-    return "\n".join(lines)
-# === [FITZ-HOTFIX-1 C2 END] ===
 
 
 def _strip_json_fence(text: str) -> str:
@@ -243,12 +174,6 @@ class LiteDocPipeline(DocumentStrategy):
                 ),
                 encoding="utf-8",
             )
-        # === [FITZ-HOTFIX-1 C2 START] R7 數字為主短行清理（同清洗步、兩來源同享）===
-        md_path.write_text(
-            _clean_short_number_lines(md_path.read_text(encoding="utf-8")),
-            encoding="utf-8",
-        )
-        # === [FITZ-HOTFIX-1 C2 END] ===
         markdown_text = md_path.read_text(encoding="utf-8")
 
         # ③ analyze：DocAnalyzer + U2.1 映射（soft-fail）
@@ -262,19 +187,11 @@ class LiteDocPipeline(DocumentStrategy):
                 ctx.paper_id, analyzer_doc_type, exc, exc_info=True,
             )
 
-        # === [FITZ-HOTFIX-1 C2 START] R6 時序前移：metadata 抽取移至 tiles 組裝之前 ===
-        # ⑦→前移 metadata：B 軌原生文字抽取（方案 A）。`_extract_litedoc_metadata`
-        # 僅唯讀吃 `markdown_text`（簽名單參數、零 tiles 依賴）→ 調序安全無副作用；
-        # 目的＝把已抽出之 meta **值**注入 `_build_tiles`→`assemble` 作確定性兜底（R6）。
+        # ④⑤⑥ md2json → json_process → tiling（產物理分組 Tiles）
+        tiles = self._build_tiles(md_path, output_dir, paper_name, ctx.doc_type)
+
+        # ⑦ metadata：B 軌原生文字抽取（方案 A）
         meta = self._extract_litedoc_metadata(markdown_text)
-
-        # ④⑤⑥ md2json → json_process → tiling（產物理分組 Tiles；帶 R6 meta 值集合）
-        tiles = self._build_tiles(
-            md_path, output_dir, paper_name, ctx.doc_type,
-            meta_values=self._collect_meta_values(meta),
-        )
-        # === [FITZ-HOTFIX-1 C2 END] ===
-
         title = self._resolve_title(meta, markdown_text, paper_name)
         # === [PIPE-LITEDOC-HOTFIX-1 START] 二元繁中偵測（取內文樣本不取封面；簡體不給 zh* 契約）===
         # 鎖二：偵測器放 section_engine 共用；鎖三：取 tiles 內文樣本（跳封面）；鎖一：非繁回非 zh* token。
@@ -363,8 +280,7 @@ class LiteDocPipeline(DocumentStrategy):
     _META_TYPES = ("title", "authors", "publication_info")
 
     def _build_tiles(
-        self, md_path: Path, output_dir: Path, paper_name: str, doc_type: str,
-        meta_values: Optional[Set[str]] = None,
+        self, md_path: Path, output_dir: Path, paper_name: str, doc_type: str
     ) -> List[Dict[str, Any]]:
         """ingestion_engine 組裝 → TextTiling（PIPE-INGEST C2、litedoc 不 opt-out）。
 
@@ -373,8 +289,6 @@ class LiteDocPipeline(DocumentStrategy):
         `TilingProcessor` 零改續用（index/part 由 tiling 自補）。A 軌 md2json／行級分塊
         借用鏈於 litedoc 退場；`_structured.json` 不再產出。
         doc_structure 讀取失敗 → structure=None soft（引擎退化為無 meta 分離、不阻斷）。
-        `meta_values`（[FITZ-HOTFIX-1 C2 R6]、預設 None 行為等價）：P1 已抽出之 meta
-        值集合，貫穿至 `assemble` 作整行比對之確定性兜底（判型失準時仍能剝除 meta 重播）。
         """
         markdown_text = md_path.read_text(encoding="utf-8")
         structure: Optional[Dict[str, Any]] = None
@@ -394,7 +308,6 @@ class LiteDocPipeline(DocumentStrategy):
         result = ingestion_engine.assemble(
             markdown_text, structure, meta_types=self._META_TYPES,
             figure_filter=fig_filter,
-            meta_values=meta_values,   # [FITZ-HOTFIX-1 C2 R6] 確定性兜底
         )
         processed = output_dir / f"{paper_name}_processed.json"
         processed.write_text(
@@ -478,39 +391,6 @@ class LiteDocPipeline(DocumentStrategy):
             return {}
 
     # === [LANG-DETECT C1 START] source_lang 合成（catch-all 限定、雙重白名單）===
-    # === [FITZ-HOTFIX-1 C2 START] R6 meta 值集合（供 assemble 確定性兜底）===
-    @staticmethod
-    def _collect_meta_values(meta: Dict[str, Any]) -> Set[str]:
-        """由 cover-prompt 已抽出之 meta 組值集合（authors 逐項 + date + publisher）。
-
-        比對正規化與變體展開分工：**大小寫/分隔符差異**由 `ingestion_engine`
-        之 `_normalize_meta_text`（casefold + 僅留 alphanumeric）吸收；本函式只負責
-        **語意變體**——① authors list 逐項 + 全項合併（`A and B` 型整行）；
-        ② date 展開常見列印變體（`2026-06-15` → `Jun 15` / `June 15` / `06/15/2026`…），
-        因扉頁重播多為人類可讀格式、與 ISO 原值字面不同。
-        取不到值/型別異常 → 略過該欄（不阻斷、集合可為空 → 兜底自然停用）。
-        """
-        values: Set[str] = set()
-
-        authors = meta.get("authors")
-        if isinstance(authors, list):
-            names = [str(a).strip() for a in authors if str(a or "").strip()]
-            values.update(names)
-            if len(names) > 1:                      # 整行合併型（`A AND B`）
-                values.add(" and ".join(names))
-                values.add(", ".join(names))
-        elif isinstance(authors, str) and authors.strip():
-            values.add(authors.strip())
-
-        for key in ("publisher", "date"):
-            val = str(meta.get(key) or "").strip()
-            if val:
-                values.add(val)
-
-        values.update(_date_variants(str(meta.get("date") or "").strip()))
-        return {v for v in values if v}
-    # === [FITZ-HOTFIX-1 C2 END] ===
-
     @staticmethod
     def _resolve_source_lang(meta: Dict[str, Any], heuristic: str) -> str:
         """合成 source_lang：僅啟發式 catch-all 'en' 時嘗試採信 LLM language 欄。

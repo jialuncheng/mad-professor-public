@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -64,38 +64,11 @@ def extract_title(lines: List[str]) -> Tuple[str, Optional[int]]:
 # ──────────────────────────────────────────────────────────────────────────
 # meta 行分離（判型注入、不受行連續性限制、soft-fail）
 # ──────────────────────────────────────────────────────────────────────────
-# === [FITZ-HOTFIX-1 C2 START] R6 meta 值比對正規化（純函式） ===
-_META_VALUE_KEY = "meta_value"   # 值比對命中之 meta dict 鍵（供審計、與判型鍵區隔）
-
-
-def _normalize_meta_text(text: str) -> str:
-    """meta 值比對用正規化：casefold + 僅保留 alphanumeric（去分隔/大小寫/空白差異）。
-
-    例：``"MARC ANDREESSEN AND MICHAEL MCGUINESS"`` 與
-    ``"Marc Andreessen and Michael McGuiness"`` → 同一 key。
-    """
-    return "".join(ch for ch in (text or "").casefold() if ch.isalnum())
-
-
-def normalize_meta_values(values: Optional[Iterable[str]]) -> Set[str]:
-    """呼叫端傳入之 meta 值集合 → 正規化非空集合（空值/空白值自動略去）。"""
-    if not values:
-        return set()
-    out = set()
-    for value in values:
-        norm = _normalize_meta_text(str(value))
-        if norm:
-            out.add(norm)
-    return out
-# === [FITZ-HOTFIX-1 C2 END] ===
-
-
 def mark_meta_lines(
     lines: List[str],
     structure: Optional[Dict[str, Any]],
     meta_types: Tuple[str, ...],
     title_idx: Optional[int],
-    meta_values: Optional[Set[str]] = None,
 ) -> Tuple[Dict[str, List[str]], List[bool]]:
     """依前段結構判型標記 meta 行，回 (meta {型別: [行文字]}, 各行 is_meta flags)。
 
@@ -104,41 +77,11 @@ def mark_meta_lines(
     - ``type == "title"`` 之 block 一律標 meta（與 ``title_idx`` 行同置，防標題回聲入內文）。
     - soft-fail：structure None / 無 ``structure`` 鍵 / 非 list / 任一 block 行號越界或
       格式不符 → 回 ``({}, 僅 title 行為 True)``（無 meta 分離、title 仍不入內文）。
-    - **[FITZ-HOTFIX-1 C2 R6] ``meta_values`` 確定性兜底（純加法、預設 None 行為等價）**：
-      呼叫端傳入已抽出之 meta **值**（authors/date/publisher 等）集合時，額外掃描未標行——
-      **整行正規化後等於任一值**者標為 meta（鍵 ``meta_value``）。比對為「整行相等」
-      **非子字串包含**（正文句中再次提及作者名不會被誤殺）。判型成功與 soft-fail
-      **兩路皆套用**（不依賴判型心情、MinerU/fitz 兩來源同享）。
     """
     flags = [False] * len(lines)
     if title_idx is not None and 0 <= title_idx < len(lines):
         flags[title_idx] = True
-
-    # === [FITZ-HOTFIX-1 C2 START] R6 值比對兜底（判型成功/soft-fail 兩路共用）===
-    norm_values = normalize_meta_values(meta_values)
-
-    def _apply_value_pass(meta: Dict[str, List[str]], flags: List[bool]) -> None:
-        if not norm_values:
-            return
-        for i, raw in enumerate(lines):
-            if flags[i]:
-                continue
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            if _normalize_meta_text(stripped) in norm_values:
-                meta.setdefault(_META_VALUE_KEY, []).append(stripped)
-                flags[i] = True
-                logger.debug(
-                    "[PIPE-INGEST] R6 值比對剝除 meta 行: %.60s", stripped
-                )
-
-    def _fallback() -> Tuple[Dict[str, List[str]], List[bool]]:
-        meta_fb: Dict[str, List[str]] = {}
-        flags_fb = list(flags)
-        _apply_value_pass(meta_fb, flags_fb)   # 判型失準時仍有確定性兜底
-        return meta_fb, flags_fb
-    # === [FITZ-HOTFIX-1 C2 END] ===
+    fallback = ({}, list(flags))
 
     blocks = structure.get("structure") if isinstance(structure, dict) else None
     if not isinstance(blocks, list) or not blocks:
@@ -146,7 +89,7 @@ def mark_meta_lines(
             logger.warning(
                 "[PIPE-INGEST] 前段結構判型缺失或格式不符、跳過 meta 分離（soft-fail）"
             )
-        return _fallback()
+        return fallback
 
     # 先整批驗證行號（任一越界 → 整體 soft-fail，不做半套分離）
     try:
@@ -159,14 +102,14 @@ def mark_meta_lines(
                     "[PIPE-INGEST] 判型行號越界（start=%d end=%d lines=%d）、"
                     "跳過 meta 分離（soft-fail）", start, end, len(lines),
                 )
-                return _fallback()
+                return fallback
             spans.append((start, end, btype))
     except Exception as exc:  # noqa: BLE001 — 判型格式異常一律 soft-fail
         logger.warning(
             "[PIPE-INGEST] 判型解析失敗、跳過 meta 分離（soft-fail）: %s", exc,
             exc_info=True,
         )
-        return _fallback()
+        return fallback
 
     meta: Dict[str, List[str]] = {}
     for start, end, btype in spans:
@@ -177,7 +120,6 @@ def mark_meta_lines(
             if s and not flags[i]:
                 meta.setdefault(btype, []).append(s)
             flags[i] = True
-    _apply_value_pass(meta, flags)   # [FITZ-HOTFIX-1 C2 R6] 判型後追加確定性兜底
     return meta, flags
 
 
@@ -346,7 +288,6 @@ def assemble(
     *,
     meta_types: Tuple[str, ...] = DEFAULT_META_TYPES,
     figure_filter: Optional[Callable[[str, str], bool]] = None,
-    meta_values: Optional[Set[str]] = None,
 ) -> Dict[str, Any]:
     """cleaned markdown 全文 + 前段結構判型 → ``{"title", "meta", "sections"}``。
 
@@ -354,14 +295,10 @@ def assemble(
     - ``meta``：``{判型型別: [行文字]}``（分離自內文；soft-fail 時為 ``{}``）。
     - ``sections``：processed 相容 section 樹（TilingProcessor 直接可餵、
       ``index``/``part`` 等索引欄由 tiling 自補、引擎不產）。
-    - ``meta_values``（[FITZ-HOTFIX-1 C2 R6] 純加法、**預設 None 行為 byte 等價**）：
-      呼叫端已抽出之 meta 值集合，供整行正規化比對之確定性兜底（見 ``mark_meta_lines``）。
     """
     lines = (markdown_text or "").split("\n")
     title, title_idx = extract_title(lines)
-    meta, flags = mark_meta_lines(
-        lines, structure, tuple(meta_types), title_idx, meta_values=meta_values
-    )
+    meta, flags = mark_meta_lines(lines, structure, tuple(meta_types), title_idx)
     sections = build_sections(lines, flags, figure_filter=figure_filter)
     logger.info(
         "[PIPE-INGEST] assemble 完成 title=%r meta_types=%d sections=%d",
