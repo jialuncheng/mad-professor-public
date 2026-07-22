@@ -193,3 +193,209 @@ class TestMedianPageChars:
         bad.write_bytes(b"garbage")
         with pytest.raises(Exception):  # 呼叫端（C3 閘門）負責 fail-open
             median_page_chars(str(bad))
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# FITZ-HOTFIX-1 C1：R1 圖框內文字排除 / R2 複合 key 救標題 / R3 三級 / R5 nav
+# ──────────────────────────────────────────────────────────────────────────
+from processor.fitz_processor import (  # noqa: E402
+    _link_tiling,
+    _max_overlap_ratio,
+    _repetition_key,
+)
+
+H3 = 13.5   # 第三級字級（介於 H2 17.0 與 BODY 11.0 之間）
+
+
+class TestR1FigureOverlap:
+    """R1：行 bbox 與圖框重疊 > 50% → 剔除；文繞圖（<50%）保留。"""
+
+    def test_overlap_ratio_math(self):
+        line = (0.0, 0.0, 100.0, 10.0)                 # 面積 1000
+        assert _max_overlap_ratio(line, [(0.0, 0.0, 100.0, 10.0)]) == 1.0   # 全覆蓋
+        assert _max_overlap_ratio(line, [(0.0, 0.0, 30.0, 10.0)]) == 0.3    # 30%
+        assert _max_overlap_ratio(line, [(200.0, 0.0, 300.0, 10.0)]) == 0.0  # 不相交
+        assert _max_overlap_ratio(line, []) == 0.0                          # 無圖框
+
+    def test_inside_figure_line_dropped_and_wrapped_line_kept(self, tmp_path):
+        """實體 PDF：圖框內黏字剔除、圖外正文保留（圖本身仍在）。"""
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text(fitz.Point(72, 100), "Real Heading", fontsize=H1)
+        pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 40))
+        pix.clear_with(200)
+        page.insert_image(fitz.Rect(72, 200, 472, 400), pixmap=pix)   # 圖框
+        # 圖框正中央的黏字（重疊 100%）
+        page.insert_text(fitz.Point(120, 300), "StuckChartLabel", fontsize=H2)
+        # 圖框外正文（重疊 0%）
+        page.insert_text(fitz.Point(72, 500), "Body text outside figure.",
+                         fontsize=BODY)
+        doc.save(str(tmp_path / "fig.pdf"))
+        doc.close()
+
+        md = FitzProcessor().parse(
+            str(tmp_path / "fig.pdf"), str(tmp_path / "out")
+        ).read_text(encoding="utf-8")
+        assert "StuckChartLabel" not in md                 # R1 剔除
+        assert "Body text outside figure." in md           # 圖外正文保留
+        assert "Real Heading" in md
+        assert "![](images/" in md                         # 圖本身仍保留
+
+
+class TestR2CompositeRepetitionKey:
+    """R2：key＝(數字歸一文字, 字級) —— chrome 剝除、同文真標題存活。"""
+
+    def test_key_includes_size(self):
+        assert _repetition_key("Title", 7.0) == ("Title", 7.0)
+        assert _repetition_key("Page 1 of 2", 7.0) == ("Page # of #", 7.0)
+        # 同文不同字級 → 不同 key（R2 核心）
+        assert _repetition_key("T", 7.0) != _repetition_key("T", 25.6)
+
+    def test_chrome_stripped_but_same_text_title_survives(self, tmp_path):
+        """列印 PDF 通案：每頁 7.0pt 頁首 chrome 與第一頁 25.6pt 真標題同文。"""
+        TITLE = "SpaceX & the Sentient Sun"
+        doc = fitz.open()
+        for i in range(3):
+            page = doc.new_page()
+            page.insert_text(fitz.Point(72, 22), TITLE, fontsize=7.0)   # chrome（band 內）
+            if i == 0:
+                page.insert_text(fitz.Point(72, 72), TITLE, fontsize=25.6)  # 真標題（band 內）
+            for j in range(6):
+                page.insert_text(fitz.Point(72, 300 + j * 40),
+                                 f"Body paragraph {i}-{j} with plenty of text. " * 2,
+                                 fontsize=BODY)
+        doc.save(str(tmp_path / "print.pdf"))
+        doc.close()
+
+        md = FitzProcessor().parse(
+            str(tmp_path / "print.pdf"), str(tmp_path / "out")
+        ).read_text(encoding="utf-8")
+        # 真標題存活且為 h1；chrome（同文、7.0pt、跨 3 頁）全剝
+        assert f"# {TITLE}" in md
+        assert md.count(TITLE) == 1
+
+
+class TestR3ThirdHeadingLevel:
+    """R3：候選前三級 → #/##/###；兩級文件回歸不變。"""
+
+    @staticmethod
+    def _pages(sizes_with_text):
+        return [{"lines": [
+            {"text": t, "size": s, "in_band": False} for s, t in sizes_with_text
+        ]}]
+
+    def test_three_tier_ladder(self):
+        pages = self._pages([
+            (25.6, "T" * 25), (20.9, "S" * 118), (17.1, "s" * 41),
+            (15.2, "b" * 43305),
+        ])
+        h1, h2, h3 = FitzProcessor()._heading_sizes(pages)
+        assert (h1, h2, h3) == (25.6, 20.9, 17.1)
+        lvl = FitzProcessor._heading_level
+        assert lvl({"text": "T", "size": 25.6}, h1, h2, h3) == 1
+        assert lvl({"text": "S", "size": 20.9}, h1, h2, h3) == 2
+        assert lvl({"text": "s", "size": 17.1}, h1, h2, h3) == 3
+        assert lvl({"text": "b", "size": 15.2}, h1, h2, h3) == 0   # 正文不升格
+
+    def test_two_tier_document_regression(self):
+        """僅兩級之文件：h3=0.0 停用、正文不被誤判 ###。"""
+        pages = self._pages([(24.0, "T" * 10), (17.0, "S" * 20), (11.0, "b" * 500)])
+        h1, h2, h3 = FitzProcessor()._heading_sizes(pages)
+        assert (h1, h2) == (24.0, 17.0) and h3 == 0.0
+        assert FitzProcessor._heading_level({"text": "b", "size": 11.0}, h1, h2, h3) == 0
+
+    def test_body_size_from_non_band_lines_only(self):
+        """正文字級只由非 band 行決定——防 chrome 字元量壓過正文致誤判。
+
+        （band 內 8.0pt 長 chrome 字元量 > 非 band 11.0pt 正文；若一併計入
+        則 body 誤判 8.0、真正文 11.0 被推升為候選而誤判成標題。）
+        """
+        pages = [{"lines": [
+            {"text": "u" * 200, "size": 8.0, "in_band": True},    # chrome（量大）
+            {"text": "T" * 10, "size": 24.0, "in_band": True},    # 真標題（band 內）
+            {"text": "b" * 100, "size": 11.0, "in_band": False},  # 正文
+        ]}]
+        h1, h2, h3 = FitzProcessor()._heading_sizes(pages)
+        assert h1 == 24.0                     # band 內真標題仍列候選（R2 配套）
+        assert 11.0 not in (h1, h2, h3)       # 正文未被推升為標題級
+
+    def test_three_tier_end_to_end(self, tmp_path):
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text(fitz.Point(72, 100), "Doc Title", fontsize=H1)
+        page.insert_text(fitz.Point(72, 160), "Major Section", fontsize=H2)
+        page.insert_text(fitz.Point(72, 220), "Minor Section", fontsize=H3)
+        for j in range(8):
+            page.insert_text(fitz.Point(72, 300 + j * 30),
+                             f"Body sentence {j} carrying the bulk of characters.",
+                             fontsize=BODY)
+        doc.save(str(tmp_path / "three.pdf"))
+        doc.close()
+
+        lines = FitzProcessor().parse(
+            str(tmp_path / "three.pdf"), str(tmp_path / "out")
+        ).read_text(encoding="utf-8").splitlines()
+        assert "# Doc Title" in lines
+        assert "## Major Section" in lines
+        assert "### Minor Section" in lines
+
+
+class TestR5LinkTilingNav:
+    """R5：≥3 獨立 link 覆蓋 ≥60% → nav 剝除；單 link / inline link 不動。"""
+
+    def test_tiling_ratio_uses_x_interval_union(self):
+        line = (0.0, 0.0, 100.0, 10.0)
+        five = [(i * 20.0, 0.0, i * 20.0 + 16.8, 10.0) for i in range(5)]   # 84%
+        ratio, n = _link_tiling(line, five)
+        assert n == 5 and ratio == pytest.approx(0.84)
+        # 重疊 link 不重複計（聯集）→ 不會把低覆蓋行灌成高覆蓋
+        dup = [(0.0, 0.0, 30.0, 10.0)] * 4
+        ratio_dup, n_dup = _link_tiling(line, dup)
+        assert n_dup == 4 and ratio_dup == pytest.approx(0.30)
+        assert _link_tiling(line, []) == (0.0, 0)                            # 無 link
+
+    @staticmethod
+    def _build(tmp_path, links):
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text(fitz.Point(72, 100), "Doc Title", fontsize=H1)
+        page.insert_text(fitz.Point(72, 160),
+                         "America Tech Opinion Culture Charts", fontsize=BODY)
+        for j in range(6):
+            page.insert_text(fitz.Point(72, 260 + j * 30),
+                             f"Body sentence {j} with enough characters here.",
+                             fontsize=BODY)
+        for rect in links:
+            page.insert_link({"kind": fitz.LINK_URI, "from": rect,
+                              "uri": "https://example.com"})
+        doc.save(str(tmp_path / "nav.pdf"))
+        doc.close()
+        return FitzProcessor().parse(
+            str(tmp_path / "nav.pdf"), str(tmp_path / "out")
+        ).read_text(encoding="utf-8")
+
+    def test_nav_row_dropped(self, tmp_path):
+        """5 個 link 平鋪覆蓋整行 → 命中剝除。"""
+        nav_rects = [fitz.Rect(72 + i * 40, 148, 72 + i * 40 + 38, 166)
+                     for i in range(5)]
+        md = self._build(tmp_path, nav_rects)
+        assert "America Tech Opinion Culture Charts" not in md   # R5 剝除
+        assert "# Doc Title" in md                               # 標題不受影響
+        assert "Body sentence 0" in md                           # 正文不受影響
+
+    def test_single_link_row_kept(self, tmp_path):
+        """單一 link 覆蓋整行（帶連結的標題/裸 URL）→ 不命中（links 數不足）。"""
+        md = self._build(tmp_path, [fitz.Rect(72, 148, 340, 166)])
+        assert "America Tech Opinion Culture Charts" in md
+
+    def test_inline_link_in_body_kept(self, tmp_path):
+        """正文句內 inline link（3 個但覆蓋低）→ 不命中（覆蓋率不足）。"""
+        inline = [fitz.Rect(72 + i * 12, 148, 72 + i * 12 + 10, 166)
+                  for i in range(3)]
+        md = self._build(tmp_path, inline)
+        assert "America Tech Opinion Culture Charts" in md
+
+    def test_no_link_annotations_is_noop(self, tmp_path):
+        """無 link 註記之 PDF → 規則自然停用、全行保留。"""
+        md = self._build(tmp_path, [])
+        assert "America Tech Opinion Culture Charts" in md

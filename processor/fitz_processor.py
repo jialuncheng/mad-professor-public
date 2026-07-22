@@ -19,7 +19,7 @@ import logging
 import re
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import fitz  # PyMuPDF
 
@@ -40,6 +40,17 @@ _HEADING_MAX_CHARS = 150
 # 字級分群的正文噪音容差（僅明顯大於正文字級者列入標題候選）
 _HEADING_SIZE_MARGIN = 1.0
 
+# === [FITZ-HOTFIX-1 C1 START] R1/R5 行過濾門檻 ===
+# R1：行 bbox 與任一圖框重疊比 > 此值 → 判圖表可選文字覆蓋層、剔除
+# （圖本身仍作 figure 保留、資訊不丟；門檻保守防誤殺文繞圖正當文字）
+_FIGURE_OVERLAP_MAX = 0.5
+# R5：一行被 ≥ 此數量之獨立 link 覆蓋、且覆蓋率 ≥ 下值 → 導覽/連結列、剔除
+# 雙閾值各擋一種誤殺：links 數擋「帶連結的標題/裸 URL 行」（單 link）；
+# 覆蓋率擋「正文句內 inline link」（覆蓋低）。無 link 註記之 PDF → 規則自然停用。
+_NAV_MIN_LINKS = 3
+_NAV_MIN_COVERAGE = 0.6
+# === [FITZ-HOTFIX-1 C1 END] ===
+
 
 def median_page_chars(pdf_path: str) -> float:
     """每頁純文字字元數中位數（文字層閘門輔助）。
@@ -54,9 +65,80 @@ def median_page_chars(pdf_path: str) -> float:
     return float(statistics.median(counts))
 
 
-def _repetition_key(text: str) -> str:
-    """跨頁重複偵測 key：數字歸一（頁碼/日期逐頁變動、去數字後同形）。"""
-    return re.sub(r"\d+", "#", text.strip())
+# === [FITZ-HOTFIX-1 C1 START] R1/R5 幾何輔助（純函式、模組級） ===
+def _rect_area(box: Tuple[float, float, float, float]) -> float:
+    return max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1])
+
+
+def _intersect(
+    a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
+) -> Optional[Tuple[float, float, float, float]]:
+    x0, y0 = max(a[0], b[0]), max(a[1], b[1])
+    x1, y1 = min(a[2], b[2]), min(a[3], b[3])
+    if x1 <= x0 or y1 <= y0:
+        return None
+    return (x0, y0, x1, y1)
+
+
+def _max_overlap_ratio(
+    bbox: Tuple[float, float, float, float],
+    rects: List[Tuple[float, float, float, float]],
+) -> float:
+    """R1：行 bbox 與各圖框之最大重疊面積比（占行面積）。"""
+    area = _rect_area(bbox)
+    if area <= 0.0:
+        return 0.0
+    best = 0.0
+    for rect in rects:
+        inter = _intersect(bbox, rect)
+        if inter is not None:
+            best = max(best, _rect_area(inter) / area)
+    return best
+
+
+def _link_tiling(
+    bbox: Tuple[float, float, float, float],
+    link_rects: List[Tuple[float, float, float, float]],
+) -> Tuple[float, int]:
+    """R5：回 (覆蓋率, 命中 link 數)。
+
+    覆蓋率以 **x 區間聯集** 計（nav 為水平平鋪；聯集避免重疊 link 重複計面積
+    致低覆蓋行被灌成高覆蓋、誤殺正文）。
+    """
+    width = bbox[2] - bbox[0]
+    if width <= 0.0:
+        return (0.0, 0)
+    spans = []
+    for rect in link_rects:
+        inter = _intersect(bbox, rect)
+        if inter is not None:
+            spans.append((inter[0], inter[2]))
+    if not spans:
+        return (0.0, 0)
+    spans.sort()
+    covered = 0.0
+    cur_start, cur_end = spans[0]
+    for start, end in spans[1:]:
+        if start > cur_end:            # 不相接 → 結算前段
+            covered += cur_end - cur_start
+            cur_start, cur_end = start, end
+        else:                          # 相接/重疊 → 併入
+            cur_end = max(cur_end, end)
+    covered += cur_end - cur_start
+    return (covered / width, len(spans))
+# === [FITZ-HOTFIX-1 C1 END] ===
+
+
+def _repetition_key(text: str, size: float) -> Tuple[str, float]:
+    """跨頁重複偵測 key：數字歸一文字 + 字級（頁碼/日期逐頁變動、去數字後同形）。
+
+    [FITZ-HOTFIX-1 C1 R2] key 加入 `round(size, 1)`——**列印 PDF 通案修復**：
+    瀏覽器列印必在每頁頁首印 `document.title`（小字級 chrome）、其文字與文章
+    真標題完全相同；而真標題必在第一頁頂部（常落入頂 band）→ 純文字 key 使
+    **每一份列印網頁 PDF 的真標題都必然撞上自己的頁首 chrome key 被誤殺**。
+    加字級後：chrome（如 7.0pt）跨頁重複照剝、真標題（如 25.6pt）全文件唯一 → 存活。
+    """
+    return (re.sub(r"\d+", "#", text.strip()), round(float(size), 1))
 
 
 class FitzProcessor(PDFParser):
@@ -97,8 +179,18 @@ class FitzProcessor(PDFParser):
     # ── 第一趟：逐頁收集行/圖項目 ──
 
     def _collect_page(self, doc: fitz.Document, page: fitz.Page) -> Dict[str, Any]:
-        """收集單頁文字行（含座標/字級/block 歸屬）與圖項目。"""
+        """收集單頁文字行（含座標/字級/block 歸屬）與圖項目。
+
+        [FITZ-HOTFIX-1 C1] 收行時套兩道確定性過濾：**R1** 落於圖框內之文字
+        （圖表可選文字覆蓋層、會搶 heading 並汙染正文）／**R5** 被多個 link
+        平鋪覆蓋之導覽列。兩者皆於此趟剔除 → 下游 `_heading_sizes` 之字級候選
+        自然淨化（R3 三級階梯得以成立）。
+        """
         height = float(page.rect.height) or 1.0
+        # === [FITZ-HOTFIX-1 C1 START] R1/R5 判定素材先備（圖框 / link 矩形）===
+        images, image_rects = self._collect_images(page)
+        link_rects = self._collect_link_rects(page)
+        # === [FITZ-HOTFIX-1 C1 END] ===
         lines: List[Dict[str, Any]] = []
         raw = page.get_text("dict")
         for b_idx, block in enumerate(raw.get("blocks", [])):
@@ -108,7 +200,25 @@ class FitzProcessor(PDFParser):
                 text = "".join(s.get("text", "") for s in line.get("spans", [])).strip()
                 if not text:
                     continue
-                x0, y0, _x1, y1 = line["bbox"]
+                x0, y0, x1, y1 = line["bbox"]
+                bbox = (float(x0), float(y0), float(x1), float(y1))
+                # === [FITZ-HOTFIX-1 C1 START] ===
+                # R1：行落圖框內（重疊 > 門檻）→ 圖表黏字、剔除（圖本身仍保留）
+                if _max_overlap_ratio(bbox, image_rects) > _FIGURE_OVERLAP_MAX:
+                    self.logger.debug(
+                        "[fitz_processor] R1 剔除圖框內文字 p%d: %.40s",
+                        page.number, text,
+                    )
+                    continue
+                # R5：≥N 個獨立 link 平鋪覆蓋 ≥門檻 → 導覽/連結列、剔除
+                coverage, n_links = _link_tiling(bbox, link_rects)
+                if n_links >= _NAV_MIN_LINKS and coverage >= _NAV_MIN_COVERAGE:
+                    self.logger.debug(
+                        "[fitz_processor] R5 剔除導覽列 p%d（%d links、覆蓋 %.0f%%）: %.40s",
+                        page.number, n_links, coverage * 100, text,
+                    )
+                    continue
+                # === [FITZ-HOTFIX-1 C1 END] ===
                 size = max(float(s.get("size", 0.0)) for s in line.get("spans", []))
                 lines.append({
                     "text": text,
@@ -120,22 +230,58 @@ class FitzProcessor(PDFParser):
                                 or y1 > height * _FOOTER_BAND_RATIO),
                 })
 
+        return {"lines": lines, "images": images, "index": page.number}
+
+    # === [FITZ-HOTFIX-1 C1 START] R1/R5 素材收集（best-effort、異常降級不阻斷）===
+    @staticmethod
+    def _collect_images(
+        page: fitz.Page,
+    ) -> Tuple[List[Dict[str, Any]], List[Tuple[float, float, float, float]]]:
+        """回 (圖項目清單〔供閱讀序嵌入〕, 全圖框矩形〔供 R1 判定〕)。"""
         images: List[Dict[str, Any]] = []
+        rects: List[Tuple[float, float, float, float]] = []
         seen_xrefs = set()
         for info in page.get_images(full=True):
             xref = info[0]
             if xref in seen_xrefs:
                 continue
             seen_xrefs.add(xref)
-            rects = page.get_image_rects(xref)
-            if not rects:
+            got = page.get_image_rects(xref)
+            if not got:
                 continue
+            for rect in got:  # 同一圖可多處放置——R1 判定全數納入
+                rects.append(
+                    (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
+                )
             images.append({
                 "xref": xref,
-                "x0": float(rects[0].x0),
-                "y0": float(rects[0].y0),
+                "x0": float(got[0].x0),
+                "y0": float(got[0].y0),
             })
-        return {"lines": lines, "images": images, "index": page.number}
+        return images, rects
+
+    def _collect_link_rects(
+        self, page: fitz.Page
+    ) -> List[Tuple[float, float, float, float]]:
+        """R5 素材：頁面 link 註記矩形（瀏覽器列印保留）；取不到→空清單（規則自然停用）。"""
+        try:
+            raw_links = page.get_links() or []
+        except Exception as exc:  # noqa: BLE001 — link 取用失敗不阻斷攝入
+            self.logger.warning(
+                "[fitz_processor] link 註記讀取失敗（R5 停用、不阻斷）: %s",
+                exc, exc_info=True,
+            )
+            return []
+        rects: List[Tuple[float, float, float, float]] = []
+        for link in raw_links:
+            rect = link.get("from")
+            if rect is None:
+                continue
+            rects.append(
+                (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
+            )
+        return rects
+    # === [FITZ-HOTFIX-1 C1 END] ===
 
     # ── 第二趟：全文分析 + 組裝 ──
 
@@ -143,7 +289,8 @@ class FitzProcessor(PDFParser):
         self, doc: fitz.Document, pages: List[Dict[str, Any]], out_dir: Path
     ) -> List[str]:
         repeated = self._repeated_band_keys(pages)
-        h1_size, h2_size = self._heading_sizes(pages)
+        # [FITZ-HOTFIX-1 C1 R3] 三級字級階梯（R1 淨化候選後方成立）
+        h1_size, h2_size, h3_size = self._heading_sizes(pages)
         images_dir = out_dir / "images"
 
         chunks: List[str] = []
@@ -173,9 +320,10 @@ class FitzProcessor(PDFParser):
             for line in sorted(
                 page_data["lines"], key=lambda l: (l["y0"], l["x0"])
             ):
-                if line["in_band"] and _repetition_key(line["text"]) in repeated:
-                    continue  # 跨頁重複之列印頁首尾
-                level = self._heading_level(line, h1_size, h2_size)
+                if (line["in_band"]
+                        and _repetition_key(line["text"], line["size"]) in repeated):
+                    continue  # 跨頁重複之列印頁首尾（R2：文字+字級複合 key）
+                level = self._heading_level(line, h1_size, h2_size, h3_size)
                 if level:
                     flush()
                     items.append((line["y0"], line["x0"], f"{'#' * level} {line['text']}"))
@@ -193,38 +341,60 @@ class FitzProcessor(PDFParser):
         return chunks
 
     def _repeated_band_keys(self, pages: List[Dict[str, Any]]) -> set:
-        """頂/底 band 內、以數字歸一 key 出現於 ≥2 頁者＝列印頁首尾。"""
+        """頂/底 band 內、以「數字歸一文字＋字級」複合 key 出現於 ≥2 頁者＝列印頁首尾。
+
+        [FITZ-HOTFIX-1 C1 R2] 複合 key 使同文字但字級不同之「頁首 chrome」與
+        「文章真標題」分屬不同 key——chrome 跨頁重複照剝、真標題唯一故存活。
+        """
         if len(pages) < 2:
             return set()
-        page_hits: Dict[str, set] = {}
+        page_hits: Dict[Tuple[str, float], set] = {}
         for page_data in pages:
             for line in page_data["lines"]:
                 if line["in_band"]:
-                    key = _repetition_key(line["text"])
+                    key = _repetition_key(line["text"], line["size"])
                     page_hits.setdefault(key, set()).add(page_data["index"])
         return {key for key, hit in page_hits.items() if len(hit) >= 2}
 
-    def _heading_sizes(self, pages: List[Dict[str, Any]]) -> Tuple[float, float]:
-        """字級分群：正文字級＝眾數；明顯大於正文的前兩群→ #（最大）/ ##（次級）。"""
+    def _heading_sizes(
+        self, pages: List[Dict[str, Any]]
+    ) -> Tuple[float, float, float]:
+        """字級分群：正文字級＝字元權重最大者；明顯大於正文之前三群 → `#`/`##`/`###`。
+
+        [FITZ-HOTFIX-1 C1 R3] 候選由前兩級擴為前三級（收編小節）；不足者補 0.0
+        （0.0 於 `_heading_level` 為 falsy、該級自然停用、兩級文件行為不變）。
+        """
+        # [FITZ-HOTFIX-1 C1 R3] 兩張權重表分工——**正文字級只由非 band 行決定**
+        # （列印頁首/頁尾 chrome 屬雜訊、短文件中其字元量可壓過真正文致 body 誤判、
+        # 連帶真正文被推升為第三級候選而誤判 `###`）；**候選字級仍由全體行枚舉**
+        # （真標題常落於頂 band〔plan §3.1 y0=71.5〕、排除 band 會連 h1 一併殺掉）。
         char_weight: Dict[float, int] = {}
+        body_weight: Dict[float, int] = {}
         for page_data in pages:
             for line in page_data["lines"]:
                 key = round(line["size"], 1)
                 char_weight[key] = char_weight.get(key, 0) + len(line["text"])
+                if not line["in_band"]:
+                    body_weight[key] = body_weight.get(key, 0) + len(line["text"])
         if not char_weight:
-            return (0.0, 0.0)
-        # 正文字級＝承載字元數最多的字級（正文以字量壓倒標題、抗頻次平手）
-        body = max(char_weight, key=char_weight.get)
+            return (0.0, 0.0, 0.0)
+        # 正文字級＝承載字元數最多的字級（正文以字量壓倒標題、抗頻次平手）；
+        # 全文件皆 band 之極端情況 → 退回全體行權重（不因無資料而崩）
+        _weight = body_weight or char_weight
+        body = max(_weight, key=_weight.get)
         candidates = sorted(
             (s for s in char_weight if s > body + _HEADING_SIZE_MARGIN),
             reverse=True,
         )
         h1 = candidates[0] if candidates else 0.0
         h2 = candidates[1] if len(candidates) > 1 else 0.0
-        return (h1, h2)
+        h3 = candidates[2] if len(candidates) > 2 else 0.0
+        return (h1, h2, h3)
 
     @staticmethod
-    def _heading_level(line: Dict[str, Any], h1: float, h2: float) -> int:
+    def _heading_level(
+        line: Dict[str, Any], h1: float, h2: float, h3: float = 0.0
+    ) -> int:
         if len(line["text"]) > _HEADING_MAX_CHARS:
             return 0
         size = round(line["size"], 1)
@@ -232,6 +402,8 @@ class FitzProcessor(PDFParser):
             return 1
         if h2 and size >= h2:
             return 2
+        if h3 and size >= h3:      # [FITZ-HOTFIX-1 C1 R3] 第三級 → ###
+            return 3
         return 0
 
     def _extract_image(
