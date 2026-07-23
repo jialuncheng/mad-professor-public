@@ -619,13 +619,7 @@ def _title_echo_match(a: str, b: str) -> bool:
         return False
     sa = re.sub(r"\s+", "", a).casefold()
     sb = re.sub(r"\s+", "", b).casefold()
-    # [FITZ-ANCHOR C2 U6] 子字串分支加長度比守衛（min/max >= 0.5）——防短標題 ⊂ 長 lede
-    # 導語誤判回聲整行剝除（「大谷翔平」4 字 ⊂ 88 字 lede、ratio 0.045）；真回聲（整行≈
-    # 標題）長度相近照剝。U2 落地後屬雙保險、成本一行。
-    if sa == sb or (
-        (sa in sb or sb in sa)
-        and min(len(sa), len(sb)) / max(len(sa), len(sb)) >= 0.5
-    ):
+    if sa == sb or sa in sb or sb in sa:
         return True
     return SequenceMatcher(None, sa, sb).ratio() >= 0.7
 

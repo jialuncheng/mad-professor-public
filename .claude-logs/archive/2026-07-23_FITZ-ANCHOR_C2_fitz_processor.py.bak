@@ -16,6 +16,7 @@ PIPE-INGEST-FITZ C1：`PDFParser` 的第二個 impl——有完整文字層的 P
 raise PDFParseError；圖檔抽取為 best-effort（單圖失敗跳過、不阻斷）。
 """
 import logging
+import json
 import math
 import re
 import statistics
@@ -30,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 # 圖檔僅此二格式落地（extract_image 之 ext 值；jpg/jpeg 同族）
 _ALLOWED_IMAGE_EXTS = {"png", "jpeg", "jpg"}
+
+# [FITZ-HOTFIX-3 K2] chrome 內 URL 線索抽取（publisher 唯一線索常僅存於列印頁尾 URL）
+_URL_RE = re.compile(r"https?://\S+")
 
 # 頁首/頁尾 band 佔頁高比例（列印雜訊多落於此極窄邊帶）
 _HEADER_BAND_RATIO = 0.08
@@ -161,7 +165,7 @@ class FitzProcessor(PDFParser):
         try:
             with fitz.open(pdf_path) as doc:
                 pages = [self._collect_page(doc, page) for page in doc]
-                chunks = self._assemble(doc, pages, out_dir)
+                chunks, chrome_urls = self._assemble(doc, pages, out_dir)
         except (PDFParseError, FileNotFoundError):
             raise
         except Exception as exc:
@@ -171,11 +175,23 @@ class FitzProcessor(PDFParser):
             raise PDFParseError(f"fitz 解析失敗: {exc}") from exc
 
         markdown_path.write_text("\n\n".join(chunks) + "\n", encoding="utf-8")
-        # [FITZ-ANCHOR C2 U3] HOTFIX-3 K2 chrome URL sidecar 已退場——publisher 線索
-        # 由 U1 錨定前移（litedoc 讀前 N 頁裸文字、天然含 chrome URL）自然吸收。
+        # === [FITZ-HOTFIX-3 K2] chrome URL 線索 sidecar（best-effort、缺之無害；
+        # 定位以 pdf stem 為基準——與 md／doc_structure 同 stem、下游 K2 讀取一致）===
+        if chrome_urls:
+            try:
+                (out_dir / f"{pdf_file.stem}_source_hints.json").write_text(
+                    json.dumps({"urls": sorted(chrome_urls)}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+            except Exception as exc:  # noqa: BLE001 — 線索屬加分項、落檔失敗零影響
+                self.logger.warning(
+                    "[fitz_processor] K2 source_hints 落檔失敗（略過）: %s",
+                    exc, exc_info=True,
+                )
+        # === [FITZ-HOTFIX-3 K2 END] ===
         self.logger.info(
-            "[fitz_processor] 直抽完成 %s → %s（%d 區塊）",
-            pdf_file.name, markdown_path.name, len(chunks),
+            "[fitz_processor] 直抽完成 %s → %s（%d 區塊、%d chrome URL）",
+            pdf_file.name, markdown_path.name, len(chunks), len(chrome_urls),
         )
         return markdown_path
 
@@ -311,16 +327,13 @@ class FitzProcessor(PDFParser):
 
     def _assemble(
         self, doc: fitz.Document, pages: List[Dict[str, Any]], out_dir: Path
-    ) -> List[str]:
-        """回 chunks（markdown 區塊清單）。跨頁重複之列印頁首尾（R2）於此照剝。
-
-        [FITZ-ANCHOR C2 U3] HOTFIX-3 K2 之 chrome URL 回收（sidecar）已退場——
-        publisher 線索改由 U1 錨定前移（litedoc 讀前 N 頁裸文字含 chrome URL）吸收。
-        """
+    ) -> Tuple[List[str], set]:
+        """回 (chunks, chrome_urls)。[FITZ-HOTFIX-3 K2] chrome 剝除點回收 URL 線索。"""
         repeated = self._repeated_band_keys(pages)
         # [FITZ-HOTFIX-1 C1 R3] 三級字級階梯（R1 淨化候選後方成立）
         h1_size, h2_size, h3_size = self._heading_sizes(pages)
         images_dir = out_dir / "images"
+        chrome_urls: set = set()   # [FITZ-HOTFIX-3 K2]
 
         chunks: List[str] = []
         for page_data in pages:
@@ -351,7 +364,12 @@ class FitzProcessor(PDFParser):
             ):
                 if (line["in_band"]
                         and _repetition_key(line["text"], line["size"]) in repeated):
-                    continue  # 跨頁重複之列印頁首尾（R2：文字+字級複合 key）照剝
+                    # [FITZ-HOTFIX-3 K2] chrome 照剝、URL 線索回收（publisher 唯一線索
+                    # 常僅存於列印頁尾 URL——NHK 實證；body 自帶 URL 者不受影響）
+                    m_url = _URL_RE.search(line["text"])
+                    if m_url:
+                        chrome_urls.add(m_url.group(0))
+                    continue  # 跨頁重複之列印頁首尾（R2：文字+字級複合 key）
                 level = self._heading_level(line, h1_size, h2_size, h3_size)
                 if level:
                     flush()
@@ -367,7 +385,7 @@ class FitzProcessor(PDFParser):
 
             items.sort(key=lambda it: (it[0], it[1]))
             chunks.extend(md for _y, _x, md in items)
-        return chunks
+        return chunks, chrome_urls
 
     def _repeated_band_keys(self, pages: List[Dict[str, Any]]) -> set:
         """頂/底 band 內、以「數字歸一文字＋字級」複合 key 跨頁重複達比例門檻者＝列印頁首尾。

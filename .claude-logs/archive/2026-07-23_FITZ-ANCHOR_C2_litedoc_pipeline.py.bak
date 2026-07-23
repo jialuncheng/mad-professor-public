@@ -254,18 +254,6 @@ class LiteDocPipeline(DocumentStrategy):
         # === [FITZ-HOTFIX-1 C2 END] ===
         markdown_text = md_path.read_text(encoding="utf-8")
 
-        # === [FITZ-ANCHOR C2 U1] meta 錨定前移——cover-prompt 改吃「前 N 頁原始文字層」
-        # （fitz 裸抽、零過濾、零新增 LLM 呼叫）；重要性判斷交 LLM，title/authors/date/
-        # publisher/language 在任何刀動手前定案。錨定空（掃描件/加密）→ 退回現行 md 文首
-        # （fail-open、行為等價）。裸文字天然含 chrome URL → 吸收 HOTFIX-3 K2 sidecar（U3）。
-        anchor = self._read_anchor_text(pdf_path)
-        meta = self._extract_litedoc_metadata(anchor if anchor.strip() else markdown_text)
-        # === [FITZ-ANCHOR C2 U2] 標題回注（③ analyze 之前、markdown_text 重讀之前——回注行
-        # 進 sidecar 行號基準、下游行界同基準）：錨定 title 存在則 promote-else-inject，
-        # 空則整步跳過（現行 _resolve_title 兜底鏈原樣運作）。整類標題誤殺 bug 終局保底。
-        self._reinject_title(md_path, str(meta.get("title") or "").strip())
-        markdown_text = md_path.read_text(encoding="utf-8")
-
         # ③ analyze：DocAnalyzer + U2.1 映射（soft-fail）
         analyzer_doc_type = ctx.doc_type if ctx.doc_type in ("news", "web") else "web"
         try:
@@ -277,13 +265,21 @@ class LiteDocPipeline(DocumentStrategy):
                 ctx.paper_id, analyzer_doc_type, exc, exc_info=True,
             )
 
+        # === [FITZ-HOTFIX-1 C2 START] R6 時序前移：metadata 抽取移至 tiles 組裝之前 ===
+        # ⑦→前移 metadata：B 軌原生文字抽取（方案 A）。`_extract_litedoc_metadata`
+        # 僅唯讀吃 `markdown_text`（簽名單參數、零 tiles 依賴）→ 調序安全無副作用；
+        # 目的＝把已抽出之 meta **值**注入 `_build_tiles`→`assemble` 作確定性兜底（R6）。
+        # [FITZ-HOTFIX-3 K2] 附 fitz 回收之 chrome URL hint（補 publisher 唯一線索）。
+        meta = self._extract_litedoc_metadata(
+            markdown_text, hints=self._load_source_hints(output_dir, pdf_path)
+        )
+
         # ④⑤⑥ md2json → json_process → tiling（產物理分組 Tiles；帶 R6 meta 值集合）
-        # [FITZ-ANCHOR C2 U1] meta 已於 ③ analyze 前經錨定抽出（見上）；此處僅消費其值
-        # 集合注入 assemble 作確定性兜底（R6），時序仍在 `_build_tiles` 之前。
         tiles = self._build_tiles(
             md_path, output_dir, paper_name, ctx.doc_type,
             meta_values=self._collect_meta_values(meta),
         )
+        # === [FITZ-HOTFIX-1 C2 END] ===
 
         title = self._resolve_title(meta, markdown_text, paper_name)
         # === [PIPE-LITEDOC-HOTFIX-1 START] 二元繁中偵測（取內文樣本不取封面；簡體不給 zh* 契約）===
@@ -481,86 +477,42 @@ class LiteDocPipeline(DocumentStrategy):
         return data if isinstance(data, list) else []
 
     @staticmethod
-    def _read_anchor_text(pdf_path: Path) -> str:
-        """[FITZ-ANCHOR C2 U1] 裸抽前 `settings.LITEDOC_ANCHOR_MAX_PAGES` 頁原始文字層。
+    def _load_source_hints(output_dir: Path, pdf_path: Path) -> str:
+        """[FITZ-HOTFIX-3 K2] 讀 fitz 回收之 chrome URL hint、附進 cover-prompt 輸入。
 
-        作 cover-prompt 之錨定輸入（重要性判斷交 LLM，先於 fitz 幾何刀）；零過濾、零新增
-        LLM 呼叫（同一次 cover-prompt、換更完整輸入）。任何異常（掃描件/加密/無文字層）→
-        回 ``""``，呼叫端 fail-open 退回 md 文首（行為 100% 等價）。與 design spec F6 一致：
-        讀正文文字層、零檔案屬性依賴（不讀 `/Title` 等）。
+        - 定位＝`{Path(pdf_path).stem}_source_hints.json`（與 md／doc_structure 同 stem
+          基準；HOTFIX-2 影子後綴教訓：**嚴禁 paper_id 組名**——影子軌帶 `_shadow` 而
+          實體檔無）。
+        - 缺檔／解析異常／空 URL → 回 ``""``（fail-open、行為與現行 100% 等價；
+          MinerU 路無此檔天然 no-op）。
         """
-        import fitz  # PyMuPDF（惰性 import；processor.fitz_processor 已載入同套件）
-
         try:
-            max_pages = int(getattr(settings, "LITEDOC_ANCHOR_MAX_PAGES", 2))
-            parts: List[str] = []
-            with fitz.open(str(pdf_path)) as doc:
-                for page in doc[:max_pages]:
-                    parts.append(page.get_text("text"))
-            return "\n".join(parts)
-        except Exception as exc:  # noqa: BLE001 — 錨定屬增強層、不得成為新 SPOF
+            p = output_dir / f"{Path(pdf_path).stem}_source_hints.json"
+            if not p.exists():
+                return ""
+            urls = json.loads(p.read_text(encoding="utf-8")).get("urls") or []
+            if not urls:
+                return ""
+            return "\n\nSource URL (from page chrome): " + " ".join(urls[:3])
+        except Exception as exc:  # noqa: BLE001 — hint 屬加分項、失敗零影響
             logger.warning(
-                "[PIPE-LITEDOC P1] 錨定裸抽失敗（fallback md 文首）: %s", exc, exc_info=True
+                "[PIPE-LITEDOC P1] source_hints 讀取失敗（略過）: %s", exc, exc_info=True
             )
             return ""
 
-    @staticmethod
-    def _reinject_title(md_path: Path, title: str) -> None:
-        """[FITZ-ANCHOR C2 U2] 標題回注：錨定 title 於 md 缺 heading 時 promote-else-inject。
-
-        整類「幾何層誤殺標題」bug 之終局保底（與哪把刀誤殺無關、單點）。正規化比對
-        （去空白 casefold）：
-        - 已存在 `#` 開頭且正規化相等之行 → 不動（return）。
-        - 存在正文行正規化相等 → 就地升級為 `# {原行}`（promote）＋ warning。
-        - 全文缺席 → 頂部注入 `# {title}\n\n`（inject）＋ warning。
-        `title` 空白（錨定失敗）→ 直接 return（現行 `_resolve_title` 兜底鏈原樣運作）。
-        接線於 ③ analyze 之前 → 回注行進 sidecar 行號基準、下游行界同基準。
-        warning 供版式觀測（哪個網站版式又騙過幾何層、不必等 E2E）。
-        """
-        if not title.strip():
-            return
-
-        def _norm(s: str) -> str:
-            return re.sub(r"\s+", "", s).casefold()
-
-        target = _norm(title)
-        if not target:
-            return
-        text = md_path.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        promote_idx: Optional[int] = None
-        for i, line in enumerate(lines):
-            s = line.strip()
-            if not s:
-                continue
-            if s.startswith("#") and _norm(s.lstrip("#")) == target:
-                return  # 已為 heading、不重複注入
-            if promote_idx is None and not s.startswith("#") and _norm(s) == target:
-                promote_idx = i
-
-        if promote_idx is not None:
-            lines[promote_idx] = f"# {lines[promote_idx].strip()}"
-            md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-            logger.warning(
-                "[FITZ-ANCHOR] 標題回注 case=promote title=%.60r", title
-            )
-            return
-        md_path.write_text(f"# {title}\n\n" + text, encoding="utf-8")
-        logger.warning(
-            "[FITZ-ANCHOR] 標題回注 case=inject title=%.60r", title
-        )
-
-    def _extract_litedoc_metadata(self, markdown_text: str) -> Dict[str, Any]:
+    def _extract_litedoc_metadata(
+        self, markdown_text: str, hints: str = ""
+    ) -> Dict[str, Any]:
         """B 軌原生文字 cover-prompt（方案 A）抽 title/authors/date/publisher/url + URL→組織解碼。
 
         soft-fail → 空 dict（不阻斷 P1）。temp=0 求確定性轉錄。
-        [FITZ-ANCHOR C2 U1] 輸入＝**錨定裸文字優先**（litedoc 讀前 N 頁原始文字層、天然含
-        chrome URL；HOTFIX-3 K2 sidecar 管線已退場）／錨定空時 fallback md 文首；
-        沿用 `[:_META_INPUT_CHARS]` 截斷窗。
+        `hints`（[FITZ-HOTFIX-3 K2]、純加法預設 ``""`` → byte 等價）：fitz 回收之 chrome
+        URL 線索，**於文首 4000 字截斷之後拼接**（防長文尾接 hint 被截掉而靜默失效）。
         """
         from llm.client import LLMClient  # 惰性 import 避免模組載入期重量級依賴
 
-        head = (markdown_text or "")[:_META_INPUT_CHARS]
+        # [FITZ-HOTFIX-3 K2] hint 於截斷「之後」拼接——保證必入 LLM 輸入窗
+        head = (markdown_text or "")[:_META_INPUT_CHARS] + (hints or "")
         if not head.strip():
             return {}
         messages = [

@@ -151,6 +151,13 @@ LITEDOC_LIGATURE_REPAIR_ENABLED = os.getenv("LITEDOC_LIGATURE_REPAIR_ENABLED", "
 FITZ_DEDUP_EPSILON = float(os.getenv("FITZ_DEDUP_EPSILON", "3.0"))
 # === [FITZ-ANCHOR C1 END] ===
 
+# === [FITZ-ANCHOR C2 START] ===
+# meta 錨定裸抽頁數（U1）：litedoc P1 於 fitz 幾何刀前，讀前 N 頁「原始文字層」作
+# cover-prompt 輸入（重要性判斷交 LLM、零新增呼叫）；baron 拍板「第一頁最多第二頁」＝2。
+# 長封面版式可經 env 熱調免 commit；錨定空（掃描件/加密）時呼叫端 fail-open 退 md 文首。
+LITEDOC_ANCHOR_MAX_PAGES = int(os.getenv("LITEDOC_ANCHOR_MAX_PAGES", "2"))
+# === [FITZ-ANCHOR C2 END] ===
+
 # === [META-NORM C1 START] ===
 # 封面 metadata 自癒飛輪總開關（依 tasks U5）。
 # False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。

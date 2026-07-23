@@ -407,32 +407,6 @@ def test_strip_title_echo_fuzzy_translated():
     assert "ZH::body one" in out and "ZH::Sec2" in out
 
 
-# === [FITZ-ANCHOR C2 U6] echo 守衛：子字串分支加長度比（min/max >= 0.5）===
-def test_u6_short_title_not_echo_of_long_lede():
-    """短標題 ⊂ 長 lede 導語（4 字 ⊂ 88 字、ratio 0.045）→ 非回聲、不誤判剝除。"""
-    title = "大谷翔平"                                        # 4 字
-    lede = ("大谷翔平在本季的表現再次證明了他作為棒球史上罕見的二刀流球員的價值"
-            "與影響力並持續改寫紀錄書寫傳奇篇章")               # 88 字、含標題子字串
-    assert min(len(title), len(lede)) / max(len(title), len(lede)) < 0.5
-    assert se._title_echo_match(title, lede) is False        # U6：不判回聲
-
-
-def test_u6_short_title_not_stripped_from_body_lede():
-    """整合於 strip_title_echo：body 首行為含標題之長 lede → 不誤剝（U6 守衛生效）。"""
-    md = "大谷翔平在本季的表現再次證明了他二刀流的價值並持續改寫紀錄書寫傳奇\n\n正文第二段"
-    out = se.strip_title_echo(md, "大谷翔平")
-    assert "本季的表現再次證明" in out                        # lede 導語完整保留、未被誤剝
-
-
-def test_u6_true_echo_still_stripped():
-    """真回聲（整行 ≈ 標題、長度相近）照剝——U6 只擋長度懸殊之誤判、不弱化真剝除。"""
-    assert se._title_echo_match("Breaking News Today", "Breaking News Today!") is True
-    md = "# Breaking News Today\nBy Reporter, 2026-06-19\n\n正文"
-    out = se.strip_title_echo(md, "Breaking News Today")
-    assert "Breaking News Today" not in out                  # 整行相似 → 照剝
-    assert "正文" in out
-
-
 # === [GLOSSARY-TERMMAP C4 START] slot_context_fn 純加法擴充 ===
 class _CtxCapTr:
     """記錄每單元收到之 InjectionContext 的確定性翻譯器。"""

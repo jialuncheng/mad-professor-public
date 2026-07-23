@@ -1169,9 +1169,9 @@ class TestR6TimingOrder:
 
         real_extract = LiteDocPipeline._extract_litedoc_metadata
 
-        def _spy_extract(self, markdown_text):   # [FITZ-ANCHOR C2 U3] hints 參數退場、恢復單參
+        def _spy_extract(self, markdown_text, hints=""):   # [FITZ-HOTFIX-3 K2] 簽名純加法
             calls.append("meta")
-            return real_extract(self, markdown_text)
+            return real_extract(self, markdown_text, hints)
 
         real_assemble = lp.ingestion_engine.assemble
 
@@ -1716,9 +1716,63 @@ class TestK2SidecarLocationAndSymmetry:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# FITZ-HOTFIX-3 K3：full_text 行級 meta 歸零（K2 sidecar hint 加載已於
-# FITZ-ANCHOR C2 U3 退場——見 TestAnchorAndReinject 的 U1/U3 覆蓋）
+# FITZ-HOTFIX-3 K2/K3：chrome hint 加載與截斷窗 / full_text 行級 meta 歸零
 # ──────────────────────────────────────────────────────────────────────────
+class TestK2HintLoading:
+    """K2 litedoc 端：sidecar hint 加載（影子後綴）+ 截斷窗之後拼接。"""
+
+    def test_load_source_hints_by_pdf_stem(self, tmp_path):
+        out = tmp_path / "out"
+        out.mkdir()
+        (out / "story_source_hints.json").write_text(
+            _json.dumps({"urls": ["https://news.web.nhk/x"]}), encoding="utf-8")
+        hint = LiteDocPipeline._load_source_hints(out, Path("/x/story.pdf"))
+        assert "https://news.web.nhk/x" in hint
+        assert hint.startswith("\n\nSource URL")
+
+    def test_load_source_hints_missing_returns_empty(self, tmp_path):
+        out = tmp_path / "out"
+        out.mkdir()
+        assert LiteDocPipeline._load_source_hints(out, Path("/x/story.pdf")) == ""
+
+    def test_hint_appended_after_truncation_window(self, monkeypatch, tmp_path):
+        """截斷窗斷言：markdown_text > 4000 字時 hint 仍入 LLM 輸入（堵尾接截斷陷阱）。"""
+        captured = {}
+
+        class _CapLLM:
+            def chat(self, messages=None, **kw):
+                captured["user"] = (messages or [{}])[-1].get("content", "")
+                return '{"title":"T","publisher":"NHK"}'
+
+        import llm.client
+        monkeypatch.setattr(llm.client.LLMClient, "get_instance",
+                            classmethod(lambda cls: _CapLLM()))
+        monkeypatch.setattr(settings, "LLM_DOMAIN_MODEL", "x", raising=False)
+
+        long_md = "x" * 8000            # 遠超 _META_INPUT_CHARS(4000)
+        hint = "\n\nSource URL (from page chrome): https://news.web.nhk/y"
+        LiteDocPipeline()._extract_litedoc_metadata(long_md, hints=hint)
+        assert "https://news.web.nhk/y" in captured["user"]   # hint 未被截掉
+        assert len(captured["user"]) > 4000
+
+    def test_default_no_hint_byte_equivalent(self, monkeypatch, tmp_path):
+        """hints='' 預設 → 與未傳參完全同 LLM 輸入。"""
+        seen = []
+
+        class _CapLLM:
+            def chat(self, messages=None, **kw):
+                seen.append((messages or [{}])[-1].get("content", ""))
+                return '{"title":"T"}'
+
+        import llm.client
+        monkeypatch.setattr(llm.client.LLMClient, "get_instance",
+                            classmethod(lambda cls: _CapLLM()))
+        monkeypatch.setattr(settings, "LLM_DOMAIN_MODEL", "x", raising=False)
+        LiteDocPipeline()._extract_litedoc_metadata("body text")
+        LiteDocPipeline()._extract_litedoc_metadata("body text", hints="")
+        assert seen[0] == seen[1]
+
+
 class TestK3MetaSourceLineStripping:
     """K3：full_text 行級 meta 歸零（雙判據）+ 時序 + 雙語文字對稱。"""
 
@@ -1827,194 +1881,3 @@ class TestK3MetaSourceLineStripping:
         for side in (zh, en):
             assert "MARC ANDREESSEN" not in side
             assert "JUN 15, 2026" not in side              # 雙語 meta 行皆空、對稱
-
-
-# ──────────────────────────────────────────────────────────────────────────
-# FITZ-ANCHOR C2：U1 錨定前移 / U2 標題回注 promote-else-inject / U3 sidecar 退場
-# ──────────────────────────────────────────────────────────────────────────
-class TestC2AnchorText:
-    """U1 `_read_anchor_text`：裸抽前 N 頁原始文字層（含 chrome URL）；截頁；失敗 fallback。"""
-
-    def test_reads_front_pages_with_chrome_url(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(settings, "LITEDOC_ANCHOR_MAX_PAGES", 2)
-        pdf = tmp_path / "a.pdf"
-        doc = _fitz.open()
-        for i, body in enumerate(["PAGE ONE anchor body", "PAGE TWO anchor body",
-                                  "PAGE THREE excluded"]):
-            page = doc.new_page()
-            page.insert_text(_fitz.Point(72, 40),
-                             "https://site.example/story", fontsize=8)   # chrome URL
-            page.insert_text(_fitz.Point(72, 120), body, fontsize=12)
-        doc.save(str(pdf))
-        doc.close()
-        anchor = LiteDocPipeline._read_anchor_text(pdf)
-        assert "PAGE ONE anchor body" in anchor
-        assert "PAGE TWO anchor body" in anchor
-        assert "https://site.example/story" in anchor      # 裸文字天然含 chrome URL（U3 吸收）
-        assert "PAGE THREE excluded" not in anchor          # MAX_PAGES=2 截頁
-
-    def test_respects_max_pages_setting(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(settings, "LITEDOC_ANCHOR_MAX_PAGES", 1)
-        pdf = tmp_path / "b.pdf"
-        doc = _fitz.open()
-        for body in ["ONLY FIRST kept", "SECOND dropped"]:
-            page = doc.new_page()
-            page.insert_text(_fitz.Point(72, 120), body, fontsize=12)
-        doc.save(str(pdf))
-        doc.close()
-        anchor = LiteDocPipeline._read_anchor_text(pdf)
-        assert "ONLY FIRST kept" in anchor
-        assert "SECOND dropped" not in anchor
-
-    def test_bad_path_fails_open_to_empty(self, tmp_path):
-        """掃描件/加密/壞檔 → 回 ""（呼叫端 fallback md 文首、行為等價、不成 SPOF）。"""
-        bad = tmp_path / "not.pdf"
-        bad.write_bytes(b"%PDF-1.4 not really a pdf")
-        assert LiteDocPipeline._read_anchor_text(bad) == ""
-
-
-class TestC2ReinjectTitle:
-    """U2 `_reinject_title`：promote-else-inject 三分支 + 空 title 跳過（整類標題誤殺保底）。"""
-
-    def _md(self, tmp_path, text):
-        p = tmp_path / "doc.md"
-        p.write_text(text, encoding="utf-8")
-        return p
-
-    def test_heading_already_present_unchanged(self, tmp_path, caplog):
-        md = self._md(tmp_path, "# Ohtani Report\n\nBody paragraph here.\n")
-        before = md.read_text(encoding="utf-8")
-        LiteDocPipeline._reinject_title(md, "Ohtani Report")
-        assert md.read_text(encoding="utf-8") == before      # 不動、不重複注入
-        assert not any("標題回注" in r.getMessage() for r in caplog.records)
-
-    def test_body_line_promoted_in_place(self, tmp_path, caplog):
-        import logging as _logging
-        md = self._md(tmp_path, "Ohtani Report\n\nBody paragraph here.\n")
-        with caplog.at_level(_logging.WARNING):
-            LiteDocPipeline._reinject_title(md, "Ohtani Report")
-        out = md.read_text(encoding="utf-8")
-        assert "# Ohtani Report" in out                      # 就地升級為 heading
-        assert out.count("Ohtani Report") == 1               # 不重複（promote 非 inject）
-        assert any("case=promote" in r.getMessage() for r in caplog.records)
-
-    def test_absent_title_injected_at_top(self, tmp_path, caplog):
-        import logging as _logging
-        md = self._md(tmp_path, "Unrelated opening line.\n\nBody paragraph.\n")
-        with caplog.at_level(_logging.WARNING):
-            LiteDocPipeline._reinject_title(md, "Ohtani Report")
-        out = md.read_text(encoding="utf-8")
-        assert out.startswith("# Ohtani Report\n\n")           # 頂部注入
-        assert "Unrelated opening line." in out               # 原文保留
-        assert any("case=inject" in r.getMessage() for r in caplog.records)
-
-    def test_empty_title_skips(self, tmp_path, caplog):
-        md = self._md(tmp_path, "Body only, no title.\n")
-        before = md.read_text(encoding="utf-8")
-        LiteDocPipeline._reinject_title(md, "   ")
-        assert md.read_text(encoding="utf-8") == before        # 空 title → 整步跳過
-        assert not any("標題回注" in r.getMessage() for r in caplog.records)
-
-    def test_normalization_ignores_whitespace_case(self, tmp_path):
-        """正規化（去空白 casefold）：`#  ohtani   REPORT` 視為已存在、不重複注入。"""
-        md = self._md(tmp_path, "#  ohtani   REPORT\n\nBody.\n")
-        before = md.read_text(encoding="utf-8")
-        LiteDocPipeline._reinject_title(md, "Ohtani Report")
-        assert md.read_text(encoding="utf-8") == before
-
-
-class TestC2SidecarRetired:
-    """U3：HOTFIX-3 K2 sidecar 消費端 dead code 清除斷言（生產端見 test_fitz_processor）。"""
-
-    def test_load_source_hints_symbol_removed(self):
-        assert not hasattr(LiteDocPipeline, "_load_source_hints")
-
-    def test_extract_metadata_is_single_param(self):
-        import inspect
-        sig = inspect.signature(LiteDocPipeline._extract_litedoc_metadata)
-        # self + markdown_text（hints 參數已退場）
-        assert list(sig.parameters) == ["self", "markdown_text"]
-
-    def test_publisher_resolvable_from_anchor_chrome_url(self, monkeypatch, tmp_path):
-        """U3 移除後 publisher 回歸：錨定裸文字含 chrome URL → cover-prompt 輸入含之、
-        LLM 據以解 publisher（此處捕 LLM 輸入斷言 URL 入窗）。"""
-        captured = {}
-
-        class _CapLLM:
-            def chat(self, messages=None, **kw):
-                captured["user"] = (messages or [{}])[-1].get("content", "")
-                return '{"title":"T","publisher":"NHK"}'
-
-        import llm.client
-        monkeypatch.setattr(llm.client.LLMClient, "get_instance",
-                            classmethod(lambda cls: _CapLLM()))
-        monkeypatch.setattr(settings, "LLM_DOMAIN_MODEL", "x", raising=False)
-        anchor = "NHK NEWS WEB\nhttps://www3.nhk.or.jp/news/story\nBody."
-        meta = LiteDocPipeline()._extract_litedoc_metadata(anchor)
-        assert "https://www3.nhk.or.jp/news/story" in captured["user"]  # chrome URL 入 cover-prompt
-        assert meta.get("publisher") == "NHK"
-
-
-# === [FITZ-ANCHOR C2] §7.2 跨 Phase 整合：實體 PDF（描邊 ×N 標題/QA＋2/N 重複段＋全頁
-# chrome URL）→ 真 FitzProcessor（C1 U4/U5 幾何）→ 真 cleaner → 錨定裸讀 → U2 回注 →
-# 真 _build_tiles；key-changing transform＝PDF→md（fitz 直抽）。斷言標題經回注存活入
-# heading、14 組 QA 成對、chrome URL 已剪、meta 零重播。===
-def test_seam_c2_anchor_reinject_key_changing_integration(monkeypatch, tmp_path):
-    from processor.md_cleaner import MarkdownCleaner as _RealCleaner
-
-    monkeypatch.setattr(settings, "LITEDOC_ANCHOR_MAX_PAGES", 2)
-    TITLE = "Ohtani Season Report"
-    CHROME_URL = "https://www3.nhk.or.jp/news/ohtani"
-
-    # ⓪ 實體 PDF：標題與 QA 皆 11pt（幾何層不判 heading——考驗 U2 回注救回）；描邊 ×2
-    # 同位重繪（考驗 U4 去重）；全頁頂 band chrome URL（考驗 U5 跨頁剝除、2/2 命中）。
-    pdf = tmp_path / "nhk.pdf"
-    doc = _fitz.open()
-    qa_lines = []
-    for i in range(14):
-        qa_lines.append((f"Q{i}: question about data point {i} here?",
-                         f"A{i}: answer regarding data point {i} explained."))
-    per_page = 7
-    for pg in range(2):
-        page = doc.new_page()
-        # 全頁 chrome（頂 band、跨頁重複 → U5 剝除；含 publisher URL）
-        for dx in (0.0, 0.5):                                 # 描邊 ×2
-            page.insert_text(_fitz.Point(72 + dx, 22), f"NHK NEWS {CHROME_URL}", fontsize=8)
-        y = 120
-        if pg == 0:                                           # 標題僅首頁、11pt 同正文
-            for dx in (0.0, 0.5):                             # 描邊 ×2（U4 去重為 1）
-                page.insert_text(_fitz.Point(72 + dx, 90), TITLE, fontsize=11)
-        for q, a in qa_lines[pg * per_page:(pg + 1) * per_page]:
-            for dx in (0.0, 0.5):                             # 每行描邊 ×2
-                page.insert_text(_fitz.Point(72 + dx, y), q, fontsize=11)
-            y += 26
-            for dx in (0.0, 0.5):
-                page.insert_text(_fitz.Point(72 + dx, y), a, fontsize=11)
-            y += 26
-    doc.save(str(pdf))
-    doc.close()
-
-    # ① 真 FitzProcessor 直抽（key-changing：PDF → 同形 md；U4 去重、U5 chrome 剝除）
-    out = tmp_path / "out"
-    md_path = _fp.FitzProcessor().parse(str(pdf), str(out))
-    # ② 真 cleaner
-    _RealCleaner().clean(md_path)
-    md_before = md_path.read_text(encoding="utf-8")
-    assert f"# {TITLE}" not in md_before                      # 幾何層未判 heading（11pt 同正文）
-    assert md_before.count(TITLE) == 1                        # U4：描邊 ×2 已去重為 1
-    assert CHROME_URL not in md_before                        # U5：全頁 chrome 跨頁剝除
-
-    # ③ 錨定裸讀（含 chrome URL、天然吸收 sidecar 職能）
-    anchor = LiteDocPipeline._read_anchor_text(pdf)
-    assert TITLE in anchor and CHROME_URL in anchor
-
-    # ④ U2 標題回注（幾何漏判 → promote 救回、單點終局保底）
-    LiteDocPipeline._reinject_title(md_path, TITLE)
-    md_after = md_path.read_text(encoding="utf-8")
-
-    assert f"# {TITLE}" in md_after                           # 標題經回注存活入 heading
-    assert md_after.count(TITLE) == 1                         # 回注不重複
-    for i in range(14):                                       # 14 組 QA 完整成對
-        assert f"Q{i}:" in md_after, f"Q{i} 缺失"
-        assert f"A{i}:" in md_after, f"A{i} 缺失"
-    assert CHROME_URL not in md_after                         # chrome URL 未重播進正文

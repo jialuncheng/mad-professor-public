@@ -402,8 +402,9 @@ class TestR5LinkTilingNav:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# FITZ-HOTFIX-3 K1：同位重繪去重（K2 sidecar 生產端已於 FITZ-ANCHOR C2 U3 退場）
+# FITZ-HOTFIX-3 K1：同位重繪去重 / K2：chrome URL 線索回收 sidecar
 # ──────────────────────────────────────────────────────────────────────────
+import json as _json  # noqa: E402
 
 
 class TestK1OverlapDedup:
@@ -470,12 +471,10 @@ class TestK1OverlapDedup:
         assert "Site Header Chrome" not in md
 
 
-class TestU3SidecarRetired:
-    """[FITZ-ANCHOR C2 U3] HOTFIX-3 K2 chrome URL sidecar 生產端已退場——
-    publisher 線索改由 U1 錨定前移吸收；此處斷言 sidecar 代碼完全清除（即使頁尾含
-    跨頁重複 URL chrome，parse 亦不再產出 `*_source_hints.json`）。"""
+class TestK2ChromeUrlHint:
+    """K2：chrome URL 於剝除點回收 → sidecar；無 URL 頁零產出。"""
 
-    def test_no_sidecar_even_with_chrome_url(self, tmp_path):
+    def test_chrome_url_recovered_to_sidecar(self, tmp_path):
         doc = fitz.open()
         URL = "https://news.web.nhk/newsweb/12345"
         for _ in range(3):                                  # 跨頁重複 URL chrome
@@ -485,18 +484,30 @@ class TestU3SidecarRetired:
                 page.insert_text(fitz.Point(72, 200 + j * 30),
                                  f"Body line {j} with adequate character count here.",
                                  fontsize=12.0)
-        pdf = tmp_path / "chrome.pdf"
+        pdf = tmp_path / "ドジャース.pdf"
         doc.save(str(pdf))
         doc.close()
         out = tmp_path / "out"
         FitzProcessor().parse(str(pdf), str(out))
-        # sidecar 完全退場：不論有無 chrome URL 一律零產出
-        assert not (out / f"{pdf.stem}_source_hints.json").exists()
+        sidecar = out / f"{pdf.stem}_source_hints.json"
+        assert sidecar.exists()
+        assert URL in _json.loads(sidecar.read_text(encoding="utf-8"))["urls"]
 
-    def test_url_re_symbol_removed_from_module(self):
-        """`_URL_RE` 已隨 sidecar 生產端一併移除（dead code 清除斷言）。"""
-        import processor.fitz_processor as fp
-        assert not hasattr(fp, "_URL_RE")
+    def test_no_url_no_sidecar(self, tmp_path):
+        doc = fitz.open()
+        for _ in range(2):
+            page = doc.new_page()
+            page.insert_text(fitz.Point(72, 820), "Page 1", fontsize=7.0)
+            for j in range(6):
+                page.insert_text(fitz.Point(72, 200 + j * 30),
+                                 f"Body line {j} with adequate character count here.",
+                                 fontsize=12.0)
+        pdf = tmp_path / "nourl.pdf"
+        doc.save(str(pdf))
+        doc.close()
+        out = tmp_path / "out"
+        FitzProcessor().parse(str(pdf), str(out))
+        assert not (out / f"{pdf.stem}_source_hints.json").exists()
 
 
 # ──────────────────────────────────────────────────────────────────────────
