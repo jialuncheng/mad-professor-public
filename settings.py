@@ -144,6 +144,13 @@ LITEDOC_FITZ_MIN_CHARS_PER_PAGE = int(os.getenv("LITEDOC_FITZ_MIN_CHARS_PER_PAGE
 LITEDOC_LIGATURE_REPAIR_ENABLED = os.getenv("LITEDOC_LIGATURE_REPAIR_ENABLED", "true").lower() in ("1", "true", "yes")
 # === [PIPE-INGEST-FITZ C3 END] ===
 
+# === [FITZ-ANCHOR C1 START] ===
+# fitz 同位重繪去重之座標容差（pt）：瀏覽器列印 text-stroke 描邊使同一行在近乎
+# 同座標重繪多份（NHK 標題 ×4，偏移 ±0.84pt）；HOTFIX-3 精確座標比對漏抓亞像素偏移。
+# 同群組〔(text, round(size,1))〕內 x0/y0 距離 ≤ 此值即視為描邊副本去重；env 可調免 commit。
+FITZ_DEDUP_EPSILON = float(os.getenv("FITZ_DEDUP_EPSILON", "3.0"))
+# === [FITZ-ANCHOR C1 END] ===
+
 # === [META-NORM C1 START] ===
 # 封面 metadata 自癒飛輪總開關（依 tasks U5）。
 # False（預設）→ MetaNormalizer 直接回傳 raw_fields 原樣：不查 DB、不呼 LLM、線上 0 風險。

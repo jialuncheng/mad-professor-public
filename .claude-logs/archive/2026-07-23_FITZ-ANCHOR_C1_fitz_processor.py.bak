@@ -17,7 +17,6 @@ raise PDFParseError；圖檔抽取為 best-effort（單圖失敗跳過、不阻�
 """
 import logging
 import json
-import math
 import re
 import statistics
 from pathlib import Path
@@ -210,12 +209,9 @@ class FitzProcessor(PDFParser):
         images, image_rects = self._collect_images(page)
         link_rects = self._collect_link_rects(page)
         # === [FITZ-HOTFIX-1 C1 END] ===
-        # === [FITZ-ANCHOR C1 U4] 同位重繪去重（每頁獨立初始化、ε 容差群組）===
-        # 群組 key＝(text, round(size,1))；值＝群內已保留之 (x0, y0) 清單。
-        import settings  # 函式內讀、避免 fitz_processor 模組級耦合 settings
-        _dedup_eps = float(getattr(settings, "FITZ_DEDUP_EPSILON", 3.0))
-        seen_groups: Dict[Tuple[str, float], List[Tuple[float, float]]] = {}
-        # === [FITZ-ANCHOR C1 U4 END] ===
+        # === [FITZ-HOTFIX-3 K1] 同位重繪去重（每頁獨立初始化）===
+        seen_lines: set = set()
+        # === [FITZ-HOTFIX-3 K1 END] ===
         lines: List[Dict[str, Any]] = []
         raw = page.get_text("dict")
         for b_idx, block in enumerate(raw.get("blocks", [])):
@@ -245,21 +241,18 @@ class FitzProcessor(PDFParser):
                     continue
                 # === [FITZ-HOTFIX-1 C1 END] ===
                 size = max(float(s.get("size", 0.0)) for s in line.get("spans", []))
-                # === [FITZ-ANCHOR C1 U4] 同位重繪 ε 容差去重——text-stroke/shadow 列印
-                # 產物為「同頁近乎同座標同字級同文字」之重疊副本（NHK 標題 ×4、偏移 ±0.84pt）；
-                # HOTFIX-3 精確座標比對漏抓亞像素偏移，改**容差群組**：同群組〔(text, round(size,1))〕
-                # 內若與任一已保留座標之 x0/y0 距離 ≤ ε 即判描邊副本、去重。合法重複文字（座標
-                # 差 > ε）保留；**每頁獨立、不干涉跨頁 chrome（R2 管轄）**。
-                _gkey = (text, round(size, 1))
-                _seen_xy = seen_groups.setdefault(_gkey, [])
-                if any(abs(float(x0) - sx) <= _dedup_eps and abs(float(y0) - sy) <= _dedup_eps
-                       for sx, sy in _seen_xy):
+                # === [FITZ-HOTFIX-3 K1] 同位重繪去重——text-stroke/shadow 列印產物為
+                # 「同頁同座標同字級同文字」之精確重疊副本（NHK 標題 ×4 實證）；只留一份、
+                # 防下游 md_cleaner 浮水印規則（heading 重複 ≥3 全殺）誤殺真標題。合法重複
+                # 文字（不同座標）key 不同、零影響；**每頁獨立、不干涉跨頁 chrome（R2 管轄）**。
+                dedup_key = (text, round(y0, 1), round(float(x0), 1), round(size, 1))
+                if dedup_key in seen_lines:
                     self.logger.debug(
-                        "[fitz_processor] U4 同位重繪去重 p%d: %.40s", page.number, text
+                        "[fitz_processor] K1 同位重繪去重 p%d: %.40s", page.number, text
                     )
                     continue
-                _seen_xy.append((float(x0), float(y0)))
-                # === [FITZ-ANCHOR C1 U4 END] ===
+                seen_lines.add(dedup_key)
+                # === [FITZ-HOTFIX-3 K1 END] ===
                 lines.append({
                     "text": text,
                     "size": size,
@@ -388,25 +381,20 @@ class FitzProcessor(PDFParser):
         return chunks, chrome_urls
 
     def _repeated_band_keys(self, pages: List[Dict[str, Any]]) -> set:
-        """頂/底 band 內、以「數字歸一文字＋字級」複合 key 跨頁重複達比例門檻者＝列印頁首尾。
+        """頂/底 band 內、以「數字歸一文字＋字級」複合 key 出現於 ≥2 頁者＝列印頁首尾。
 
         [FITZ-HOTFIX-1 C1 R2] 複合 key 使同文字但字級不同之「頁首 chrome」與
         「文章真標題」分屬不同 key——chrome 跨頁重複照剝、真標題唯一故存活。
-
-        [FITZ-ANCHOR C1 U5] 門檻由固定 ≥2 頁改為比例——`need = max(2, ceil(len(pages)*0.5))`；
-        真 chrome（頁首/頁尾）幾乎每頁重印、遠超半數，改比例門檻避免少數頁偶然重複之
-        內容段落行（如 10 頁只在 2 頁出現）被誤判為 chrome 剝除。下限 2 完全相容 2-3 頁極短 PDF。
         """
         if len(pages) < 2:
             return set()
-        need = max(2, math.ceil(len(pages) * 0.5))
         page_hits: Dict[Tuple[str, float], set] = {}
         for page_data in pages:
             for line in page_data["lines"]:
                 if line["in_band"]:
                     key = _repetition_key(line["text"], line["size"])
                     page_hits.setdefault(key, set()).add(page_data["index"])
-        return {key for key, hit in page_hits.items() if len(hit) >= need}
+        return {key for key, hit in page_hits.items() if len(hit) >= 2}
 
     def _heading_sizes(
         self, pages: List[Dict[str, Any]]
