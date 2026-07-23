@@ -1,6 +1,13 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-23（FITZ-HOTFIX-3 Check 收官）
+最後更新：2026-07-23（FITZ-ANCHOR Check）
+
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_Check_提示詞.md`（Check·checkout 收官·BE-Refactor：Conformance 驗收〔plan v2 六規格項 U1-U6 對照 C1/C2 報告 / tasks §6 驗收〔含 §7.2 整合〕/ 不可動七類 / 提示詞 4 份稽核〕→ 全綠後 TODO 雙層結案 + C1/C2 hash 回填 + baton 一次性 mv 歸檔〔plan→plans/·tasks→tasks/·C1-C2 執行→executions/〕+ 4 提示詞入版控 + staged 白名單自檢實貼〔含 8 .bak〕+ 直產 checkout 執行報告〔§7.2 純後端無跨 Phase handoff 豁免〕；commit 由 baron 手動）
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_C2_run_提示詞.md`（C2 Run·BE-Refactor：Meta Anchor & Title Reinjection（LLM 錨定前移、標題回注與 sidecar 退場）——**U1** litedoc `_read_anchor_text` 裸抽前 `settings.LITEDOC_ANCHOR_MAX_PAGES`(=2) 頁純文字送 cover-prompt〔零新增呼叫·裸文字天然含 chrome URL·空則 fallback md 文首 100% 等價〕+ 恢復 `_extract_litedoc_metadata` 單參數 / **U2** P1 `_reinject_title` promote-else-inject〔cleaner/連字/R7 後、DocAnalyzer 判型前·正規化比對·heading 已在不動 / 正文行 promote 就地升 `# ` + warning / 缺席 inject 頂部 + warning·title 空跳過·避免重複注入〕/ **U3** HOTFIX-3 K2 sidecar 雙端同刀退場〔fitz 生產端 `_URL_RE` + JSON 寫檔塊、litedoc 消費端 `_load_source_hints` 讀端 + hints 參數全清〕/ **U6** section_engine echo 守衛〔`sa in sb or sb in sa` 子字串分支加 `min/max >= 0.5` 比例判定·防 4 字短標題誤吃 88 字 lede 導語〕；嚴禁動 md_cleaner/image_filter/ingestion_engine；測試〔U1 裸抽含 URL/空 fallback/頁截斷·U2 三分支+空跳過·U3 sidecar 清除+裸文字 hints publisher 解析·U6 0.045 比值不判回聲/整行相似照剝·§7.2 實體 PDF 端到端標題存活+QA 成對+meta 零重播+雙語對稱〕；6 `.bak`；執行報告暫存 baton；TODO C2→✅/checkout→WIP+雙源 hash 自癒；git add 14 檔）
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_C1_run_提示詞.md`（C1 Run·BE-Refactor：Fitz Geometry Refinement（fitz 幾何整形與容差去重）——U4 `_collect_page` **ε 容差同位去重**〔同頁同 `(text, round(size,1))` 群組下 x0/y0 距離 ≤ `settings.FITZ_DEDUP_EPSILON`(=3.0) → text-stroke 描邊副本去重·每頁獨立·取代 HOTFIX-3 精確座標比對·防 md_cleaner 浮水印≥3 誤殺〕+ U5 `_repeated_band_keys` **跨頁重複比例門檻**〔`need = max(2, ceil(len(pages)*0.5))`·下限 2 相容 2-3 頁極短 PDF·防少數頁重複內容段落誤殺〕+ settings `FITZ_DEDUP_EPSILON` + `.env.example`；嚴禁動 pdf_processor/section_engine/litedoc/ingestion_engine；測試〔±0.84pt 容差去重/3pt 外保留/跨頁不誤合/10 頁比例門檻 10-of-10 剝 vs 2-of-10 留/2 頁回歸/**§3.1 模擬表轉正式 fixture**：描邊 ×4 標題+14 QA→真 MarkdownCleaner 標題存活 ×1+QA 成對+浮水印告警零觸發〕；2 `.bak`；執行報告暫存 baton；TODO C1→✅/C2→WIP+雙源 hash 自癒；git add 6 檔）
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_tasks_提示詞.md`（Tasks·BE-Refactor：依 plan v2〔六 OQ 拍板〕拆 FITZ-ANCHOR 為原子 commits——C1 Fitz Geometry Refinement〔U4 ε 容差同位去重＋U5 跨頁重複比例門檻·§3.1 模擬表轉 fixture〕/ C2 Meta Anchor & Title Reinjection〔U1 錨定前移吃前 2 頁裸文字＋U2 標題回注 promote-else-inject＋U3 sidecar 同刀退場＋U6 echo 守衛〕/ C_CHECKOUT；業務碼零碰、TODO 同步 🟡 WIP）
+
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_診斷與plan_提示詞.md`（診斷鏈+plan 落檔·BE-Refactor 規劃：HOTFIX-3 落地後 NHK E2E 仍敗〔K2/K3 成功、K1 被描邊 ±0.84pt 偏移擊穿——log (3次)/(4次) 鐵證〕→ 逐段對照表〔lede 被 echo 子字串誤吃/史上初段被 R2 誤殺剩孤兒/QA Q×4 攪爛/圖文錯位次生〕→ scratchpad 離線模擬 K1′+K2′ before/after〔標題+section 樹+14 組 QA 全復活〕→ **baron 架構轉向拍板**：重要性判斷交 LLM 錨定〔前 1-2 頁裸文字、零新增呼叫＝既有 cover-prompt 換輸入〕+標題回注 promote-else-inject 終局保底+fitz 回歸抽文字清垃圾；HOTFIX-3 K2 sidecar 管線退場〔裸文字天然含 chrome URL〕；產出 `baton/2026-07-23_FITZ-ANCHOR_LLM錨定前移與fitz幾何整形_plan.md`〔template_plan·六規格項 U1-U6·無 commit 建議·取代 FITZ-HOTFIX-4 擬案〕）
 
 - 2026-07-23 — `2026-07-22_FITZ-HOTFIX-3_Check_提示詞.md`（Check·checkout 收官·BE-Hotfix：Conformance 驗收〔K1 同位去重救 NHK 標題 / K2 截斷窗後 hint 注入補 publisher / K3 full_text 行級 meta 歸零雙判據+echo-strip/R8 前時序 / 雙語文字對稱斷言 / 不可動 / 提示詞 3 份稽核〕→ 全綠後 TODO 雙層結案 + HOTFIX-3 hash 回填 + baton 一次性 mv 歸檔〔hotfix→hotfixes/·執行報告→executions/〕+ 提示詞入版控 + staged 白名單自檢實貼〔含 4 .bak〕+ 直產 checkout 執行報告；commit 由 baron 手動）
 - 2026-07-23 — `2026-07-22_FITZ-HOTFIX-3_run_提示詞.md`（HOTFIX-3 Run·BE-Hotfix：Overlap Dedup, Chrome Hint & Meta Zeroing（同位重繪去重、chrome 線索回收與 full_text meta 歸零）——**K1** `fitz_processor._collect_page` 逐頁同位重繪去重〔per-page dedup_key＝同座標同字級同文字·過濾 text-stroke 列印重繪副本·防 md_cleaner 浮水印規則≥3 誤殺 NHK 真標題·**嚴禁干涉跨頁 R2**〕/ **K2** chrome URL 線索回收〔剝 chrome 時捕 URL 落 `{pdf_file.stem}_source_hints.json` sidecar·**嚴禁 paper_id**〕+ litedoc `_extract_litedoc_metadata` hints 獨立參數注入〔**必於 `[:4000]` 截斷後拼接**防長文靜默失效〕補回 publisher / **K3** `full_text` 行級 meta 歸零〔`_read_source_text` 後·**echo-strip 與 R8 前**保 sidecar 行號對齊·sidecar spans ∪ R6 值比對整行 alphanumeric·排除圖片行防誤殺〕恢復雙語文字對稱；嚴禁動 md_cleaner/image_filter/ingestion_engine/rag_indexer；測試〔幾何去重/sidecar URL 加載/截斷窗注入/K3 時序斷言/雙語文字對稱〕；4 `.bak`；執行報告暫存 baton；TODO 標 ✅+雙源 hash 自癒；git add 8 檔）
@@ -112,6 +119,11 @@
 > 簡化規則：「依時間排序」僅保留最新 15 筆;超過則僅在「依任務分類」內保留。
 
 ## 依任務分類
+
+### FITZ-ANCHOR 系列（LLM 錨定前移與 fitz 幾何整形）
+- 🟡 **FITZ-ANCHOR LLM錨定前移與fitz幾何整形（2026-07-23 plan v2 六 OQ 拍板 → Tasks·BE-Refactor·進行中）**
+  - `2026-07-23_FITZ-ANCHOR_診斷與plan_提示詞.md` — 診斷與 plan（HOTFIX-3 後 NHK E2E 仍敗 → 逐段對照+離線模擬 → baron 架構轉向拍板：重要性判斷交 LLM 錨定、fitz 回歸抽文字清垃圾；U1-U6 六規格項）
+  - `2026-07-23_FITZ-ANCHOR_tasks_提示詞.md` — Tasks（C1 幾何整形〔U4 ε 去重+U5 比例門檻〕/ C2 錨定前移+回注+sidecar 退場〔U1/U2/U3/U6〕/ C_CHECKOUT）
 
 ### SOP-COMPLY 系列（logging 與 DB SOP 合規清帳）
 - ✅ **SOP-COMPLY logging與DB_SOP合規清帳（2026-07-18 plan v1.1 六 OQ 拍板 → Tasks → C1-C3 → Check 收官·BE-Refactor·已結案）**
@@ -582,6 +594,7 @@
   - `2026-05-27_OPTIMIZE-1_Tasks_v2_提示詞.md` — Tasks v2（C1 加 Atomic Overwrite + C2 一字步上傳端點 + 前台 UI 整合）
 
 ## 依時間排序（最新 15 筆）
+- 2026-07-23 — `2026-07-23_FITZ-ANCHOR_tasks_提示詞.md`（Tasks·BE-Refactor：依 plan v2 拆 C1 幾何整形〔U4 ε 去重+U5 比例門檻〕/ C2 錨定前移+回注+sidecar 退場〔U1/U2/U3/U6〕/ C_CHECKOUT）
 - 2026-07-01 — `2026-07-01_RESCUE-1_Tasks_提示詞.md`（Tasks·DOC-Refactor：舊 worktree 刪除致 baton 文件遺失之機械救援拆 5 commit〔C1 QUEUE-1 v2 救回+archive .bak / C2 PIPE-SPEC v8 重建〔v7 .bak+C2 執行報告 D5-D8.1+對照現役 code〕 / C3 MODEL-10 殘留 mv→archive / C4 TODO 失效引用總修正+遺失清單尾註 / C5 Checkout〕;工作目錄改主 repo·Q1-Q6 定案·§7.2 豁免）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C6_run_提示詞.md`（C6 Run·DOC-Refactor+治理 hook：新建 tools/settings.hooks.sample.json〔PreToolUse:Write|Edit→pre_tool_guard / SessionEnd→dirty_reset·$CLAUDE_PROJECT_DIR〕+ baton/README §3 跨環境部署 SOP〔Q1 方案 a·腳本版控 + 專案級 settings 指針·作用域隔離·強度分級〕;§99.2 v3）
 - 2026-06-27 — `2026-06-27_WORKFLOW-5_C5_run_提示詞.md`（C5 Run·DOC-Refactor+治理 hook：新建 tools/dirty_reset_guard.sh〔SessionEnd·Observable Fault Only〔C1 定案不能 block〕·python3·觸發＝TODO Checkout ✅ 但 baton 未歸檔〔非 baton 非空〕·stderr 警告+exit 0·fail-open〕+ test_hook_guards.sh 補 dirty_reset 4/4 全綠）
@@ -596,4 +609,3 @@
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C3_run_提示詞.md`（C3 Run·DOC-Refactor：HOW_TO_ADD B 軌範式 D9〔裝飾器機制 @register+__init__ import + 四 Phase 消費共用真理源 + raw_metadata 旁路 + §7.2 整合 / A/B 對比〔嚴禁寫 A 軌硬分支〕/ U2.1 DocAnalyzer 安全映射〕;A 軌既有章不動·版控直接 git add+.bak）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C2_run_提示詞.md`（C2 Run·DOC-Refactor：PIPE-SPEC 回灌 D5-D8.1〔D5 §1.2.5 section_engine 契約章 / D5b §1.2.4 MetaNormalizer 契約章 / D6 §1.1.1 LiteDoc 旁路登記 / D7 三大→家族 / D8 v8 / D8.1 不改 §1.3+四凍結合約〕;SPEC baton 就地不版控·.bak→archive）
 - 2026-06-19 — `2026-06-19_PIPE-SYNC-4_C1_run_提示詞.md`（C1 Run·DOC-Refactor：master plan v10 回灌 D1-D4〔L72 technical 排除矯正 / L260 LiteDoc ✅+hash+順序 / L18/L74/§8.4 三大→共用真理源家族〔補 META-NORM+section_engine〕/ L86 絞殺順序實況註〕;就地補註·版控直接 git add·.bak→archive）
-- 2026-06-19 — `2026-06-19_PIPE-SYNC-4_Tasks_提示詞.md`（Tasks·DOC-Refactor：拆 4 Commit〔C1 master plan v10 回灌 / C2 PIPE-SPEC〔section_engine §1.2.5 + MetaNormalizer §1.2.4 + litedoc 旁路 + v8〕/ C3 HOW_TO_ADD B 軌範式 / C4 Checkout〕;純 DOC 零業務碼、SPEC baton 就地不版控、§7.2 豁免）
