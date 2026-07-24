@@ -1158,16 +1158,6 @@ class LiteDocPipeline(DocumentStrategy):
             "value": translated_title or title, "source": "litedoc_p3", "confidence": "high",
         }
 
-        # === [FITZ-HOTFIX-5] 譯後/重組復活之裸 HTML 標籤出口補中和（結構性保證）===
-        # HOTFIX-4 K1（P1 源頭）已把中繼 md 27→0，但 P3 section 逐 tile 翻譯時 LLM 拆掉部分
-        # 反引號（實證 final_zh L57「Java<script>」）→ 成品 body 復活裸 <script> 致前端
-        # marked+DOMPurify 撞首個即吞其後全部內容（46 頁塌 3 頁）。此處對 body 補跑冪等中和
-        # （反引號守衛→只包新復活者、行數不變），覆蓋 whole/section/is_zh 三模式 × zh/en 雙側。
-        # **必在扉頁 prepend 之前**——扉頁 paper-header-meta div 為合法 raw HTML、不可包反引號。
-        zh_text = _neutralize_inline_html(zh_text)
-        en_text = _neutralize_inline_html(en_text)
-        # === [FITZ-HOTFIX-5 END] ===
-
         # ⑤ HTML 扉頁（# 標題：zh 用譯題 / en 用原題；render_meta_header_html 純格式化器）
         header_zh, header_en = self._render_meta_headers(ctx, title, translated_title)
         zh_text = header_zh + zh_text
