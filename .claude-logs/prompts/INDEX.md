@@ -1,6 +1,10 @@
 # 提示詞資料庫索引
 
-最後更新：2026-07-24（FITZ-HOTFIX-4 Check）
+最後更新：2026-07-24（FITZ-HOTFIX-5 Check）
+
+- 2026-07-24 — `2026-07-24_FITZ-HOTFIX-5_Check_提示詞.md`（Check·checkout 收官·BE-Hotfix：Conformance 驗收〔P3 出口補中和 / 扉頁合法 HTML 豁免 / 冪等·行數不變 對照 hotfix+執行報告 / 不可動 / 提示詞 2 份稽核〕→ 全綠後 TODO 雙層結案 + HOTFIX-5 hash 回填 + baton 一次性 mv 歸檔〔hotfix→hotfixes/·執行報告→executions/〕+ 2 提示詞入版控 + staged 白名單自檢實貼〔含 2 .bak〕+ 直產 checkout 執行報告〔無跨 Phase handoff 豁免〕；commit 由 baron 手動）
+
+- 2026-07-24 — `2026-07-24_FITZ-HOTFIX-5_run_提示詞.md`（HOTFIX-5 Run·BE-Hotfix：Post-Translation Inline HTML Re-Neutralization（譯後裸 HTML 標籤出口補中和）——治 HOTFIX-4 K1〔P1 源頭中和〕殘留漏洞：section 模式逐 tile 翻譯 LLM 拆掉反引號致 `final_shadow_zh.md` body 復活裸 `<script>`〔實證 L57「Java<script>」〕→ 前端 marked+DOMPurify 撞首個裸 `<script>` 吞其後全部→46 頁塌 3 頁；修法＝`run_phase3` 尾段〔`zh_text`/`en_text` 組裝後、扉頁 `_render_meta_headers` prepend **之前**〕對雙側 body 各補跑一次冪等 `_neutralize_inline_html`〔HOTFIX-4 函式零改·僅加 2 行接線·反引號守衛→只包新復活者·行數不變·覆蓋 whole/section/is_zh 三模式〕；扉頁 `paper-header-meta` div 在 body 中和後才 prepend 天然豁免；嚴禁動 image_filter/fitz_processor/md_cleaner/K1 本體/前端；測試〔譯後復活 body 零裸標籤+`<script>` 已包·扉頁 div 未被包·冪等+行數不變·whole 雙側對稱〕；2 `.bak`；執行報告暫存 baton；TODO 標 ✅+雙源 hash 自癒；git add 4 檔）
 
 - 2026-07-24 — `2026-07-24_FITZ-HOTFIX-4_Check_提示詞.md`（Check·checkout 收官·BE-Hotfix：Conformance 驗收〔K1 裸 HTML 中和 / K2 報頭集原封基準 / 雙語圖片對稱不變式對照 hotfix+執行報告 / 不可動 / 提示詞 2 份稽核〕→ 全綠後 TODO 雙層結案 + HOTFIX-4 hash 回填 + baton 一次性 mv 歸檔〔hotfix→hotfixes/·執行報告→executions/〕+ 2 提示詞入版控 + staged 白名單自檢實貼〔含 2 .bak〕+ 直產 checkout 執行報告〔無跨 Phase handoff 豁免〕；commit 由 baron 手動）
 
